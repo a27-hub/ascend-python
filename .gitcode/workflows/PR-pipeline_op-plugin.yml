@@ -270,8 +270,8 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
-          runs_on_arch: x64
-          runs_on_os: euler
+          runs_on_arch: arch=x64
+          runs_on_os: os=euler
 
   #     Build_v2_7_1_x86:
   #       name: Build_v2_7_1_x86
