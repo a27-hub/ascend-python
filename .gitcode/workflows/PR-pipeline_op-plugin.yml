@@ -255,25 +255,17 @@ stages:
     name: stage_2
     select: selected_by_default
     jobs:
-      HELLO_JOB:
-        name: HELLO_JOB
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        runs-on: [ self-hosted, arch=x64, os=euler ]
-        steps:
-          - name: HELLO_STEP
-            run: |
-              echo "hello step"
 
-      Build_master_x86:
-        name: Build_master_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
+      # Build_master_x86:
+      #   name: Build_master_x86
+      #   if : ${{ env.BUILD_SKIP == 'no' }}
+      #   uses: .gitcode/workflows/build_job.yml
+      #   secrets:
+      #     OBS_AK: ${{ secrets.OBS_AK }}
+      #     OBS_SK: ${{ secrets.OBS_SK }}
+      #   with:
+      #     pytorch_branch: "master"
+      #     CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
