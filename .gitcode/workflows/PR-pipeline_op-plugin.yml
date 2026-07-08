@@ -279,32 +279,32 @@ stages:
               export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
               echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
-  stage_2:
-    name: stage_2
-    select: selected_by_default
-    jobs:
+  # stage_2:
+  #   name: stage_2
+  #   select: selected_by_default
+  #   jobs:
 
-      # Build_master_x86:
-      #   name: Build_master_x86
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "master"
-      #     CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
+  #     # Build_master_x86:
+  #     #   name: Build_master_x86
+  #     #   if : ${{ env.BUILD_SKIP == 'no' }}
+  #     #   uses: .gitcode/workflows/build_job.yml
+  #     #   secrets:
+  #     #     OBS_AK: ${{ secrets.OBS_AK }}
+  #     #     OBS_SK: ${{ secrets.OBS_SK }}
+  #     #   with:
+  #     #     pytorch_branch: "master"
+  #     #     CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
 
-      Build_v2_7_1_x86:
-        name: Build_v2_7_1_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
-        with:
-          pytorch_branch: "v2.7.1"
-          CP_DOCKER_IMG: "pytorch_2.7.1_a1_x86_64_builder:20260518"
+  #     Build_v2_7_1_x86:
+  #       name: Build_v2_7_1_x86
+  #       if : ${{ env.BUILD_SKIP == 'no' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       secrets:
+  #         OBS_AK: ${{ secrets.OBS_AK }}
+  #         OBS_SK: ${{ secrets.OBS_SK }}
+  #       with:
+  #         pytorch_branch: "v2.7.1"
+  #         CP_DOCKER_IMG: "pytorch_2.7.1_a1_x86_64_builder:20260518"
 
       # Build_v2_9_0_x86:
       #   name: Build_v2_9_0_x86
