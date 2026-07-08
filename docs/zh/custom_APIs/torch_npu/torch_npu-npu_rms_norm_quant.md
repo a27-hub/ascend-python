@@ -53,16 +53,14 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06, dst_d
   - Ascend 950DT 产品：数据类型支持 `float16`、`bfloat16`、`float32`。
 
 - **offset** (`Tensor`)：必选参数，表示量化过程中的偏移张量，对应公式中的$offset$。shape需与 `scale` 保持一致，数据格式支持 `ND`，支持非连续 `Tensor`，不支持空 `Tensor`。
-  - Atlas 推理系列产品、Atlas 200I/500 A2 推理产品：数据类型支持 `int8`。
-  - Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件、Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持 `int8`。
+  - Atlas 推理系列产品、Atlas 200I/500 A2 推理产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件、Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持 `int8`。
   - Ascend 950DT 产品：数据类型支持 `int8`、`int32`、`float16`、`bfloat16`、`float32`。
 
 - **epsilon** (`double`)：可选参数，对应公式中的$eps$，用于防止除零错误，默认值为 `1e-6`。建议传入较小的正数。
 
 - **dst_dtype** (`int`): 可选参数，指定量化输出的类型，默认值为`int8`。传`None`时当做int8处理，支持取值`int8`、`quint4x2`。
-  - Atlas 推理系列产品、Atlas 200I/500 A2 推理产品：支持取值 `int8`、`quint4x2`。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持取值 `int8`、`quint4x2`。
-  - Ascend 950DT 产品：支持取值 `int8`、`int4`、`quint4x2`、`float8_e4m3fn`、`float8_e5m2`、`hifloat8。
+  - Atlas 推理系列产品、Atlas 200I/500 A2 推理产品、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持取值 `int8`、`quint4x2`。
+  - Ascend 950DT 产品：支持取值 `int8`、`quint4x2`、`float8_e4m3fn`、`float8_e5m2`、`hifloat8。
 
 ## 返回值说明
   
