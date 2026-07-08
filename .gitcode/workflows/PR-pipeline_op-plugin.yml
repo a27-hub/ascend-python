@@ -198,6 +198,24 @@ stages:
       #       with:
       #         gc_token: ${{ secrets.GC_TOKEN }}
 
+      JOB_BUILD_node:
+        name: 构建setup-node
+        select: selected_by_default
+        needs: []
+        steps:
+          - name: setup-node
+            uses: setup-node
+            with:
+              node-version: '16'
+              package-manager: 'npm'
+              registry-url: 'https://registry.npmmirror.com/'
+          - name: Verify
+            run: |-
+                node -v
+                npm config get registry
+        if: "${{ default() }}"
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+
       Only_doc_commit:
         name: Only_doc_commit
         runs-on: [ self-hosted, arch=x64, os=euler ]
