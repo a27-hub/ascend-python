@@ -60,7 +60,7 @@ at::Tensor& index_add_out(
                 indices.emplace_back(c10::nullopt);
             }
         }
-        
+
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -103,7 +103,7 @@ at::Tensor index_add(
                 indices.emplace_back(c10::nullopt);
             }
         }
-        
+
         result.index_put_(indices, source * alpha, true);
         return result;
     }
