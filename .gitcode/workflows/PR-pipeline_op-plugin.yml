@@ -208,6 +208,9 @@ stages:
         steps:
           # - name: checkout
           #   uses: checkout
+          - name: print env
+            run: |
+              env
           - name: checkout
             run: |
               pwd
