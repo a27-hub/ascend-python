@@ -21,12 +21,6 @@ on:
       pytorch_branch:
         required: true
         type: string
-      runs_on_arch:
-        required: true
-        type: string
-      runs_on_os:
-        required: true
-        type: string
     secrets:
       OBS_AK:
         required: true
@@ -45,8 +39,6 @@ jobs:
     steps:
       - name: print env
         run: |
-          echo "runs_on_arch=${{ inputs.runs_on_arch }}"
-          echo "runs_on_os=${{ inputs.runs_on_os }}"
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
           echo "py_version=${{ inputs.py_version }}"
           echo "pr_id=${{ env.pr_id }}"
