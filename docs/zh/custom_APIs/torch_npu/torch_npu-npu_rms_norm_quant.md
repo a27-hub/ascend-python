@@ -90,15 +90,15 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06, dst_d
 
     | x | gamma | beta | scale | offset | epsilon | y |
     | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | INT8 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | DOUBLE | INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | DOUBLE | INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | DOUBLE | INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | INT32 | DOUBLE | INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | INT32 | DOUBLE | INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | DOUBLE | INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
-    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | DOUBLE | INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | float16 | float16 | float16 | float16 | int8 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | bfloat16 | bfloat16 | bfloat16 | bfloat16 | int8 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | float16 | float16 | float16 | float16 | float16 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | bfloat16 | bfloat16 | bfloat16 | bfloat16 | bfloat16 | double | int8、int4、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | float32 | float32 | float32 | float32 | float32 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | float16 | float16 | float16 | float32 | int32 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | bfloat16 | bfloat16 | bfloat16 | float32 | int32 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | float16 | float16 | float16 | float32 | float32 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
+    | bfloat16 | bfloat16 | bfloat16 | float32 | float32 | double | int8、int32、float8_e4m3fn、float8_e5m2、hifloat8 |
 
 ## 调用示例
 
