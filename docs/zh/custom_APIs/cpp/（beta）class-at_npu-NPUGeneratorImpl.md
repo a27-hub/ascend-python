@@ -90,7 +90,7 @@ PyTorch2.5.1及以上版本，移除以下成员函数，PyTorch2.5.1之前版�
 
     NPUGeneratorImpl结束图捕获，返回值类型uint64_t，关闭图捕获并返回预留区域大小offset_extragraph，与uint64_t at::CUDAGeneratorImpl::capture_epilogue()相同。
 
-Pytorch2.5.1及以上版本，新增以下成员函数：
+PyTorch2.5.1及以上版本，新增以下成员函数：
 
 - **void graphsafe_set_state(const c10::intrusive_ptr\<c10::GeneratorImpl>& state)**
 
