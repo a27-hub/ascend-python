@@ -21,6 +21,9 @@ on:
       pytorch_branch:
         required: true
         type: string
+      runs_on:
+        required: true
+        type: string
     secrets:
       OBS_AK:
         required: true
@@ -32,7 +35,7 @@ jobs:
   JOB_compile:
     name: JOB_compile
     select: selected_by_default
-    runs-on:  [ self-hosted, arch=x64, os=euler ]
+    runs-on:  ${{ inputs.runs_on }}
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
