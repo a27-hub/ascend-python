@@ -255,7 +255,6 @@ stages:
               export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
               echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
-
   stage_2:
     name: stage_2
     select: selected_by_default

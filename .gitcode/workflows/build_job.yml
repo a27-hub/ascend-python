@@ -21,9 +21,6 @@ on:
       pytorch_branch:
         required: true
         type: string
-      runs_on_type:
-        required: true
-        type: string
       runs_on_arch:
         required: true
         type: string
