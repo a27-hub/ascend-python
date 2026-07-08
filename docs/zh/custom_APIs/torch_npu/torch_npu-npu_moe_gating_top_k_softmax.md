@@ -43,11 +43,13 @@ torch_npu.npu_moe_gating_top_k_softmax(x, finished=None, k=1) -> (Tensor, Tensor
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
-- <term>Atlas 推理系列产品</term>:
-  - 输入`x` shape为[token_num，expert_num]，expert_num必须满足16对齐，即expert_num是16整数倍，且不能超过256。
-  - 输入`x`仅支持float16。
-  - 输入不支持`finished`，只能输入None。
-  - 输出不支持`rowIdx`。
+
+Atlas推理系列产品在该接口上有以下特殊约束：
+
+- **输入x的数据类型**：仅支持`float16`。
+- **输出y的数据类型**：仅支持`float16`。
+- **x参数**：shape为[token_num，expert_num]，expert_num必须满足16对齐，即expert_num是16整数倍，且不能超过256。
+- **finished参数**：不支持，只能输入None。
 
 ## 调用示例
 
