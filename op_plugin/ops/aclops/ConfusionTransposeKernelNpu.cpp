@@ -82,7 +82,7 @@ at::Tensor npu_confusion_transpose_backward_symint(const at::Tensor &grad, at::I
     }
     std::vector<int64_t> vec_perm;
     int64_t perm_len = perm.size();
-    int64_t temp_perm[perm_len] = {0};
+    std::vector<int64_t> temp_perm(perm_len, 0);
     for (int64_t i = 0; i < perm_len; i++) {
         TORCH_CHECK(perm[i] >= 0 && perm[i] < perm_len,
             "perm value out of range: ", perm[i], OPS_ERROR(ErrCode::PARAM));
