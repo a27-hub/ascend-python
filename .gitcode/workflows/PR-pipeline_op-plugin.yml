@@ -242,15 +242,14 @@ stages:
             run: |
               echo "pr_id= ${pr_id}"
               echo "target_branch= ${{ atomgit.event.pull_request.base.ref }}"
-              echo "remote_url= ${{ inputs.REMOTE_URL }}"
-              echo "remote_url= ${{ env.REMOTE_URL }}"
+              echo "remote_url= ${REMOTE_URL}"
           - name: Only Doc Commit Check
             id: only-doc-check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
             with:
               pr_id: ${{ env.pr_id }}
               target_branch: ${{ atomgit.event.pull_request.base.ref }}
-              remote_url: ${{ inputs.REMOTE_URL }}
+              remote_url: ${{ env.REMOTE_URL }}
           - name: set build skip flag
             run: |
               export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
