@@ -1456,8 +1456,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "expert_tokens_num_flag is None or invalid. must be in [True, False]"
     )
     torch._check(
-        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15],
-        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]"
+        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 14, 15],
+        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 14, 15]"
     )
     torch._check(
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
@@ -1602,10 +1602,10 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_x_dtype = torch.uint8
     elif quant_mode in [0, 1]:
         expanded_x_dtype = torch.int8
-    elif quant_mode == 2:
+    elif quant_mode in [2, 16]:
         expanded_x_dtype = torch.float8_e5m2
         expanded_scale_dtype = torch.float8_e8m0fnu
-    elif quant_mode == 3:
+    elif quant_mode in [3, 17]:
         expanded_x_dtype = torch.float8_e4m3fn
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
@@ -1626,7 +1626,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     else:
         num_expanded_rows = bs * k if active_num <= 0 else min(active_num, bs * k)
         expanded_x_dim_list = [num_expanded_rows, x.size(1)]
-        if quant_mode in [2, 3]:
+        if quant_mode in [2, 3, 16, 17]:
             MXQUANT_BLOCK_SIZE = 32
             PAD_TO_EVEN_FACTOR = 2
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
@@ -5878,6 +5878,40 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
     y_size.append(math.floor(x.size(x.dim() - 1) / 2))
     return (torch.empty(y_size, dtype=dst_type, device=x.device),
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
+
+
+@impl(m, "npu_swiglu_group_quant")
+def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, scale=None,
+                                dst_type=296, quant_mode=0, block_size=0, round_scale=False,
+                                clamp_limit=-1.0, dst_type_max=0.0, output_origin=False):
+    dim_num = x.dim()
+    x_last_dim = x.size(dim_num - 1)
+
+    y_shape = list(x.shape)
+    y_shape[dim_num - 1] = x_last_dim // 2
+
+    if quant_mode == 2 or quant_mode == 3:
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+    else:
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+
+    if quant_mode == 2:
+        y_scale = x.new_empty([0], dtype=torch.float32)
+    elif quant_mode == 3:
+        if group_index is not None and group_index.numel() > 0:
+            y_scale = group_index.new_empty(group_index.shape, dtype=torch.float32)
+        else:
+            y_scale = x.new_empty([1], dtype=torch.float32)
+    else:
+        y_scale = None
+
+    if output_origin:
+        y_origin_shape = list(x.shape)
+        y_origin_shape[dim_num - 1] = x_last_dim // 2
+        y_origin = x.new_empty(y_origin_shape, dtype=x.dtype)
+    else:
+        y_origin = None
+    return (y, y_scale, y_origin)
 
 
 @impl(m, "npu_swiglu_group_quant_backward")
