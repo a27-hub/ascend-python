@@ -112,7 +112,7 @@ at::Tensor index_add(
     return result;
 }
 
-#if !VERSION_BETWEEN("V2R13", "VERSION_NEWEST")
+#if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
 at::Tensor index_add(
     const at::Tensor& self,
     at::Dimname dim,
