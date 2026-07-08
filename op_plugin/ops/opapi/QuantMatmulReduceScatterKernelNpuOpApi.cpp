@@ -42,7 +42,12 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(
     TORCH_CHECK(world_size != 0, "world_size cannot be zero", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
                 OPS_ERROR(ErrCode::PARAM));
-    c10::string_view comm_mode_value = comm_mode.value_or("");
+    bool isSocBelowAscend950 = (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950);
+    c10::string_view default_comm_mode = isSocBelowAscend950 ? "aiv" : "ai_cpu";
+    c10::string_view comm_mode_value = comm_mode.value_or(default_comm_mode);
+    std::string hcom_str = std::string(hcom);
+    std::string reduce_op_str = std::string(reduce_op);
+    std::string comm_mode_str = std::string(comm_mode_value);
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = op_plugin::utils::check_and_get_group_size(group_size_list);
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
@@ -67,9 +72,9 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(
     }
     c10::TensorOptions options = self.options().dtype(output_scalar_type);
     auto result = npu_preparation::apply_tensor_without_format(output_size, options);
-    char* reduce_op_ptr = const_cast<char*>(reduce_op.data());
-    char* hcom_ptr = const_cast<char*>(hcom.data());
-    char *comm_mode_ptr = const_cast<char *>(comm_mode_value.data());
+    char *reduce_op_ptr = const_cast<char*>(reduce_op_str.data());
+    char *hcom_ptr = const_cast<char*>(hcom_str.data());
+    char *comm_mode_ptr = const_cast<char*>(comm_mode_str.data());
     const at::Tensor& bias_real = bias.value_or(at::Tensor());
     const at::Tensor& quant_scale_real = quant_scale.value_or(at::Tensor());
     int64_t stream_mode = ACL_STOP_ON_FAILURE;
@@ -77,22 +82,12 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(
     if (amax_output) {
         amax_output_result = npu_preparation::apply_tensor_without_format({1}, self.options().dtype(at::kFloat));
     }
-    TensorWrapper x1_wrapper = {self, (x1_dtype.has_value())
-                                          ? c10_npu::GetAclDataType(x1_dtype.value())
-                                          : npu_preparation::convert_to_acl_data_type(self.scalar_type())};
-    TensorWrapper x2_wrapper = {x2, (x2_dtype.has_value())
-                                        ? c10_npu::GetAclDataType(x2_dtype.value())
-                                        : npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
-    auto x1_scale_scalar_dtype = x1_scale.has_value() ? x1_scale.value().scalar_type() : at::kFloat;
-    auto x2_scale_scalar_dtype = x2_scale.has_value() ? x2_scale.value().scalar_type() : at::kFloat;
-    TensorWrapper x1_scale_wrapper = {x1_scale.value_or(at::Tensor()),
-                                      (x1_scale_dtype.has_value())
-                                          ? c10_npu::GetAclDataType(x1_scale_dtype.value())
-                                          : npu_preparation::convert_to_acl_data_type(x1_scale_scalar_dtype)};
-    TensorWrapper x2_scale_wrapper = {x2_scale.value_or(at::Tensor()),
-                                      (x2_scale_dtype.has_value())
-                                          ? c10_npu::GetAclDataType(x2_scale_dtype.value())
-                                          : npu_preparation::convert_to_acl_data_type(x2_scale_scalar_dtype)};
+    TensorWrapper x1_wrapper = make_wrapper(self, x1_dtype);
+    TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
+    const at::Tensor &x1_scale_real = x1_scale.value_or(at::Tensor());
+    const at::Tensor &x2_scale_real = x2_scale.value_or(at::Tensor());
+    TensorWrapper x1_scale_wrapper = make_wrapper(x1_scale_real, x1_scale_dtype);
+    TensorWrapper x2_scale_wrapper = make_wrapper(x2_scale_real, x2_scale_dtype);
     EXEC_NPU_CMD(aclnnMatmulReduceScatterV2, x1_wrapper, x2_wrapper, bias_real, x1_scale_wrapper, x2_scale_wrapper,
                  quant_scale_real, block_size, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, group_size, comm_mode_ptr,
                  result, amax_output_result);

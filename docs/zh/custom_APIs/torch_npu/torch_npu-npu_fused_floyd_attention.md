@@ -40,7 +40,7 @@ torch_npu.npu_fused_floyd_attention(query_ik, key_ij, value_ij, key_jk, value_jk
 
 - **softmax_max_out** (`Tensor`)：输出张量，Softmax计算的Max中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[B,H,N,M,8]。数据格式支持$ND$。
 - **softmax_sum_out** (`Tensor`)：输出张量，Softmax计算的Sum中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[B,H,N,M,8]。数据格式支持$ND$。
-- **attention_out** (`Tensor`)：输出张量，计算公式的最终输出，对应公式中的$attention\_out$。数据类型支持`bfloat16`、`float16`。数据类型和shape类型与`query_ik`保持一致，数据格式支持$ND$，输入shape支持[B,H,N,M,D]。
+- **attention_out** (`Tensor`)：输出张量，计算公式的最终输出，对应公式中的$attention\_out$。数据类型支持`bfloat16`、`float16`。数据类型和shape类型与`query_ik`保持一致，数据格式支持$ND$，输出shape支持[B,H,N,M,D]。
 
 ## 约束说明
 
@@ -74,7 +74,7 @@ import torch_npu
 import math
 
 def truncated_normal(mean, std, min, max, size):
-    x = torch.normal(mean, std, size)
+    x = torch.normal(mean, std, size=size)
     x = torch.where((x < min) | (x > max), torch.tensor(0.0), x)
     return x
 B, N, S1, S2, S3, D = 1, 1, 16, 256, 256, 64
