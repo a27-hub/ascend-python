@@ -35,7 +35,7 @@ jobs:
   JOB_compile:
     name: JOB_compile
     select: selected_by_default
-    runs-on:  ${{ inputs.runs_on }}
+    runs-on:  [ "${{ inputs.runs_on }}" ] 
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
