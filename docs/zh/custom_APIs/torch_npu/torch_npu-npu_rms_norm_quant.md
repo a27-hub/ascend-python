@@ -8,6 +8,7 @@
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
 | <term>Atlas 200I/500 A2 推理产品</term>                                         |    √    |
 | <term>Atlas 推理系列产品</term>                                                |    √    |
+| <term>Ascend 950DT </term>                                                |    √    |
 
 ## 功能说明
 
@@ -80,6 +81,20 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06, dst_d
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
     | float16   | float16       | float16       | float16       | int8           | double      |int8      |
     | float16   | float16       | float16       | float16       | int8           | double      |int32      |
+
+  - <term>Ascend 950DT</term>：
+
+    | x | gamma | beta | scale | offset | epsilon | y |
+    | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | INT8 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | INT32 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | INT32 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | DOUBLE | INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8 |
 
 ## 调用示例
 
