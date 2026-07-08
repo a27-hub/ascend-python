@@ -36,7 +36,6 @@ on:
       OBS_SK:
         required: true
 
-
 jobs:
   JOB_compile:
     name: JOB_compile
