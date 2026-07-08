@@ -48,10 +48,10 @@ jobs:
           cd -
           source cie/common/common/ccache_env.sh
           # bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
-          echo "pytorch_branch: ${pytorch_branch}"
-          echo "py_version: ${py_version}"
-          echo "pr_id: ${pr_id}"
-          echo "ATOMGIT_WORKSPACE: ${ATOMGIT_WORKSPACE}"
+          echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
+          echo "py_version: ${{ inputs.py_version }}"
+          echo "pr_id: ${{ env.pr_id }}"
+          echo "ATOMGIT_WORKSPACE: ${{ inputs.ATOMGIT_WORKSPACE }}"
           echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
 
 
