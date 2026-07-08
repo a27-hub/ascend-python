@@ -209,6 +209,9 @@ stages:
               node-version: '16'
               package-manager: 'npm'
               registry-url: 'https://registry.npmmirror.com/'
+          - name: print env
+            run: |
+              env
           - name: Verify
             run: |-
                 node -v
@@ -251,6 +254,9 @@ stages:
               node-version: '16'
               package-manager: 'npm'
               registry-url: 'https://registry.npmmirror.com/'
+          - name: print env
+            run: |
+              env
           - name: actions install
             run: |
               cd .gitcode/actions/Only_Doc_Commit_Check
