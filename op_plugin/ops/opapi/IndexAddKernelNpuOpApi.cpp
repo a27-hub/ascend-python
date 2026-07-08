@@ -112,6 +112,7 @@ at::Tensor index_add(
     return result;
 }
 
+# if !VERSION_BETWEEN("V2R13", "VERSION_NEWEST")
 at::Tensor index_add(
     const at::Tensor& self,
     at::Dimname dim,
@@ -120,5 +121,6 @@ at::Tensor index_add(
     const at::Scalar& alpha) {
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
+#endif
 
 } // namespace op_api
