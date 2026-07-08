@@ -23,6 +23,7 @@
 #include <algorithm>
 
 #include "op_plugin/utils/OpAdapter.h"
+#include "torch_npu/csrc/core/npu/NPUGraphsUtils.h"
 
 typedef struct {
     const at::Tensor& tensor_;
