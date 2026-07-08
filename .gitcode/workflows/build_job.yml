@@ -21,7 +21,13 @@ on:
       pytorch_branch:
         required: true
         type: string
-      runs_on:
+      runs_on_type:
+        required: true
+        type: string
+      runs_on_arch:
+        required: true
+        type: string
+      runs_on_os:
         required: true
         type: string
     secrets:
@@ -35,7 +41,7 @@ jobs:
   JOB_compile:
     name: JOB_compile
     select: selected_by_default
-    runs-on:  [ "${{ inputs.runs_on }}" ] 
+    runs-on:  [ "${{ inputs.runs_on_type }}", "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ] 
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
