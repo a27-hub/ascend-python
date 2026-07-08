@@ -47,6 +47,11 @@ jobs:
           cat ../modify_files.txt 
           cd -
           source cie/common/common/ccache_env.sh
-          bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          # bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          echo "pytorch_branch: ${pytorch_branch}"
+          echo "py_version: ${py_version}"
+          echo "pr_id: ${pr_id}"
+          echo "ATOMGIT_WORKSPACE: ${ATOMGIT_WORKSPACE}"
+          echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
 
 
