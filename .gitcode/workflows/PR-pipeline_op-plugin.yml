@@ -218,6 +218,9 @@ stages:
                 npm config get registry
         if: "${{ default() }}"
         runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
 
       Only_doc_commit:
         name: Only_doc_commit
