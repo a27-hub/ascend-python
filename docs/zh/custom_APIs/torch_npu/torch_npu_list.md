@@ -89,7 +89,7 @@
 </tr>
 <tr id="row158945317117"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p5901953141111"><a name="p5901953141111"></a><a name="p5901953141111"></a><a href="（beta）torch_npu-npu_confusion_transpose.md">（beta）torch_npu.npu_confusion_transpose</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p7908532119"><a name="p7908532119"></a><a name="p7908532119"></a>混淆reshape和transpose运算。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p7908532119"><a name="p7908532119"></a><a name="p7908532119"></a>融合reshape和transpose运算。</p>
 </td>
 </tr>
 <tr id="row2090953141119"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1690125311117"><a name="p1690125311117"></a><a name="p1690125311117"></a><a href="（beta）torch_npu-npu_conv_transpose2d.md">（beta）torch_npu.npu_conv_transpose2d</a></p>
