@@ -211,6 +211,7 @@ stages:
           - name: print env
             run: |
               env
+              echo "TARGET_BRANCH= ${TARGET_BRANCH}"
           - name: checkout
             run: |
               pwd
