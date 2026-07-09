@@ -126,7 +126,7 @@ stages:
           - name: checkout
             uses: checkout
             with:
-              ref: refs/merge-requests/${{ env.pr_id }}/head
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
           # - name: checkout
           #   run: |
           #     pwd
