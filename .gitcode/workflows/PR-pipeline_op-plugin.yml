@@ -61,60 +61,60 @@ env:
   img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260518"
 
 stages:
-  # stage_1:
-  #   name: stage_1
-  #   select: selected_by_default
-  #   jobs:
-  #     CodeCheck:
-  #       name: CodeCheck
-  #       # runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: Dump Atomgit context
-  #           env:
-  #             ATOMGIT_CONTEXT: ${{ toJson(atomgit) }}
-  #           run: echo "$ATOMGIT_CONTEXT"
-  #         - name: Dump job context
-  #           env:
-  #             JOB_CONTEXT: ${{ toJson(job) }}
-  #           run: echo "$JOB_CONTEXT"
-  #         - name: Dump steps context
-  #           env:
-  #             STEPS_CONTEXT: ${{ toJson(steps) }}
-  #           run: echo "$STEPS_CONTEXT"
-  #         - name: Dump runner context
-  #           env:
-  #             RUNNER_CONTEXT: ${{ toJson(runner) }}
-  #           run: echo "$RUNNER_CONTEXT"
-  #         - name: Dump strategy context
-  #           env:
-  #             STRATEGY_CONTEXT: ${{ toJson(strategy) }}
-  #           run: echo "$STRATEGY_CONTEXT"
-  #         - name: Dump matrix context
-  #           env:
-  #             MATRIX_CONTEXT: ${{ toJson(matrix) }}
-  #           run: echo "$MATRIX_CONTEXT"
-  #         - name: hello action
-  #           run: |
-  #             echo "print env"
-  #             env
-  #             echo "print env end"
-  #         - name: Login to CodeArts
-  #           uses: codearts-login
-  #           with:
-  #             region: cn-north-4
-  #             name: Ascend_Pytorch_CI
-  #             password: ${{ secrets.IAM_USER_PASSWORD }}
-  #             domain-name: hwstaff_jsz_gjl
-  #         - name: codecheck
-  #           uses: codecheck_gitcode_v2
-  #           with:
-  #             project_id: a9b188a62f334fc0963bcfb523426d17
-  #             task_name: wwq-op-plugin-test
-  #             branch: master
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
+      CodeCheck:
+        name: CodeCheck
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: Dump Atomgit context
+            env:
+              ATOMGIT_CONTEXT: ${{ toJson(atomgit) }}
+            run: echo "$ATOMGIT_CONTEXT"
+          - name: Dump job context
+            env:
+              JOB_CONTEXT: ${{ toJson(job) }}
+            run: echo "$JOB_CONTEXT"
+          - name: Dump steps context
+            env:
+              STEPS_CONTEXT: ${{ toJson(steps) }}
+            run: echo "$STEPS_CONTEXT"
+          - name: Dump runner context
+            env:
+              RUNNER_CONTEXT: ${{ toJson(runner) }}
+            run: echo "$RUNNER_CONTEXT"
+          - name: Dump strategy context
+            env:
+              STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+            run: echo "$STRATEGY_CONTEXT"
+          - name: Dump matrix context
+            env:
+              MATRIX_CONTEXT: ${{ toJson(matrix) }}
+            run: echo "$MATRIX_CONTEXT"
+          - name: hello action
+            run: |
+              echo "print env"
+              env
+              echo "print env end"
+          - name: Login to CodeArts
+            uses: codearts-login
+            with:
+              region: cn-north-4
+              name: Ascend_Pytorch_CI
+              password: ${{ secrets.IAM_USER_PASSWORD }}
+              domain-name: hwstaff_jsz_gjl
+          - name: codecheck
+            uses: codecheck_gitcode_v2
+            with:
+              project_id: a9b188a62f334fc0963bcfb523426d17
+              task_name: wwq-op-plugin-test
+              branch: ${{ atomgit.event.pull_request.base.ref }}
 
   #     # SCA:
   #     #   name: SCA
@@ -256,21 +256,21 @@ stages:
   #             echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
 
-  stage_2:
-    name: stage_2
-    select: selected_by_default
-    jobs:
+  # stage_2:
+  #   name: stage_2
+  #   select: selected_by_default
+  #   jobs:
 
-      Build_master_x86:
-        name: Build_master_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job_x86.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
+  #     Build_master_x86:
+  #       name: Build_master_x86
+  #       if : ${{ env.BUILD_SKIP == 'no' }}
+  #       uses: .gitcode/workflows/build_job_x86.yml
+  #       secrets:
+  #         OBS_AK: ${{ secrets.OBS_AK }}
+  #         OBS_SK: ${{ secrets.OBS_SK }}
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
 
   #     Build_v2_7_1_x86:
   #       name: Build_v2_7_1_x86
