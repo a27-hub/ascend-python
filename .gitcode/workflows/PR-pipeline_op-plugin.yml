@@ -1,7 +1,7 @@
 name: PR-pipeline_op-plugin
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - 7.3.0
       - 7.3.0_test
