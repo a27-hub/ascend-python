@@ -1,0 +1,57 @@
+name: UT Job
+
+on:
+  workflow_call:
+    inputs:
+      py_version:
+        required: false
+        type: string
+        default: "3.10"
+      REMOTE_URL:
+        required: false
+        type: string
+        default: ${{ env.ATOMGIT_REPOSITORY_URL }}
+      pr_id:
+        required: false
+        type: string
+        default: ${{ atomgit.event.pull_request.number }}
+      CP_DOCKER_IMG:
+        required: true
+        type: string
+      pytorch_branch:
+        required: true
+        type: string
+
+jobs:
+  JOB_UT:
+    name: JOB_UT
+    select: selected_by_default
+    runs-on: [ self-hosted, arch=arm64, os=euler ]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      options: --user root
+    steps:
+      - name: UT
+        run: |
+          rm -rf *
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 5000
+          git config --global http.lowSpeedTime 300
+
+          git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+
+          bash cie/common/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${REMOTE_URL} ${pr_id} ${ATOMGIT_WORKSPACE}
+
+          cd ./CODE
+          git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
+          cat ../modify_files.txt 
+          cd -
+          source cie/common/common/ccache_env.sh
+          # bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
+          echo "py_version: ${{ inputs.py_version }}"
+          echo "pr_id: ${{ env.pr_id }}"
+          echo "ATOMGIT_WORKSPACE: ${{ inputs.ATOMGIT_WORKSPACE }}"
+          echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
+
+

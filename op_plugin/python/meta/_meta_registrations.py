@@ -1,5 +1,6 @@
 import math
 import os
+import warnings
 import torch
 import torch_npu
 from torch.library import Library, impl
@@ -1455,8 +1456,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "expert_tokens_num_flag is None or invalid. must be in [True, False]"
     )
     torch._check(
-        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15],
-        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]"
+        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 14, 15],
+        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 14, 15]"
     )
     torch._check(
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
@@ -1601,10 +1602,10 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_x_dtype = torch.uint8
     elif quant_mode in [0, 1]:
         expanded_x_dtype = torch.int8
-    elif quant_mode == 2:
+    elif quant_mode in [2, 16]:
         expanded_x_dtype = torch.float8_e5m2
         expanded_scale_dtype = torch.float8_e8m0fnu
-    elif quant_mode == 3:
+    elif quant_mode in [3, 17]:
         expanded_x_dtype = torch.float8_e4m3fn
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
@@ -1625,7 +1626,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     else:
         num_expanded_rows = bs * k if active_num <= 0 else min(active_num, bs * k)
         expanded_x_dim_list = [num_expanded_rows, x.size(1)]
-        if quant_mode in [2, 3]:
+        if quant_mode in [2, 3, 16, 17]:
             MXQUANT_BLOCK_SIZE = 32
             PAD_TO_EVEN_FACTOR = 2
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
@@ -2080,6 +2081,11 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
         lambda: "numHeads should be greater than 0, but got " + str(num_query_heads) +
             ops_error(ErrCode.VALUE),
     )
+    torch._check(
+        query_quant_mode != 3 and key_quant_mode != 3 and value_quant_mode != 2,
+        lambda: "GQA FP8 Fullquant(Query/Key Per-Token-Head, Value PerHead) only supports path 0." + ops_error(ErrCode.VALUE),
+    )
+
     num_key_value_heads = num_query_heads if num_key_value_heads == 0 else num_key_value_heads
 
     # get query_layout, attention_out_layout
@@ -2219,11 +2225,33 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     return out
 
 
+# Keep in sync with torch_npu/csrc/core/npu/NpuVariables.h: SocVersion::Ascend950.
+_ASCEND950_SOC_VERSION = 260
+_npu_fusion_attention_warning_printed = False
+
+
+def _warn_npu_fusion_attention_compile_once():
+    # Remove this warning helper after torch.compile correctly preserves seed, offset and numels
+    # for npu_fusion_attention on supported Ascend950 versions.
+    global _npu_fusion_attention_warning_printed
+    if _npu_fusion_attention_warning_printed or get_soc_version() < _ASCEND950_SOC_VERSION:
+        return
+    warnings.warn(
+        "CAUTION: On Ascend950, when npu_fusion_attention is compiled by torch.compile, the seed, "
+        "offset, and numels may be optimized, which can cause results to differ from eager mode "
+        "when the random seed is set. This issue will be fixed in later version.",
+        UserWarning,
+        stacklevel=2,
+    )
+    _npu_fusion_attention_warning_printed = True
+
+
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                  atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
                                  inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
                                  gen_mask_parallel=True, sync=False, softmax_layout="", sink=None, dropout_mask=None, seed=0, offset=0):
+    _warn_npu_fusion_attention_compile_once()
     B = query.size(0)
     N = head_num
     S1 = query.size(2)
@@ -5852,6 +5880,40 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
 
 
+@impl(m, "npu_swiglu_group_quant")
+def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, scale=None,
+                                dst_type=296, quant_mode=0, block_size=0, round_scale=False,
+                                clamp_limit=-1.0, dst_type_max=0.0, output_origin=False):
+    dim_num = x.dim()
+    x_last_dim = x.size(dim_num - 1)
+
+    y_shape = list(x.shape)
+    y_shape[dim_num - 1] = x_last_dim // 2
+
+    if quant_mode == 2 or quant_mode == 3:
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+    else:
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+
+    if quant_mode == 2:
+        y_scale = x.new_empty([0], dtype=torch.float32)
+    elif quant_mode == 3:
+        if group_index is not None and group_index.numel() > 0:
+            y_scale = group_index.new_empty(group_index.shape, dtype=torch.float32)
+        else:
+            y_scale = x.new_empty([1], dtype=torch.float32)
+    else:
+        y_scale = None
+
+    if output_origin:
+        y_origin_shape = list(x.shape)
+        y_origin_shape[dim_num - 1] = x_last_dim // 2
+        y_origin = x.new_empty(y_origin_shape, dtype=x.dtype)
+    else:
+        y_origin = None
+    return (y, y_scale, y_origin)
+
+
 @impl(m, "npu_swiglu_group_quant_backward")
 def npu_swiglu_group_quant_backward_meta(grad_y, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=0.0):
     grad_x = torch.empty_like(x, dtype=x.dtype)
@@ -6903,8 +6965,8 @@ def convolution_meta(input_tensor, weight, bias, stride, padding, dilation, tran
 
 @impl(m, "batch_norm_reduce")
 def batch_norm_reduce_meta(self, eps):
-    out_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
-    out_square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
+    out_sum = torch.empty(self.size(1), dtype=torch.float32, device='meta')
+    out_square_sum = torch.empty(self.size(1), dtype=torch.float32, device='meta')
     return (out_sum, out_square_sum)
 
 
