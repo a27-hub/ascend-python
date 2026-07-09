@@ -115,7 +115,7 @@ stages:
               project_id: a9b188a62f334fc0963bcfb523426d17
               task_name: wwq-op-plugin-test
               branch: ${{ atomgit.event.pull_request.base.ref }}
-              mergeId: ${{ env.pr_id }}
+              mergeId: ${{ atomgit.event.pull_request.number }}
 
   #     # SCA:
   #     #   name: SCA
