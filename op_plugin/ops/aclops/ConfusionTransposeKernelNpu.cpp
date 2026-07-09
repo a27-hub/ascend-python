@@ -86,7 +86,7 @@ at::Tensor npu_confusion_transpose_backward_symint(const at::Tensor &grad, at::I
     for (int64_t i = 0; i < perm_len; i++) {
         TORCH_CHECK(perm[i] >= 0 && perm[i] < perm_len,
             "perm value out of range: ", perm[i], OPS_ERROR(ErrCode::PARAM));
-        vec_perm[perm[i]] = i; // 直接在 vec_perm 上赋值
+        vec_perm[perm[i]] = i;
     }
 
     perm = at::IntArrayRef(vec_perm);
