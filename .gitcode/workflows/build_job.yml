@@ -39,8 +39,8 @@ jobs:
   JOB_compile:
     name: JOB_compile
     select: selected_by_default
-    # runs-on:  [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]
-    runs-on:  [ self-hosted, arch=x64, os=euler ]
+    runs-on:  [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]
+    # runs-on:  [ self-hosted, arch=x64, os=euler ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
