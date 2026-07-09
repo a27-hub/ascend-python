@@ -77,7 +77,6 @@ class TestNpuRotateQuant(TestCase):
         rotation = rotation / (torch.norm(rotation, dim=1, keepdim=True) + 1e-6)
         return x, rotation
 
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
     @SupportedDevices(['Ascend910B'])
     def test_npu_rotate_quant_int8(self, device="npu"):
         # 生成数据
@@ -91,7 +90,6 @@ class TestNpuRotateQuant(TestCase):
         self.assertEqual(output0, output0_npu.cpu(), 1)
         self.assertRtolEqual(output1, output1_npu.cpu())
 
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
     @SupportedDevices(['Ascend910B'])
     def test_npu_rotate_quant_int4(self, device="npu"):
         # 生成数据
@@ -105,7 +103,6 @@ class TestNpuRotateQuant(TestCase):
         self.compare_tensor_nibbles(output0.cpu(), output0_npu.cpu())
         self.assertRtolEqual(output1, output1_npu.cpu())
 
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
     @SupportedDevices(['Ascend950'])
     def test_npu_rotate_quant_int4(self, device="npu"):
         # 生成数据
@@ -115,11 +112,11 @@ class TestNpuRotateQuant(TestCase):
         dst_dtype = torch_npu.float4_e2m1fn_x2  # fp4
         x, rotation = self.gen_input_data(M, N, K)
         x_rot = self.conv_rot(x,rotation)
-        x_rot = x_rot.to(torch.bfloat16)
+        x_rot = x_rot.to(torch.bfloat16).npu()
         output0, output1 = torch_npu.npu_dynamic_mx_quant(x_rot, dst_type=dst_dtype)
         output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
         self.compare_tensor_nibbles(output0.cpu(), output0_npu.cpu())
-        self.assertRtolEqual(output1, output1_npu.cpu())
+        self.assertRtolEqual(output1.float(), output1_npu.cpu().float())
 
 if __name__ == "__main__":
     run_tests()
