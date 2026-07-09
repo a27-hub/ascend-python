@@ -61,87 +61,89 @@ env:
   img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260518"
 
 stages:
-  # stage_1:
-  #   name: stage_1
-  #   select: selected_by_default
-  #   jobs:
-  #     # CodeCheck:
-  #     #   name: CodeCheck
-  #     #   runs-on: [ self-hosted, arch=x64, os=euler ]
-  #     #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-  #     #   container:
-  #     #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #     #     options: --user root
-  #     #   steps:
-  #     #     - name: Login to CodeArts
-  #     #       uses: codearts-login
-  #     #       with:
-  #     #         region: cn-north-4
-  #     #         name: wangshusheng
-  #     #         password: ${{ secrets.IAM_USER_PASSWORD }}
-  #     #         domain-name: hwstaff_jsz_gjl
-  #     #     - name: codecheck
-  #     #       uses: codecheck_gitcode_v2
-  #     #       with:
-  #     #         project_id: a9b188a62f334fc0963bcfb523426d17
-  #     #         task_name: wwq-op-plugin-test
-  #     #         branch: ${{ atomgit.event.pull_request.base.ref }}
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
+      # CodeCheck:
+      #   name: CodeCheck
+      #   runs-on: [ self-hosted, arch=x64, os=euler ]
+      #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #     options: --user root
+      #   steps:
+      #     - name: Login to CodeArts
+      #       uses: codearts-login
+      #       with:
+      #         region: cn-north-4
+      #         name: wangshusheng
+      #         password: ${{ secrets.IAM_USER_PASSWORD }}
+      #         domain-name: hwstaff_jsz_gjl
+      #     - name: codecheck
+      #       uses: codecheck_gitcode_v2
+      #       with:
+      #         project_id: a9b188a62f334fc0963bcfb523426d17
+      #         task_name: wwq-op-plugin-test
+      #         branch: ${{ atomgit.event.pull_request.base.ref }}
 
-  #     dump_contexts_to_log:
-  #       name: dump_contexts_to_log
-  #       runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       steps:
-  #         - name: Dump Atomgit context
-  #           env:
-  #             ATOMGIT_CONTEXT: ${{ toJson(atomgit) }} 
-  #           run: echo "$ATOMGIT_CONTEXT"
-  #         - name: Dump job context
-  #           env:
-  #             JOB_CONTEXT: ${{ toJson(job) }} 
-  #           run: echo "$JOB_CONTEXT"
-  #         - name: Dump steps context
-  #           env:
-  #             STEPS_CONTEXT: ${{ toJson(steps) }} 
-  #           run: echo "$STEPS_CONTEXT"
-  #         - name: Dump runner context
-  #           env:
-  #             RUNNER_CONTEXT: ${{ toJson(runner) }} 
-  #           run: echo "$RUNNER_CONTEXT"
-  #         - name: Dump strategy context
-  #           env:
-  #             STRATEGY_CONTEXT: ${{ toJson(strategy) }} 
-  #           run: echo "$STRATEGY_CONTEXT"
-  #         - name: Dump matrix context
-  #           env:
-  #             MATRIX_CONTEXT: ${{ toJson(matrix) }} 
-  #           run: echo "$MATRIX_CONTEXT"
-  #         - name: print env
-  #           run: |
-  #             env
-  #     SCA:
-  #       name: SCA
-  #       runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-  #       steps:
-  #         - name: checkout
-  #           uses: checkout
-  #         # - name: checkout
-  #         #   run: |
-  #         #     pwd
-  #         #     rm -rf *
-  #         #     set -ex
-  #         #     git config --global user.name wangwq129
-  #         #     git config --global user.email wangweiqi22@huawei.com
-  #         #     git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-  #         - name: Run SCA PR Scan
-  #           id: sca-pr-scan
-  #           uses: sca-pr-scan
-  #           with:
-  #             scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
-  #             scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
-  #             pr-id: ${{ atomgit.event.pull_request.number }}
-  #             repository-name: ${{ atomgit.repository }}
-  #             project-name: FrameworkPTAdapter
+      dump_contexts_to_log:
+        name: dump_contexts_to_log
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        steps:
+          - name: Dump Atomgit context
+            env:
+              ATOMGIT_CONTEXT: ${{ toJson(atomgit) }} 
+            run: echo "$ATOMGIT_CONTEXT"
+          - name: Dump job context
+            env:
+              JOB_CONTEXT: ${{ toJson(job) }} 
+            run: echo "$JOB_CONTEXT"
+          - name: Dump steps context
+            env:
+              STEPS_CONTEXT: ${{ toJson(steps) }} 
+            run: echo "$STEPS_CONTEXT"
+          - name: Dump runner context
+            env:
+              RUNNER_CONTEXT: ${{ toJson(runner) }} 
+            run: echo "$RUNNER_CONTEXT"
+          - name: Dump strategy context
+            env:
+              STRATEGY_CONTEXT: ${{ toJson(strategy) }} 
+            run: echo "$STRATEGY_CONTEXT"
+          - name: Dump matrix context
+            env:
+              MATRIX_CONTEXT: ${{ toJson(matrix) }} 
+            run: echo "$MATRIX_CONTEXT"
+          - name: print env
+            run: |
+              env
+      SCA:
+        name: SCA
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/head
+          # - name: checkout
+          #   run: |
+          #     pwd
+          #     rm -rf *
+          #     set -ex
+          #     git config --global user.name wangwq129
+          #     git config --global user.email wangweiqi22@huawei.com
+          #     git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+          - name: Run SCA PR Scan
+            id: sca-pr-scan
+            uses: sca-pr-scan
+            with:
+              scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
+              scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
+              pr-id: ${{ atomgit.event.pull_request.number }}
+              repository-name: ${{ atomgit.repository }}
+              project-name: FrameworkPTAdapter
 
   #     # Antipoison:
   #     #   name: Antipoison
@@ -258,21 +260,21 @@ stages:
   #             echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
 
-  stage_2:
-    name: stage_2
-    select: selected_by_default
-    jobs:
+  # stage_2:
+  #   name: stage_2
+  #   select: selected_by_default
+  #   jobs:
 
-      Build_master_x86:
-        name: Build_master_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
+  #     Build_master_x86:
+  #       name: Build_master_x86
+  #       if : ${{ env.BUILD_SKIP == 'no' }}
+  #       uses: .gitcode/workflows/build_job_x86.yml
+  #       secrets:
+  #         OBS_AK: ${{ secrets.OBS_AK }}
+  #         OBS_SK: ${{ secrets.OBS_SK }}
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
 
   #     Build_v2_7_1_x86:
   #       name: Build_v2_7_1_x86
