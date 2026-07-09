@@ -264,13 +264,15 @@ stages:
       Build_master_x86:
         name: Build_master_x86
         if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job_x86.yml
+        uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
           OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
+          runs_on_arch: "x86_64"
+          runs_on_os: "euler"
 
   #     Build_v2_7_1_x86:
   #       name: Build_v2_7_1_x86
