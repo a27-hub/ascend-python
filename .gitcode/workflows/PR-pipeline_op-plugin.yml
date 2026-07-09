@@ -94,27 +94,27 @@ stages:
           - name: Dump Atomgit context
             env:
               ATOMGIT_CONTEXT: toJson(atomgit)run:echo"{{ toJson(atomgit) }} 
-            run: echo "toJson(atomgit)run:echo"ATOMGIT_CONTEXT"
+            run: echo "toJson(atomgit)"
           - name: Dump job context
             env:
               JOB_CONTEXT: toJson(job)run:echo"{{ toJson(job) }} 
-            run: echo "toJson(job)run:echo"JOB_CONTEXT"
+            run: echo "toJson(job)"
           - name: Dump steps context
             env:
               STEPS_CONTEXT: toJson(steps)run:echo"{{ toJson(steps) }} 
-            run: echo "toJson(steps)run:echo"STEPS_CONTEXT"
+            run: echo "toJson(steps)"
           - name: Dump runner context
             env:
               RUNNER_CONTEXT: toJson(runner)run:echo"{{ toJson(runner) }} 
-            run: echo "toJson(runner)run:echo"RUNNER_CONTEXT"
+            run: echo "toJson(runner)"
           - name: Dump strategy context
             env:
               STRATEGY_CONTEXT: toJson(strategy)run:echo"{{ toJson(strategy) }} 
-            run: echo "toJson(strategy)run:echo"STRATEGY_CONTEXT"
+            run: echo "toJson(strategy)"
           - name: Dump matrix context
             env:
               MATRIX_CONTEXT: toJson(matrix)run:echo"{{ toJson(matrix) }} 
-            run: echo "toJson(matrix)run:echo"MATRIX_CONTEXT"
+            run: echo "toJson(matrix)"
           - name: print env
             run: |
               env
