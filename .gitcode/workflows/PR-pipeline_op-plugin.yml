@@ -106,7 +106,7 @@ stages:
             uses: codearts-login
             with:
               region: cn-north-4
-              name: Ascend_Pytorch_CI
+              name: wangshusheng
               password: ${{ secrets.IAM_USER_PASSWORD }}
               domain-name: hwstaff_jsz_gjl
           - name: codecheck
