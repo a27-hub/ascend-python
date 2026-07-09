@@ -65,84 +65,57 @@ stages:
     name: stage_1
     select: selected_by_default
     jobs:
-      # CodeCheck:
-      #   name: CodeCheck
-      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   container:
-      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-      #     options: --user root
-      #   steps:
-      #     - name: Login to CodeArts
-      #       uses: codearts-login
-      #       with:
-      #         region: cn-north-4
-      #         name: wangshusheng
-      #         password: ${{ secrets.IAM_USER_PASSWORD }}
-      #         domain-name: hwstaff_jsz_gjl
-      #     - name: codecheck
-      #       uses: codecheck_gitcode_v2
-      #       with:
-      #         project_id: a9b188a62f334fc0963bcfb523426d17
-      #         task_name: wwq-op-plugin-test
-      #         branch: ${{ atomgit.event.pull_request.base.ref }}
+      CodeCheck:
+        name: CodeCheck
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: Login to CodeArts
+            uses: codearts-login
+            with:
+              region: cn-north-4
+              name: wangshusheng
+              password: ${{ secrets.IAM_USER_PASSWORD }}
+              domain-name: hwstaff_jsz_gjl
+          - name: codecheck
+            uses: codecheck_gitcode_v2
+            with:
+              project_id: a9b188a62f334fc0963bcfb523426d17
+              task_name: wwq-op-plugin-test
+              branch: ${{ atomgit.event.pull_request.base.ref }}
 
-      # SCA:
-      #   name: SCA
-      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   steps:
-      #     # - name: checkout
-      #     #   uses: checkout
-      #     #   with:
-      #     #     ref: refs/merge-requests/${{ env.pr_id }}/merge
-      #     - name: checkout
-      #       run: |
-      #         pwd
-      #         rm -rf *
-      #         set -ex
-      #         git config --global user.name wangwq129
-      #         git config --global user.email wangweiqi22@huawei.com
-      #         git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-      #     - name: Run SCA PR Scan
-      #       id: sca-pr-scan
-      #       uses: sca-pr-scan
-      #       with:
-      #         scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
-      #         scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
-      #         pr-id: ${{ atomgit.event.pull_request.number }}
-      #         repository-name: ${{ atomgit.repository }}
-      #         project-name: FrameworkPTAdapter
+      SCA:
+        name: SCA
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        steps:
+          # - name: checkout
+          #   uses: checkout
+          #   with:
+          #     ref: refs/merge-requests/${{ env.pr_id }}/merge
+          - name: checkout
+            run: |
+              pwd
+              rm -rf *
+              set -ex
+              git config --global user.name wangwq129
+              git config --global user.email wangweiqi22@huawei.com
+              git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+          - name: Run SCA PR Scan
+            id: sca-pr-scan
+            uses: sca-pr-scan
+            with:
+              scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
+              scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
+              pr-id: ${{ atomgit.event.pull_request.number }}
+              repository-name: ${{ atomgit.repository }}
+              project-name: FrameworkPTAdapter
 
-      # Antipoison:
-      #   name: Antipoison
-      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   container:
-      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-      #     options: --user root
-      #   steps:
-      #     # - name: checkout
-      #     #   uses: checkout
-      #     - name: checkout
-      #       run: |
-      #         pwd
-      #         rm -rf *
-      #         set -ex
-      #         git config --global user.name wangwq129
-      #         git config --global user.email wangweiqi22@huawei.com
-      #         git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-      #     - name: Antipoison
-      #       run: |
-      #         git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-      #         pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
-      #         wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
-      #         unzip -q ApiGateway-python-sdk-2.0.7.zip
-      #         cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-      #         python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
-
-      CodeCheck_pre_commit:
-        name: CodeCheck_pre_commit
+      Antipoison:
+        name: Antipoison
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         container:
@@ -153,80 +126,107 @@ stages:
           #   uses: checkout
           - name: checkout
             run: |
-              echo "remote_url= ${REMOTE_URL}"
               pwd
               rm -rf *
+              set -ex
               git config --global user.name wangwq129
               git config --global user.email wangweiqi22@huawei.com
               git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-          - name: setup-python
-            uses: setup-python
-          - name: setup-python310
+          - name: Antipoison
             run: |
-              ln -sf /usr/local/bin/python3.10 /usr/bin/python
-              python --version
-              ls -al
-          - name: pre-commit
-            uses: openlibing-pre-commit-action
-            with:
-              gc_token: ${{ secrets.ATOMGIT_TOKEN }}
+              git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+              pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
+              wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
+              unzip -q ApiGateway-python-sdk-2.0.7.zip
+              cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
+              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
-      Only_doc_commit:
-        name: Only_doc_commit
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          # - name: checkout
-          #   uses: checkout
-          - name: print env
-            run: |
-              env
-              echo "TARGET_BRANCH= ${{ atomgit.event.pull_request.base.ref }}"
-          - name: checkout
-            run: |
-              pwd
-              echo "TARGET_BRANCH= ${{ atomgit.event.pull_request.base.ref }}"
-              rm -rf *
-              git config --global user.name wangwq129
-              git config --global user.email wangweiqi22@huawei.com
-              git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-          - name: merge
-            run: |
-              git fetch origin
-              git fetch origin refs/merge-requests/${pr_id}/head:new_${pr_id}
-              git checkout new_${pr_id}
-              git merge origin/${{ atomgit.event.pull_request.base.ref }}
-              ls -al
-          - name: setup-node
-            uses: setup-node
-            with:
-              node-version: '16'
-              package-manager: 'npm'
-              registry-url: 'https://registry.npmmirror.com/'
-          - name: actions install
-            run: |
-              cd .gitcode/actions/Only_Doc_Commit_Check
-              npm install @actions/core@^1.10.0
-              cd -
-          - name: print params
-            run: |
-              echo "pr_id= ${pr_id}"
-              echo "target_branch= ${{ atomgit.event.pull_request.base.ref }}"
-              echo "remote_url= ${REMOTE_URL}"
-          - name: Only Doc Commit Check
-            id: only-doc-check
-            uses: ./.gitcode/actions/Only_Doc_Commit_Check
-            with:
-              pr_id: ${{ env.pr_id }}
-              target_branch: ${{ atomgit.event.pull_request.base.ref }}
-              remote_url: ${{ env.REMOTE_URL }}
-          - name: set build skip flag
-            run: |
-              export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
-              echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
+      # CodeCheck_pre_commit:
+      #   name: CodeCheck_pre_commit
+      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
+      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #     options: --user root
+      #   steps:
+      #     # - name: checkout
+      #     #   uses: checkout
+      #     - name: checkout
+      #       run: |
+      #         echo "remote_url= ${REMOTE_URL}"
+      #         pwd
+      #         rm -rf *
+      #         git config --global user.name wangwq129
+      #         git config --global user.email wangweiqi22@huawei.com
+      #         git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+      #     - name: setup-python
+      #       uses: setup-python
+      #     - name: setup-python310
+      #       run: |
+      #         ln -sf /usr/local/bin/python3.10 /usr/bin/python
+      #         python --version
+      #         ls -al
+      #     - name: pre-commit
+      #       uses: openlibing-pre-commit-action
+      #       with:
+      #         gc_token: ${{ secrets.ATOMGIT_TOKEN }}
+
+      # Only_doc_commit:
+      #   name: Only_doc_commit
+      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
+      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #     options: --user root
+      #   steps:
+      #     # - name: checkout
+      #     #   uses: checkout
+      #     - name: print env
+      #       run: |
+      #         env
+      #         echo "TARGET_BRANCH= ${{ atomgit.event.pull_request.base.ref }}"
+      #     - name: checkout
+      #       run: |
+      #         pwd
+      #         echo "TARGET_BRANCH= ${{ atomgit.event.pull_request.base.ref }}"
+      #         rm -rf *
+      #         git config --global user.name wangwq129
+      #         git config --global user.email wangweiqi22@huawei.com
+      #         git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+      #     - name: merge
+      #       run: |
+      #         git fetch origin
+      #         git fetch origin refs/merge-requests/${pr_id}/head:new_${pr_id}
+      #         git checkout new_${pr_id}
+      #         git merge origin/${{ atomgit.event.pull_request.base.ref }}
+      #         ls -al
+      #     - name: setup-node
+      #       uses: setup-node
+      #       with:
+      #         node-version: '16'
+      #         package-manager: 'npm'
+      #         registry-url: 'https://registry.npmmirror.com/'
+      #     - name: actions install
+      #       run: |
+      #         cd .gitcode/actions/Only_Doc_Commit_Check
+      #         npm install @actions/core@^1.10.0
+      #         cd -
+      #     - name: print params
+      #       run: |
+      #         echo "pr_id= ${pr_id}"
+      #         echo "target_branch= ${{ atomgit.event.pull_request.base.ref }}"
+      #         echo "remote_url= ${REMOTE_URL}"
+      #     - name: Only Doc Commit Check
+      #       id: only-doc-check
+      #       uses: ./.gitcode/actions/Only_Doc_Commit_Check
+      #       with:
+      #         pr_id: ${{ env.pr_id }}
+      #         target_branch: ${{ atomgit.event.pull_request.base.ref }}
+      #         remote_url: ${{ env.REMOTE_URL }}
+      #     - name: set build skip flag
+      #       run: |
+      #         export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
+      #         echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
 
   stage_2:
