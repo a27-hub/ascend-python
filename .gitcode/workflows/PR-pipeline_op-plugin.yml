@@ -93,16 +93,16 @@ stages:
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         steps:
-          # - name: checkout
-          #   uses: checkout
           - name: checkout
-            run: |
-              pwd
-              rm -rf *
-              set -ex
-              git config --global user.name wangwq129
-              git config --global user.email wangweiqi22@huawei.com
-              git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+            uses: checkout
+          # - name: checkout
+          #   run: |
+          #     pwd
+          #     rm -rf *
+          #     set -ex
+          #     git config --global user.name wangwq129
+          #     git config --global user.email wangweiqi22@huawei.com
+          #     git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: Run SCA PR Scan
             id: sca-pr-scan
             uses: sca-pr-scan
