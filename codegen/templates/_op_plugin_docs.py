@@ -15694,7 +15694,7 @@ group_list: 可选输入张量，表示输入x在0轴上每个group的偏移（c
 输出说明:
 返回两个Tensor:
 - y: Tensor类型, 量化后的输出, 数据类型由dst_dtype指定, shape与输入x相同。
-- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[num_groups]。
+- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[num_groups] 。
 
 约束说明:
 该接口支持推理、训练场景下使用。
