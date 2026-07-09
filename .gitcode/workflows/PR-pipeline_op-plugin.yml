@@ -88,6 +88,7 @@ stages:
       #         branch: ${{ atomgit.event.pull_request.base.ref }}
 
       dump_contexts_to_log:
+        name: dump_contexts_to_log
         runs-on: ubuntu-latest
         steps:
           - name: Dump Atomgit context
