@@ -65,33 +65,62 @@ stages:
     name: stage_1
     select: selected_by_default
     jobs:
-      CodeCheck:
-        name: CodeCheck
-        runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
+      # CodeCheck:
+      #   name: CodeCheck
+      #   runs-on: [ self-hosted, arch=x64, os=euler ]
+      #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #     options: --user root
+      #   steps:
+      #     - name: Login to CodeArts
+      #       uses: codearts-login
+      #       with:
+      #         region: cn-north-4
+      #         name: wangshusheng
+      #         password: ${{ secrets.IAM_USER_PASSWORD }}
+      #         domain-name: hwstaff_jsz_gjl
+      #     - name: codecheck
+      #       uses: codecheck_gitcode_v2
+      #       with:
+      #         project_id: a9b188a62f334fc0963bcfb523426d17
+      #         task_name: wwq-op-plugin-test
+      #         branch: ${{ atomgit.event.pull_request.base.ref }}
+
+      dump_contexts_to_log:
+        runs-on: ubuntu-latest
         steps:
-          - name: Login to CodeArts
-            uses: codearts-login
-            with:
-              region: cn-north-4
-              name: wangshusheng
-              password: ${{ secrets.IAM_USER_PASSWORD }}
-              domain-name: hwstaff_jsz_gjl
-          - name: codecheck
-            uses: codecheck_gitcode_v2
-            with:
-              project_id: a9b188a62f334fc0963bcfb523426d17
-              task_name: wwq-op-plugin-test
-              branch: ${{ atomgit.event.pull_request.base.ref }}
-
-
+          - name: Dump Atomgit context
+            env:
+              ATOMGIT_CONTEXT: toJson(atomgit)run:echo"{{ toJson(atomgit) }} 
+            run: echo "toJson(atomgit)run:echo"ATOMGIT_CONTEXT"
+          - name: Dump job context
+            env:
+              JOB_CONTEXT: toJson(job)run:echo"{{ toJson(job) }} 
+            run: echo "toJson(job)run:echo"JOB_CONTEXT"
+          - name: Dump steps context
+            env:
+              STEPS_CONTEXT: toJson(steps)run:echo"{{ toJson(steps) }} 
+            run: echo "toJson(steps)run:echo"STEPS_CONTEXT"
+          - name: Dump runner context
+            env:
+              RUNNER_CONTEXT: toJson(runner)run:echo"{{ toJson(runner) }} 
+            run: echo "toJson(runner)run:echo"RUNNER_CONTEXT"
+          - name: Dump strategy context
+            env:
+              STRATEGY_CONTEXT: toJson(strategy)run:echo"{{ toJson(strategy) }} 
+            run: echo "toJson(strategy)run:echo"STRATEGY_CONTEXT"
+          - name: Dump matrix context
+            env:
+              MATRIX_CONTEXT: toJson(matrix)run:echo"{{ toJson(matrix) }} 
+            run: echo "toJson(matrix)run:echo"MATRIX_CONTEXT"
+          - name: print env
+            run: |
+              env
       SCA:
         name: SCA
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         steps:
           - name: checkout
             uses: checkout
