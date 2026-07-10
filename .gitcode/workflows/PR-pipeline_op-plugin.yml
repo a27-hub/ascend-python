@@ -203,12 +203,12 @@ stages:
               git checkout new_${pr_id}
               git merge origin/${{ atomgit.event.pull_request.base.ref }}
               ls -al
-          - name: setup-node
-            uses: setup-node
-            with:
-              node-version: '16'
-              package-manager: 'npm'
-              registry-url: 'https://registry.npmmirror.com/'
+          # - name: setup-node
+          #   uses: setup-node
+          #   with:
+          #     node-version: '16'
+          #     package-manager: 'npm'
+          #     registry-url: 'https://registry.npmmirror.com/'
           - name: setup-node
             run: |
               # 检测操作系统类型并安装 Node.js
