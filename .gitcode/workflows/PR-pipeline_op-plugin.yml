@@ -208,9 +208,7 @@ stages:
               registry-url: 'https://registry.npmmirror.com/'
           - name: actions install
             run: |
-              cd .gitcode/actions/Only_Doc_Commit_Check
               npm install @actions/core@^1.10.0
-              cd -
           - name: print params
             run: |
               echo "pr_id= ${pr_id}"
