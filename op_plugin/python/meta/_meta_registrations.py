@@ -2082,7 +2082,8 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             ops_error(ErrCode.VALUE),
     )
     torch._check(
-        not (query_quant_mode == 3 and key_quant_mode == 3 and value_quant_mode == 2),
+        not (query_quant_mode == 3 and key_quant_mode == 3 and value_quant_mode == 2
+             and query.dtype == torch.float8_e4m3fn and key.dtype == torch.float8_e4m3fn and value.dtype == torch.float8_e4m3fn),
         lambda: "GQA FP8 Fullquant(Qurey/Key Per-Token-Head, Value PerHead) only supports eager mode." + ops_error(ErrCode.VALUE),
     )
 
