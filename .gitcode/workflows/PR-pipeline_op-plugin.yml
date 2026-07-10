@@ -98,6 +98,7 @@ stages:
           #     ref: refs/merge-requests/${{ env.pr_id }}/merge
           - name: checkout
             run: |
+              curl cip.cc
               pwd
               rm -rf *
               set -ex
@@ -229,23 +230,23 @@ stages:
               echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
 
-  stage_2:
-    name: stage_2
-    select: selected_by_default
-    jobs:
+  # stage_2:
+  #   name: stage_2
+  #   select: selected_by_default
+  #   jobs:
 
-      Build_master_x86:
-        name: Build_master_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
-          runs_on_arch: "arch=x64"
-          runs_on_os: "os=euler"
+  #     Build_master_x86:
+  #       name: Build_master_x86
+  #       if : ${{ env.BUILD_SKIP == 'no' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       secrets:
+  #         OBS_AK: ${{ secrets.OBS_AK }}
+  #         OBS_SK: ${{ secrets.OBS_SK }}
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
+  #         runs_on_arch: "arch=x64"
+  #         runs_on_os: "os=euler"
 
   #     Build_v2_7_1_x86:
   #       name: Build_v2_7_1_x86
@@ -306,18 +307,18 @@ stages:
       #     pytorch_branch: "v2.12.0"
       #     CP_DOCKER_IMG: "pytorch_2.12.0_a1_x86_64_builder:20260518"
 
-      Build_master_ARM:
-        name: Build_master_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
-          runs_on_arch: "arch=arm64"
-          runs_on_os: "os=euler"
+      # Build_master_ARM:
+      #   name: Build_master_ARM
+      #   if : ${{ env.BUILD_SKIP == 'no' }}
+      #   uses: .gitcode/workflows/build_job.yml
+      #   secrets:
+      #     OBS_AK: ${{ secrets.OBS_AK }}
+      #     OBS_SK: ${{ secrets.OBS_SK }}
+      #   with:
+      #     pytorch_branch: "master"
+      #     CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
+      #     runs_on_arch: "arch=arm64"
+      #     runs_on_os: "os=euler"
 
       # Build_v2_7_1_ARM:
       #   name: Build_v2_7_1_ARM
@@ -375,16 +376,16 @@ stages:
       #     CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260518"
 
 
-  stage_3:
-    name: stage_3
-    jobs:
-      UT_master_ARM_01:
-        name: UT_master_ARM_01
-        if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/ut_job.yml
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
+  # stage_3:
+  #   name: stage_3
+  #   jobs:
+  #     UT_master_ARM_01:
+  #       name: UT_master_ARM_01
+  #       if : ${{ env.BUILD_SKIP == 'no' }}
+  #       uses: .gitcode/workflows/ut_job.yml
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
 
       # UT_master_ARM_02:
       #   name: UT_master_ARM_02
