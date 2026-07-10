@@ -213,6 +213,7 @@ stages:
               env
               echo "-------------------"
               whereis node
+              ls /opt/tools/cache/node/16/x64/bin
           - name: actions install
             run: |
               cd /
