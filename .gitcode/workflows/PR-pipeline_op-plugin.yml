@@ -217,6 +217,7 @@ stages:
           - name: actions install
             run: |
               cd /
+              npm cache clean --force
               npm install @actions/core@^1.10.0
               cd -
           - name: print params
