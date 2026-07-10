@@ -187,7 +187,6 @@ stages:
           - name: print env
             run: |
               env
-              echo "TARGET_BRANCH= ${{ atomgit.event.pull_request.base.ref }}"
           - name: checkout
             run: |
               pwd
@@ -203,33 +202,15 @@ stages:
               git checkout new_${pr_id}
               git merge origin/${{ atomgit.event.pull_request.base.ref }}
               ls -al
-          # - name: setup-node
-          #   uses: setup-node
-          #   with:
-          #     node-version: '16'
-          #     package-manager: 'npm'
-          #     registry-url: 'https://registry.npmmirror.com/'
           - name: setup-node
+            uses: setup-node
+            with:
+              node-version: '16'
+              package-manager: 'npm'
+              registry-url: 'https://registry.npmmirror.com/'
+          - name: print env
             run: |
-              # 检测操作系统类型并安装 Node.js
-              if command -v apt-get &> /dev/null; then
-                echo "Detected Debian/Ubuntu system, using apt-get..."
-                curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
-                apt-get install -y nodejs
-              elif command -v yum &> /dev/null; then
-                echo "Detected CentOS/RHEL/EulerOS system, using yum..."
-                curl -fsSL https://rpm.nodesource.com/setup_16.x | bash -
-                yum install -y nodejs
-              else
-                echo "Unknown system, downloading Node.js binary directly..."
-                curl -fsSL https://nodejs.org/dist/v16.20.2/node-v16.20.2-linux-x64.tar.xz -o /tmp/node.tar.xz
-                tar -xf /tmp/node.tar.xz -C /usr/local --strip-components=1
-                rm -f /tmp/node.tar.xz
-              fi
-              npm config set registry https://registry.npmmirror.com/
-              echo "NODE_PATH=$(npm root -g)" >> "$ATOMGIT_ENV"
-              node -v
-              npm -v
+              env
           - name: actions install
             run: |
               cd /
