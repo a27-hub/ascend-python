@@ -28,12 +28,13 @@ constexpr int64_t NZ_16 = 16;
 constexpr int64_t NZ_C0_16 = 16;
 constexpr int64_t DIMS_2 = 2;
 constexpr int64_t DIMS_3 = 3;
+constexpr int64_t DIMS_4 = 4;
 constexpr int64_t DIMS_MAX = 5;
 constexpr int64_t IDX_0 = 0;
 constexpr int64_t IDX_1 = 1;
 constexpr int64_t IDX_2 = 2;
 constexpr int64_t IDX_3 = 3;
-constexpr int64_t DOUBLE = 2;
+constexpr int64_t MX_SCALE_LAST_DIM = 2;
 
 struct QuantContext {
     const at::Tensor& weight;
@@ -88,9 +89,14 @@ bool judge_mm_mx_a8w4(QuantContext& ctx) {
         (x_scale_acl_dtype == ACL_FLOAT8_E8M0) &&
         (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
     if (dtype_match && ctx.weight.dim() == DIMS_2) {
-        ctx.is_weight_trans = true;
+        TORCH_CHECK(ctx.weight_scale.dim() == DIMS_3,
+            "Input weight scale tensor should be 3D, but got ", ctx.weight_scale.dim(),
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
+            "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight_scale, 0),
             "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
+        ctx.is_weight_trans = true;
         return true;
     }
     return false;
@@ -113,9 +119,14 @@ bool judge_gmm_mx_a8w4(QuantContext& ctx) {
         (x_scale_acl_dtype == ACL_FLOAT8_E8M0) &&
         (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
     if (dtype_match && ctx.weight.dim() == DIMS_3) {
-        ctx.is_weight_trans = true;
+        TORCH_CHECK(ctx.weight_scale.dim() == DIMS_4,
+            "Input weight scale tensor should be 4D, but got ", ctx.weight_scale.dim(),
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 1),
+            "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight_scale, 1),
             "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
+        ctx.is_weight_trans = true;
         return true;
     }
     return false;
@@ -134,8 +145,8 @@ static void prepare_out_weight_nz(QuantContext& ctx)
     
     if (ctx.is_weight_trans) {
         if constexpr (IsGmm) {
-            int64_t g = weight_sizes[IDX_0];
-            storage_shape = {g, ceil_div(k, NzC0), ceil_div(n, NZ_16), NZ_16, NzC0};
+            int64_t group_num = weight_sizes[IDX_0];
+            storage_shape = {group_num, ceil_div(k, NzC0), ceil_div(n, NZ_16), NZ_16, NzC0};
             trans_stride = {k * n, 1, k};
         } else {
             storage_shape = {ceil_div(k, NzC0), ceil_div(n, NZ_16), NZ_16, NzC0};
@@ -143,8 +154,8 @@ static void prepare_out_weight_nz(QuantContext& ctx)
         }
     } else {
         if constexpr (IsGmm) {
-            int64_t g = weight_sizes[IDX_0];
-            storage_shape = {g, ceil_div(n, NzC0), ceil_div(k, NZ_16), NZ_16, NzC0};
+            int64_t group_num = weight_sizes[IDX_0];
+            storage_shape = {group_num, ceil_div(n, NzC0), ceil_div(k, NZ_16), NZ_16, NzC0};
         } else {
             storage_shape = {ceil_div(n, NzC0), ceil_div(k, NZ_16), NZ_16, NzC0};
         }
@@ -173,20 +184,24 @@ static void prepare_out_weight_nz(QuantContext& ctx)
 template<bool IsGmm>
 static void prepare_out_weight_scale_mx(QuantContext& ctx)
 {
+    constexpr int64_t expected_dim = IsGmm ? DIMS_4 : DIMS_3;
+    TORCH_CHECK(ctx.weight_scale.dim() == expected_dim,
+        "Input weight scale tensor should be ", expected_dim, "D, but got ", ctx.weight_scale.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+
     auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
     ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
 
     if (ctx.is_weight_trans) {
-        auto scale_sizes = ctx.weight_scale.sizes();
         int64_t scale_dim = ctx.weight_scale.dim();
         int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
         int64_t n = scale_view_shape[scale_dim - IDX_2];
         c10::SmallVector<int64_t, DIMS_MAX> trans_stride; // 对应内存转置存储
         if constexpr (IsGmm) {
-            int64_t g = scale_view_shape[IDX_0];
-            trans_stride = {DOUBLE * k_scale * n, DOUBLE, DOUBLE * k_scale, 1}; // 对应内存中的 [g, n, k_scale, 2]
+            trans_stride = {MX_SCALE_LAST_DIM * k_scale * n, MX_SCALE_LAST_DIM,
+                            MX_SCALE_LAST_DIM * k_scale, 1}; // 对应内存中的 [group_num, n, k_scale, 2]
         } else {
-            trans_stride = {DOUBLE, DOUBLE * k_scale, 1}; // 对应内存中的 [n, k_scale, 2]
+            trans_stride = {MX_SCALE_LAST_DIM, MX_SCALE_LAST_DIM * k_scale, 1}; // 对应内存中的 [n, k_scale, 2]
         }
         ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
     }
@@ -219,14 +234,14 @@ static void execute_prepares(const std::vector<PrepareFunc>& prepares, QuantCont
 static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>> SOC_DATA_FLOW_CONFIG_MAP = {
     {c10_npu::SocVersion::Ascend950, {
         {judge_mm_mx_a8w4, {
-            // 实际 C0 为 32，torch 层用 1 个 int8/uint8 打包 2 个 fp4，最后一位需要除以 2
+            // FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
             prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
             prepare_out_weight_scale_mx<false>,
             prepare_out_weight_offset,
             prepare_out_bias
         }},
         {judge_gmm_mx_a8w4, {
-            // 实际 C0 为 32，torch 层用 1 个 int8/uint8 打包 2 个 fp4，最后一位需要除以 2
+            // FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
             prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
             prepare_out_weight_scale_mx<true>,
             prepare_out_weight_offset,

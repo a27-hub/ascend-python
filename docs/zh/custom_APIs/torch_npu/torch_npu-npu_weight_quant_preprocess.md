@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-| <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>    |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>    |    √     |
 
 ## 功能说明
 
@@ -37,31 +37,31 @@ torch_npu.npu_weight_quant_preprocess(
 ## 参数说明
 
 - **weight** (`Tensor`)：必选参数。Matmul 的权重矩阵。支持非连续 Tensor（transposed）。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：数据类型支持 `int8`、`int4`、`fp8_e4m3`、`hif8`、`fp4_e2m1`。数据格式支持 `ND`。支持输入维度为2维 \(K, N\)（MM_MX_A8W4）。3维 \(G, K, N\)（GMM_MX_A8W4）为预留接口，当前暂不支持。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持 `int8`、`int4`、`fp8_e4m3`、`hif8`、`fp4_e2m1`。数据格式支持 `ND`。支持输入维度为2维 \(K, N\)（MM_MX_A8W4）。3维 \(G, K, N\)（GMM_MX_A8W4）为预留接口，当前暂不支持。
 
 - **weight\_scale** (`Tensor`)：必选参数。权重的反量化 scale 参数。支持非连续 Tensor（transposed）。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：数据类型支持 `float16`、`bfloat16`、`fp8_e8m0`。数据格式支持 `ND`、`NCL`。支持输入维度为3维 \(ceil\_div(K, 64), N, 2\)（MM_MX_A8W4）。4维 \(G, ceil\_div(K, 64), N, 2\)（GMM_MX_A8W4）为预留接口，当前暂不支持。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持 `float16`、`bfloat16`、`fp8_e8m0`。数据格式支持 `ND`、`NCL`。支持输入维度为3维 \(ceil\_div(K, 64), N, 2\)（MM_MX_A8W4）。4维 \(G, ceil\_div(K, 64), N, 2\)（GMM_MX_A8W4）为预留接口，当前暂不支持。
 
 - **x\_dtype** (`int`)：必选参数。Matmul 的激活矩阵的数据类型，对应 aclDataType 的整数值。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：支持 `ACL_FLOAT8_E4M3FN`（对应数值请参考 CANN 文档）。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持 `ACL_FLOAT8_E4M3FN`（对应数值请参考 CANN 文档）。
 
 - **weight\_dtype** (`int`)：必选参数。权重矩阵的数据类型，对应 aclDataType 的整数值。需与 `weight` tensor 的实际数据类型一致。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：支持 `ACL_INT8`、`ACL_INT4`、`ACL_FLOAT8_E4M3FN`、`ACL_HIF8`、`ACL_FLOAT4_E2M1`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持 `ACL_INT8`、`ACL_INT4`、`ACL_FLOAT8_E4M3FN`、`ACL_HIF8`、`ACL_FLOAT4_E2M1`。
 
 - **weight\_scale\_dtype** (`int`)：必选参数。权重 scale 参数的数据类型，对应 aclDataType 的整数值。需与 `weight_scale` tensor 的实际数据类型一致。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：支持 `ACL_FLOAT16`、`ACL_BFLOAT16`、`ACL_FLOAT8_E8M0`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持 `ACL_FLOAT16`、`ACL_BFLOAT16`、`ACL_FLOAT8_E8M0`。
 
 - **weight\_offset** (`Tensor`)：可选参数。权重的反量化 offset 参数。当前 MM_MX_A8W4/GMM_MX_A8W4 数据流不支持，默认值为 None。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：当前版本不支持此参数，请传入 None。
+    - <term>Ascend 950PR/Ascend 950DT</term>：当前版本不支持此参数，请传入 None。
 
 - **bias** (`Tensor`)：可选参数。Matmul 的偏置矩阵。必须为 contiguous Tensor。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：数据类型支持 `float16`、`bfloat16`、`float32`。数据格式支持 `ND`。支持输入维度为1维 \(N\) 或2维 \(1, N\)。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持 `float16`、`bfloat16`、`float32`。数据格式支持 `ND`。支持输入维度为1维 \(N\) 或2维 \(1, N\)。
 
 - **x\_scale\_dtype** (`int`)：可选参数。激活的量化 scale 参数的数据类型，对应 aclDataType 的整数值。默认值为 None。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：支持 `ACL_FLOAT8_E8M0`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持 `ACL_FLOAT8_E8M0`。
 
 - **k\_group\_size** (`int`)：可选参数。权重在 per-group 量化时 K 维度的 group 的大小。默认值为 0。
-    - <term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>：MM_MX_A8W4/GMM_MX_A8W4 数据流要求 `k_group_size` 为 32。
+    - <term>Ascend 950PR/Ascend 950DT</term>：MM_MX_A8W4/GMM_MX_A8W4 数据流要求 `k_group_size` 为 32。
 
 ## 返回值说明<a name="zh-cn_topic_0000001771071862_section22231435517"></a>
 
@@ -78,7 +78,7 @@ torch_npu.npu_weight_quant_preprocess(
 
 - 该接口支持推理场景下使用。
 - 该接口支持单算子模式、静态图模式、动态图模式、aclgraph 模式。
-- **MM_MX_A8W4 数据流**（仅支持<term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>）：
+- **MM_MX_A8W4 数据流**（仅支持<term>Ascend 950PR/Ascend 950DT</term>）：
     - `weight` 数据类型必须为 `FLOAT4_E2M1`，格式为 `ND`，K 必须满足 `K % k_group_size == 0`。
     - `weight` 的 view shape 为 \{K, N\}，storage shape 为 \{N, K\}（transposed），stride 为 \[1, K\]。
     - `weight_scale` 数据类型必须为 `FLOAT8_E8M0`，格式为 `ND`/`NCL`。
@@ -122,19 +122,14 @@ torch_npu.npu_weight_quant_preprocess(
             super().__init__()
 
         def forward(self, weight, weight_scale):
-            # x_dtype=ACL_FLOAT8_E4M3FN (数值请参考 CANN 文档)
-            # weight_dtype=ACL_FLOAT4_E2M1
-            # weight_scale_dtype=ACL_FLOAT8_E8M0
-            # x_scale_dtype=ACL_FLOAT8_E8M0
-            # k_group_size=32
             return torch_npu.npu_weight_quant_preprocess(
                 weight, weight_scale,
-                x_dtype=1,  # ACL_FLOAT8_E4M3FN 对应数值（示例）
-                weight_dtype=1,  # ACL_FLOAT4_E2M1 对应数值（示例）
-                weight_scale_dtype=1,  # ACL_FLOAT8_E8M0 对应数值（示例）
+                x_dtype=292,  # ACL_FLOAT8_E4M3FN
+                weight_dtype=296,  # ACL_FLOAT4_E2M1
+                weight_scale_dtype=293,  # ACL_FLOAT8_E8M0
                 weight_offset=None,
                 bias=None,
-                x_scale_dtype=1,  # ACL_FLOAT8_E8M0 对应数值（示例）
+                x_scale_dtype=293,  # ACL_FLOAT8_E8M0
                 k_group_size=32
             )
 
