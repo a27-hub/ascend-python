@@ -216,7 +216,7 @@ stages:
               ls /opt/tools/cache/node/16/x64/bin
           - name: actions install
             run: |
-              cd ${ATOMGIT_WORKSPACE}
+              cd ${ATOMGIT_WORKSPACE}/../../../
               npm install @actions/core@^1.10.0
               cd -
           - name: print params
