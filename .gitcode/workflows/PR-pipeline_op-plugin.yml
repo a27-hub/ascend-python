@@ -192,7 +192,7 @@ stages:
               rm -rf *
               git config --global user.name wangwq129
               git config --global user.email wangweiqi22@huawei.com
-              git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+              git clone -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: merge
             run: |
               git fetch origin
