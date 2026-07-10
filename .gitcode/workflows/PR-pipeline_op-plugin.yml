@@ -216,7 +216,7 @@ stages:
               echo "remote_url= ${REMOTE_URL}"
           - name: Only Doc Commit Check
             id: only-doc-check
-            uses: ./.gitcode/actions/Only_Doc_Commit_Check
+            uses: ./.gitcode/actions/Only_Doc_Commit_Check@7.3.0
             with:
               pr_id: ${{ env.pr_id }}
               target_branch: ${{ atomgit.event.pull_request.base.ref }}
