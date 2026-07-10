@@ -1,5 +1,6 @@
 // Copyright (c) 2025 Huawei Technologies Co., Ltd
 // Copyright (c) 2025, Facebook CORPORATION.
+// Copyright (c) The Pytorch Contributors.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
