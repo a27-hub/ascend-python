@@ -68,6 +68,7 @@ torch_npu.npu_weight_quant_preprocess(
 `Tuple[Tensor, Tensor, Tensor, Tensor]`
 
 返回四个 Tensor：
+
 - **out\_weight**：预处理后的 weight，数据类型与输入 `weight` 相同，格式为 `FRACTAL_NZ_C0_32`（FP4 场景）或 `FRACTAL_NZ_C0_16`。
 - **out\_weight\_scale**：预处理后的 weight\_scale，数据类型与输入 `weight_scale` 相同。
 - **out\_weight\_offset**：预处理后的 weight\_offset，当前版本返回空 Tensor。
