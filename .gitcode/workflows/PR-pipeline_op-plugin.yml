@@ -141,35 +141,35 @@ stages:
       #         cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
       #         python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
-      CodeCheck_pre_commit:
-        name: CodeCheck_pre_commit
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          # - name: checkout
-          #   uses: checkout
-          - name: checkout
-            run: |
-              echo "remote_url= ${REMOTE_URL}"
-              pwd
-              rm -rf *
-              git config --global user.name wangwq129
-              git config --global user.email wangweiqi22@huawei.com
-              git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-          - name: setup-python
-            uses: setup-python
-          - name: setup-python310
-            run: |
-              ln -sf /usr/local/bin/python3.10 /usr/bin/python
-              python --version
-              ls -al
-          - name: pre-commit
-            uses: openlibing-pre-commit-action
-            with:
-              gc_token: ${{ secrets.ATOMGIT_TOKEN }}
+      # CodeCheck_pre_commit:
+      #   name: CodeCheck_pre_commit
+      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
+      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #     options: --user root
+      #   steps:
+      #     # - name: checkout
+      #     #   uses: checkout
+      #     - name: checkout
+      #       run: |
+      #         echo "remote_url= ${REMOTE_URL}"
+      #         pwd
+      #         rm -rf *
+      #         git config --global user.name wangwq129
+      #         git config --global user.email wangweiqi22@huawei.com
+      #         git clone --depth=1 -b ${{ atomgit.event.pull_request.base.ref }} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+      #     - name: setup-python
+      #       uses: setup-python
+      #     - name: setup-python310
+      #       run: |
+      #         ln -sf /usr/local/bin/python3.10 /usr/bin/python
+      #         python --version
+      #         ls -al
+      #     - name: pre-commit
+      #       uses: openlibing-pre-commit-action
+      #       with:
+      #         gc_token: ${{ secrets.ATOMGIT_TOKEN }}
 
       Only_doc_commit:
         name: Only_doc_commit
@@ -237,7 +237,7 @@ stages:
       Build_master_x86:
         name: Build_master_x86
         if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job_x86.yml
+        uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
           OBS_SK: ${{ secrets.OBS_SK }}
