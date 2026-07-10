@@ -77,9 +77,9 @@ torch_npu.npu_moe_update_expert(expert_ids, eplb_table, *, expert_scales=None, p
     |`BS`                       |`BS`                                                       |
     |`K`                        |`K`                                                        |
 
-- <term>Atlas A3 training products/Atlas A3 inference products</term>: In this scenario, a single rank contains dual dies. Therefore, "this rank" in the parameter description indicates a single die.
+- Atlas A3 training products/Atlas A3 inference products: In this scenario, a single rank contains dual dies. Therefore, "this rank" in the parameter description indicates a single die.
 - The shape-related variables used in the parameter descriptions are defined as follows:
-    - `BS`: Batch sequence size. That is, the number of tokens output by the current rank. <term>Atlas A3 training products/Atlas A3 inference products</term>: The value range is 0 < `BS` <= 512.
+    - `BS`: Batch sequence size. That is, the number of tokens output by the current rank. Atlas A3 training products/Atlas A3 inference products: The value range is 0 < `BS` <= 512.
     - `K`: Number of top-K experts selected. The value range is `0 < K ≤ 16`, and the condition `0 < K ≤ moe_expert_num` must be satisfied.
     - `moe_expert_num`: Number of Moe experts. The value range is (0, 1024].
     - **`F`**: Number of columns in the input mapping table `eplb_table`. The value range is [2, `world_size + 1`].
