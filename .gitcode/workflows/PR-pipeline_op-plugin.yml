@@ -232,7 +232,7 @@ stages:
               npm -v
           - name: actions install
             run: |
-              cd /runner/workers
+              cd /
               npm install @actions/core@^1.10.0
               cd -
           - name: print params
