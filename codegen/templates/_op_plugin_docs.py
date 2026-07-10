@@ -15618,6 +15618,10 @@ _add_torch_npu_docstr(
  transpose_y当前版本仅支持False。
  当dst_dtype为quint4x2时，输入最后一维必须可被8整除。
  当dst_dtype为float4_e2m1fn_x2时，输入最后一维必须可被2整除。
+ 当前在Atlas A5平台上，rotation的shape仅支持[32, 32]、[64, 64]、[128, 128]三种固定形式。
+ 不同型号产品支持的dst_dtype不同：
+   - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：dst_dtype仅支持torch.int8和torch.quint4x2。
+   - Atlas A5 训练系列产品/Atlas A5 推理系列产品：dst_dtype仅支持torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn。
 
  调用示例:
  import torch
@@ -15632,12 +15636,11 @@ _add_torch_npu_docstr(
      )
      return output, output_scale
 
- def test_rotate_quant_mxfp4(M=512, N=1024, K=1024):
+ def test_rotate_quant_mxfp4(M=512, N=1024, K=128):
      x = torch.randn(M, N, dtype=torch.bfloat16).npu()
      rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
      output, output_scale = torch_npu.npu_rotate_quant(
          x, rotation, dst_dtype=torch_npu.float4_e2m1fn_x2, axis=-1, round_mode="rint"
-         x, rotation, dst_dtype=torch.int8
      )
      return output, output_scale
 
