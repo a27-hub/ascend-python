@@ -24,10 +24,6 @@ inputs:
     type: string
     description: "仓库名称"
     default: ${{ atomgit.event.repository.name }}
-  owner:
-    type: string
-    description: "仓库所有者"
-    default: "wangwq129"
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
@@ -65,27 +61,27 @@ stages:
     name: stage_1
     select: selected_by_default
     jobs:
-      CodeCheck:
-        name: CodeCheck
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          # - name: Login to CodeArts
-          #   uses: codearts-login
-          #   with:
-          #     region: cn-north-4
-          #     name: wangshusheng
-          #     password: ${{ secrets.IAM_USER_PASSWORD }}
-          #     domain-name: hwstaff_jsz_gjl
-          - name: codecheck
-            uses: codecheck_gitcode_v2
-            with:
-              project_id: a9b188a62f334fc0963bcfb523426d17
-              task_name: wwq-op-plugin-test
-              branch: ${{ atomgit.event.pull_request.base.ref }}
+      # CodeCheck:
+      #   name: CodeCheck
+      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
+      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #     options: --user root
+      #   steps:
+      #     - name: Login to CodeArts
+      #       uses: codearts-login
+      #       with:
+      #         region: cn-north-4
+      #         name: wangshusheng
+      #         password: ${{ secrets.IAM_USER_PASSWORD }}
+      #         domain-name: hwstaff_jsz_gjl
+      #     - name: codecheck
+      #       uses: codecheck_gitcode_v2
+      #       with:
+      #         project_id: a9b188a62f334fc0963bcfb523426d17
+      #         task_name: wwq-op-plugin-test
+      #         branch: ${{ atomgit.event.pull_request.base.ref }}
 
       SCA:
         name: SCA
@@ -196,7 +192,7 @@ stages:
               echo "remote_url= ${REMOTE_URL}"
           - name: Only Doc Commit Check
             id: only-doc-check
-            uses: wangwq129/op-plugin/.gitcode/actions/Only_Doc_Commit_Check@7.3.0
+            uses: ${{ atomgit.repository }}/.gitcode/actions/Only_Doc_Commit_Check@7.3.0
             with:
               pr_id: ${{ env.pr_id }}
               target_branch: ${{ atomgit.event.pull_request.base.ref }}
