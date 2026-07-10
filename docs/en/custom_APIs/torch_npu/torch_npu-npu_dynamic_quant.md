@@ -41,8 +41,8 @@ torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type
 - **`group_index`** (`Tensor`): Optional. Group index tensor for `smooth_scales`, valid only in MoE scenarios. The data type can be `int32`. The data layout can be ND. Non-contiguous tensors are supported.
 
 - **`dst_type`** (`ScalarType`): Optional. Data type of the quantization output. Processed as `int8` if `None` is provided.
-    - Atlas A2 training products/Atlas A2 inference products: Valid values are `int8` or `quint4x2`.
-    - Atlas A3 training products/Atlas A3 inference products: Valid values are `int8` or `quint4x2`.
+    - <term>Atlas A2 training products/Atlas A2 inference products</term>: Valid values are `int8` or `quint4x2`.
+    - <term>Atlas A3 training products/Atlas A3 inference products</term>: Valid values are `int8` or `quint4x2`.
 
 ## Return Values
 
@@ -69,17 +69,17 @@ torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type
         >>> import torch_npu
         >>>
         >>> x = torch.rand((3, 3), dtype=torch.float16).to("npu")
-        >>> print(x)
+        >>> x
         tensor([[0.7261, 0.3726, 0.9126],
                 [0.9023, 0.9990, 0.1279],
                 [0.8628, 0.6240, 0.9028]], device='npu:0', dtype=torch.float16)
         >>>
         >>> output, scale = torch_npu.npu_dynamic_quant(x)
-        >>> print(output)
+        >>> output
         tensor([[101,  52, 127],
                 [115, 127,  16],
                 [121,  88, 127]], device='npu:0', dtype=torch.int8)
-        >>> print(scale)
+        >>> scale
         tensor([0.0072, 0.0079, 0.0071], device='npu:0')
         ```
 
@@ -90,21 +90,21 @@ torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type
         >>> import torch_npu
         >>>
         >>> x = torch.rand((3, 3), dtype=torch.float16).to("npu")
-        >>> print(x)
+        >>> x
         tensor([[0.6680, 0.9492, 0.0845],
                 [0.1924, 0.5278, 0.1484],
                 [0.6631, 0.9497, 0.0957]], device='npu:0', dtype=torch.float16)
         >>>
         >>> smooth_scales = torch.rand((3,), dtype=torch.float16).to("npu")
-        >>> print(smooth_scales)
+        >>> smooth_scales
         tensor([0.8042, 0.0884, 0.8901], device='npu:0', dtype=torch.float16)
         >>>
         >>> output, scale = torch_npu.npu_dynamic_quant(x, smooth_scales=smooth_scales)
-        >>> print(output)
+        >>> output
         tensor([[127,  20,  18],
                 [127,  38, 108],
                 [127,  20,  20]], device='npu:0', dtype=torch.int8)
-        >>> print(scale)
+        >>> scale
         tensor([0.0042, 0.0012, 0.0042], device='npu:0')
         ```
 

@@ -23,16 +23,16 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
     - Atlas inference products, Atlas A2 training products, and Atlas 800I A2 inference products: The data type can be `int8`.
 - **`indices`** (`Tensor`): Required. Index tensor. The data type can be `int32`. The data layout can be ND. Non-contiguous tensors are supported.
 - **`updates`** (`Tensor`): Required. Update data tensor. The data layout can be ND. Non-contiguous tensors are supported.
-    - Atlas inference products: The data type can be `float16`.
-    - Atlas A2 training products/Atlas A2 inference products: The data type can be `bfloat16` or `float16`.
+    - <term>Atlas inference products</term>: The data type can be `float16`.
+    - <term>Atlas A2 training products/Atlas A2 inference products</term>: The data type can be `bfloat16` or `float16`.
 
 - **`quant_scales`** (`Tensor`): Required. Quantization scale tensor. The data layout can be ND. Non-contiguous tensors are supported.
-    - Atlas inference products: The data type can be `float32`.
-    - Atlas A2 training products/Atlas A2 inference products: The data type can be `bfloat16` or `float32`.
+    - <term>Atlas inference products</term>: The data type can be `float32`.
+    - <term>Atlas A2 training products/Atlas A2 inference products</term>: The data type can be `bfloat16` or `float32`.
 
 - **`quant_zero_points`** (`Tensor`): Optional. Quantization offset tensor. The data layout can be ND. Non-contiguous tensors are supported.
-    - Atlas inference products: The data type can be `int32`.
-    - Atlas A2 training products/Atlas A2 inference products: The data type can be `bfloat16` or `int32`.
+    - <term>Atlas inference products</term>: The data type can be `int32`.
+    - <term>Atlas A2 training products/Atlas A2 inference products</term>: The data type can be `bfloat16` or `int32`.
 
 - **`axis`** (`int`): Optional. Axis on `updates` used for updating. The default value is `0`.
 - **`quant_axis`** (`int`): Optional. Axis on `updates` used for quantization. The default value is `1`.
@@ -59,7 +59,7 @@ Output tensor representing the results after `input` is updated.
 
 - Single-operator call
 
-   ```python
+    ```python
    >>> import torch
    >>> import torch_npu
    >>> import numpy as np
@@ -85,11 +85,11 @@ Output tensor representing the results after `input` is updated.
    >>> reduce = "update"
    >>>
    >>> out=torch_npu.npu_quant_scatter_(var, indices, updates, quant_scales, quant_zero_points, axis=axis, quant_axis=quant_axis, reduce=reduce)
-   >>> print(out.shape)
+   >>> out.shape
    torch.Size([24, 4096, 128])
-   >>> print(out.dtype)
+   >>> out.dtype
    torch.int8
-   >>> print(out)
+   >>> out
    tensor([[[2, 3, 2,  ..., 3, 6, 1],
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0],
@@ -139,7 +139,7 @@ Output tensor representing the results after `input` is updated.
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0]]], device='npu:0', dtype=torch.int8)
-   ```
+    ```
 
 - Graph mode call
 
