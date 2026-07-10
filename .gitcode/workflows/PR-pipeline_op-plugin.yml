@@ -211,6 +211,8 @@ stages:
           - name: print env
             run: |
               env
+              echo "-------------------"
+              whereis node
           - name: actions install
             run: |
               cd /
