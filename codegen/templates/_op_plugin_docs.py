@@ -15695,7 +15695,7 @@ dst_dtype: int类型, 可选参数, 指定输出y的数据类型对应的枚举�
 - torch_npu.hifloat8
 - torch.float8_e5m2
 - torch.float8_e4m3fn
-group_list: 可选输入张量，表示输入x在0轴上每个group的偏移（cumsum模式），默认为None，数据类型支持int64。
+group_list: 可选输入张量，表示输入x在0轴上每个group的偏移（cumsum模式），默认为None，数据类型支持int64，取值范围为[1, 384]。
 
 输出说明:
 返回两个Tensor:
