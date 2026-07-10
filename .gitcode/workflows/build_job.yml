@@ -24,11 +24,9 @@ on:
       runs_on_arch:
         required: false
         type: string
-        default: "arch=x64"
       runs_on_os:
         required: false
         type: string
-        default: "os=euler"
     secrets:
       OBS_AK:
         required: true
