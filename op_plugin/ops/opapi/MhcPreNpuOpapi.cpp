@@ -51,11 +51,12 @@ inline void check_mhc_pre_supported()
  *
  * @param x:   输入张量，要求为 3 维或 4 维。
  * @param phi: 输入张量，其第 0 维大小用于确定 outHmix 的最后一维。
+ * @param hasResi: 是否有残差输出（alpha 元素数为 3 时为 true，为 2 时为 false）。
  * @return 返回 6 个输出张量：
  * (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
  */
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> construct_mhc_pre_outputs(
-    const at::Tensor &x, const at::Tensor &phi, int64_t out_flag)
+    const at::Tensor &x, const at::Tensor &phi, int64_t out_flag, bool hasResi)
 {
     c10::TensorOptions hInOptions = x.options().dtype(x.dtype());
     c10::TensorOptions hOptions = x.options().dtype(at::kFloat);
@@ -115,7 +116,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
         outHin = at::empty(outHinSize, hInOptions);
         outHpost = at::empty(outHpostSize, hOptions);
-        outHres = at::empty(outHresSize, hOptions);
+        if (hasResi) {
+            outHres = at::empty(outHresSize, hOptions);
+        }
         if (out_flag == 1) {
             outInvRms = at::empty(outInvRmsSize, hOptions);
             outHmix = at::empty(outHmixSize, hOptions);
@@ -161,7 +164,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
         outHin = at::empty(outHinSize, hInOptions);
         outHpost = at::empty(outHpostSize, hOptions);
-        outHres = at::empty(outHresSize, hOptions);
+        if (hasResi) {
+            outHres = at::empty(outHresSize, hOptions);
+        }
         if (out_flag == 1) {
             outInvRms = at::empty(outInvRmsSize, hOptions);
             outHmix = at::empty(outHmixSize, hOptions);
@@ -195,7 +200,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
     check_mhc_pre_supported();
 
-    auto mhcPreOutput = construct_mhc_pre_outputs(x, phi, out_flag);
+    bool hasResi = (alpha.numel() == ALPHA_NUMEL);
+    auto mhcPreOutput = construct_mhc_pre_outputs(x, phi, out_flag, hasResi);
 
     at::Tensor outHin = std::get<0>(mhcPreOutput);
     at::Tensor outHpost = std::get<1>(mhcPreOutput);
