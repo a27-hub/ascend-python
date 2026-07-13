@@ -214,7 +214,7 @@ stages:
       Build_master_x86:
         name: Build_master_x86
         if : ${{ env.BUILD_SKIP == 'no' }}
-        uses: .gitcode/workflows/build_job.yml
+        uses: .gitcode/workflows/build_job_x86.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
           OBS_SK: ${{ secrets.OBS_SK }}
