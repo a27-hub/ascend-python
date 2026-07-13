@@ -1471,7 +1471,7 @@ _add_torch_npu_docstr(
 随着大模型上下文长度的增加，Sparse Attention的重要性与日俱增，这一技术通过“只计算关键部分”大幅减少计算量，然而会引入大量的离散访存，造成数据搬运时间增加，进而影响整体性能。
 
 接口原型
-custom.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, int sparse_block_size, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3) -> Tensor
+custom.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, int sparse_block_size=1, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, bool return_softmax_lse=False, Tensor? sinks=None) -> (Tensor, Tensor, Tensor)
 
 参数说明
 key（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16和float16，layout_kv为PA_BSND时shape为[block_num, block_size, KV_N, D]，其中block_num为PageAttention时block总数，block_size为一个block的token数。
@@ -1510,6 +1510,16 @@ sparse_mode（int）：可选参数，表示sparse的模式。数据类型支持
 
 sparse_mode为0时，代表全部计算。
 sparse_mode为3时，代表rightDownCausal模式的mask，对应以右下顶点往左上为划分线的下三角场景。
+
+pre_tokens（int）：可选参数，用于稀疏计算，表示attention需要和前几个Token计算关联。数据类型支持int64，仅支持默认值9223372036854775807。
+
+next_tokens（int）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持int64，仅支持默认值9223372036854775807。
+
+attention_mode（int）：可选参数，表示attention的模式，数据类型支持int64，仅支持传入2，表示MLA-absorb模式，即计算过程中会将query和key的nope部分分别和query_rope和key_rope的rope部分沿头维度（D）拼接，合并形成最终的query和key用于后续计算，且key和value共享同一份底层张量数据。
+
+return_softmax_lse（bool）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，但图模式下不支持，False表示不返回；默认值为False。该参数仅在训练且layout_kv不为PA_BSND场景支持。
+
+sinks（Tensor）：可选参数，表示attention结构中的可学习sinks信息。传入该参数时调用aclnnSparseFlashAttentionV2接口；不传入时调用原aclnnSparseFlashAttention接口。数据格式支持ND，数据类型支持float32，shape为[N1]。
 
 说明：
 query、key、value参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示hidden层的大小、N（Head Num）表示多头数、D（Head Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
