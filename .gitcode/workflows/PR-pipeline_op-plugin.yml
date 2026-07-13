@@ -57,10 +57,10 @@ env:
   img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260518"
 
 stages:
-  # stage_1:
-  #   name: stage_1
-  #   select: selected_by_default
-  #   jobs:
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
   #     # CodeCheck:
   #     #   name: CodeCheck
   #     #   # runs-on: [ self-hosted, arch=x64, os=euler ]
@@ -156,54 +156,54 @@ stages:
   #     #       with:
   #     #         gc_token: ${{ secrets.ATOMGIT_TOKEN }}
 
-  #     Only_doc_commit:
-  #       name: Only_doc_commit
-  #       # runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: checkout
-  #           uses: checkout
-  #           with:
-  #             ref: refs/merge-requests/${{ env.pr_id }}/merge
-  #         - name: print env
-  #           run: |
-  #             env
-  #         - name: setup-node
-  #           uses: setup-node
-  #           with:
-  #             node-version: '16'
-  #             package-manager: 'npm'
-  #             registry-url: 'https://registry.npmmirror.com/'
-  #         - name: print env
-  #           run: |
-  #             env
-  #             echo "-------------------"
-  #             whereis node
-  #             ls /opt/tools/cache/node/16/x64/bin
-  #         - name: actions install
-  #           run: |
-  #             cd ${ATOMGIT_WORKSPACE}/../../../
-  #             npm install @actions/core@^1.10.0
-  #             cd -
-  #         - name: print params
-  #           run: |
-  #             echo "pr_id= ${pr_id}"
-  #             echo "target_branch= ${{ atomgit.event.pull_request.base.ref }}"
-  #             echo "remote_url= ${REMOTE_URL}"
-  #         - name: Only Doc Commit Check
-  #           id: only-doc-check
-  #           uses: ${{ atomgit.repository }}/.gitcode/actions/Only_Doc_Commit_Check@7.3.0
-  #           with:
-  #             pr_id: ${{ env.pr_id }}
-  #             target_branch: ${{ atomgit.event.pull_request.base.ref }}
-  #             remote_url: ${{ env.REMOTE_URL }}
-  #         - name: set build skip flag
-  #           run: |
-  #             export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
-  #             echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
+      Only_doc_commit:
+        name: Only_doc_commit
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+          - name: print env
+            run: |
+              env
+          - name: setup-node
+            uses: setup-node
+            with:
+              node-version: '16'
+              package-manager: 'npm'
+              registry-url: 'https://registry.npmmirror.com/'
+          - name: print env
+            run: |
+              env
+              echo "-------------------"
+              whereis node
+              ls /opt/tools/cache/node/16/x64/bin
+          - name: actions install
+            run: |
+              cd ${ATOMGIT_WORKSPACE}/../../../
+              npm install @actions/core@^1.10.0
+              cd -
+          - name: print params
+            run: |
+              echo "pr_id= ${pr_id}"
+              echo "target_branch= ${{ atomgit.event.pull_request.base.ref }}"
+              echo "remote_url= ${REMOTE_URL}"
+          - name: Only Doc Commit Check
+            id: only-doc-check
+            uses: ${{ atomgit.repository }}/.gitcode/actions/Only_Doc_Commit_Check@7.3.0
+            with:
+              pr_id: ${{ env.pr_id }}
+              target_branch: ${{ atomgit.event.pull_request.base.ref }}
+              remote_url: ${{ env.REMOTE_URL }}
+          - name: set build skip flag
+            run: |
+              export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
+              echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
 
   stage_2:
