@@ -713,3 +713,5 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
   $$
 
   应用场景：该技术常用于超大序列推理或训练。
+ # fix this
+ 
