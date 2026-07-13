@@ -292,7 +292,7 @@ stages:
           OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
-          CP_DOCKER_IMG: ${{ env.img_master_arm}}
+          CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
           runs_on_arch: "arch=arm64"
           runs_on_os: "os=euler"
 
@@ -361,7 +361,7 @@ stages:
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "master"
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
 
       # UT_master_ARM_02:
       #   name: UT_master_ARM_02
