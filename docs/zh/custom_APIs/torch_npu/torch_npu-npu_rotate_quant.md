@@ -7,6 +7,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Atlas A5 训练系列产品/Atlas A5 推理系列产品</term>        |    √     |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>        |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>        |    √     |
 
@@ -17,34 +18,39 @@ API功能：`npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant
 ## 函数原型
 
 ```python
-torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor, Tensor)
+torch_npu.npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0, transpose_y=False) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
 
 - **x**（`Tensor`）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
 - **rotation**（`Tensor`）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
-- **alpha**（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
-- **dst_dtype**（`int`）：可选输入，指定量化输出的类型, 传None时当做torch.int8处理。
+- **alpha**（`Tensor`）：可选输入，旋转角度缩放因子，数据类型为1维`Tensor`，默认值为None。
+- **dst_dtype**（`int`）：可选输入，指定量化输出的类型，传None时当做torch.int8处理。支持的量化输出类型包括：torch.int8(1)、torch.quint4x2(16)、torch_npu.float4_e2m1fn_x2(296)、torch.float8_e5m2(23)、torch.float8_e4m3fn(24)。
+- **axis**（`int`）：可选输入，指定量化输出的轴，默认值为-1。
+- **round_mode**（`str`）：可选输入，指定取整模式，默认值为"rint"。
+- **scale_alg**（`int`）：可选输入，指定scale算法，默认值为0。
+- **dst_type_max**（`float`）：可选输入，指定量化输出的最大值，默认值为0.0。
+- **transpose_y**（`bool`）：可选输入，指定输出是否转置，默认值为False，当前版本仅支持False。
 
 ## 返回值说明
 
-- **y**（`Tensor`）：输出的量化结果，shape支持2维[m,n]，与x保持一致，数据类型支持`int4`/`int8`。数据格式支持ND，支持非连续的Tensor。
-- **scale**（`Tensor`）：输出的量化因子，shape支持1维[m]，数据类型支持`float32`。数据格式支持ND，支持非连续的Tensor。
+- **y**（`Tensor`）：输出的量化结果，数据类型根据dst_dtype决定。数据格式支持ND，int场景中支持非连续的Tensor。
+- **scale**（`Tensor`）：输出的量化因子，数据类型根据dst_dtype决定。当dst_dtype为MX类型（float4_e2m1fn_x2/float8_e5m2/float8_e4m3fn）时，scale为MX格式量化因子（uint8表示float8_e8m0）；其他类型时，scale为per-token量化因子（float32）。
 
 ## 约束说明
 
 - 该接口支持推理和训练场景下使用。
 - 该接口支持图模式。
-- n支持128-16000，8字节对齐，需要能被k整除。
-- 输入和输出Tensor支持的数据类型组合如下：
-
-    |x|rotation|dst_dtype|y|scale|
-    |--------|--------|--------|--------|--------|
-    |`bfloat16`|`bfloat16`|torch.qint8|`int8`|`float32`|
-    |`bfloat16`|`bfloat16`|torch.quint4X2|`int4`|`float32`|
-    |`float16`|`float16`|torch.qint8|`int8`|`float32`|
-    |`float16`|`float16`|torch.quint4X2|`int4`|`float32`|
+- 关于数据shape的约束，其中：
+    - n：取值范围为128~16000，8字节对齐，n可以整除k。
+    - transpose_y当前版本仅支持False。
+    - 当dst_dtype为quint4x2时，输入最后一维必须可被8整除。
+    - 当dst_dtype为float4_e2m1fn_x2时，输入最后一维必须可被2整除。
+    - rotation的shape形式为[k,k]，当前在Atlas A5平台上，k仅支持32、64、128三种取值；在Atlas A2/A3平台上，k的取值范围为[16, 1024]。
+- 不同型号产品支持的dst_dtype不同：
+    - Atlas A2/A3 训练/推理系列产品：dst_dtype仅支持torch.int8和torch.quint4x2。
+    - Atlas A5 训练/推理系列产品：dst_dtype仅支持torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn。
 
 ## 调用示例
 
@@ -62,9 +68,14 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
 
     M = 512
     N = 1024
-    K = 1024
+    K = 128
     x, rotation = gen_input_data(M, N, K)
-    output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), alpha=0.0, dst_dtype=torch.int8)
+    # int8 quantization, only supported on Atlas A2/A3
+    output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=torch.int8)
+    # mxfp4 quantization, only supported on Atlas A5
+    output0_npu, output1_npu = torch_npu.npu_rotate_quant(
+        x.npu(), rotation.npu(), dst_dtype=torch_npu.float4_e2m1fn_x2, axis=-1, round_mode="rint"
+    )
     ```
 
 - 图模式调用：
@@ -83,7 +94,7 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
         def __init__(self):
             super().__init__()
         def forward(self, x, rotation):
-            output = torch_npu.npu_rotate_quant(x, rotation, alpha=0.0, dst_dtype=torch.int8)
+            output = torch_npu.npu_rotate_quant(x, rotation, dst_dtype=torch.int8)
             return output
 
     def gen_input_data(M, N, K):
