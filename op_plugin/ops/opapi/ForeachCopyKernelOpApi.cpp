@@ -286,7 +286,7 @@ void process_tensor_list_batch(const at::TensorList self, const at::TensorList s
 
 void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking)
 {
-    DO_COMPATIBILITY(aclnnForeachCopy, at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking));
+    DO_COMPATIBILITY_NOERROR(aclnnForeachCopy, at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking));
     at::native::check_foreach_api_restrictions(self, src);
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
