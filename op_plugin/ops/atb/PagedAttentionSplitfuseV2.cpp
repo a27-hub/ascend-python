@@ -18,6 +18,10 @@
 
 using namespace std;
 
+namespace {
+    constexpr int64_t CONTEXT_LENS_INDEX = 4;
+}
+
 namespace atb {
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
 
@@ -35,7 +39,7 @@ static std::string MaskTypeToString(int64_t mtype)
     }
 }
 
-void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, const at::Tensor &block_table, const at::Tensor &context_lens, const at::Tensor &mask, const at::Tensor &seq_len, int64_t num_kv_heads, int64_t num_heads, double scale_value, const c10::optional<int64_t> mask_type, at::Tensor &out)
+void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, const at::Tensor &block_table, const at::Tensor &context_lens, const at::Tensor &context_lens_cpu, const at::Tensor &mask, const at::Tensor &seq_len, int64_t num_kv_heads, int64_t num_heads, double scale_value, const c10::optional<int64_t> mask_type, at::Tensor &out)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
     int64_t mtype = mask_type.has_value() ? mask_type.value() : PagedAttentionParam::MASK_TYPE_NORM_COMPRESS;
@@ -57,6 +61,9 @@ void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor
     pagedparam.inputLayout = atb::infer::TYPE_BSND;
     pagedparam.mlaVHeadSize = 0;
 
+    TORCH_CHECK(context_lens_cpu.device().is_cpu(), "context_lens must be a CPU tensor");
+    TORCH_CHECK(torch_npu::utils::is_npu(context_lens), "context_lens must be a NPU tensor");
+
     ParamSetter paramsetter;
     paramsetter.Input(query, true)
         .Input(key_cache)
@@ -66,6 +73,9 @@ void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor
         .Input(mask)
         .Input(seq_len, true)
         .Output(out);
+
+    paramsetter.variant_pack_.inTensors[CONTEXT_LENS_INDEX].hostData = context_lens_cpu.data_ptr();
+    paramsetter.tensor_maintainer_.cpu_tensors.emplace_back(std::move(context_lens_cpu));
     auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
     RunAtbCmd(opPaged, paramsetter, "PagedAttentionOperation");
 
@@ -75,7 +85,7 @@ void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_paged_attention_splitfuse_v2(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, Tensor context_lens, Tensor mask, Tensor seq_len, int num_kv_heads, int num_heads, float scale_value, *, int ? mask_type = 5, Tensor(a!) out) -> ()");
+    m.def("_npu_paged_attention_splitfuse_v2(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, Tensor context_lens, Tensor context_lens_cpu, Tensor mask, Tensor seq_len, int num_kv_heads, int num_heads, float scale_value, *, int ? mask_type = 5, Tensor(a!) out) -> ()");
 }
 }
 
