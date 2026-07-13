@@ -18,13 +18,10 @@
 
 using namespace std;
 
-<<<<<<< HEAD
 namespace {
     constexpr int64_t CONTEXT_LENS_INDEX = 4;
 }
 
-=======
->>>>>>> 67082c5d2e778f0e7a0fe62d928bdb1421647daf
 namespace atb {
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
 
@@ -76,12 +73,9 @@ void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor
         .Input(mask)
         .Input(seq_len, true)
         .Output(out);
-<<<<<<< HEAD
 
     paramsetter.variant_pack_.inTensors[CONTEXT_LENS_INDEX].hostData = context_lens_cpu.data_ptr();
     paramsetter.tensor_maintainer_.cpu_tensors.emplace_back(std::move(context_lens_cpu));
-=======
->>>>>>> 67082c5d2e778f0e7a0fe62d928bdb1421647daf
     auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
     RunAtbCmd(opPaged, paramsetter, "PagedAttentionOperation");
 
