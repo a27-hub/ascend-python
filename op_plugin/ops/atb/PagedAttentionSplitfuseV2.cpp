@@ -61,7 +61,7 @@ void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor
     pagedparam.inputLayout = atb::infer::TYPE_BSND;
     pagedparam.mlaVHeadSize = 0;
 
-    TORCH_CHECK(context_lens_cpu.device().is_cpu(), "context_lens must be a CPU tensor");
+    TORCH_CHECK(context_lens_cpu.device().is_cpu(), "context_lens_cpu must be a CPU tensor");
     TORCH_CHECK(torch_npu::utils::is_npu(context_lens), "context_lens must be a NPU tensor");
 
     ParamSetter paramsetter;
