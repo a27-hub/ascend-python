@@ -86,7 +86,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`。当`x`数据类型为`bfloat16`，`bias`需为`float32`；当`x`数据类型为`float16`，`bias`需为`float16`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float16`、`float32`。当`x`数据类型为`bfloat16`，`bias`需为`float32`；当`x`数据类型为`float16`，`bias`需为`float16`。
 
-- **antiquant\_group\_size** (`int`)：可选参数。用于控制pergroup场景下group大小，其他量化场景不生效。默认值为0，perroup场景下要求传入值的范围为\[32, K-1\]且必须是32的倍数。
+- **antiquant\_group\_size** (`int`)：可选参数。用于控制pergroup场景下group大小，其他量化场景不生效。默认值为0，pergroup场景下要求传入值的范围为\[32, K-1\]且必须是32的倍数。
 - **inner\_precise** (`int`)：可选参数。计算模式选择，默认为0。0表示高精度模式，1表示高性能模式，可能会影响精度。当`weight`以`int32`类型且以$FRACTAL\_NZ$格式输入，M不大于16的pergroup场景下可以设置为1，提升性能。其他场景不建议使用高性能模式。
 
 ## 返回值说明<a name="zh-cn_topic_0000001771071862_section22231435517"></a>
