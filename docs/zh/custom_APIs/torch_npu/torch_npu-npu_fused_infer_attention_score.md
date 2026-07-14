@@ -511,6 +511,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 **场景说明**：标准 Multi-Head Attention，全量 prefill 场景，无量化。Q_S > 1 触发 PromptFlashAttention 分支。
 
 **关键参数**：
+
 - `num_heads` = 8，`num_key_value_heads` = 0 → MHA（Q_N = KV_N）
 - `input_layout` = "BNSD"
 - `scale` = 1/√D
@@ -597,6 +598,7 @@ if __name__ == "__main__":
 **场景说明**：Decode 阶段，Q_S=1（逐 token 推理）。GQA 下 KV_N=2 < Q_N=8，KV Cache 以 Page Attention 方式管理，`key`/`value` 为 INT8 并通过伪量化反量化为 FLOAT16 计算。
 
 **关键参数**：
+
 - `num_heads`=8, `num_key_value_heads`=2 → GQA
 - `block_table` + `block_size`=128 → 开启 Page Attention
 - `antiquant_scale` → per-channel 伪量化（INT8 KV → FP16）
@@ -650,6 +652,7 @@ print(out.shape)  # torch.Size([1, 8, 1, 128])
 **场景说明**：MLA 场景，独立传入 RoPE 位置编码信息。TND layout，D=128。每个 Batch 的 seqlen 可能不同，通过 `actual_seq_lengths` 区分。
 
 **关键参数**：
+
 - `query_rope` + `key_rope` → MLA 模式
 - `input_layout`="TND" → T=∑S 的变长序列模式
 - `actual_seq_lengths` 必须传入，元素值表示各 Batch 的 seqlen 累加和
@@ -697,6 +700,7 @@ print(out.shape)  # torch.Size([450, 8, 128])
 **场景说明**：全量化计算，query/key/value 均为 INT8 输入，attention_out 为 INT8 输出。BMM1 后反量化到 FP16 计算 softmax，BMM2 后再量化回 INT8。
 
 **关键参数**：
+
 - `dequant_scale1` / `quant_scale1` → BMM1 反量化 / BMM2 前量化
 - `dequant_scale2` / `quant_scale2` / `quant_offset2` → 输出量化
 - 四组量化参数缺一不可
@@ -744,6 +748,7 @@ print(out.shape, out.dtype)  # torch.Size([1, 8, 164, 128]) torch.int8
 **场景说明**：query/key/value 均为 BFLOAT16，仅输出端量化为 INT8。无需 BMM1/BMM2 的 dequant/quant 参数，只需 `quant_scale2`。
 
 **关键参数**：
+
 - `quant_scale2` → 输出量化因子（per-tensor）
 - 不应传入 `dequant_scale1` / `quant_scale1` / `dequant_scale2`
 
@@ -782,6 +787,7 @@ print(out.shape, out.dtype)  # torch.Size([1, 4, 128, 64]) torch.int8
 **场景说明**：共享 prefix 的 KV 场景。前缀部分 `key_shared_prefix`/`value_shared_prefix` 为所有请求共用的 Prompt KV Cache，后续 `key`/`value` 为各请求独有部分。
 
 **关键参数**：
+
 - `key_shared_prefix` / `value_shared_prefix` → 公共前缀 KV
 - `actual_shared_prefix_len` → 前缀有效长度
 - prefix S + key/value S 需满足各自 S 维度限制
