@@ -15593,8 +15593,8 @@ _add_torch_npu_docstr(
  `npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant）的计算方法。该方法适用于需要对输入数据进行旋转变换后进行量化的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
 
  参数说明:
- x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
- rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+ x（Tensor）：必选输入，输入tensor。数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+ rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
  alpha（`Tensor`）：可选输入，旋转角度缩放因子，数据类型为1维`Tensor`，默认值为None。
  dst_dtype: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8(1), torch.quint4x2(16), torch_npu.float4_e2m1fn_x2(296), torch.float8_e5m2(23), torch.float8_e4m3fn(24)。
  axis: int类型, 指定量化输出的轴, 可选输入, 默认值为-1。
@@ -15613,11 +15613,13 @@ _add_torch_npu_docstr(
  Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
  约束说明
- 关于数据shape的约束，其中：
- n：取值范围为128~16000，8字节对齐, n可以整除k。
+ 对于输入数据的shape，存在以下约束：
+ rotation的shape形式为[k,k]，当前在Atlas A5平台上，k仅支持32、64、128三种取值；在Atlas A2/A3平台上，k的取值范围为[16, 1024]。
+ 输入x的最后一维需要能被k整除。在Atlas A2/A3平台上，x的shape仅支持2维，最后一维的大小需要在128~16000之间且必须同时可被8整除；在Atlas A5平台上，x的shape支持1~7维，且当dst_dtype为float4_e2m1fn_x2时，输入x的最后一维必须同时可被2整除。
  transpose_y当前版本仅支持False。
- 当dst_dtype为quint4x2时，输入最后一维必须可被8整除。
- 当dst_dtype为float4_e2m1fn_x2时，输入最后一维必须可被2整除。
+ 不同型号产品支持的dst_dtype不同：
+    - Atlas A2/A3 训练/推理系列产品：dst_dtype仅支持torch.int8和torch.quint4x2。
+    - Atlas A5 训练/推理系列产品：dst_dtype仅支持torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn。
 
  调用示例:
  import torch
@@ -15632,12 +15634,11 @@ _add_torch_npu_docstr(
      )
      return output, output_scale
 
- def test_rotate_quant_mxfp4(M=512, N=1024, K=1024):
+ def test_rotate_quant_mxfp4(M=512, N=1024, K=128):
      x = torch.randn(M, N, dtype=torch.bfloat16).npu()
      rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
      output, output_scale = torch_npu.npu_rotate_quant(
          x, rotation, dst_dtype=torch_npu.float4_e2m1fn_x2, axis=-1, round_mode="rint"
-         x, rotation, dst_dtype=torch.int8
      )
      return output, output_scale
 
