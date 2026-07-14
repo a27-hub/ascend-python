@@ -550,97 +550,290 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
 ## 调用示例<a name="zh-cn_topic_0000001832267082_section14459801435"></a>
 
-- 单算子模式调用
+### 示例 1：MHA + 非量化 + BNSD（PromptFlashAttention）
 
-    ```python
-    import torch
-    import torch_npu
-    import math
-    # 生成随机数据, 并发送到npu
-    q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
-    k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
-    v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
-    softmax_scale = 1/math.sqrt(128.0)
-    actseqlen = [164]
-    actseqlenkv = [1024]
+**场景说明**：query/key/value 均为 BFLOAT16，仅输出端量化为 INT8。无需 BMM1/BMM2 的 dequant/quant 参数，只需 `quant_scale2`。
 
-    # 调用FIA算子
-    out, _ = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, 
-    actual_seq_qlen = actseqlen, actual_seq_kvlen = actseqlenkv,
-    num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
+**关键参数**：
 
-    print(out)
-    # 执行上述代码的输出out类似如下
-    tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
-            [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
-            [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
-            ..
-            [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
-            [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
-            [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
-            device='npu:0', dtype=torch.float16)
-    ```
+- `num_query_heads` = 8，`num_key_value_heads` = 0 → MHA（Q_N = KV_N）
+- `input_layout` = "BNSD"
+- `softmax_scale` = 1/√D
+- `pre_tokens` / `next_tokens` = 65535 → 不限制稀疏范围
 
-- 图模式调用
+**相关约束**：[通用约束](#通用约束)
 
-    ```python
-    import torch
-    import torch_npu
-    import math
-    import torchair as tng
+#### 单算子模式调用
 
-    from torchair.configs.compiler_config import CompilerConfig
-    import torch._dynamo
-    TORCHDYNAMO_VERBOSE=1
-    TORCH_LOGS="+dynamo"
+```python
+import torch
+import torch_npu
+import math
+# 生成随机数据, 并发送到npu
+q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
+k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+softmax_scale = 1/math.sqrt(128.0)
+actseqlen = [164]
+actseqlenkv = [1024]
 
-    # 支持入图的打印宏
-    import logging
-    from torchair.core.utils import logger
-    logger.setLevel(logging.DEBUG)
-    config = CompilerConfig()
-    config.debug.graph_dump.type = "pbtxt"
-    npu_backend = tng.get_npu_backend(compiler_config=config)
-    from torch.library import Library, impl
+# 调用FIA算子
+out, _ = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, 
+         actual_seq_qlen = actseqlen, actual_seq_kvlen = actseqlenkv,
+         num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
 
-    # 数据生成
-    q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
-    k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
-    v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
-    softmax_scale = 1/math.sqrt(128.0)
+print(out)
+```
 
-    class Model(torch.nn.Module):
-        def __init__(self):
-            super().__init__()
-        def forward(self):
-            return torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
-    def MetaInfershape():
-        with torch.no_grad():
-            model = Model()
-            model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
-            graph_output = model()
-        single_op = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
-        print("single op output with mask:", single_op[0], single_op[0].shape)
-        print("graph output with mask:", graph_output[0], graph_output[0].shape)
-    if __name__ == "__main__":
-        MetaInfershape()
+执行上述代码的输出out类似如下：
 
-    # 执行上述代码的输出类似如下
-    single op output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
-            [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
-            [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
-            ...,
-            [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
-            [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
-            [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
-            device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+```text
+tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
+        [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
+        [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
+        ..
+        [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
+        [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
+        [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
+        device='npu:0', dtype=torch.float16)
+```
 
-    graph output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
-            [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
-            [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
-            ...,
-            [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
-            [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
-            [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
-            device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
-    ```
+#### 图模式调用
+
+```python
+import torch
+import torch_npu
+import math
+import torchair as tng
+
+from torchair.configs.compiler_config import CompilerConfig
+import torch._dynamo
+TORCHDYNAMO_VERBOSE=1
+TORCH_LOGS="+dynamo"
+
+# 支持入图的打印宏
+import logging
+from torchair.core.utils import logger
+logger.setLevel(logging.DEBUG)
+config = CompilerConfig()
+config.debug.graph_dump.type = "pbtxt"
+npu_backend = tng.get_npu_backend(compiler_config=config)
+from torch.library import Library, impl
+
+# 数据生成
+q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
+k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+softmax_scale = 1/math.sqrt(128.0)
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self):
+        return torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+    
+def MetaInfershape():
+    with torch.no_grad():
+        model = Model()
+        model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+        graph_output = model()
+    single_op = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+    print("single op output with mask:", single_op[0], single_op[0].shape)
+    print("graph output with mask:", graph_output[0], graph_output[0].shape)
+
+if __name__ == "__main__":
+    MetaInfershape()
+```
+
+执行上述代码的输出类似如下：
+
+```text
+single op output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
+        [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
+        [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
+        ...,
+        [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
+        [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
+        [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
+        device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+
+graph output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
+        [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
+        [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
+        ...,
+        [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
+        [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
+        [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
+        device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+```
+
+### 示例 2：GQA + KV NZ + Page Attention 约束
+
+**场景说明**：Decode 阶段，Q_S=1（逐 token 增量推理）。GQA 下 KV_N=1 < Q_N=10，KV Cache 以 Page Attention 方式管理，`key`/`value` 为 INT8 并通过伪量化反量化为 FLOAT16 计算，选择NZ格式时仅支持高性能模式。
+
+**关键参数**：
+
+- `num_query_heads`=10, `num_key_value_heads`=1 → GQA 支持组合: (10,1)/(64,8)/(80,8)/(128,16)
+- `block_table` + `block_size`=128 → 开启 Page Attention，仅支持128或512
+- `dequant_scale_value, dequant_scale_key` → per-channel 伪量化（INT8 KV → FP16）
+- `key_quant_mode`=0, `value_quant_mode`=0 → per-channel 模式
+- `key, value`: int8, NZ 格式 [blockNum, KV_N, D/32, blockSize, 32]
+- `inner_precise`=1，仅支持高性能模式
+
+**相关约束**：[GQA伪量化+KV NZ格式约束](#gqa伪量化kv-nz格式约束)，[增量推理约束](#q_s1增量推理约束)
+
+```python
+import torch
+import torch_npu
+import math
+
+B, Q_N, Q_S, D = 1, 10, 1, 128
+KV_N = 1            # 组合 (10, 1)
+block_size = 128     # 仅支持 128 或 512
+KV_S = 1024          # key/value 序列长度
+
+# 计算 block 数量
+block_num = (KV_S + block_size - 1) // block_size
+
+# query: bfloat16, BNSD
+q = torch.randn(B, Q_N, Q_S, D, dtype=torch.bfloat16).npu()
+
+# key/value: int8, NZ 格式 [blockNum, KV_N, D/32, blockSize, 32]
+k = torch.randint(-128, 127, (block_num, KV_N, D // 32, block_size, 32), dtype=torch.int8).npu()
+v = torch.randint(-128, 127, (block_num, KV_N, D // 32, block_size, 32), dtype=torch.int8).npu()
+
+# dequant_scale: perchannel 模式, bfloat16
+# layout=BNSD 时 shape 为 [KV_N, 1, D]
+dequant_scale_key = torch.randn(KV_N, 1, D, dtype=torch.bfloat16).npu()
+dequant_scale_value = torch.randn(KV_N, 1, D, dtype=torch.bfloat16).npu()
+
+# block_table: page attention 映射表
+block_table = torch.arange(block_num, dtype=torch.int32).reshape(B, block_num).npu()
+
+softmax_scale = 1.0 / math.sqrt(D)
+
+out, _ = torch_npu.npu_fused_infer_attention_score_v2(q, k, v,
+         dequant_scale_key=dequant_scale_key, dequant_scale_value=dequant_scale_value, 
+         key_quant_mode=0, value_quant_mode=0, 
+         block_table=block_table, actual_seq_kvlen=[KV_S],
+         num_query_heads=Q_N, num_key_value_heads=KV_N,
+         input_layout="BNSD", softmax_scale=softmax_scale, block_size=block_size,
+         inner_precise=1 #高性能模式
+         )
+
+print(out)
+```
+
+### 示例 3：MLA + TND 约束
+
+**场景说明**：MLA 场景，独立传入 RoPE 位置编码信息。TND layout，D=128。
+
+**关键参数**：
+
+- `num_query_heads`=8，`num_key_value_heads`=8
+- `input_layout`="TND" -> TND场景
+- `actual_seq_qlen, actual_seq_kvlen` TND场景下必传
+- `query_rope, key_rope` MLA模式参数
+
+**相关约束**：[MLA场景约束](#mla场景约束)
+
+```python
+import torch
+import torch_npu
+import math
+
+Q_N, KV_N = 8, 8
+D = 128
+D_rope = 64
+
+# TND 场景：T 为所有 Batch 的 seqlen 累加和
+# actual_seq_qlen 表示每个 batch 的累加 seqlen
+# 单 batch 场景: T = S
+S_q = 164
+S_kv = 1024
+
+# query:  (T, Q_N, D)     → (164, 8, 128)
+# key:    (T, KV_N, D)    → (1024, 8, 128)
+# value:  (T, KV_N, D)    → (1024, 8, 128)
+q = torch.randn(S_q, Q_N, D, dtype=torch.float16).npu()
+k = torch.randn(S_kv, KV_N, D, dtype=torch.float16).npu()
+v = torch.randn(S_kv, KV_N, D, dtype=torch.float16).npu()
+
+# query_rope: (T, Q_N, 64)
+# key_rope:   (T, KV_N, 64)
+query_rope = torch.randn(S_q, Q_N, D_rope, dtype=torch.float16).npu()
+key_rope   = torch.randn(S_kv, KV_N, D_rope, dtype=torch.float16).npu()
+
+# TND 场景必须传入 actual_seq_qlen / actual_seq_kvlen
+# 元素为当前 batch 与之前所有 batch 的 S 累加和（单 batch 直接给 S 值）
+actual_seq_qlen = [S_q]
+actual_seq_kvlen = [S_kv]
+
+softmax_scale = 1.0 / math.sqrt(D)
+
+out, _ = torch_npu.npu_fused_infer_attention_score_v2(
+    q, k, v,
+    query_rope=query_rope,
+    key_rope=key_rope,
+    actual_seq_qlen=actual_seq_qlen,       # TND 场景必须传入
+    actual_seq_kvlen=actual_seq_kvlen,     # TND 场景必须传入
+    num_query_heads=Q_N,
+    num_key_value_heads=KV_N,
+    input_layout="TND",                    # TND 布局
+    softmax_scale=softmax_scale,
+    sparse_mode=0,                         # 不传 atten_mask
+    inner_precise=1                        # float16 仅支持 0 或 1
+)
+
+print(out)  #tensor([[[...]]], device='npu:0', dtype=torch.float16)
+```
+
+### 示例 4：learnable_sink + 非量化 约束
+
+**场景说明**：添加**learnable_sink**参数，并且注意其他约束条件。
+
+**关键参数**：
+
+- `learnable_sink`关键参数。
+- `input_layout`="TND"，仅支持TND、NTD_TND场景。
+
+**相关约束**：[learnable_sink约束](#learnable_sink约束)
+
+```python
+import torch
+import torch_npu
+import math
+
+S_q = 164
+S_kv = 1024
+Q_N, KV_N = 8, 8
+D = 128               # value 的 D ≤ 128
+
+# query/key/value: TND 布局, bfloat16
+q = torch.randn(S_q, Q_N, D, dtype=torch.bfloat16).npu()
+k = torch.randn(S_kv, KV_N, D, dtype=torch.bfloat16).npu()
+v = torch.randn(S_kv, KV_N, D, dtype=torch.bfloat16).npu()
+
+# learnable_sink: shape=(Q_N,), dtype=bfloat16
+learnable_sink = torch.randn(Q_N, dtype=torch.bfloat16).npu()
+
+# TND 场景必须传入 actual_seq_qlen / actual_seq_kvlen
+actual_seq_qlen = [S_q]
+actual_seq_kvlen = [S_kv]
+
+softmax_scale = 1.0 / math.sqrt(D)
+
+out, _ = torch_npu.npu_fused_infer_attention_score_v2(
+    q, k, v,
+    learnable_sink=learnable_sink,          # 可学习的 Sink Token
+    actual_seq_qlen=actual_seq_qlen,
+    actual_seq_kvlen=actual_seq_kvlen,
+    num_query_heads=Q_N,
+    num_key_value_heads=KV_N,
+    input_layout="TND",
+    softmax_scale=softmax_scale,
+    sparse_mode=0
+)
+
+print(out)
+```
