@@ -121,7 +121,7 @@
 | 伪量化（KV int8→fp16） | `query, key, value, antiquant_scale` | `antiquant_offset, antiquant_mode` | [伪量化约束](#pseudo_quant_constraints) |
 | 伪量化分离模式 | `query, key, value, key_antiquant_scale, value_antiquant_scale` | `key_antiquant_mode, value_antiquant_mode` | [Q_S > 1 约束](#qs_gt_1) / [Q_S = 1 约束](#qs_eq_1) |
 | 左 Padding | `query, key, value, actual_seq_lengths, query_padding_size` | `kv_padding_size` | [Padding 约束](#padding_constraints) |
-| Ring Attention | `query, key, value, softmax_lse_flag=True` | — | [返回值说明](#return_value) |
+| Ring Attention | `query, key, value, softmax_lse_flag=True` | — | [返回值说明](#返回值说明) |
 | TND 布局 | `query, key, value, actual_seq_lengths, actual_seq_lengths_kv, input_layout="TND"` | — | [TND 布局约束](#tnd_constraints) |
 
 ### 各轴取值范围速查
