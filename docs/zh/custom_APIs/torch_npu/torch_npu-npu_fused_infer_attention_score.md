@@ -1,8 +1,5 @@
 # torch_npu.npu_fused_infer_attention_score
 
-> [!WARNING]
-> 该接口后续版本会废弃，请使用最新接口。对应 CANN 算子 [aclnnFusedInferAttentionScoreV5](../../../../aclnnFusedInferAttentionScoreV5.md)。
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
