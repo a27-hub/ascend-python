@@ -223,6 +223,7 @@ torch_npu.npu_fused_infer_attention_score(
 | 5 | pertoken + perhead + page attention | per-token 叠加 per-head 并使用 page attention 管理 scale/offset。 |
 
 > **特殊约束**：
+
 > - Q_S ≥ 2 时仅支持 0、1。
 > - Q_S = 1 时支持 0~5。
 > - 除 `key_antiquant_mode=0` 且 `value_antiquant_mode=1` 的场景外，`key_antiquant_mode` 与 `value_antiquant_mode` 必须一致。
@@ -517,6 +518,7 @@ torch_npu.npu_fused_infer_attention_score(
 - query 的 D 仅支持 512 或 128。
 
 **D = 512 时**：
+
 - sparse 支持 0/3/4。
 - `query_rope`：要求 query 的 N 为 1/2/4/8/16/32/64/128，shape 中 D=64，其余维度与 query 一致。
 - `key_rope`：要求 key 的 N=1、D=512，shape 中 D=64，其余维度与 key 一致。
@@ -526,6 +528,7 @@ torch_npu.npu_fused_infer_attention_score(
 - 不支持：softmax_lse、左 padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
 **D = 128 时**：
+
 - input_layout：BSH、BSND、TND、BNSD、NTD、BSH_BNSD、BSND_BNSD、BNSD_BSND、NTD_TND。
 - `query_rope`/`key_rope` shape 中 D=64，其余维度不变。
 - 不支持：左 padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
@@ -544,6 +547,7 @@ torch_npu.npu_fused_infer_attention_score(
 ### <a id="padding_constraints"></a>Padding 约束
 
 **query 左 padding（仅 Q_S > 1）**：
+
 - 搬运起点 = Q_S − query_padding_size − actual_seq_lengths（须 ≥ 0）。
 - 搬运终点 = Q_S − query_padding_size（须 ≤ Q_S）。
 - `kv_padding_size` < 0 时被置为 0。
@@ -551,6 +555,7 @@ torch_npu.npu_fused_infer_attention_score(
 - 不支持 PageAttention。
 
 **kv 左 padding**：
+
 - 搬运起点 = KV_S − kv_padding_size − actual_seq_lengths_kv（Q_S > 1 时须 ≥ 0；Q_S = 1 时若 < 0 则返回全 0）。
 - 搬运终点 = KV_S − kv_padding_size（Q_S > 1 时须 ≤ KV_S；Q_S = 1 时若 < 0 则返回全 0）。
 - 需与 `actual_seq_lengths_kv` 一起开启。
@@ -562,7 +567,9 @@ torch_npu.npu_fused_infer_attention_score(
 `input_layout` 为 TND、TND_NTD、NTD_TND 时的综合限制：
 
 - `actual_seq_lengths` 和 `actual_seq_lengths_kv` 必须传入，元素个数即 batch 值（≤ 4096）。每个元素值为累加和（后值 ≥ 前值）。
+
 - **query D = 512 时**：
+
   - sparse：0/3/4。
   - 支持 TND、TND_NTD。
   - 支持 PageAttention（`actual_seq_lengths_kv` 长度 = kv batch 数，值 ≤ KV_S）。
@@ -667,6 +674,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 ```
 
 > **关键参数说明**：
+
 > - `scale=1/√128`：必设，控制 softmax 之前 QK^T 的缩放。设错会导致 attention 分布异常。
 > - `pre_tokens=65535, next_tokens=65535`：表示不限制 attention 范围（等价于双向 attention），对应的约束见 [sparse_mode 枚举说明](#sparse_mode-枚举说明)。
 > - `input_layout="BNSD"`：表示输入为 (B,N,S,D)，见 [input_layout 枚举说明](#input_layout-枚举说明)。
@@ -722,6 +730,7 @@ print(out.shape)  # torch.Size([1, 8, 1, 128])
 ```
 
 > **关键参数说明**：
+
 > - `num_key_value_heads=2`：启用 GQA，num_heads / num_key_value_heads = 4。该参数不传时默认为 0（即 MHA），见 [参数说明](#详细参数说明)。
 > - `block_table` + `block_size`：传入即开启 PageAttention，kv cache 排布见 [PageAttention 约束](#pa_constraints)。
 > - `input_layout="BSH"`：kv cache 为 BnBsH 格式时必须用 BSH。若 kv cache 为 BnNBsD 格式且 query 为 BNSD，则可用 BNSD。
@@ -808,6 +817,7 @@ print(out.shape)  # torch.Size([1, 16, 1, 512])
 ```
 
 > **关键参数说明**：
+
 > - `query_rope` + `key_rope`：传入即进入 MLA 分支，必须同时传入。RoPE 维度固定 64。二者 dtype/format 须与 query/key 一致。
 > - D=512：MLA prefill 场景的 D 为 512 或 128。D=512 时可开启 PageAttention、支持 NZ 格式等。约束详见 [MLA 约束](#mla_constraints)。
 > - 此场景不支持：softmax_lse、左 padding、pse、prefix、伪量化、全量化。
@@ -849,6 +859,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 ```
 
 > **关键参数说明**：
+
 > - `quant_scale2`：传入即触发后量化（输出 int8）。不传 `quant_offset2` 则偏移为 0。
 > - int8 输出场景下，**禁止**同时传入 `dequant_scale1`/`quant_scale1`/`dequant_scale2`。约束详见 [int8 量化约束](#int8_constraints)。
 > - 如需 per-channel 量化，shape 建议 (Q_N, D)。详见 [quant_scale2 参数说明](#详细参数说明)。
@@ -898,6 +909,7 @@ print(out.dtype)  # torch.int8
 ```
 
 > **关键参数说明**：
+
 > - 四个量化参数必须**同时存在**。`quant_offset2` 可选，不传时偏移为 0。
 > - D 轴需 32 对齐。input_layout 仅支持 BSH/BNSD/BSND/BNSD_BSND。
 > - 约束详见 [int8 量化约束](#int8_constraints)。
@@ -942,6 +954,7 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 ```
 
 > **关键参数说明**：
+
 > - 使用 KV 分离模式（优于 `antiquant_scale`/`antiquant_offset` 模式）。
 > - `key_antiquant_mode=0`：per-channel 模式。此处 Q_S=1 + query bf16 + kv int8 + key/value_antiquant_scale bf16 → 满足 [Q_S = 1 约束](#qs_eq_1) 中的 kv 伪量化参数分离条件。
 > - 当 `key_antiquant_scale`/`value_antiquant_scale` 与 `antiquant_scale` 同时传入时，以 KV 分离参数为准。
@@ -985,6 +998,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 ```
 
 > **关键参数说明**：
+
 > - `key_shared_prefix` + `value_shared_prefix`：必须同时传入。shape 第一维 batch=1。约束见 [Prefix 约束](#prefix_constraints)。
 > - 如果 S2（KV_S + prefix_S）超出原 KV_S 限制则报错。若传入 `atten_mask`，S2 需大于 prefix_S + KV_S。
 > - 不支持 PageAttention、左 padding、tensorlist、qkv 全 int8。
