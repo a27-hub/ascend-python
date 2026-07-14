@@ -4503,16 +4503,19 @@ _add_torch_npu_docstr(
     "npu_mhc_post",
     """
 接口原型：
-torch_npu.npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor
+torch_npu.npu_mhc_post(Tensor x, Tensor? h_res, Tensor h_out, Tensor h_post) -> Tensor
 
 功能描述
-算子功能: 融合主分支特征h_out与残差分支特征x_l（或residual），通过门控H_post和经sinkhorn投影后的双随机矩阵H_res机制实现信息流动.
+算子功能: 融合主分支特征h_out与残差分支特征x_l（或residual），通过门控H_post和经sinkhorn投影后的双随机矩阵H_res机制实现信息流动. 当h_res传入None时，跳过Res Mapping，直接进行残差相加.
 计算公式为:
+当h_res提供时:
 x_{l+1} = (H_{l}^{res})^{T} \times x_l + h_{l}^{out} \otimes H_{t}^{post}
+当h_res缺省(传入None)时:
+x_{l+1} = x_l + h_{l}^{out} \otimes H_{t}^{post}
 
 参数说明
 x: Tensor类型, 必选输入, 待计算数据，代表网络中mHC层的输入数据. 数据格式为ND，支持非连续Tensor, 支持的数据类型为BFLOAT16和FLOAT16， 数据维度可为3维[T, n, D]和4维.[B, S, n, D].
-h_res: Tensor类型, 必选输入, mHC的h_res变换矩阵，是做完sinkhorn变换之后的双随机矩阵.数据格式为ND，支持非连续Tensor, 支持的数据类型为FLOAT32， 数据维度可为3维[T, n, n]和4维[B, S, n, n].
+h_res: Tensor类型, 可选输入, mHC的h_res变换矩阵，是做完sinkhorn变换之后的双随机矩阵.传入None时跳过Res Mapping，计算公式退化为 x_{l+1} = x_l + h_{l}^{out} \otimes H_{t}^{post}，仅Ascend 950支持传入None，其他设备传入None会报错.数据格式为ND，支持非连续Tensor, 支持的数据类型为FLOAT32， 数据维度可为3维[T, n, n]和4维[B, S, n, n].
 h_out: Tensor类型, 必选输入，Attn/MLP层输出.数据格式为ND，支持非连续Tensor, 支持的数据类型为BFLOAT16和FLOAT16， 数据维度可为3维[B, S, D]和2维[T, D].
 h_post: Tensor类型, 必选输入，mHC的h_post变换矩阵.数据格式为ND，支持非连续Tensor, 支持的数据类型为FLOAT32， 数据维度可为3维[B, S, n]和2维[T, n].
 n：shape中n常取4，6，8.
@@ -4547,7 +4550,10 @@ x_npu = x.npu()
 h_res_npu = h_res.npu()
 h_out_npu = h_out.npu()
 h_post_npu = h_post.npu()
+# h_res提供时
 y_npu = torch_npu.npu_mhc_post(x_npu, h_res_npu, h_out_npu, h_post_npu)
+# h_res缺省时(仅Ascend 950支持)
+y_npu = torch_npu.npu_mhc_post(x_npu, None, h_out_npu, h_post_npu)
 
 图模式调用
 import torch
@@ -10807,7 +10813,7 @@ _add_torch_npu_docstr(
     "npu_moe_gating_top_k",
     """
 函数原型
-npu_moe_gating_top_k(x, k, bias=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
+npu_moe_gating_top_k(x, k, bias=None, input_ids=None, tid2eid=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
 
 ## 参数说明
 
@@ -10818,6 +10824,10 @@ npu_moe_gating_top_k(x, k, bias=None, k_group=1, group_count=1, group_select_mod
 -   <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
 -   **bias**（`Tensor`）：可选参数，表示与输入`x`进行计算的bias值。要求是1D的Tensor，要求shape值与`x`的最后一维相等。数据类型支持`float16`、`bfloat16`、`float32`，数据类型需要与`x`保持一致，数据格式要求为ND。支持非连续`Tensor`。
+
+-   **input_ids**（`Tensor`）：可选参数，表示Hash模式的输入索引，用于从`tid2eid`中查找专家索引。要求是1D的Tensor，要求shape值与`x`的第一维相等。数据类型支持`int32`、`int64`，数据格式要求为ND。支持非连续`Tensor`。
+
+-   **tid2eid**（`Tensor`）：可选参数，表示Hash映射表，存储预计算的专家索引。要求是2D的Tensor，要求shape值的最后一维与`k`相等。数据类型支持`int32`、`int64`，数据格式要求为ND。支持非连续`Tensor`。
 
 -   **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
 
