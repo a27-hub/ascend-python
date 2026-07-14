@@ -686,29 +686,30 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 
 ```python
 import torch
-import torch_npu
+i️mport torch_npu
 import math
 
-# ===== 数据准备 =====
+# ===== 数据准备 =====️
 B = 1
-Q_N = 8          # query heads
-KV_N = 2         # key/value heads (GQA: Q_N / KV_N = 4)
-Q_S = 1          # decode 阶段 query 长度 = 1
+Q_N = 8           # query heads
+KV_N = 2          # key/value heads (GQA: Q_N / KV_N = 4)
+Q_S = 1           # decode 阶段 query 长度 = 1
 D = 128
-KV_S = 2048      # KV Cache 总长度
+KV_S = 2048       # KV Cache 总长度
 block_size = 128
 # 计算需要的 block 数量
 max_block_num = (KV_S + block_size - 1) // block_size  # = 16
 
-q = torch.randn(B, Q_N, Q_S, D, dtype=torch.float16).npu()
-# KV Cache: (blocknum, blocksize, H) — BnBsH 格式
-# H = KV_N * D = 2 * 128 = 256
-k = torch.randn(max_block_num * B, block_size, KV_N * D, dtype=torch.float16).npu()
-v = torch.randn(max_block_num * B, block_size, KV_N * D, dtype=torch.float16).npu()
+ # BSH layout: query 为 3 维 (B, S, H_q)，其中 H_q = Q_N * D
+H_q = Q_N * D    # = 1024
+H_kv = KV_N * D  # = 256
+q = torch.randn(B, Q_S, H_q, dtype=torch.float16).npu()
+# KV Cache: BnBsH 格式 (blocknum, blocksize, H_kv)
+k = torch.randn(max_block_num, block_size, H_kv, dtype=torch.float16).npu()
+v = torch.randn(max_block_num, block_size, H_kv, dtype=torch.float16).npu()
 
 # block_table: (B, max_block_num)，存储 block id
 block_table = torch.arange(max_block_num, dtype=torch.int32).unsqueeze(0).npu()
-
 scale = 1.0 / math.sqrt(D)
 
 # PageAttention 场景必须传入 actual_seq_lengths_kv
@@ -716,17 +717,17 @@ act_seq_len_kv = [KV_S]
 
 # ===== 调用算子 =====
 out, _ = torch_npu.npu_fused_infer_attention_score(
-    q, k, v,
+    q, k, v,️
     actual_seq_lengths_kv=act_seq_len_kv,
     num_heads=Q_N,
-    num_key_value_heads=KV_N,   # GQA: 指定 KV head 数
+   ️  num_key_value_heads=KV_N,   # GQA: 指定 KV head 数
     input_layout="BSH",          # kv cache 为 BnBsH 时用 BSH
-    scale=scale,
+    scale=scale,️
     block_table=block_table,
     block_size=block_size
-)
+)️
 
-print(out.shape)  # torch.Size([1, 8, 1, 128])
+print(out.shape)  # torch.Size([1, 1, 1024])
 ```
 
 > **关键参数说明**：
