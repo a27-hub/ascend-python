@@ -86,7 +86,7 @@ function checkout_pytorch_branch() {
             rm -r ${PYTORCH_PATH}/third_party/op-plugin
         fi
         echo "checkout to torch expected-branch[ ${PYTORCH_VERSION} ] "
-        git checkout "${PYTORCH_VERSION}" --recurse-submodules;
+        git checkout compatible_randomness_v2.9.0-26.1.0 --recurse-submodules;
         git checkout .;git clean -fdx;
     fi
     cd ${CUR_DIR}/../
@@ -107,7 +107,7 @@ function main()
         if [ -d ${BUILD_PATH} ]; then
             rm -r ${BUILD_PATH}
         fi
-        git clone -b ${PYTORCH_VERSION} https://gitcode.com/ascend/pytorch.git ${PYTORCH_PATH}
+        git clone -b compatible_randomness_v2.9.0-26.1.0 https://atomgit.com/wang-ziqi-code/pytorch.git ${PYTORCH_PATH}
     fi
     checkout_pytorch_branch
 
@@ -134,7 +134,7 @@ function main()
     if [[ "${PYTORCH_VERSION}" == v1.11.0* ]] || [[ "${PYTORCH_VERSION}" == v2.0.1* ]]; then
         bash ${PYTORCH_PATH}/ci/build.sh --python=${PY_VERSION}
     else
-        bash ${PYTORCH_PATH}/ci/build.sh --python=${PY_VERSION} --disable_torchair --disable_rpc
+        bash ${PYTORCH_PATH}/ci/build.sh --python=${PY_VERSION} --disable_rpc
     fi
 
     # copy dist/torch_npu.whl from torch_adapter to op_plugin

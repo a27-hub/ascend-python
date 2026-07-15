@@ -141,12 +141,18 @@ inline bool ConfigureCannRandomnessOnce(bool legacy_impl)
     return cann_randomness_compat_configured;
 }
 
+inline bool IsRandomnessLegacyImpl()
+{
+    static const bool legacy_impl = at_npu::native::env::CheckCompatibleImplBlackListFor(
+        at_npu::native::env::CompatibleKey::Randomness);
+    return legacy_impl;
+}
+
 inline bool PrepareRandomnessCompatible(bool support_cann_random_switch = true)
 {
-    const bool legacy_impl = at_npu::native::env::CheckCompatibleImplBlackListFor(
-        at_npu::native::env::CompatibleKey::Randomness);
     const bool is_aclnn_only = c10_npu::IsAclnnOnly();
     if (support_cann_random_switch && is_aclnn_only) {
+        const bool legacy_impl = IsRandomnessLegacyImpl();
         bool cann_randomness_configured = ConfigureCannRandomnessOnce(legacy_impl);
         if (!cann_randomness_configured) {
             return true;
