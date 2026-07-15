@@ -940,9 +940,8 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
 
     const auto dimNum = at_tensor.sizes().size();
     aclFormat format = ACL_FORMAT_ND;
-    auto npu_format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
     if (!at_npu::native::FormatHelper::IsOpInputBaseFormat(at_tensor)) {
-        format = npu_format;
+        format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
@@ -957,8 +956,6 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
                 format = realFormat->second;
             }
         }
-    } else if (npu_format == ACL_FORMAT_ND && c10_npu::IsAclnnOnly()) {
-        format = ACL_FORMAT_ND;
     } else {
         switch (dimNum) {
             case NCL_DIM_NUM:
