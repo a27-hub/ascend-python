@@ -552,7 +552,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
 ### 示例 1：MHA + 非量化 + BNSD（PromptFlashAttention）
 
-**场景说明**：query/key/value 均为 BFLOAT16，仅输出端量化为 INT8。无需 BMM1/BMM2 的 dequant/quant 参数，只需 `quant_scale2`。
+**场景说明**：query/key/value 均为 FLOAT16，非量化场景，BNSD layout。无 BMM1/BMM2 量化参数，也不做输出量化。
 
 **关键参数**：
 
