@@ -15616,15 +15616,15 @@ _add_torch_npu_docstr(
  该接口支持推理和训练场景下使用。
  该接口支持图模式。
  对于输入数据的shape，存在以下约束：
-    - 当前在Atlas A2/A3 训练/推理系列产品上，rotation的shape仅支持[K, K]一种形式，K的取值范围为[16, 1024]；在Ascend 950PR/Ascend 950DT平台上，rotation的shape支持[K, K]和[block_num, K, K]两种形式，K仅支持32、64、128三种取值, 其中block_num = N/K，N为x最后一维的大小。
-    - 输入x的最后一维需要能被K整除。在Atlas A2/A3 训练/推理系列产品上，x的shape仅支持2维，最后一维的大小需要在128~16000之间且必须同时可被8整除；在Ascend 950PR/Ascend 950DT平台上，x的shape支持1~7维，且当dst_dtype为torch_npu.float4_e2m1fn_x2时，输入x的最后一维必须同时可被2整除。
+    - 当前在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上，rotation的shape仅支持[K, K]一种形式，K的取值范围为[16, 1024]；在Ascend 950PR/Ascend 950DT平台上，rotation的shape支持[K, K]和[block_num, K, K]两种形式，K仅支持32、64、128三种取值, 其中block_num = N/K，N为x最后一维的大小。
+    - 输入x的最后一维需要能被K整除。在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上，x的shape仅支持2维，最后一维的大小需要在128~16000之间且必须同时可被8整除；在Ascend 950PR/Ascend 950DT平台上，x的shape支持1~7维，且当dst_dtype为torch_npu.float4_e2m1fn_x2时，输入x的最后一维必须同时可被2整除。
  对于输入数据的取值范围，存在以下约束：
-    - dst_dtype在Atlas A2/A3 训练/推理系列产品上仅支持torch.int8和torch.quint4x2；在Ascend 950PR/Ascend 950DT平台上仅支持torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn。
-    - alpha在Atlas A2/A3 训练/推理系列产品上仅支持传入None，无实际功能；在Ascend 950PR/Ascend 950DT平台上取值范围为(0.0, 1.0)，传入None或不在有效取值范围内时不做处理。
-    - axis在Atlas A2/A3 训练/推理系列产品上仅支持-1或1；在Ascend 950PR/Ascend 950DT平台上仅支持-1或D-1，D为输入x的维度数。
+    - dst_dtype在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持torch.int8和torch.quint4x2；在Ascend 950PR/Ascend 950DT平台上仅支持torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn。
+    - alpha在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持传入None，无实际功能；在Ascend 950PR/Ascend 950DT平台上取值范围为(0.0, 1.0)，传入None或不在有效取值范围内时不做处理。
+    - axis在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持-1或1；在Ascend 950PR/Ascend 950DT平台上仅支持-1或D-1，D为输入x的维度数。
     - 在Ascend 950PR/Ascend 950DT平台上，当dst_dtype为torch.float8_e5m2或torch.float8_e4m3fn时，round_mode仅支持"rint"。
-    - scale_alg在Atlas A2/A3 训练/推理系列产品上仅支持0；在Ascend 950PR/Ascend 950DT平台上支持取值0、1、2，其中当dst_dtype为torch.float8_e5m2或torch.float8_e4m3fn时仅支持0和1，当dst_dtype为torch_npu.float4_e2m1fn_x2时仅支持0和2。
-    - dst_type_max在Atlas A2/A3 训练/推理系列产品上仅支持0.0；在Ascend 950PR/Ascend 950DT平台上，当scale_alg为2时取值范围为[6.0, 12.0]，其余场景仅支持0.0。
+    - scale_alg在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持0；在Ascend 950PR/Ascend 950DT平台上支持取值0、1、2，其中当dst_dtype为torch.float8_e5m2或torch.float8_e4m3fn时仅支持0和1，当dst_dtype为torch_npu.float4_e2m1fn_x2时仅支持0和2。
+    - dst_type_max在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持0.0；在Ascend 950PR/Ascend 950DT平台上，当scale_alg为2时取值范围为[6.0, 12.0]，其余场景仅支持0.0。
  x和rotation的数据类型必须一致。
 
  调用示例:
