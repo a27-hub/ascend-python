@@ -20,21 +20,17 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor upsample_linear1d_backward(
-    const at::Tensor& grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    bool align_corners,
-    c10::optional<double> scales)
+at::Tensor upsample_linear1d_backward(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, bool align_corners, c10::optional<double> scales)
 {
     DO_COMPATIBILITY(aclnnUpsampleLinear1dBackward,
-                     acl_op::upsample_linear1d_backward(grad_output, output_size, input_size, align_corners, scales));
+        acl_op::upsample_linear1d_backward(grad_output, output_size, input_size, align_corners, scales));
     double scales_attr = scales.value_or(0);
 
     at::Tensor grad_input = npu_preparation::apply_tensor(grad_output, input_size);
 
-    EXEC_NPU_CMD(aclnnUpsampleLinear1dBackward, grad_output, output_size, input_size, align_corners,
-                 scales_attr, grad_input);
+    EXEC_NPU_CMD(
+        aclnnUpsampleLinear1dBackward, grad_output, output_size, input_size, align_corners, scales_attr, grad_input);
     return grad_input;
 }
 }

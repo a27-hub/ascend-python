@@ -21,8 +21,8 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-c10::SmallVector<int64_t, SIZE> roi_align_npu_output_size(const at::Tensor &self, const at::Tensor &rois,
-                                                          int64_t pooled_height, int64_t pooled_width)
+c10::SmallVector<int64_t, SIZE> roi_align_npu_output_size(
+    const at::Tensor &self, const at::Tensor &rois, int64_t pooled_height, int64_t pooled_width)
 {
     TORCH_CHECK(rois.dim() >= 1, "The dim of input tensor [rois] is less than 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.dim() >= 2, "The dim of input tensor [self] is less than 2." + OPS_ERROR(ErrCode::PARAM));
@@ -30,8 +30,7 @@ c10::SmallVector<int64_t, SIZE> roi_align_npu_output_size(const at::Tensor &self
 }
 
 at::Tensor &roi_align_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &rois,
-                                  double spatial_scale, int64_t pooled_height, int64_t pooled_width, int64_t sample_num,
-                                  int64_t roi_end_mode)
+    double spatial_scale, int64_t pooled_height, int64_t pooled_width, int64_t sample_num, int64_t roi_end_mode)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("ROIAlign")
@@ -50,7 +49,7 @@ at::Tensor &roi_align_npu_nocheck(at::Tensor &result, const at::Tensor &self, co
 } // namespace
 
 at::Tensor npu_roi_align(const at::Tensor &self, const at::Tensor &rois, double spatial_scale, int64_t pooled_height,
-                         int64_t pooled_width, int64_t sample_num, int64_t roi_end_mode)
+    int64_t pooled_width, int64_t sample_num, int64_t roi_end_mode)
 {
     at::Tensor self_cast = self;
     at::Tensor rois_cast = rois;

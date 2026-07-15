@@ -23,38 +23,26 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-void check_beta_aplha(
-    const at::Tensor& self,
-    const at::Tensor& vec1,
-    const at::Tensor& vec2,
-    const at::Scalar& beta,
-    const at::Scalar& alpha,
-    at::ScalarType high_dtype)
+void check_beta_aplha(const at::Tensor &self, const at::Tensor &vec1, const at::Tensor &vec2, const at::Scalar &beta,
+    const at::Scalar &alpha, at::ScalarType high_dtype)
 {
     TORCH_CHECK(((high_dtype == at::ScalarType::Bool) || !beta.isBoolean()),
-                "Boolean beta only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
+        "Boolean beta only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(((high_dtype == at::ScalarType::Bool) || !alpha.isBoolean()),
-                "Boolean alpha only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
+        "Boolean alpha only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
 
     bool all_int_inputs = ((isIntegralType(self.scalar_type(), true)) && (isIntegralType(vec1.scalar_type(), true)) &&
-                           (isIntegralType(vec2.scalar_type(), true)));
+        (isIntegralType(vec2.scalar_type(), true)));
 
     TORCH_CHECK(!all_int_inputs || beta.isIntegral(true),
-                "For integral input tensors, argument beta must not be a floating point number."
-                + OPS_ERROR(ErrCode::TYPE));
+        "For integral input tensors, argument beta must not be a floating point number." + OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(!all_int_inputs || alpha.isIntegral(true),
-                "For integral input tensors, argument alpha must not be a floating point number."
-                + OPS_ERROR(ErrCode::TYPE));
+        "For integral input tensors, argument alpha must not be a floating point number." + OPS_ERROR(ErrCode::TYPE));
 }
 } // namespace
 
-at::Tensor& addr_out(
-    const at::Tensor& self,
-    const at::Tensor& vec1,
-    const at::Tensor& vec2,
-    const at::Scalar& beta,
-    const at::Scalar& alpha,
-    at::Tensor& out)
+at::Tensor &addr_out(const at::Tensor &self, const at::Tensor &vec1, const at::Tensor &vec2, const at::Scalar &beta,
+    const at::Scalar &alpha, at::Tensor &out)
 {
     at::ScalarType high_dtype = at::native::result_type({self, vec1, vec2});
     check_beta_aplha(self, vec1, vec2, beta, alpha, high_dtype);
@@ -89,12 +77,8 @@ at::Tensor& addr_out(
     return out;
 }
 
-at::Tensor addr(
-    const at::Tensor& self,
-    const at::Tensor& vec1,
-    const at::Tensor& vec2,
-    const at::Scalar& beta,
-    const at::Scalar& alpha)
+at::Tensor addr(const at::Tensor &self, const at::Tensor &vec1, const at::Tensor &vec2, const at::Scalar &beta,
+    const at::Scalar &alpha)
 {
     at::ScalarType high_dtype = at::native::result_type({self, vec1, vec2});
     auto output_size = op_infer::addr_npu_output_size(self, vec1, vec2);
@@ -103,12 +87,8 @@ at::Tensor addr(
     return result;
 }
 
-at::Tensor& addr_(
-    at::Tensor& self,
-    const at::Tensor& vec1,
-    const at::Tensor& vec2,
-    const at::Scalar& beta,
-    const at::Scalar& alpha)
+at::Tensor &addr_(
+    at::Tensor &self, const at::Tensor &vec1, const at::Tensor &vec2, const at::Scalar &beta, const at::Scalar &alpha)
 {
     npu_preparation::CheckMemory({self, vec1, vec2}, {self});
     if (!npu_utils::check_match(&self)) {

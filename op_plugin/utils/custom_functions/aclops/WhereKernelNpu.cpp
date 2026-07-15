@@ -18,8 +18,8 @@
 
 namespace acl_op {
 
-at::Tensor &where_out_nocheck(at::Tensor &out, const at::Tensor &condition, const at::Tensor &self,
-                              const at::Tensor &other)
+at::Tensor &where_out_nocheck(
+    at::Tensor &out, const at::Tensor &condition, const at::Tensor &self, const at::Tensor &other)
 {
     at::Tensor self_cp;
     at::Tensor other_cp;
@@ -33,8 +33,8 @@ at::Tensor &where_out_nocheck(at::Tensor &out, const at::Tensor &condition, cons
     }
 
     TORCH_CHECK(!(condition.scalar_type() != at::ScalarType::Byte && condition.scalar_type() != at::ScalarType::Bool),
-                "Expected condition to have ScalarType Byte, but got ScalarType ", toString(condition.scalar_type()),
-                OPS_ERROR(ErrCode::TYPE));
+        "Expected condition to have ScalarType Byte, but got ScalarType ", toString(condition.scalar_type()),
+        OPS_ERROR(ErrCode::TYPE));
 
     at_npu::native::OpCommand cmd;
     cmd.Name("Select").Input(condition).Input(self_cp).Input(other_cp).Output(out).Run();
@@ -42,9 +42,8 @@ at::Tensor &where_out_nocheck(at::Tensor &out, const at::Tensor &condition, cons
     return out;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_expand_outplace(const at::Tensor &to_expand1,
-                                                                   const at::Tensor &to_expand2,
-                                                                   const at::Tensor &to_expand3, const char *api_name)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_expand_outplace(
+    const at::Tensor &to_expand1, const at::Tensor &to_expand2, const at::Tensor &to_expand3, const char *api_name)
 {
     for (auto &t : {to_expand1, to_expand2, to_expand3}) {
         if (!t.defined()) {
@@ -60,7 +59,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_expand_outplace(const at::Ten
     auto expanded_size = op_infer::broadcast_ops_npu_output_size(expanded_size12, to_expand3.sizes());
 
     return std::make_tuple(to_expand1.expand(expanded_size, true), to_expand2.expand(expanded_size, true),
-                           to_expand3.expand(expanded_size, true));
+        to_expand3.expand(expanded_size, true));
 }
 
 } // namespace acl_op

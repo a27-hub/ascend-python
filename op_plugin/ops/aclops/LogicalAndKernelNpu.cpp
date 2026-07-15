@@ -52,8 +52,8 @@ at::Tensor &logical_and_out_npu_nocheck(at::Tensor &result, const at::Tensor &se
 at::Tensor &logical_and_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &out)
 {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    npu_preparation::CheckOut({self}, out, npu_preparation::get_tensor_npu_format(self), out.scalar_type(),
-                              output_size);
+    npu_preparation::CheckOut(
+        {self}, out, npu_preparation::get_tensor_npu_format(self), out.scalar_type(), output_size);
 
     if (npu_utils::check_match(&out) && (out.dtype() == at::kBool)) {
         logical_and_out_npu_nocheck(out, self, other);
@@ -69,8 +69,8 @@ at::Tensor &logical_and_out(const at::Tensor &self, const at::Tensor &other, at:
 at::Tensor logical_and(const at::Tensor &self, const at::Tensor &other)
 {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kBool),
-                                                                  npu_preparation::get_tensor_npu_format(self));
+    at::Tensor result = npu_preparation::apply_tensor_with_format(
+        output_size, self.options().dtype(at::kBool), npu_preparation::get_tensor_npu_format(self));
     logical_and_out_npu_nocheck(result, self, other);
     return result;
 }

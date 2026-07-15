@@ -22,18 +22,15 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& hardswish_out_nocheck(at::Tensor& result, const at::Tensor& self)
+at::Tensor &hardswish_out_nocheck(at::Tensor &result, const at::Tensor &self)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("HardSwish")
-        .Input(self)
-        .Output(result)
-        .Run();
+    cmd.Name("HardSwish").Input(self).Output(result).Run();
     return result;
 }
 } // namespace
 
-at::Tensor& hardswish_out(const at::Tensor& self, at::Tensor& result)
+at::Tensor &hardswish_out(const at::Tensor &self, at::Tensor &result)
 {
     npu_preparation::CheckOut({self}, result, self);
 
@@ -48,14 +45,14 @@ at::Tensor& hardswish_out(const at::Tensor& self, at::Tensor& result)
     return result;
 }
 
-at::Tensor hardswish(const at::Tensor& self)
+at::Tensor hardswish(const at::Tensor &self)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);
     hardswish_out_nocheck(result, self);
     return result;
 }
 
-at::Tensor& hardswish_(at::Tensor& self)
+at::Tensor &hardswish_(at::Tensor &self)
 {
     acl_op::hardswish_out(self, self);
     return self;

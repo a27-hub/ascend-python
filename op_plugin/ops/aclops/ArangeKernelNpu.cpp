@@ -48,8 +48,8 @@ at::Tensor &arange_out_npu_nocheck(at::Tensor &result, at::Scalar start, at::Sca
 } // namespace
 
 at::Tensor arange(const at::Scalar &start, const at::Scalar &end, const at::Scalar &step,
-                  c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
-                  c10::optional<at::Device> device, c10::optional<bool> pin_memory)
+    c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout, c10::optional<at::Device> device,
+    c10::optional<bool> pin_memory)
 {
     c10::TensorOptions option =
         c10::TensorOptions().dtype(dtype).device(device).layout(layout).pinned_memory(pin_memory);
@@ -63,9 +63,9 @@ at::Tensor arange(const at::Scalar &start, const at::Scalar &end, const at::Scal
             auto step_value = step.to<accscalar_type>();
 
             TORCH_CHECK(step_value > 0 || step_value < 0, "step must be nonzero" + OPS_ERROR(ErrCode::VALUE));
-            TORCH_CHECK(((step_value > 0) && (end_value >= start_value)) ||
-                            ((step_value < 0) && (end_value <= start_value)),
-                        "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                ((step_value > 0) && (end_value >= start_value)) || ((step_value < 0) && (end_value <= start_value)),
+                "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
             at::Scalar start_opt = start;
             at::Scalar end_opt = end;
             at::Scalar step_opt = step;
@@ -83,9 +83,9 @@ at::Tensor arange(const at::Scalar &start, const at::Scalar &end, const at::Scal
 
     auto output_size = op_infer::infersize_arange(start, end, step, c10::typeMetaToScalarType(option.dtype()));
     bool is_half = option.dtype() == at::kHalf || option.dtype() == at::kBFloat16;
-    at::Tensor result =
-        is_half ? npu_preparation::apply_tensor_with_format(output_size, option.dtype(at::kFloat), ACL_FORMAT_ND)
-                : npu_preparation::apply_tensor_with_format(output_size, option, ACL_FORMAT_ND);
+    at::Tensor result = is_half
+        ? npu_preparation::apply_tensor_with_format(output_size, option.dtype(at::kFloat), ACL_FORMAT_ND)
+        : npu_preparation::apply_tensor_with_format(output_size, option, ACL_FORMAT_ND);
     arange_out_npu_nocheck(result, start, end, step);
     if (is_half) {
         result = result.to(option.dtype());
@@ -94,16 +94,14 @@ at::Tensor arange(const at::Scalar &start, const at::Scalar &end, const at::Scal
 }
 
 at::Tensor arange(const at::Scalar &start, const at::Scalar &end, c10::optional<at::ScalarType> dtype,
-                  c10::optional<at::Layout> layout, c10::optional<at::Device> device,
-                  c10::optional<bool> pin_memory)
+    c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory)
 {
     const at::Scalar step = 1;
     return acl_op::arange(start, end, step, dtype, layout, device, pin_memory);
 }
 
-
 at::Tensor arange(const at::Scalar &end, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
-                  c10::optional<at::Device> device, c10::optional<bool> pin_memory)
+    c10::optional<at::Device> device, c10::optional<bool> pin_memory)
 {
     const at::Scalar start = 0;
     return acl_op::arange(start, end, dtype, layout, device, pin_memory);
@@ -118,15 +116,15 @@ at::Tensor &arange_out(const at::Scalar &start, const at::Scalar &end, const at:
         auto step_value = step.to<accscalar_type>();
 
         TORCH_CHECK(step_value != 0, "step must be nonzero" + OPS_ERROR(ErrCode::VALUE));
-        TORCH_CHECK(((step_value > 0) && (end_value >= start_value)) ||
-                        ((step_value < 0) && (end_value <= start_value)),
-                    "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(
+            ((step_value > 0) && (end_value >= start_value)) || ((step_value < 0) && (end_value <= start_value)),
+            "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
     });
 
     auto output_size = op_infer::infersize_arange(start, end, step, out.scalar_type());
     if (out.numel() != output_size[0]) {
         TORCH_NPU_WARN("The out tensor size does not match the computed size, it will resize to computed size (",
-                       output_size[0], ",).");
+            output_size[0], ",).");
         out.resize_(output_size);
     }
     if (!npu_utils::check_match(&out)) {

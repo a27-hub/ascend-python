@@ -21,15 +21,15 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor index_high_dims_op_api(const at::Tensor& self, std::vector<at::Tensor> indices)
+at::Tensor index_high_dims_op_api(const at::Tensor &self, std::vector<at::Tensor> indices)
 {
     std::vector<at::Tensor> all_defined_indices;
     at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
     at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
     for (uint64_t i = 0; i < indices.size(); i++) {
         if (indices[i].defined()) {
-        all_defined_indices.emplace_back(indices[i]);
-        continue;
+            all_defined_indices.emplace_back(indices[i]);
+            continue;
         }
         all_defined_indices.emplace_back(emptyTensor);
     }
@@ -41,7 +41,7 @@ at::Tensor index_high_dims_op_api(const at::Tensor& self, std::vector<at::Tensor
     return result;
 }
 
-at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Tensor>>& orig)
+at::Tensor index(const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &orig)
 {
     DO_COMPATIBILITY(aclnnIndex, acl_op::index(self, orig));
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(orig);

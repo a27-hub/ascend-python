@@ -16,10 +16,12 @@
 using namespace std;
 namespace atb {
 using SelfAttentionParam = atb::infer::SelfAttentionParam;
-void _npu_flash_attention_qlens(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, const at::Tensor &block_table, const at::Tensor &mask, const at::Tensor &seq_len, const at::Tensor &context_lens, int64_t num_kv_heads, int64_t num_heads, double scale_value, at::Tensor &out)
+void _npu_flash_attention_qlens(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache,
+    const at::Tensor &block_table, const at::Tensor &mask, const at::Tensor &seq_len, const at::Tensor &context_lens,
+    int64_t num_kv_heads, int64_t num_heads, double scale_value, at::Tensor &out)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
+    OpParamCache<SelfAttentionParam> &selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
     SelfAttentionParam selfattentionparam;
 
     selfattentionparam.calcType = SelfAttentionParam::PREFIX_ENCODER;
@@ -62,7 +64,9 @@ void _npu_flash_attention_qlens(const at::Tensor &query, const at::Tensor &key_c
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_flash_attention_qlens(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, Tensor mask, Tensor seq_len, Tensor context_lens, int num_kv_heads, int num_heads, float scale_value, Tensor(a!) out) -> ()");
+    m.def("_npu_flash_attention_qlens(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, Tensor "
+          "mask, Tensor seq_len, Tensor context_lens, int num_kv_heads, int num_heads, float scale_value, Tensor(a!) "
+          "out) -> ()");
 }
 }
 

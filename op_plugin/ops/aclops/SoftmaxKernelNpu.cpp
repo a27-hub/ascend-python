@@ -21,30 +21,21 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& softmax_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    int64_t dim)
+at::Tensor &softmax_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_t dim)
 {
     c10::SmallVector<int64_t, N> dim_list = {dim};
     at_npu::native::OpCommand cmd;
-    cmd.Name("SoftmaxV2")
-        .Input(self)
-        .Output(result)
-        .Attr("axes", dim_list)
-        .Run();
+    cmd.Name("SoftmaxV2").Input(self).Output(result).Attr("axes", dim_list).Run();
     return result;
 }
 } // namespace
 
-at::Tensor softmax(
-    const at::Tensor &self,
-    int64_t dim,
-    c10::optional<at::ScalarType> dtype)
+at::Tensor softmax(const at::Tensor &self, int64_t dim, c10::optional<at::ScalarType> dtype)
 {
     auto result = [&]() {
         at::NoNamesGuard guard;
-        at::Tensor converted = dtype.has_value() ? at_npu::native::custom_ops::_npu_dtype_cast(self, dtype.value()) : self;
+        at::Tensor converted =
+            dtype.has_value() ? at_npu::native::custom_ops::_npu_dtype_cast(self, dtype.value()) : self;
         return at::_softmax(converted, dim, false);
     }();
     at::namedinference::propagate_names(result, self);
@@ -53,10 +44,7 @@ at::Tensor softmax(
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor softmax(
-    const at::Tensor &self,
-    at::Dimname dim,
-    c10::optional<at::ScalarType> dtype)
+at::Tensor softmax(const at::Tensor &self, at::Dimname dim, c10::optional<at::ScalarType> dtype)
 {
     return acl_op::softmax(self, dimname_to_position(self, dim), dtype);
 }
@@ -81,25 +69,16 @@ at::Tensor _softmax(const at::Tensor &self, int64_t dim, bool half_to_float)
         dst_type = self.scalar_type();
     }
 
-    at::Tensor self_cast = dst_type == self.scalar_type() ?
-        self : at_npu::native::custom_ops::_npu_dtype_cast(self, dst_type);
+    at::Tensor self_cast =
+        dst_type == self.scalar_type() ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, dst_type);
     softmax_out_nocheck(result, self_cast, dim);
     return result;
 }
 
-at::Tensor& _softmax_out(
-    const at::Tensor& self,
-    int64_t dim,
-    bool half_to_float,
-    at::Tensor& out)
+at::Tensor &_softmax_out(const at::Tensor &self, int64_t dim, bool half_to_float, at::Tensor &out)
 {
     auto dst_type = half_to_float ? at::kFloat : self.scalar_type();
-    npu_preparation::CheckOut(
-        {self},
-        out,
-        npu_preparation::get_tensor_npu_format(out),
-        dst_type,
-        self.sizes());
+    npu_preparation::CheckOut({self}, out, npu_preparation::get_tensor_npu_format(out), dst_type, self.sizes());
 
     auto self_dtype = self.scalar_type();
     if (half_to_float) {
@@ -109,8 +88,8 @@ at::Tensor& _softmax_out(
             "'" + OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
 
-    at::Tensor self_cast = dst_type == self.scalar_type() ?
-        self : at_npu::native::custom_ops::_npu_dtype_cast(self, dst_type);
+    at::Tensor self_cast =
+        dst_type == self.scalar_type() ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, dst_type);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
         softmax_out_nocheck(contiguous_result, self_cast, dim);

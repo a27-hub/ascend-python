@@ -22,16 +22,11 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& logspace_out_nocheck(
-    at::Tensor& result,
-    at::Scalar start,
-    at::Scalar end,
-    int64_t steps,
-    double base)
+at::Tensor &logspace_out_nocheck(at::Tensor &result, at::Scalar start, at::Scalar end, int64_t steps, double base)
 {
     if ((base <= 0) && ((!start.isIntegral(false)) || (!end.isIntegral(false)))) {
-        TORCH_NPU_WARN("Warning: start and end in logspace should both be int when base <= 0, get type ",
-                       start.type(), " and", end.type());
+        TORCH_NPU_WARN("Warning: start and end in logspace should both be int when base <= 0, get type ", start.type(),
+            " and", end.type());
     }
 
     at::Tensor inputs;
@@ -39,15 +34,14 @@ at::Tensor& logspace_out_nocheck(
     auto result_type = result.scalar_type();
     if (result_type == at::ScalarType::Half) {
         inputs = at_npu::native::custom_ops::_npu_dtype_cast(
-            at::arange(0, steps, at::device(torch_npu::utils::get_npu_device_type())),
-            at::kHalf);
+            at::arange(0, steps, at::device(torch_npu::utils::get_npu_device_type())), at::kHalf);
         dtype = 0;
     } else if (result_type == at::ScalarType::Float) {
         inputs = at::arange(0, steps, at::device(torch_npu::utils::get_npu_device_type()).dtype(at::kFloat));
         dtype = 1;
     } else {
-        TORCH_CHECK(false, "logspace only support float32 and float16, given type is ", result_type,
-            OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK(
+            false, "logspace only support float32 and float16, given type is ", result_type, OPS_ERROR(ErrCode::TYPE));
     }
     at_npu::native::OpCommand cmd;
     cmd.Name("LogSpaceD")
@@ -63,15 +57,9 @@ at::Tensor& logspace_out_nocheck(
 }
 } // namespace
 
-at::Tensor& logspace_out(
-    const at::Scalar& start,
-    const at::Scalar& end,
-    int64_t steps,
-    double base,
-    at::Tensor& out)
+at::Tensor &logspace_out(const at::Scalar &start, const at::Scalar &end, int64_t steps, double base, at::Tensor &out)
 {
-    TORCH_CHECK(steps >= 0, "logspace requires non-negative steps, given steps is ", steps,
-        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(steps >= 0, "logspace requires non-negative steps, given steps is ", steps, OPS_ERROR(ErrCode::PARAM));
     if (out.numel() != steps) {
         out.resize_({steps});
     }

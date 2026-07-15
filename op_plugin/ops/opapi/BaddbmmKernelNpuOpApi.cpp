@@ -22,7 +22,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor &baddbmm_out(const at::Tensor &self, const at::Tensor &batch1, const at::Tensor &batch2,
-                        const at::Scalar &beta, const at::Scalar &alpha, at::Tensor &out)
+    const at::Scalar &beta, const at::Scalar &alpha, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnBaddbmm, acl_op::baddbmm_out(self, batch1, batch2, beta, alpha, out));
     auto output_size = op_infer::baddbmm_npu_output_size(batch1, batch2);
@@ -33,8 +33,7 @@ at::Tensor &baddbmm_out(const at::Tensor &self, const at::Tensor &batch1, const 
 }
 
 at::Tensor &baddbmm_out(const at::Tensor &self, const at::Tensor &batch1, const at::Tensor &batch2,
-                        const at::ScalarType output_dtype, const at::Scalar &beta, const at::Scalar &alpha,
-                        at::Tensor &out)
+    const at::ScalarType output_dtype, const at::Scalar &beta, const at::Scalar &alpha, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnBaddbmm, acl_op::baddbmm_out(self, batch1, batch2, beta, alpha, out));
     auto output_size = op_infer::baddbmm_npu_output_size(batch1, batch2);
@@ -45,7 +44,7 @@ at::Tensor &baddbmm_out(const at::Tensor &self, const at::Tensor &batch1, const 
 }
 
 at::Tensor baddbmm(const at::Tensor &self, const at::Tensor &batch1, const at::Tensor &batch2, const at::Scalar &beta,
-                   const at::Scalar &alpha)
+    const at::Scalar &alpha)
 {
     DO_COMPATIBILITY(aclnnBaddbmm, acl_op::baddbmm(self, batch1, batch2, beta, alpha));
     auto output_size = op_infer::baddbmm_npu_output_size(batch1, batch2);
@@ -57,7 +56,7 @@ at::Tensor baddbmm(const at::Tensor &self, const at::Tensor &batch1, const at::T
 }
 
 at::Tensor baddbmm(const at::Tensor &self, const at::Tensor &batch1, const at::Tensor &batch2,
-                   const at::ScalarType output_dtype, const at::Scalar &beta, const at::Scalar &alpha)
+    const at::ScalarType output_dtype, const at::Scalar &beta, const at::Scalar &alpha)
 {
     DO_COMPATIBILITY(aclnnBaddbmm, acl_op::baddbmm(self, batch1, batch2, beta, alpha));
     auto output_size = op_infer::baddbmm_npu_output_size(batch1, batch2);
@@ -69,7 +68,7 @@ at::Tensor baddbmm(const at::Tensor &self, const at::Tensor &batch1, const at::T
 }
 
 at::Tensor &baddbmm_(at::Tensor &self, const at::Tensor &batch1, const at::Tensor &batch2, const at::Scalar &beta,
-                     const at::Scalar &alpha)
+    const at::Scalar &alpha)
 {
     DO_COMPATIBILITY(aclnnBaddbmm, acl_op::baddbmm_(self, batch1, batch2, beta, alpha));
     op_api::baddbmm_out(self, batch1, batch2, beta, alpha, self);

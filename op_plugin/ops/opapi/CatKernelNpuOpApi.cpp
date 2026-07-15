@@ -24,7 +24,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_opapi(
-    const at::MaterializedITensorListRef& tensors)
+    const at::MaterializedITensorListRef &tensors)
 {
     c10::SmallVector<at::Tensor, op_infer::N> dst_tensor_list;
     // pytorch supports empty tensors, which needs to be removed from the NPU.
@@ -38,20 +38,20 @@ static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_opapi(
 }
 
 static c10::SmallVector<int64_t, op_infer::SIZE> cat_npu_output_size_opapi(
-    c10::SmallVector<at::Tensor, op_infer::N>& tensors, int64_t dimension)
+    c10::SmallVector<at::Tensor, op_infer::N> &tensors, int64_t dimension)
 {
     bool allSkipped = true;
     int64_t nDims = 0;
-    at::Tensor* notSkippedTensor;
+    at::Tensor *notSkippedTensor;
     int numInputs = static_cast<int64_t>(tensors.size());
-    auto should_skip = [](const at::Tensor* t) { return t->nbytes() == 0 && t->dim() == 1; };
+    auto should_skip = [](const at::Tensor *t) { return t->nbytes() == 0 && t->dim() == 1; };
     for (int i = 0; i < numInputs; i++) {
-        if (should_skip(static_cast<at::Tensor*>(&tensors[i]))) {
+        if (should_skip(static_cast<at::Tensor *>(&tensors[i]))) {
             continue;
         }
         // found a non-empty tensor
         allSkipped = false;
-        notSkippedTensor = static_cast<at::Tensor*>(&tensors[i]);
+        notSkippedTensor = static_cast<at::Tensor *>(&tensors[i]);
         nDims = notSkippedTensor->dim();
         break;
     }
@@ -64,7 +64,7 @@ static c10::SmallVector<int64_t, op_infer::SIZE> cat_npu_output_size_opapi(
     // Compute size of the result in the cat dimension
     int64_t cat_dim_size = 0;
     for (int i = 0; i < numInputs; i++) {
-        at::Tensor* tensor = static_cast<at::Tensor*>(&tensors[i]);
+        at::Tensor *tensor = static_cast<at::Tensor *>(&tensors[i]);
         if (should_skip(tensor)) {
             continue;
         }
@@ -85,18 +85,17 @@ static c10::SmallVector<int64_t, op_infer::SIZE> cat_npu_output_size_opapi(
     return size;
 }
 
-inline void cat_check_no_zero_dim(const at::MaterializedITensorListRef& tensors)
+inline void cat_check_no_zero_dim(const at::MaterializedITensorListRef &tensors)
 {
     size_t i = 0;
-    for (const at::Tensor& t : tensors) {
-        TORCH_CHECK(
-            t.dim() > 0,
-            "zero-dimensional tensor (at position ", i, ") cannot be concatenated" + OPS_ERROR(ErrCode::PARAM));
+    for (const at::Tensor &t : tensors) {
+        TORCH_CHECK(t.dim() > 0, "zero-dimensional tensor (at position ", i,
+            ") cannot be concatenated" + OPS_ERROR(ErrCode::PARAM));
         i++;
     }
 }
 
-at::Tensor& cat_out(const at::ITensorListRef& tensors, int64_t dim, at::Tensor& out)
+at::Tensor &cat_out(const at::ITensorListRef &tensors, int64_t dim, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnCat, acl_op::cat_out(tensors, dim, out));
     auto materialized = tensors.materialize();
@@ -121,7 +120,7 @@ at::Tensor& cat_out(const at::ITensorListRef& tensors, int64_t dim, at::Tensor& 
     return out;
 }
 
-at::Tensor cat(const at::ITensorListRef& tensors, int64_t dim)
+at::Tensor cat(const at::ITensorListRef &tensors, int64_t dim)
 {
     DO_COMPATIBILITY(aclnnCat, acl_op::cat(tensors, dim));
     auto materialized = tensors.materialize();
@@ -151,7 +150,7 @@ at::Tensor cat(const at::ITensorListRef& tensors, int64_t dim)
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor& cat_out(at::TensorList tensors, at::Dimname dim, at::Tensor& out)
+at::Tensor &cat_out(at::TensorList tensors, at::Dimname dim, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnCat, acl_op::cat_out(tensors, dim, out));
     return at::cat_out(out, tensors, dimname_to_position(tensors[0], dim));

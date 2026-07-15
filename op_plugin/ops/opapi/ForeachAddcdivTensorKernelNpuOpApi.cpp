@@ -22,12 +22,8 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
-void _split_and_exec_npu_cmd_addcdiv_tensor(const at::TensorList input,
-    const at::TensorList tensors1,
-    const at::TensorList tensors2,
-    const at::Tensor scalars,
-    at::TensorList result,
-    bool is_inplace)
+void _split_and_exec_npu_cmd_addcdiv_tensor(const at::TensorList input, const at::TensorList tensors1,
+    const at::TensorList tensors2, const at::Tensor scalars, at::TensorList result, bool is_inplace)
 {
     size_t tensor_count = input.size();
     size_t max_tensor_count = is_inplace ? 16 : 12;
@@ -55,21 +51,16 @@ void _split_and_exec_npu_cmd_addcdiv_tensor(const at::TensorList input,
         at::TensorList temp_result(result.data() + i * max_tensor_count, data_count);
 
         EXEC_NPU_CMD(
-            aclnnForeachAddcdivScalarList,
-            temp_input, temp_tensors1,
-            temp_tensors2, temp_scalars,
-            temp_result);
+            aclnnForeachAddcdivScalarList, temp_input, temp_tensors1, temp_tensors2, temp_scalars, temp_result);
     }
 }
 
-std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
-    const at::TensorList tensors1,
-    const at::TensorList tensors2,
-    const at::Tensor& scalars)
+std::vector<at::Tensor> _foreach_addcdiv(
+    const at::TensorList input, const at::TensorList tensors1, const at::TensorList tensors2, const at::Tensor &scalars)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
 
     auto scalars_ = at::native::convert_tensor_to_scalar_list(scalars, input.size());
 
@@ -78,11 +69,10 @@ std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
     }
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars_);
-    if (!at::native::can_use_fast_route({input, tensors1, tensors2}) ||
-        at::native::has_integral_tensor(input, true)) {
-            return at::native::foreach_tensor_addcdiv_scalarlist_slow(input, tensors1, tensors2, scalars_);
+    if (!at::native::can_use_fast_route({input, tensors1, tensors2}) || at::native::has_integral_tensor(input, true)) {
+        return at::native::foreach_tensor_addcdiv_scalarlist_slow(input, tensors1, tensors2, scalars_);
     }
-    
+
     auto scalar_type = input[0].scalar_type();
     std::vector<at::Tensor> result(input.size());
     auto iterRes = result.data();
@@ -90,33 +80,29 @@ std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
     for (const at::Tensor &tensor : input) {
         auto output_size = op_infer::input_same_output_size(tensor);
         iterRes[i++] = at_npu::native::OpPreparation::apply_tensor_without_format(
-            output_size,
-            tensor.options().dtype(scalar_type));
+            output_size, tensor.options().dtype(scalar_type));
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_addcdiv_tensor(input, tensors1, tensors2, scalars, result_, false);
     return result;
 }
 
-void _foreach_addcdiv_(const at::TensorList input,
-    const at::TensorList tensors1,
-    const at::TensorList tensors2,
-    const at::Tensor& scalars)
+void _foreach_addcdiv_(
+    const at::TensorList input, const at::TensorList tensors1, const at::TensorList tensors2, const at::Tensor &scalars)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+
     auto scalars_ = at::native::convert_tensor_to_scalar_list(scalars, input.size());
 
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcdiv_scalarlist_slow_(input, tensors1, tensors2, scalars_);
     }
-    
+
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars_);
-    if (!at::native::can_use_fast_route({input, tensors1, tensors2}) ||
-        at::native::has_integral_tensor(input, true)) {
-            return at::native::foreach_tensor_addcdiv_scalarlist_slow_(input, tensors1, tensors2, scalars_);
+    if (!at::native::can_use_fast_route({input, tensors1, tensors2}) || at::native::has_integral_tensor(input, true)) {
+        return at::native::foreach_tensor_addcdiv_scalarlist_slow_(input, tensors1, tensors2, scalars_);
     }
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);

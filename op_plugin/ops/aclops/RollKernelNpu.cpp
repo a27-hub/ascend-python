@@ -21,30 +21,17 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 
-at::Tensor& roll_out_npu_no_transpose(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef shifts,
-    at::IntArrayRef dims)
+at::Tensor &roll_out_npu_no_transpose(
+    at::Tensor &result, const at::Tensor &self, at::IntArrayRef shifts, at::IntArrayRef dims)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Roll")
-        .Input(self)
-        .Output(result)
-        .Attr("shifts", shifts)
-        .Attr("dims", dims)
-        .Run();
+    cmd.Name("Roll").Input(self).Output(result).Attr("shifts", shifts).Attr("dims", dims).Run();
 
     return result;
 }
 
-at::Tensor& roll_transpose(
-    at::Tensor& result,
-    const at::Tensor& self,
-    int64_t axis,
-    int64_t first_dim,
-    at::IntArrayRef shifts,
-    int64_t id)
+at::Tensor &roll_transpose(
+    at::Tensor &result, const at::Tensor &self, int64_t axis, int64_t first_dim, at::IntArrayRef shifts, int64_t id)
 {
     c10::SmallVector<int64_t, SIZE> perm;
     for (int64_t i = 0; i < self.dim(); i++) {
@@ -63,18 +50,14 @@ at::Tensor& roll_transpose(
     return result;
 }
 
-at::Tensor& roll_out_npu(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef shifts,
-    at::IntArrayRef dims)
+at::Tensor &roll_out_npu(at::Tensor &result, const at::Tensor &self, at::IntArrayRef shifts, at::IntArrayRef dims)
 {
     if (dims.size() == 0) {
         roll_out_npu_no_transpose(result, self, shifts, dims);
     } else {
         TORCH_CHECK(dims.size() == shifts.size(),
-                    "The size of shifts and dims should be the same when the size of dims is not 0."
-                    + OPS_ERROR(ErrCode::PARAM));
+            "The size of shifts and dims should be the same when the size of dims is not 0." +
+                OPS_ERROR(ErrCode::PARAM));
         int64_t first_dim = op_plugin::utils::make_warp_dim(0, self.dim());
         for (uint i = 0; i < dims.size(); i++) {
             int64_t axis = op_plugin::utils::make_warp_dim(dims[i], self.dim());
@@ -97,10 +80,7 @@ at::Tensor& roll_out_npu(
 }
 } // namespace
 
-at::Tensor roll(
-    const at::Tensor& self,
-    at::IntArrayRef shifts,
-    at::IntArrayRef dims)
+at::Tensor roll(const at::Tensor &self, at::IntArrayRef shifts, at::IntArrayRef dims)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);
     roll_out_npu(result, self, shifts, dims);

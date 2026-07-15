@@ -24,19 +24,17 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 inline void max_unpool3d_check(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size)
 {
-    TORCH_CHECK(output_size.size() == 3, "There should be exactly 3 elements (depth, height, width) in output_size"
-        + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() == 3,
+        "There should be exactly 3 elements (depth, height, width) in output_size" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((self.ndimension() == 4 || self.ndimension() == 5),
-        "Input to max_unpooling2d should be a 4d or 5d Tensor"
-        + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.sizes() == indices.sizes(), "Shape of indices should match shape of input"
-        + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.numel() > 0, "Input must be non-empty"
-        + OPS_ERROR(ErrCode::PARAM));
+        "Input to max_unpooling2d should be a 4d or 5d Tensor" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        self.sizes() == indices.sizes(), "Shape of indices should match shape of input" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(self.numel() > 0, "Input must be non-empty" + OPS_ERROR(ErrCode::PARAM));
 }
 
-at::Tensor &max_unpool3d_out_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &indices,
-                                     const at::Tensor &data)
+at::Tensor &max_unpool3d_out_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &indices, const at::Tensor &data)
 {
     int64_t N = 1;
     int64_t C = self.size(0);
@@ -64,7 +62,7 @@ at::Tensor &max_unpool3d_out_nocheck(at::Tensor &result, const at::Tensor &self,
 } // namespace
 
 at::Tensor &max_unpool3d_out(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size,
-                             at::IntArrayRef stride, at::IntArrayRef padding, at::Tensor &out)
+    at::IntArrayRef stride, at::IntArrayRef padding, at::Tensor &out)
 {
     max_unpool3d_check(self, indices, output_size);
     auto out_shape = op_infer::max_pool3d_output_size(self, output_size);
@@ -83,7 +81,7 @@ at::Tensor &max_unpool3d_out(const at::Tensor &self, const at::Tensor &indices, 
 }
 
 at::Tensor max_unpool3d(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size,
-                        at::IntArrayRef stride, at::IntArrayRef padding)
+    at::IntArrayRef stride, at::IntArrayRef padding)
 {
     max_unpool3d_check(self, indices, output_size);
     auto out_shape = op_infer::max_pool3d_output_size(self, output_size);

@@ -20,8 +20,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-c10::SmallVector<int64_t, SIZE> get_output_size(const at::Tensor &weight, const at::Tensor &indices,
-                                                const at::Tensor &offsets, bool include_last_offset)
+c10::SmallVector<int64_t, SIZE> get_output_size(
+    const at::Tensor &weight, const at::Tensor &indices, const at::Tensor &offsets, bool include_last_offset)
 {
     TORCH_CHECK(weight.dim() == 2, "weight has to be a 2D Tensor, but got Tensor of dimension ", weight.dim());
     c10::SmallVector<int64_t, SIZE> outputSize = {};
@@ -33,13 +33,13 @@ c10::SmallVector<int64_t, SIZE> get_output_size(const at::Tensor &weight, const 
     return outputSize;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
-    const at::Tensor &weight, const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq,
-    int64_t mode, bool sparse, const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset,
-    int64_t padding_idx)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(const at::Tensor &weight,
+    const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq, int64_t mode, bool sparse,
+    const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset, int64_t padding_idx)
 {
-    DO_COMPATIBILITY(aclnnEmbeddingBag, acl_op::_embedding_bag(weight, indices, offsets, scale_grad_by_freq,
-    mode, sparse, per_sample_weights, include_last_offset, padding_idx));
+    DO_COMPATIBILITY(aclnnEmbeddingBag,
+        acl_op::_embedding_bag(weight, indices, offsets, scale_grad_by_freq, mode, sparse, per_sample_weights,
+            include_last_offset, padding_idx));
 
     TORCH_CHECK((indices.dim() > 0), "indices.dim() must be greater than 0");
     TORCH_CHECK((weight.dim() > 0), "weight.dim() must be greater than 0");
@@ -94,19 +94,18 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
         offset2bag_cast = npu_preparation::apply_tensor_without_format(offset2bag_cast, 0);
     }
 
-    EXEC_NPU_CMD(aclnnEmbeddingBag, weight, indices, offsets, scale_grad_by_freq,
-                 mode, sparse, per_sample_weights, include_last_offset, padding_idx,
-                 output_tensor, offset2bag_cast, bag_size_cast, max_indices_cast);
+    EXEC_NPU_CMD(aclnnEmbeddingBag, weight, indices, offsets, scale_grad_by_freq, mode, sparse, per_sample_weights,
+        include_last_offset, padding_idx, output_tensor, offset2bag_cast, bag_size_cast, max_indices_cast);
     return std::tie(output_tensor, offset2bag_cast, bag_size_cast, max_indices_cast);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forward_only(
-    const at::Tensor &weight, const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq,
-    int64_t mode, bool sparse, const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset,
-    int64_t padding_idx)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forward_only(const at::Tensor &weight,
+    const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq, int64_t mode, bool sparse,
+    const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset, int64_t padding_idx)
 {
-    DO_COMPATIBILITY(aclnnEmbeddingBag, acl_op::_embedding_bag_forward_only(weight, indices, offsets, scale_grad_by_freq,
-    mode, sparse, per_sample_weights, include_last_offset, padding_idx));
+    DO_COMPATIBILITY(aclnnEmbeddingBag,
+        acl_op::_embedding_bag_forward_only(weight, indices, offsets, scale_grad_by_freq, mode, sparse,
+            per_sample_weights, include_last_offset, padding_idx));
 
     TORCH_CHECK((indices.dim() > 0), "indices.dim() must be greater than 0");
     TORCH_CHECK((weight.dim() > 0), "weight.dim() must be greater than 0");
@@ -161,9 +160,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forwar
         offset2bag_cast = npu_preparation::apply_tensor_without_format(offset2bag_cast, 0);
     }
 
-    EXEC_NPU_CMD(aclnnEmbeddingBag, weight, indices, offsets, scale_grad_by_freq,
-                 mode, sparse, per_sample_weights, include_last_offset, padding_idx,
-                 output_tensor, offset2bag_cast, bag_size_cast, max_indices_cast);
+    EXEC_NPU_CMD(aclnnEmbeddingBag, weight, indices, offsets, scale_grad_by_freq, mode, sparse, per_sample_weights,
+        include_last_offset, padding_idx, output_tensor, offset2bag_cast, bag_size_cast, max_indices_cast);
     return std::tie(output_tensor, offset2bag_cast, bag_size_cast, max_indices_cast);
 }
 }

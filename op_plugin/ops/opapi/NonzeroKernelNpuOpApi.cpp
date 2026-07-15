@@ -20,7 +20,7 @@
 
 namespace op_api {
 
-at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out)
+at::Tensor exec_aclnn_non_zero(const at::Tensor &self, at::Tensor &out)
 {
     static auto opApiFuncAddr = []() {
         auto ret = GetOpApiFuncAddr("aclGetViewShape");
@@ -43,7 +43,7 @@ at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out)
     return out;
 }
 
-at::Tensor& nonzero_out(const at::Tensor& self, at::Tensor& result)
+at::Tensor &nonzero_out(const at::Tensor &self, at::Tensor &result)
 {
     DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero_out(self, result));
     auto out_size = op_infer::nonzero_npu_max_output_size(self);
@@ -56,7 +56,7 @@ at::Tensor& nonzero_out(const at::Tensor& self, at::Tensor& result)
     return result;
 }
 
-at::Tensor nonzero(const at::Tensor& self)
+at::Tensor nonzero(const at::Tensor &self)
 {
     DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero(self));
     auto out_size = op_infer::nonzero_npu_max_output_size(self);

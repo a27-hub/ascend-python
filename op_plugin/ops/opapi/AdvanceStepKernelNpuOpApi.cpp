@@ -25,30 +25,12 @@ void npu_advance_step_flashattn(at::Tensor &input_tokens, const at::Tensor &samp
     const c10::optional<at::Tensor> &accepted_num)
 {
     if (spec_token.has_value() || accepted_num.has_value()) {
-        EXEC_NPU_CMD(aclnnAdvanceStepV2,
-            input_tokens,
-            sampled_token_ids,
-            input_positions,
-            seq_lens,
-            slot_mapping,
-            block_tables,
-            spec_token,
-            accepted_num,
-            num_seqs,
-            num_queries,
-            block_size);
+        EXEC_NPU_CMD(aclnnAdvanceStepV2, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
+            block_tables, spec_token, accepted_num, num_seqs, num_queries, block_size);
     } else {
-        EXEC_NPU_CMD(aclnnAdvanceStep,
-            input_tokens,
-            sampled_token_ids,
-            input_positions,
-            seq_lens,
-            slot_mapping,
-            block_tables,
-            num_seqs,
-            num_queries,
-            block_size);
+        EXEC_NPU_CMD(aclnnAdvanceStep, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
+            block_tables, num_seqs, num_queries, block_size);
     }
 }
 
-}  // namespace op_api
+} // namespace op_api

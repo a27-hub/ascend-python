@@ -20,12 +20,8 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor&, at::Tensor&> min_v1_out_npu_nocheck(
-    at::Tensor& output,
-    at::Tensor& indices,
-    const at::Tensor& self,
-    int64_t dim,
-    bool keepdim)
+std::tuple<at::Tensor &, at::Tensor &> min_v1_out_npu_nocheck(
+    at::Tensor &output, at::Tensor &indices, const at::Tensor &self, int64_t dim, bool keepdim)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("ArgMinWithValue")
@@ -39,13 +35,13 @@ std::tuple<at::Tensor&, at::Tensor&> min_v1_out_npu_nocheck(
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor, at::Tensor> npu_min(const at::Tensor& self, at::Dimname dim, bool keepdim)
+std::tuple<at::Tensor, at::Tensor> npu_min(const at::Tensor &self, at::Dimname dim, bool keepdim)
 {
     return acl_op::npu_min(self, dimname_to_position(self, dim), keepdim);
 }
 #endif
 
-std::tuple<at::Tensor, at::Tensor> npu_min(const at::Tensor& self, int64_t dim, bool keepdim)
+std::tuple<at::Tensor, at::Tensor> npu_min(const at::Tensor &self, int64_t dim, bool keepdim)
 {
     c10::SmallVector<int64_t, SIZE> dims = {dim};
     c10::SmallVector<int64_t, SIZE> output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
@@ -61,8 +57,8 @@ std::tuple<at::Tensor, at::Tensor> npu_min(const at::Tensor& self, int64_t dim, 
     return std::tie(outputs, indices);
 }
 
-at::Tensor npu_min_backward_symint(const at::Tensor &grad, int64_t dim, const at::Tensor &indices,
-                                   c10::SymIntArrayRef sizes, bool keepdim)
+at::Tensor npu_min_backward_symint(
+    const at::Tensor &grad, int64_t dim, const at::Tensor &indices, c10::SymIntArrayRef sizes, bool keepdim)
 {
     at::IntArrayRef sizes_ = c10::asIntArrayRefUnchecked(sizes);
     at::Tensor new_grad = grad;

@@ -21,12 +21,8 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> nms_with_mask_npu_nocheck(
-    at::Tensor& boxes,
-    at::Tensor& idx,
-    at::Tensor& mask,
-    const at::Tensor& input,
-    at::Scalar iou_threshold)
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> nms_with_mask_npu_nocheck(
+    at::Tensor &boxes, at::Tensor &idx, at::Tensor &mask, const at::Tensor &input, at::Scalar iou_threshold)
 {
     float iou_threshold_value = op_plugin::utils::get_scalar_float_value(iou_threshold);
     at_npu::native::OpCommand cmd;
@@ -42,8 +38,7 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> nms_with_mask_npu_nocheck(
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_nms_with_mask(
-    const at::Tensor& input,
-    const at::Scalar& iou_threshold)
+    const at::Tensor &input, const at::Scalar &iou_threshold)
 {
     auto output_sizes = op_infer::nms_with_mask_npu_output_size(input);
     at::Tensor boxes = npu_preparation::apply_tensor(input, std::get<0>(output_sizes));

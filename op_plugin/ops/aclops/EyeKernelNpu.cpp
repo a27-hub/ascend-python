@@ -22,24 +22,18 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& eye_out_npu_nocheck(at::Tensor& result, int64_t n, int64_t m)
+at::Tensor &eye_out_npu_nocheck(at::Tensor &result, int64_t n, int64_t m)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Eye")
-        .Output(result)
-        .Attr("num_rows", n)
-        .Attr("num_columns", m)
-        .Attr("dtype", result.scalar_type())
-        .Run();
+    cmd.Name("Eye").Output(result).Attr("num_rows", n).Attr("num_columns", m).Attr("dtype", result.scalar_type()).Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor& eye_out(int64_t n, int64_t m, at::Tensor& out)
+at::Tensor &eye_out(int64_t n, int64_t m, at::Tensor &out)
 {
-    TORCH_CHECK(n >= 0, "n must be greater or equal to 0, got ", n,
-        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(n >= 0, "n must be greater or equal to 0, got ", n, OPS_ERROR(ErrCode::VALUE));
 
     if (m < 0) {
         m = n;
@@ -62,17 +56,10 @@ at::Tensor& eye_out(int64_t n, int64_t m, at::Tensor& out)
     return out;
 }
 
-at::Tensor& eye_out(int64_t n, at::Tensor& out)
-{
-    return acl_op::eye_out(n, -1, out);
-}
+at::Tensor &eye_out(int64_t n, at::Tensor &out) { return acl_op::eye_out(n, -1, out); }
 
-at::Tensor eye(
-    int64_t n,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory)
+at::Tensor eye(int64_t n, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
+    c10::optional<at::Device> device, c10::optional<bool> pin_memory)
 {
     auto device_value = device_or_default(device);
     at::TensorOptions option =
@@ -81,9 +68,9 @@ at::Tensor eye(
     c10::SmallVector<int64_t, N> output_size = {n, n};
 
     // The operator does not support the bool type and needs to be converted to an integer.
-    at::Tensor result = (option.dtype() == at::kBool) ?
-        npu_preparation::apply_tensor_with_format(output_size, option.dtype(at::kInt), ACL_FORMAT_ND) :
-        npu_preparation::apply_tensor_with_format(output_size, option, ACL_FORMAT_ND);
+    at::Tensor result = (option.dtype() == at::kBool)
+        ? npu_preparation::apply_tensor_with_format(output_size, option.dtype(at::kInt), ACL_FORMAT_ND)
+        : npu_preparation::apply_tensor_with_format(output_size, option, ACL_FORMAT_ND);
 
     acl_op::eye_out(n, result);
     if (option.dtype() == at::kBool) {
@@ -92,13 +79,8 @@ at::Tensor eye(
     return result;
 }
 
-at::Tensor eye(
-    int64_t n,
-    int64_t m,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory)
+at::Tensor eye(int64_t n, int64_t m, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
+    c10::optional<at::Device> device, c10::optional<bool> pin_memory)
 {
     auto device_value = device_or_default(device);
     c10::TensorOptions option =
@@ -108,9 +90,9 @@ at::Tensor eye(
     c10::SmallVector<int64_t, N> output_size = {n, m};
 
     // The operator does not support the bool type and needs to be converted to an integer.
-    at::Tensor result = (option.dtype() == at::kBool) ?
-        npu_preparation::apply_tensor_with_format(output_size, option.dtype(at::kInt), ACL_FORMAT_ND) :
-        npu_preparation::apply_tensor_with_format(output_size, option, ACL_FORMAT_ND);
+    at::Tensor result = (option.dtype() == at::kBool)
+        ? npu_preparation::apply_tensor_with_format(output_size, option.dtype(at::kInt), ACL_FORMAT_ND)
+        : npu_preparation::apply_tensor_with_format(output_size, option, ACL_FORMAT_ND);
 
     eye_out_npu_nocheck(result, n, m);
     if (option.dtype() == at::kBool) {

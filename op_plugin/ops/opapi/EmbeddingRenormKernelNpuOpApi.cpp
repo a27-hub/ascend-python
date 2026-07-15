@@ -20,11 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& embedding_renorm_(
-    at::Tensor& self,
-    const at::Tensor& indices,
-    double max_norm,
-    double norm_type)
+at::Tensor &embedding_renorm_(at::Tensor &self, const at::Tensor &indices, double max_norm, double norm_type)
 {
     DO_COMPATIBILITY(aclnnEmbeddingRenorm, acl_op::embedding_renorm_(self, indices, max_norm, norm_type));
     auto self_arg = at::TensorArg(self, "self", 1);

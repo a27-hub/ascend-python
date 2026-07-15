@@ -21,34 +21,18 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& sort_without_indices_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    int64_t dim,
-    bool descending)
+at::Tensor &sort_without_indices_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_t dim, bool descending)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("SortV2")
-        .Input(self)
-        .Output(result)
-        .Attr("axis", dim)
-        .Attr("descending", descending)
-        .Run();
+    cmd.Name("SortV2").Input(self).Output(result).Attr("axis", dim).Attr("descending", descending).Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor& npu_sort_v2_out(
-    const at::Tensor& self,
-    int64_t dim,
-    bool descending,
-    at::Tensor& result)
+at::Tensor &npu_sort_v2_out(const at::Tensor &self, int64_t dim, bool descending, at::Tensor &result)
 {
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        self);
+    npu_preparation::CheckOut({self}, result, self);
 
     dim = op_plugin::utils::make_warp_dim(dim, self.dim());
     int64_t last_dim = op_plugin::utils::make_warp_dim(-1, self.dim());
@@ -78,10 +62,7 @@ at::Tensor& npu_sort_v2_out(
     return result;
 }
 
-at::Tensor npu_sort_v2(
-    const at::Tensor& self,
-    int64_t dim,
-    bool descending)
+at::Tensor npu_sort_v2(const at::Tensor &self, int64_t dim, bool descending)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);
 

@@ -21,20 +21,11 @@ const int DIM = 3;
 const int LAST_AXIS = 2;
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(
-    const at::Tensor& grad_out,
-    const at::Tensor& input,
-    const at::Tensor& mean,
-    const at::Tensor& rstd,
-    const c10::optional<at::Tensor>& weight,
-    int64_t N,
-    int64_t C,
-    int64_t HxW,
-    int64_t group,
-    std::array<bool, DIM> output_mask)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(const at::Tensor &grad_out,
+    const at::Tensor &input, const at::Tensor &mean, const at::Tensor &rstd, const c10::optional<at::Tensor> &weight,
+    int64_t N, int64_t C, int64_t HxW, int64_t group, std::array<bool, DIM> output_mask)
 {
-    TORCH_CHECK(group != 0, "group = 0 for group_norm_backward, please check!"
-        + OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(group != 0, "group = 0 for group_norm_backward, please check!" + OPS_ERROR(ErrCode::VALUE));
     at::Tensor dY_reshaped_3;
     at::Tensor X_reshaped_3;
     if (input.dim() != DIM) {
@@ -45,7 +36,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(
         X_reshaped_3 = input;
     }
 
-    const at::Tensor& gamma = c10::value_or_else(weight, [] {return at::Tensor();});
+    const at::Tensor &gamma = c10::value_or_else(weight, [] { return at::Tensor(); });
     at::Tensor dY_b = gamma.defined() ? dY_reshaped_3.mul(gamma.view({1, C, 1})) : dY_reshaped_3;
 
     at::Tensor X_reshaped = X_reshaped_3.view({1, N * group, N > 0 ? -1 : 1});
@@ -57,7 +48,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(
     at::Tensor weight_opt = at::ones({N * group}, X_reshaped_3.options());
 
     auto output = at::native_batch_norm_backward(dY_reshaped, X_reshaped, weight_opt, c10::nullopt, c10::nullopt,
-                                                 mean_reshaped, rstd_reshaped, true, eps, output_mask);
+        mean_reshaped, rstd_reshaped, true, eps, output_mask);
 
     at::Tensor dX = std::get<0>(output);
     dX = dX.view(X_reshaped_3.sizes());

@@ -58,8 +58,5 @@ at::Tensor log(const at::Tensor &self)
     return result;
 }
 
-at::Tensor &log_(at::Tensor &self)
-{
-    return acl_op::log_out(self, self);
-}
+at::Tensor &log_(at::Tensor &self) { return acl_op::log_out(self, self); }
 } // namespace acl_op

@@ -60,14 +60,14 @@ void div_torch_check(c10::optional<c10::string_view> rounding_mode)
         *rounding_mode, "'" + OPS_ERROR(ErrCode::PARAM));
 }
 
-at::Tensor &div_out_with_dtype(at::Tensor &result, const at::Tensor &self, const at::Tensor &other,
-                               at::ScalarType result_type, bool is_trunc)
+at::Tensor &div_out_with_dtype(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &other, at::ScalarType result_type, bool is_trunc)
 {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     npu_preparation::CheckOut({self, other}, result, result, output_size);
 
-    auto calculate_type = is_trunc ? op_plugin::utils::get_divide_calculate_type(self, other) :
-                                     op_plugin::utils::get_divide_result_type(self, other);
+    auto calculate_type = is_trunc ? op_plugin::utils::get_divide_calculate_type(self, other)
+                                   : op_plugin::utils::get_divide_result_type(self, other);
     at::Tensor self_cast = (self.scalar_type() == calculate_type) ? self : self.to(calculate_type);
     at::Tensor other_cast = other;
     at::Tensor result_cast;
@@ -75,8 +75,9 @@ at::Tensor &div_out_with_dtype(at::Tensor &result, const at::Tensor &self, const
         result_cast = (result_type == calculate_type) ? result : self_cast;
     } else {
         other_cast = (other.scalar_type() == calculate_type) ? other : other.to(calculate_type);
-        result_cast = (result_type == calculate_type) ? result :
-            at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
+        result_cast = (result_type == calculate_type)
+            ? result
+            : at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
     }
 
     if (!npu_utils::check_match(&result_cast)) {
@@ -123,13 +124,12 @@ at::Tensor &div_out(const at::Tensor &self, const at::Tensor &other, at::Tensor 
     auto high_type = op_plugin::utils::get_divide_result_type(self, other);
     auto result_type = result.scalar_type();
     TORCH_CHECK(canCast(high_type, result_type), "result type ", high_type,
-        " can't be cast to the desired output type ", result_type,
-        OPS_ERROR(ErrCode::TYPE));
+        " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
     return div_out_with_dtype(result, self, other, result_type, false);
 }
 
-at::Tensor &div_out(const at::Tensor &self, const at::Tensor &other, c10::optional<c10::string_view> rounding_mode,
-                    at::Tensor &result)
+at::Tensor &div_out(
+    const at::Tensor &self, const at::Tensor &other, c10::optional<c10::string_view> rounding_mode, at::Tensor &result)
 {
     if (!rounding_mode.has_value()) {
         return acl_op::div_out(self, other, result);
@@ -139,8 +139,7 @@ at::Tensor &div_out(const at::Tensor &self, const at::Tensor &other, c10::option
         auto high_type = at::native::result_type(self, other);
         auto result_type = result.scalar_type();
         TORCH_CHECK(canCast(high_type, result_type), "result type ", high_type,
-            " can't be cast to the desired output type ", result_type,
-            OPS_ERROR(ErrCode::TYPE));
+            " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
         div_out_with_dtype(result, self, other, result_type, true);
         return result;
     }

@@ -18,10 +18,12 @@ using namespace std;
 
 namespace atb {
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
-void _npu_paged_attention_splitfuse(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, const at::Tensor &block_table, const at::Tensor &context_lens, const at::Tensor &mask, const at::Tensor &seq_len, int64_t num_kv_heads, int64_t num_heads, double scale_value, at::Tensor &out)
+void _npu_paged_attention_splitfuse(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache,
+    const at::Tensor &block_table, const at::Tensor &context_lens, const at::Tensor &mask, const at::Tensor &seq_len,
+    int64_t num_kv_heads, int64_t num_heads, double scale_value, at::Tensor &out)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
+    OpParamCache<PagedAttentionParam> &pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
     pagedparam.headNum = num_heads;
     pagedparam.qkScale = scale_value;
@@ -55,7 +57,9 @@ void _npu_paged_attention_splitfuse(const at::Tensor &query, const at::Tensor &k
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_paged_attention_splitfuse(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, Tensor context_lens, Tensor mask, Tensor seq_len, int num_kv_heads, int num_heads, float scale_value, Tensor(a!) out) -> ()");
+    m.def("_npu_paged_attention_splitfuse(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, "
+          "Tensor context_lens, Tensor mask, Tensor seq_len, int num_kv_heads, int num_heads, float scale_value, "
+          "Tensor(a!) out) -> ()");
 }
 }
 

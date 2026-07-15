@@ -46,8 +46,8 @@ at::Tensor &logical_or_out_npu_nocheck(at::Tensor &result, const at::Tensor &sel
 at::Tensor &logical_or_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &out)
 {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    npu_preparation::CheckOut({self, other}, out, npu_preparation::get_tensor_npu_format(self), out.scalar_type(),
-                              output_size);
+    npu_preparation::CheckOut(
+        {self, other}, out, npu_preparation::get_tensor_npu_format(self), out.scalar_type(), output_size);
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -68,8 +68,5 @@ at::Tensor logical_or(const at::Tensor &self, const at::Tensor &other)
     return result;
 }
 
-at::Tensor &logical_or_(at::Tensor &self, const at::Tensor &other)
-{
-    return acl_op::logical_or_out(self, other, self);
-}
+at::Tensor &logical_or_(at::Tensor &self, const at::Tensor &other) { return acl_op::logical_or_out(self, other, self); }
 } // namespace acl_op

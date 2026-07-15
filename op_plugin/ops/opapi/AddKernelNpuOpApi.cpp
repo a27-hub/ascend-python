@@ -23,14 +23,13 @@ using npu_preparation = at_npu::native::OpPreparation;
 inline void alpha_check_npu(const at::ScalarType dtype, at::Scalar alpha)
 {
     TORCH_CHECK(!alpha.isBoolean() || dtype == at::ScalarType::Bool,
-                "Boolean alpha only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
+        "Boolean alpha only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(isFloatingType(dtype) || isComplexType(dtype) || alpha.isIntegral(true),
-                "For integral input tensors, argument alpha must not be a floating point number."
-                + OPS_ERROR(ErrCode::TYPE));
+        "For integral input tensors, argument alpha must not be a floating point number." + OPS_ERROR(ErrCode::TYPE));
 }
 
-static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
-                                        const c10::Device device)
+static at::Tensor self_tensor_to_device(
+    const at::Tensor &tensor, const at::ScalarType result_type, const c10::Device device)
 {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor) ||
         (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
@@ -41,10 +40,7 @@ static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::Scal
 }
 
 static at::Tensor &add_out_npu_nocheck(
-    const at::Tensor &self,
-    const at::Tensor &other,
-    const at::Scalar &alpha,
-    at::Tensor &result)
+    const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor &result)
 {
     // executing the NPU operator
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {

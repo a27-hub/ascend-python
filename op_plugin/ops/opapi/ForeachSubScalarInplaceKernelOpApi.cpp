@@ -11,8 +11,7 @@ std::vector<at::Tensor> _foreach_sub_v1(at::TensorList self, const at::Scalar &s
 {
     // Fallback
     at::native::check_foreach_api_restrictions(self);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, false)) {
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_sub_scalar_kernel_slow(self, scalar);
     }
 
@@ -41,8 +40,7 @@ std::vector<at::Tensor> _foreach_sub_v1(at::TensorList self, const at::Scalar &s
 void _foreach_sub_v1_(const at::TensorList self, const at::Scalar &scalar)
 {
     at::native::check_foreach_api_restrictions(self);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, false)) {
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_sub_scalar_kernel_slow_(self, scalar);
     }
 
@@ -55,7 +53,8 @@ void _foreach_sub_v1_(const at::TensorList self, const at::Scalar &scalar)
     EXEC_NPU_CMD(aclnnForeachSubScalar, self, scalar_tensor, self);
 }
 
-void _split_and_exec_npu_cmd_sub_scalar(at::TensorList tensors1, const at::Scalar &scalar, at::TensorList &result_list, bool is_inplace)
+void _split_and_exec_npu_cmd_sub_scalar(
+    at::TensorList tensors1, const at::Scalar &scalar, at::TensorList &result_list, bool is_inplace)
 {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
@@ -81,11 +80,11 @@ void _split_and_exec_npu_cmd_sub_scalar(at::TensorList tensors1, const at::Scala
     }
 }
 
-std::vector<at::Tensor> _foreach_sub(at::TensorList self, const at::Scalar& scalar)
+std::vector<at::Tensor> _foreach_sub(at::TensorList self, const at::Scalar &scalar)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_sub_scalar_kernel_slow(self, scalar);
     }
@@ -99,9 +98,9 @@ std::vector<at::Tensor> _foreach_sub(at::TensorList self, const at::Scalar& scal
     // Type Check
     auto scalar_type = self[0].scalar_type();
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::Int || scalar_type == at::ScalarType::BFloat16,
-                "input must be half, float, int32 or bfloat16");
-    
+            scalar_type == at::ScalarType::Int || scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float, int32 or bfloat16");
+
     std::vector<at::Tensor> result(self.size());
     auto iterRes = result.data();
     int i = 0;
@@ -116,11 +115,11 @@ std::vector<at::Tensor> _foreach_sub(at::TensorList self, const at::Scalar& scal
     return result;
 }
 
-void _foreach_sub_(at::TensorList self, const at::Scalar& scalar)
+void _foreach_sub_(at::TensorList self, const at::Scalar &scalar)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_sub_scalar_kernel_slow_(self, scalar);
     }
@@ -133,8 +132,8 @@ void _foreach_sub_(at::TensorList self, const at::Scalar& scalar)
     auto scalar_type = self[0].scalar_type();
 
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::Int || scalar_type == at::ScalarType::BFloat16,
-                "input must be half, float, int32 or bfloat16");
+            scalar_type == at::ScalarType::Int || scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float, int32 or bfloat16");
     _split_and_exec_npu_cmd_sub_scalar(self, scalar, self, true);
 }
 }

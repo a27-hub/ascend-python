@@ -32,8 +32,8 @@ bool check_padding(at::IntArrayRef padding)
     return true;
 }
 
-at::Tensor &replication_pad2d_backward_out_npu_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
-                                                       const at::Tensor &input, at::IntArrayRef padding)
+at::Tensor &replication_pad2d_backward_out_npu_nocheck(
+    at::Tensor &grad_input, const at::Tensor &grad_output, const at::Tensor &input, at::IntArrayRef padding)
 {
     c10::SmallVector<int64_t, N> vector_int;
     c10::SmallVector<int64_t, N> paddings_vector = op_infer::array_to_small_vector(padding);
@@ -67,8 +67,8 @@ at::Tensor &replication_pad2d_backward_out_npu_nocheck(at::Tensor &grad_input, c
 }
 } // namespace
 
-at::Tensor &replication_pad2d_backward_out(const at::Tensor &grad_output, const at::Tensor &self,
-                                           at::IntArrayRef padding, at::Tensor &grad_input)
+at::Tensor &replication_pad2d_backward_out(
+    const at::Tensor &grad_output, const at::Tensor &self, at::IntArrayRef padding, at::Tensor &grad_input)
 {
     if (check_padding(padding)) {
         grad_input.copy_(grad_output);

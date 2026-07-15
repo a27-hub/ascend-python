@@ -26,11 +26,11 @@ at::Tensor isin(const at::Tensor &elements, const at::Scalar &test_elements, boo
     return result;
 }
 
-at::Tensor &isin_out(const at::Tensor &elements, const at::Scalar &test_elements, bool assume_unique, bool invert,
-                     at::Tensor &result)
+at::Tensor &isin_out(
+    const at::Tensor &elements, const at::Scalar &test_elements, bool assume_unique, bool invert, at::Tensor &result)
 {
-    npu_preparation::CheckOut({elements}, result, npu_preparation::get_tensor_npu_format(elements),
-                              at::ScalarType::Bool, elements.sizes());
+    npu_preparation::CheckOut(
+        {elements}, result, npu_preparation::get_tensor_npu_format(elements), at::ScalarType::Bool, elements.sizes());
     const auto elements_cpu = elements.cpu();
     auto result_cpu = result.cpu();
     at::isin_out(result_cpu, elements_cpu, test_elements, assume_unique, invert);

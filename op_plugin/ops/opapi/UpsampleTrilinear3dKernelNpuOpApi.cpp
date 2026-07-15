@@ -20,52 +20,36 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& upsample_trilinear3d_opapi(
-    const at::Tensor& input,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales_d,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w,
-    at::Tensor& result) {
-  double scales_d_value = scales_d.value_or(0);
-  double scales_h_value = scales_h.value_or(0);
-  double scales_w_value = scales_w.value_or(0);
-  EXEC_NPU_CMD(aclnnUpsampleTrilinear3d, input, output_size, align_corners,
-               scales_d_value, scales_h_value, scales_w_value, result);
-  return result;
+at::Tensor &upsample_trilinear3d_opapi(const at::Tensor &input, at::IntArrayRef output_size, bool align_corners,
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result)
+{
+    double scales_d_value = scales_d.value_or(0);
+    double scales_h_value = scales_h.value_or(0);
+    double scales_w_value = scales_w.value_or(0);
+    EXEC_NPU_CMD(aclnnUpsampleTrilinear3d, input, output_size, align_corners, scales_d_value, scales_h_value,
+        scales_w_value, result);
+    return result;
 }
 
-at::Tensor& upsample_trilinear3d_out(
-    const at::Tensor& input,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales_d,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w,
-    at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnUpsampleTrilinear3d,
-                   acl_op::upsample_trilinear3d_out(input, output_size, align_corners,
-                                                    scales_d, scales_h, scales_w, result));
-  auto outputsize = op_infer::upsample_trilinear3d_npu_output_size(input, output_size);
-  npu_preparation::check_tensor({input}, result, input, outputsize);
-  upsample_trilinear3d_opapi(input, output_size, align_corners, scales_d, scales_h, scales_w, result);
-  return result;
+at::Tensor &upsample_trilinear3d_out(const at::Tensor &input, at::IntArrayRef output_size, bool align_corners,
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result)
+{
+    DO_COMPATIBILITY(aclnnUpsampleTrilinear3d,
+        acl_op::upsample_trilinear3d_out(input, output_size, align_corners, scales_d, scales_h, scales_w, result));
+    auto outputsize = op_infer::upsample_trilinear3d_npu_output_size(input, output_size);
+    npu_preparation::check_tensor({input}, result, input, outputsize);
+    upsample_trilinear3d_opapi(input, output_size, align_corners, scales_d, scales_h, scales_w, result);
+    return result;
 }
 
-at::Tensor upsample_trilinear3d(
-    const at::Tensor& input,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales_d,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w) {
-  DO_COMPATIBILITY(aclnnUpsampleTrilinear3d,
-                   acl_op::upsample_trilinear3d(input, output_size, align_corners,
-                                                scales_d, scales_h, scales_w));
-  auto outputsize = op_infer::upsample_trilinear3d_npu_output_size(input, output_size);
-  at::Tensor result = npu_preparation::apply_tensor_without_format(input, outputsize);
-  upsample_trilinear3d_opapi(input, output_size, align_corners, scales_d, scales_h, scales_w, result);
-  return result;
+at::Tensor upsample_trilinear3d(const at::Tensor &input, at::IntArrayRef output_size, bool align_corners,
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w)
+{
+    DO_COMPATIBILITY(aclnnUpsampleTrilinear3d,
+        acl_op::upsample_trilinear3d(input, output_size, align_corners, scales_d, scales_h, scales_w));
+    auto outputsize = op_infer::upsample_trilinear3d_npu_output_size(input, output_size);
+    at::Tensor result = npu_preparation::apply_tensor_without_format(input, outputsize);
+    upsample_trilinear3d_opapi(input, output_size, align_corners, scales_d, scales_h, scales_w, result);
+    return result;
 }
 }

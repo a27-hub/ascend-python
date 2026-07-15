@@ -18,23 +18,20 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> _lstm_npu(
-    const at::Tensor &input,
-    const at::TensorList hx,
-    const at::TensorList params,
-    bool has_biases,
-    int64_t num_layers,
-    double dropout,
-    bool train,
-    bool bidirectional,
-    c10::optional<bool> batch_first,
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor,
+    at::Tensor>
+_lstm_npu(const at::Tensor &input, const at::TensorList hx, const at::TensorList params, bool has_biases,
+    int64_t num_layers, double dropout, bool train, bool bidirectional, c10::optional<bool> batch_first,
     const c10::optional<at::Tensor> &batch_sizes)
 {
     const bool batch_first_1 = batch_first.value_or(false);
     auto out0_shape = op_infer::lstm_npu_output_size(input, params, bidirectional, batch_first_1, batch_sizes);
-    auto out1_shape = op_infer::lstm_npu_output1_2_size(input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
-    auto out2_shape = op_infer::lstm_npu_output1_2_size(input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
-    auto ijfo_hc_tanhc_shapes = op_infer::lstm_npu_ijfo_hc_tanhc_output_size(input, params, num_layers, train, bidirectional, batch_first_1, batch_sizes);
+    auto out1_shape =
+        op_infer::lstm_npu_output1_2_size(input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
+    auto out2_shape =
+        op_infer::lstm_npu_output1_2_size(input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
+    auto ijfo_hc_tanhc_shapes = op_infer::lstm_npu_ijfo_hc_tanhc_output_size(
+        input, params, num_layers, train, bidirectional, batch_first_1, batch_sizes);
 
     int64_t D = bidirectional ? 2 : 1;
     int64_t output_format = ACL_FORMAT_ND;
@@ -104,28 +101,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::TensorList h_list_ = at::TensorList(h_list);
     at::TensorList c_list_ = at::TensorList(c_list);
 
-    EXEC_NPU_CMD(
-        aclnnLSTM,
-        input,
-        params,
-        hx,
-        batch_sizes,
-        has_biases,
-        num_layers,
-        dropout,
-        train,
-        bidirectional,
-        batch_first_1,
-        out0,
-        out1,
-        out2,
-        i_list_,
-        j_list_,
-        f_list_,
-        o_list_,
-        h_list_,
-        c_list_,
-        tanh_list_);
+    EXEC_NPU_CMD(aclnnLSTM, input, params, hx, batch_sizes, has_biases, num_layers, dropout, train, bidirectional,
+        batch_first_1, out0, out1, out2, i_list_, j_list_, f_list_, o_list_, h_list_, c_list_, tanh_list_);
 
     at::Tensor i_tensor = i_list_.vec().empty() ? at::Tensor() : at::stack(i_list_.vec(), 0);
     at::Tensor j_tensor = j_list_.vec().empty() ? at::Tensor() : at::stack(j_list_.vec(), 0);
@@ -135,35 +112,22 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor h_tensor = h_list_.vec().empty() ? at::Tensor() : at::stack(h_list_.vec(), 0);
     at::Tensor c_tensor = c_list_.vec().empty() ? at::Tensor() : at::stack(c_list_.vec(), 0);
 
-    return std::make_tuple(
-        out0,
-        out1,
-        out2,
-        i_tensor,
-        j_tensor,
-        f_tensor,
-        o_tensor,
-        h_tensor,
-        c_tensor,
-        tanh_tensor);
+    return std::make_tuple(out0, out1, out2, i_tensor, j_tensor, f_tensor, o_tensor, h_tensor, c_tensor, tanh_tensor);
 }
 
-inline bool IsBf16Tensor(const at::Tensor& t)
-{
-    return t.defined() && t.scalar_type() == at::kBFloat16;
-}
+inline bool IsBf16Tensor(const at::Tensor &t) { return t.defined() && t.scalar_type() == at::kBFloat16; }
 
-inline bool HasBf16Tensor(const at::Tensor& input, const at::TensorList hx, const at::TensorList params)
+inline bool HasBf16Tensor(const at::Tensor &input, const at::TensorList hx, const at::TensorList params)
 {
     if (IsBf16Tensor(input)) {
         return true;
     }
-    for (const auto& t : hx) {
+    for (const auto &t : hx) {
         if (IsBf16Tensor(t)) {
             return true;
         }
     }
-    for (const auto& t : params) {
+    for (const auto &t : params) {
         if (IsBf16Tensor(t)) {
             return true;
         }
@@ -171,7 +135,7 @@ inline bool HasBf16Tensor(const at::Tensor& input, const at::TensorList hx, cons
     return false;
 }
 
-inline bool HasMixedFloatDtype(const at::Tensor& input, const at::TensorList hx, const at::TensorList params)
+inline bool HasMixedFloatDtype(const at::Tensor &input, const at::TensorList hx, const at::TensorList params)
 {
     if (!input.defined() || !at::isFloatingType(input.scalar_type())) {
         return false;
@@ -179,18 +143,16 @@ inline bool HasMixedFloatDtype(const at::Tensor& input, const at::TensorList hx,
 
     const auto ref_dtype = input.scalar_type();
 
-    auto mismatch_with_input = [ref_dtype](const at::Tensor& t) {
-        return t.defined() &&
-               at::isFloatingType(t.scalar_type()) &&
-               t.scalar_type() != ref_dtype;
+    auto mismatch_with_input = [ref_dtype](const at::Tensor &t) {
+        return t.defined() && at::isFloatingType(t.scalar_type()) && t.scalar_type() != ref_dtype;
     };
 
-    for (const auto& t : hx) {
+    for (const auto &t : hx) {
         if (mismatch_with_input(t)) {
             return true;
         }
     }
-    for (const auto& t : params) {
+    for (const auto &t : params) {
         if (mismatch_with_input(t)) {
             return true;
         }
@@ -198,7 +160,7 @@ inline bool HasMixedFloatDtype(const at::Tensor& input, const at::TensorList hx,
     return false;
 }
 
-inline bool ShouldFallbackToAclOp(const at::Tensor& input, const at::TensorList hx, const at::TensorList params)
+inline bool ShouldFallbackToAclOp(const at::Tensor &input, const at::TensorList hx, const at::TensorList params)
 {
     // weight_ih, weight_hh, bias_ih, bias_hh for a single layer with biases
     constexpr size_t kSingleLayerBiasParamCount = 4;
@@ -210,26 +172,25 @@ inline bool ShouldFallbackToAclOp(const at::Tensor& input, const at::TensorList 
     return HasBf16Tensor(input, hx, params) || HasMixedFloatDtype(input, hx, params);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
-    const at::Tensor& input, const at::TensorList hx,
-    const at::TensorList params, bool has_biases,
-    int64_t num_layers, double dropout,
-    bool train, bool bidirectional, bool batch_first)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(const at::Tensor &input, const at::TensorList hx,
+    const at::TensorList params, bool has_biases, int64_t num_layers, double dropout, bool train, bool bidirectional,
+    bool batch_first)
 {
     // If bf16 or mixed dtype, fallback to acl_op
     if (ShouldFallbackToAclOp(input, hx, params)) {
         return acl_op::lstm(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
     }
 
-    DO_COMPATIBILITY(aclnnLSTM, acl_op::lstm(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first));
-    auto output = at_npu::native::custom_ops::_lstm_npu(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
-    return std::make_tuple(std::get<0>(output), std::get<1>(output), std::get<2>(output)); // 0 for output_y, 1 for output_h, 2 for output_c
+    DO_COMPATIBILITY(
+        aclnnLSTM, acl_op::lstm(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first));
+    auto output = at_npu::native::custom_ops::_lstm_npu(
+        input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
+    return std::make_tuple(std::get<0>(output), std::get<1>(output),
+        std::get<2>(output)); // 0 for output_y, 1 for output_h, 2 for output_c
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
-    const at::Tensor& data, const at::Tensor& batch_sizes, const at::TensorList hx,
-    const at::TensorList params, bool has_biases,
-    int64_t num_layers, double dropout,
+std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(const at::Tensor &data, const at::Tensor &batch_sizes,
+    const at::TensorList hx, const at::TensorList params, bool has_biases, int64_t num_layers, double dropout,
     bool train, bool bidirectional)
 {
     // If bf16 or mixed dtype, fallback to acl_op
@@ -237,8 +198,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
         return acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional);
     }
 
-    DO_COMPATIBILITY(aclnnLSTM, acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional));
-    auto output = at_npu::native::custom_ops::_lstm_npu(data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes);
-    return std::make_tuple(std::get<0>(output), std::get<1>(output), std::get<2>(output)); // 0 for output_y, 1 for output_h, 2 for output_c
+    DO_COMPATIBILITY(
+        aclnnLSTM, acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional));
+    auto output = at_npu::native::custom_ops::_lstm_npu(
+        data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes);
+    return std::make_tuple(std::get<0>(output), std::get<1>(output),
+        std::get<2>(output)); // 0 for output_y, 1 for output_h, 2 for output_c
 }
 }

@@ -32,7 +32,8 @@ c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self)
 
 std::tuple<at::Tensor, at::Tensor> npu_rms_norm_quant_v2(const at::Tensor &x, const at::Tensor &gamma,
     const at::Tensor &scale, const c10::optional<at::Tensor> &offset, const c10::optional<at::Tensor> &beta,
-    double epsilon, bool div_mode, c10::optional<int64_t> dst_dtype) {
+    double epsilon, bool div_mode, c10::optional<int64_t> dst_dtype)
+{
     // output
     at::Tensor y;
     at::Tensor rstd;

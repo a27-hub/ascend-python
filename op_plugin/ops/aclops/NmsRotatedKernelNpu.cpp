@@ -20,13 +20,8 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> npu_nms_rotated(
-    const at::Tensor& self,
-    const at::Tensor& scores,
-    double iou_threshold,
-    double scores_threshold,
-    int64_t max_output_size,
-    int64_t mode)
+std::tuple<at::Tensor, at::Tensor> npu_nms_rotated(const at::Tensor &self, const at::Tensor &scores,
+    double iou_threshold, double scores_threshold, int64_t max_output_size, int64_t mode)
 {
     // the Op only support fp32 currently!
     auto origin_dtype = self.scalar_type();
@@ -39,7 +34,8 @@ std::tuple<at::Tensor, at::Tensor> npu_nms_rotated(
     }
     c10::SmallVector<int64_t, SIZE> selected_index_size = {self.size(0)};
     at::Tensor selected_box = npu_preparation::apply_tensor(dets_cast);
-    at::Tensor selected_index = npu_preparation::apply_tensor(selected_index_size, self.options().dtype(at::kInt), self);
+    at::Tensor selected_index =
+        npu_preparation::apply_tensor(selected_index_size, self.options().dtype(at::kInt), self);
 
     c10::SmallVector<int64_t, N> output_sync_idx = {0, 1};
     at_npu::native::OpCommand cmd;

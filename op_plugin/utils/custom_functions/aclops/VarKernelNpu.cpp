@@ -37,7 +37,7 @@ std::vector<int64_t> var_check_and_trans_dim(const at::Tensor &self, at::IntArra
 int64_t var_get_shape_prod(const at::Tensor &self, at::IntArrayRef dim)
 {
     TORCH_CHECK(self.numel() < std::numeric_limits<int64_t>::max(),
-                "Input tensor contain more than the max number of int64.", OPS_ERROR(ErrCode::VALUE));
+        "Input tensor contain more than the max number of int64.", OPS_ERROR(ErrCode::VALUE));
     int64_t shape_prod = 1;
     if (self.dim() == 0) {
         shape_prod = 1;
@@ -49,14 +49,14 @@ int64_t var_get_shape_prod(const at::Tensor &self, at::IntArrayRef dim)
         for (uint64_t i = 0; i < dim.size(); i++) {
             shape_prod *= self.size(dim[i]);
             TORCH_CHECK(shape_prod < std::numeric_limits<int64_t>::max(),
-                        "Result is larger than the max number of int64.", OPS_ERROR(ErrCode::VALUE));
+                "Result is larger than the max number of int64.", OPS_ERROR(ErrCode::VALUE));
         }
     }
     return shape_prod;
 }
 
 at::Tensor &var_after_out_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &mean_broadcast,
-                                  at::IntArrayRef dim, bool unbiased, bool keepdim, int64_t correction)
+    at::IntArrayRef dim, bool unbiased, bool keepdim, int64_t correction)
 {
     bool if_std = false;
     at_npu::native::OpCommand cmd;
@@ -74,8 +74,7 @@ at::Tensor &var_after_out_nocheck(at::Tensor &result, const at::Tensor &self, co
 }
 
 std::tuple<at::Tensor &, at::Tensor &> var_mean_compute(at::Tensor &variance, at::Tensor &mean, const at::Tensor &self,
-                                                        at::IntArrayRef dim, bool unbiased, bool keepdim,
-                                                        int64_t correction)
+    at::IntArrayRef dim, bool unbiased, bool keepdim, int64_t correction)
 {
     auto mean_output_size_keepdim = op_infer::var_npu_output_size(self, dim, true);
     auto mean_output_size_not_keepdim = op_infer::var_npu_output_size(self, dim, false);
@@ -99,23 +98,22 @@ std::tuple<at::Tensor &, at::Tensor &> var_mean_compute(at::Tensor &variance, at
 }
 
 std::tuple<at::Tensor &, at::Tensor &> var_mean_out_nocheck(at::Tensor &variance, at::Tensor &mean,
-                                                            const at::Tensor &self, at::IntArrayRef dim, bool unbiased,
-                                                            bool keepdim, int64_t correction)
+    const at::Tensor &self, at::IntArrayRef dim, bool unbiased, bool keepdim, int64_t correction)
 {
     c10::SmallVector<int64_t, N> dim_now =
         dim.empty() ? op_plugin::utils::get_dimlist_for_tensor(self) : c10::SmallVector<int64_t, N>(dim);
     auto ori_type = self.scalar_type();
     TORCH_CHECK((ori_type == c10::ScalarType::Half || ori_type == c10::ScalarType::Float),
-                "Var Mean only support float16 or float32 type.", OPS_ERROR(ErrCode::TYPE));
+        "Var Mean only support float16 or float32 type.", OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK((variance.scalar_type() == mean.scalar_type() && variance.scalar_type() == ori_type),
-                "mean's type and variance' type must be equal to input's type.", OPS_ERROR(ErrCode::TYPE));
+        "mean's type and variance' type must be equal to input's type.", OPS_ERROR(ErrCode::TYPE));
     var_mean_compute(variance, mean, self, dim_now, unbiased, keepdim, correction);
 
     return std::tuple<at::Tensor &, at::Tensor &>(variance, mean);
 }
 
 at::Tensor &cal_var_out(const at::Tensor &self, at::IntArrayRef dim, const int64_t correction, const bool unbiased,
-                        const bool keepdim, at::Tensor &result)
+    const bool keepdim, at::Tensor &result)
 {
     // check and trans dim
     auto dim_now = var_check_and_trans_dim(self, dim);
@@ -134,8 +132,8 @@ at::Tensor &cal_var_out(const at::Tensor &self, at::IntArrayRef dim, const int64
     return result;
 }
 
-at::Tensor cal_var(const at::Tensor &self, at::IntArrayRef dim, const int64_t correction, const bool unbiased,
-                   const bool keepdim)
+at::Tensor cal_var(
+    const at::Tensor &self, at::IntArrayRef dim, const int64_t correction, const bool unbiased, const bool keepdim)
 {
     auto dim_now = var_check_and_trans_dim(self, dim);
     auto output_size = op_infer::var_npu_output_size(self, dim_now, keepdim);
@@ -145,8 +143,8 @@ at::Tensor cal_var(const at::Tensor &self, at::IntArrayRef dim, const int64_t co
     return variance;
 }
 
-std::tuple<at::Tensor, at::Tensor> cal_var_mean(const at::Tensor &self, at::IntArrayRef dim, bool unbiased,
-                                                int64_t correction, bool keepdim)
+std::tuple<at::Tensor, at::Tensor> cal_var_mean(
+    const at::Tensor &self, at::IntArrayRef dim, bool unbiased, int64_t correction, bool keepdim)
 {
     auto dim_now = var_check_and_trans_dim(self, dim);
     auto output_size = op_infer::var_npu_output_size(self, dim_now, keepdim);

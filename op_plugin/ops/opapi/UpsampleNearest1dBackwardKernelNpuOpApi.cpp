@@ -21,12 +21,8 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 constexpr int DEFAULT_SCALES = -1;
 
-at::Tensor &upsample_nearest1d_backward_out(
-    const at::Tensor &grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<double> scales,
-    at::Tensor &grad_input)
+at::Tensor &upsample_nearest1d_backward_out(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, c10::optional<double> scales, at::Tensor &grad_input)
 {
     DO_COMPATIBILITY(aclnnUpsampleNearest1dBackward,
         acl_op::upsample_nearest1d_backward_out(grad_output, output_size, input_size, scales, grad_input));
@@ -36,11 +32,8 @@ at::Tensor &upsample_nearest1d_backward_out(
     return grad_input;
 }
 
-at::Tensor upsample_nearest1d_backward(
-    const at::Tensor &grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<double> scales)
+at::Tensor upsample_nearest1d_backward(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, c10::optional<double> scales)
 {
     DO_COMPATIBILITY(aclnnUpsampleNearest1dBackward,
         acl_op::upsample_nearest1d_backward(grad_output, output_size, input_size, scales));

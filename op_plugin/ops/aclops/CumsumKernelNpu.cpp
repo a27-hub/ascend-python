@@ -54,8 +54,8 @@ at::Tensor &cumsum_out(const at::Tensor &self, int64_t dim, c10::optional<at::Sc
     }
     at::Tensor self_cp =
         self.scalar_type() == dst_type ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, dst_type);
-    npu_preparation::CheckOut({self_cp}, result, npu_preparation::get_tensor_npu_format(result), dst_type,
-                              self_cp.sizes());
+    npu_preparation::CheckOut(
+        {self_cp}, result, npu_preparation::get_tensor_npu_format(result), dst_type, self_cp.sizes());
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
         cumsum_out_nocheck(contiguous_result, self_cp, dim);

@@ -37,8 +37,8 @@ c10::SmallVector<int64_t, N> diou_output_size(const at::Tensor &self, const at::
     return output_size;
 }
 
-at::Tensor &diou_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &gtboxes, bool trans,
-                                 bool is_cross, int64_t mode)
+at::Tensor &diou_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &gtboxes, bool trans, bool is_cross, int64_t mode)
 {
     auto output_size = diou_output_size(self, gtboxes, is_cross);
     string mode_str = mode == IOF_MODE ? "iof" : "iou";
@@ -62,7 +62,8 @@ at::Tensor diou_npu_nocheck(const at::Tensor &self, const at::Tensor &gtboxes, b
     bool self_is_half = self.scalar_type() == at::kHalf;
     bool gtboxes_is_half = gtboxes.scalar_type() == at::kHalf;
     at::Tensor self_cp = self_is_half ? at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat) : self;
-    at::Tensor gtboxes_cp = gtboxes_is_half ? at_npu::native::custom_ops::_npu_dtype_cast(gtboxes, at::kFloat) : gtboxes;
+    at::Tensor gtboxes_cp =
+        gtboxes_is_half ? at_npu::native::custom_ops::_npu_dtype_cast(gtboxes, at::kFloat) : gtboxes;
 
     auto output_size = diou_output_size(self_cp, gtboxes_cp, is_cross);
     at::Tensor result = npu_preparation::apply_tensor(self_cp, output_size);
@@ -75,9 +76,8 @@ at::Tensor diou_npu_nocheck(const at::Tensor &self, const at::Tensor &gtboxes, b
 }
 
 std::tuple<at::Tensor &, at::Tensor &> diou_backward_out_npu_nocheck(at::Tensor &dbboxes, at::Tensor &dgtboxes,
-                                                                     const at::Tensor &grad, const at::Tensor &bboxes,
-                                                                     const at::Tensor &gtboxes, bool trans,
-                                                                     bool is_cross, int64_t mode)
+    const at::Tensor &grad, const at::Tensor &bboxes, const at::Tensor &gtboxes, bool trans, bool is_cross,
+    int64_t mode)
 {
     string mode_str = mode == IOF_MODE ? "iof" : "iou";
     at_npu::native::OpCommand cmd;
@@ -96,7 +96,7 @@ std::tuple<at::Tensor &, at::Tensor &> diou_backward_out_npu_nocheck(at::Tensor 
 } // namespace
 
 std::tuple<at::Tensor, at::Tensor> npu_diou_backward(const at::Tensor &grad, const at::Tensor &bboxes,
-                                                     const at::Tensor &gtboxes, bool trans, bool is_cross, int64_t mode)
+    const at::Tensor &gtboxes, bool trans, bool is_cross, int64_t mode)
 {
     // Op need form of [n] grad
     // Note: temp avoid! it'll be remove while op deal with fp16 issue!
@@ -108,7 +108,8 @@ std::tuple<at::Tensor, at::Tensor> npu_diou_backward(const at::Tensor &grad, con
     bool bboxes_is_half = bboxes.scalar_type() == at::kHalf;
     bool gtboxes_is_half = gtboxes.scalar_type() == at::kHalf;
     at::Tensor bboxes_cp = bboxes_is_half ? at_npu::native::custom_ops::_npu_dtype_cast(bboxes, at::kFloat) : bboxes;
-    at::Tensor gtboxes_cp = gtboxes_is_half ? at_npu::native::custom_ops::_npu_dtype_cast(gtboxes, at::kFloat) : gtboxes;
+    at::Tensor gtboxes_cp =
+        gtboxes_is_half ? at_npu::native::custom_ops::_npu_dtype_cast(gtboxes, at::kFloat) : gtboxes;
     at::Tensor dbboxes = npu_preparation::apply_tensor(bboxes_cp);
     at::Tensor dgtboxes = npu_preparation::apply_tensor(gtboxes_cp);
 

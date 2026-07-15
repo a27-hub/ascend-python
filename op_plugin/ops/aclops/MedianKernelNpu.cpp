@@ -50,8 +50,8 @@ at::Tensor &median_out_nocheck(at::Tensor &result, const at::Tensor &self)
     return result;
 }
 
-std::tuple<at::Tensor &, at::Tensor &> median_out_value_nocheck(at::Tensor &values, at::Tensor &indices,
-                                                                const at::Tensor &self, int64_t dim, bool keepdim)
+std::tuple<at::Tensor &, at::Tensor &> median_out_value_nocheck(
+    at::Tensor &values, at::Tensor &indices, const at::Tensor &self, int64_t dim, bool keepdim)
 {
     dim = op_plugin::utils::make_warp_dim(dim, self.dim());
     int64_t k = self.dim() > 0 ? (self.size(dim) + 1) / 2 : 1;
@@ -83,8 +83,8 @@ std::tuple<at::Tensor &, at::Tensor &> median_out_value_nocheck(at::Tensor &valu
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor &, at::Tensor &> median_out_npu_nocheck(at::Tensor &values, at::Tensor &indices,
-                                                              const at::Tensor &self, at::Dimname dim, bool keepdim)
+std::tuple<at::Tensor &, at::Tensor &> median_out_npu_nocheck(
+    at::Tensor &values, at::Tensor &indices, const at::Tensor &self, at::Dimname dim, bool keepdim)
 {
     return median_out_value_nocheck(values, indices, self, dimname_to_position(self, dim), keepdim);
 }
@@ -92,8 +92,8 @@ std::tuple<at::Tensor &, at::Tensor &> median_out_npu_nocheck(at::Tensor &values
 
 } // namespace
 
-std::tuple<at::Tensor &, at::Tensor &> median_out(const at::Tensor &self, int64_t dim, bool keepdim, at::Tensor &values,
-                                                  at::Tensor &indices)
+std::tuple<at::Tensor &, at::Tensor &> median_out(
+    const at::Tensor &self, int64_t dim, bool keepdim, at::Tensor &values, at::Tensor &indices)
 {
     auto output_size = median_npu_output_size(self, dim, keepdim);
     npu_preparation::CheckOut({self}, values, ACL_FORMAT_ND, self.scalar_type(), output_size);
@@ -129,8 +129,8 @@ at::Tensor median(const at::Tensor &self)
 std::tuple<at::Tensor, at::Tensor> median(const at::Tensor &self, int64_t dim, bool keepdim)
 {
     auto output_size = median_npu_output_size(self, dim, keepdim);
-    at::Tensor values = npu_preparation::apply_tensor_with_format(output_size, self.options(),
-                                                                  npu_preparation::get_tensor_npu_format(self));
+    at::Tensor values = npu_preparation::apply_tensor_with_format(
+        output_size, self.options(), npu_preparation::get_tensor_npu_format(self));
     at::Tensor indices =
         npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kLong), ACL_FORMAT_NCHW);
     median_out_value_nocheck(values, indices, self, dim, keepdim);
@@ -152,8 +152,8 @@ std::tuple<at::Tensor, at::Tensor> nanmedian(const at::Tensor &self, int64_t dim
     TORCH_WARN_ONCE(
         "Warning: kernel [nanmedian.dim] is not supported by NPU currently. Now this kernel is running on CPU.");
     auto output_size = median_npu_output_size(self, dim, keepdim);
-    at::Tensor values = npu_preparation::apply_tensor_with_format(output_size, self.options(),
-                                                                  npu_preparation::get_tensor_npu_format(self));
+    at::Tensor values = npu_preparation::apply_tensor_with_format(
+        output_size, self.options(), npu_preparation::get_tensor_npu_format(self));
     at::Tensor indices =
         npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kLong), ACL_FORMAT_NCHW);
 

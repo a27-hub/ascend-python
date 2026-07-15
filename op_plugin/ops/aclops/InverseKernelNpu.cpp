@@ -22,7 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& inverse_out_npu_nocheck(at::Tensor& result, const at::Tensor& self)
+at::Tensor &inverse_out_npu_nocheck(at::Tensor &result, const at::Tensor &self)
 {
     at::Tensor self_cast = self;
     at::Tensor result_cast = result;
@@ -35,24 +35,15 @@ at::Tensor& inverse_out_npu_nocheck(at::Tensor& result, const at::Tensor& self)
     }
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("MatrixInverse")
-        .Input(self_cast)
-        .Output(result_cast)
-        .Attr("adjoint", false)
-        .Run();
+    cmd.Name("MatrixInverse").Input(self_cast).Output(result_cast).Attr("adjoint", false).Run();
     result.copy_(result_cast);
     return result;
 }
 } // namespace
 
-at::Tensor& inverse_out(
-    const at::Tensor& self,
-    at::Tensor& out)
+at::Tensor &inverse_out(const at::Tensor &self, at::Tensor &out)
 {
-    npu_preparation::CheckOut(
-        {self},
-        out,
-        self);
+    npu_preparation::CheckOut({self}, out, self);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
         inverse_out_npu_nocheck(contiguous_result, self);
@@ -63,7 +54,7 @@ at::Tensor& inverse_out(
     return out;
 }
 
-at::Tensor inverse(const at::Tensor& self)
+at::Tensor inverse(const at::Tensor &self)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);
     inverse_out_npu_nocheck(result, self);

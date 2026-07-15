@@ -20,12 +20,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor isclose(
-    const at::Tensor& self,
-    const at::Tensor& other,
-    double rtol,
-    double atol,
-    bool equal_nan)
+at::Tensor isclose(const at::Tensor &self, const at::Tensor &other, double rtol, double atol, bool equal_nan)
 {
     TORCH_CHECK(self.scalar_type() == other.scalar_type(), self.scalar_type(), " did not match ", other.scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
@@ -34,7 +29,8 @@ at::Tensor isclose(
 #else
     auto output_size = self.sizes();
 #endif
-    at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kBool), ACL_FORMAT_ND);
+    at::Tensor result =
+        npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kBool), ACL_FORMAT_ND);
 
     TORCH_NPU_WARN_ONCE("Device do not support double dtype of rtol and atol now, dtype cast repalce with float.");
     auto rtol1 = static_cast<float>(rtol);

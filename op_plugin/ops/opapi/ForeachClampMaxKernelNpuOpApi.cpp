@@ -31,12 +31,12 @@ void _foreach_clamp_max_(at::TensorList self, at::TensorList other)
     return;
 }
 
-std::vector<at::Tensor> _foreach_clamp_max(at::TensorList self, const at::Scalar& scalar)
+std::vector<at::Tensor> _foreach_clamp_max(at::TensorList self, const at::Scalar &scalar)
 {
     return op_api::_foreach_minimum(self, scalar);
 }
 
-void _foreach_clamp_max_(at::TensorList self, const at::Scalar& scalar)
+void _foreach_clamp_max_(at::TensorList self, const at::Scalar &scalar)
 {
     op_api::_foreach_minimum_(self, scalar);
     return;
@@ -53,4 +53,4 @@ void _foreach_clamp_max_(at::TensorList self, at::ArrayRef<at::Scalar> scalars)
     return;
 }
 #endif
-}  // namespace op_api
+} // namespace op_api

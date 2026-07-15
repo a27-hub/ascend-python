@@ -29,10 +29,7 @@ inline c10::SmallVector<int64_t, SIZE> transpose_shape(
             TORCH_CHECK(shape_size > perm[i],
                 "npu_confusion_transpose forward/backward input invalid, "
                 "shape has size ",
-                shape_size,
-                " but perm[i] is, ",
-                perm[i],
-                OPS_ERROR(ErrCode::PARAM));
+                shape_size, " but perm[i] is, ", perm[i], OPS_ERROR(ErrCode::PARAM));
             trans_shape.emplace_back(ori_shape[perm[i]]);
         }
     }
@@ -77,4 +74,4 @@ at::Tensor npu_confusion_transpose_backward_symint(
     EXEC_NPU_CMD(aclnnConfusionTranspose, grad, backward_perm, backward_shape, transpose_first, y);
     return y;
 }
-}  // namespace op_api
+} // namespace op_api

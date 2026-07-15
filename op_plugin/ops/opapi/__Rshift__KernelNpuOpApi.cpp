@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor __rshift__(const at::Tensor& self, const at::Tensor& other)
+at::Tensor __rshift__(const at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnRightShift, acl_op::__rshift__(self, other));
     at::Tensor result = npu_preparation::apply_tensor(self);
@@ -28,7 +28,7 @@ at::Tensor __rshift__(const at::Tensor& self, const at::Tensor& other)
     return result;
 }
 
-at::Tensor __rshift__(const at::Tensor& self, const at::Scalar& other)
+at::Tensor __rshift__(const at::Tensor &self, const at::Scalar &other)
 {
     DO_COMPATIBILITY(aclnnRightShift, acl_op::__rshift__(self, other));
     at::Tensor scalar_tensor = npu_preparation::copy_scalar_to_device(other, self.scalar_type(), self.device());
@@ -36,4 +36,4 @@ at::Tensor __rshift__(const at::Tensor& self, const at::Scalar& other)
     EXEC_NPU_CMD(aclnnRightShift, self, scalar_tensor, result);
     return result;
 }
-}  // namespace op_api
+} // namespace op_api

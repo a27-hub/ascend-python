@@ -22,32 +22,21 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& masked_scatter_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& mask,
-    const at::Tensor& source)
+at::Tensor &masked_scatter_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &mask, const at::Tensor &source)
 {
     at::Tensor mask_bool = mask;
     if (!(mask.dtype() == at::kBool)) {
         mask_bool = at_npu::native::custom_ops::_npu_dtype_cast(mask_bool, at::kBool);
     }
     at_npu::native::OpCommand cmd;
-    cmd.Name("MaskedScatter")
-        .Input(self)
-        .Input(mask_bool)
-        .Input(source)
-        .Output(result)
-        .Run();
+    cmd.Name("MaskedScatter").Input(self).Input(mask_bool).Input(source).Output(result).Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor& masked_scatter_(
-    at::Tensor& self,
-    const at::Tensor& mask,
-    const at::Tensor& source)
+at::Tensor &masked_scatter_(at::Tensor &self, const at::Tensor &mask, const at::Tensor &source)
 {
     npu_preparation::CheckMemory({self, mask, source}, {self});
     if (!npu_utils::check_match(&self)) {

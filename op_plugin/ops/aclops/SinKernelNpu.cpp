@@ -22,19 +22,16 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::Tensor& sin_out_npu_nocheck(at::Tensor& result, const at::Tensor& self)
+at::Tensor &sin_out_npu_nocheck(at::Tensor &result, const at::Tensor &self)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Sin")
-        .Input(self)
-        .Output(result)
-        .Run();
+    cmd.Name("Sin").Input(self).Output(result).Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor& sin_out(const at::Tensor& self, at::Tensor& result)
+at::Tensor &sin_out(const at::Tensor &self, at::Tensor &result)
 {
     npu_preparation::CheckOut({self}, result, self);
 
@@ -49,7 +46,7 @@ at::Tensor& sin_out(const at::Tensor& self, at::Tensor& result)
     return result;
 }
 
-at::Tensor sin(const at::Tensor& self)
+at::Tensor sin(const at::Tensor &self)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);
     sin_out_npu_nocheck(result, self);
@@ -57,9 +54,6 @@ at::Tensor sin(const at::Tensor& self)
     return result;
 }
 
-at::Tensor& sin_(at::Tensor& self)
-{
-    return acl_op::sin_out(self, self);
-}
+at::Tensor &sin_(at::Tensor &self) { return acl_op::sin_out(self, self); }
 
 } // namespace acl_op

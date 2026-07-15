@@ -20,40 +20,27 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_normalize_batch(
-    const at::Tensor& self,
-    const at::Tensor& seq_len,
-    int64_t normalize_type) {
-  TORCH_CHECK(
-      seq_len.dim() == 1,
-      "Non-empty 1D seq_len tensor expected but got a tensor with sizes ",
-      seq_len.sizes(),
-      OPS_ERROR(ErrCode::PARAM));
-  TORCH_CHECK(
-      seq_len.size(0) == self.size(0),
-      "seq_len's length should be equal self' num, but got seq_len length ",
-      seq_len.size(0),
-      "self num ",
-      self.size(0),
-      OPS_ERROR(ErrCode::PARAM));
-  TORCH_CHECK(
-      normalize_type >= 0 && normalize_type <= 1,
-      "normalize_type expected to be in range [0, 1], but got ",
-      normalize_type,
-      OPS_ERROR(ErrCode::VALUE));
+at::Tensor npu_normalize_batch(const at::Tensor &self, const at::Tensor &seq_len, int64_t normalize_type)
+{
+    TORCH_CHECK(seq_len.dim() == 1, "Non-empty 1D seq_len tensor expected but got a tensor with sizes ",
+        seq_len.sizes(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(seq_len.size(0) == self.size(0), "seq_len's length should be equal self' num, but got seq_len length ",
+        seq_len.size(0), "self num ", self.size(0), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(normalize_type >= 0 && normalize_type <= 1, "normalize_type expected to be in range [0, 1], but got ",
+        normalize_type, OPS_ERROR(ErrCode::VALUE));
 
-  at::Tensor result = npu_preparation::apply_tensor(self);
-  string normalize_type_str = normalize_type == 0 ? "per_feature" : "all_features";
+    at::Tensor result = npu_preparation::apply_tensor(self);
+    string normalize_type_str = normalize_type == 0 ? "per_feature" : "all_features";
 
-  constexpr float_t EPSILON = 1e-5;
-  at_npu::native::OpCommand cmd;
-  cmd.Name("NormalizeBatch")
-      .Input(self)
-      .Input(seq_len)
-      .Output(result)
-      .Attr("normalize_type", normalize_type_str)
-      .Attr("epsilon", EPSILON)
-      .Run();
-  return result;
+    constexpr float_t EPSILON = 1e-5;
+    at_npu::native::OpCommand cmd;
+    cmd.Name("NormalizeBatch")
+        .Input(self)
+        .Input(seq_len)
+        .Output(result)
+        .Attr("normalize_type", normalize_type_str)
+        .Attr("epsilon", EPSILON)
+        .Run();
+    return result;
 }
 } // namespace acl_op

@@ -25,8 +25,7 @@ namespace {
 // a_grad = c_grad @ b^H
 // b_grad = a^H @ c_grad
 std::tuple<at::Tensor, at::Tensor> npu_matmul_backward(const at::Tensor &grad, const at::Tensor &self,
-                                                       const at::Tensor &other, std::array<bool, 2> mask,
-                                                       at::Tensor &grad_self, at::Tensor &grad_other)
+    const at::Tensor &other, std::array<bool, 2> mask, at::Tensor &grad_self, at::Tensor &grad_other)
 {
     // select feasible path by checking tensor dimension
     auto dim_self = self.dim();
@@ -83,15 +82,17 @@ std::tuple<at::Tensor, at::Tensor> npu_matmul_backward(const at::Tensor &grad, c
 }
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor> matmul_backward(const at::Tensor &grad, const at::Tensor &self,
-                                                   const at::Tensor &other, std::array<bool, 2> mask)
+std::tuple<at::Tensor, at::Tensor> matmul_backward(
+    const at::Tensor &grad, const at::Tensor &self, const at::Tensor &other, std::array<bool, 2> mask)
 {
     if (!grad.defined()) {
         return std::make_tuple(at::Tensor(), at::Tensor());
     }
 
-    TORCH_CHECK(self.dim() > 0 && other.dim() > 0, "both matrices must be at least 1D,"
-                "but they are", self.dim(), "D and ", other.dim(), "D" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(self.dim() > 0 && other.dim() > 0,
+        "both matrices must be at least 1D,"
+        "but they are",
+        self.dim(), "D and ", other.dim(), "D" + OPS_ERROR(ErrCode::PARAM));
     at::Tensor grad_self;
     at::Tensor grad_other;
     if (!mask[0] && !mask[1]) {

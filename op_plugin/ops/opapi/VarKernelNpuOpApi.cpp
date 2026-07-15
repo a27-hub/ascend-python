@@ -18,12 +18,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& var_out(
-    const at::Tensor& self,
-    at::OptionalIntArrayRef dim,
-    const c10::optional<c10::Scalar>& correction,
-    bool keepdim,
-    at::Tensor& out)
+at::Tensor &var_out(const at::Tensor &self, at::OptionalIntArrayRef dim, const c10::optional<c10::Scalar> &correction,
+    bool keepdim, at::Tensor &out)
 {
     if (!correction_fits_aclnn_int64(correction)) {
         at::Tensor cpu_out = out.cpu();
@@ -39,11 +35,7 @@ at::Tensor& var_out(
     auto output_size = op_infer::reduce_ops_npu_output_size(self, real_dim, keepdim);
     int64_t real_correction = correction.has_value() ? correction.value().toLong() : 1;
 
-    at_npu::native::OpPreparation::check_tensor(
-        {self},
-        out,
-        self,
-        output_size);
+    at_npu::native::OpPreparation::check_tensor({self}, out, self, output_size);
 
     auto rd = at::IntArrayRef(real_dim);
     EXEC_NPU_CMD(aclnnVarCorrection, self, rd, real_correction, keepdim, out);
@@ -51,10 +43,7 @@ at::Tensor& var_out(
 }
 
 at::Tensor var(
-    const at::Tensor & self,
-    at::OptionalIntArrayRef dim,
-    const c10::optional<c10::Scalar>& correction,
-    bool keepdim)
+    const at::Tensor &self, at::OptionalIntArrayRef dim, const c10::optional<c10::Scalar> &correction, bool keepdim)
 {
     if (!correction_fits_aclnn_int64(correction)) {
         return at::var(self.cpu(), dim, correction, keepdim).to(self.options());
@@ -68,11 +57,7 @@ at::Tensor var(
     int64_t real_correction = correction.has_value() ? correction.value().toLong() : 1;
     auto result = npu_preparation::apply_tensor_without_format(output_size, self.options());
 
-    at_npu::native::OpPreparation::check_tensor(
-        {self},
-        result,
-        self,
-        output_size);
+    at_npu::native::OpPreparation::check_tensor({self}, result, self, output_size);
 
     auto rd = at::IntArrayRef(real_dim);
     EXEC_NPU_CMD(aclnnVarCorrection, self, rd, real_correction, keepdim, result);
@@ -80,16 +65,11 @@ at::Tensor var(
 }
 
 std::tuple<at::Tensor, at::Tensor> var_mean(
-    const at::Tensor& self,
-    at::OptionalIntArrayRef dim,
-    const c10::optional<c10::Scalar>& correction,
-    bool keepdim)
+    const at::Tensor &self, at::OptionalIntArrayRef dim, const c10::optional<c10::Scalar> &correction, bool keepdim)
 {
     if (!correction_fits_aclnn_int64(correction)) {
         auto cpu_tup = at::var_mean(self.cpu(), dim, correction, keepdim);
-        return std::make_tuple(
-            std::get<0>(cpu_tup).to(self.options()),
-            std::get<1>(cpu_tup).to(self.options()));
+        return std::make_tuple(std::get<0>(cpu_tup).to(self.options()), std::get<1>(cpu_tup).to(self.options()));
     }
     c10::SmallVector<int64_t, N> real_dim = op_plugin::utils::get_dimlist_for_tensor(self);
     if (dim.has_value()) {

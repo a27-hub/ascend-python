@@ -53,7 +53,8 @@ at::Tensor &_upsample_nearest_exact3d_backward_out(const at::Tensor &grad_output
     double scales_d_attr = scales_d.value_or(0);
     double scales_h_attr = scales_h.value_or(0);
     double scales_w_attr = scales_w.value_or(0);
-    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dBackward, grad_output, output_size, input_size, scales_d_attr, scales_h_attr, scales_w_attr, grad_input);
+    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dBackward, grad_output, output_size, input_size, scales_d_attr,
+        scales_h_attr, scales_w_attr, grad_input);
     return grad_input;
 }
 
@@ -68,8 +69,9 @@ at::Tensor _upsample_nearest_exact3d_backward(const at::Tensor &grad_output, at:
     double scales_h_attr = scales_h.value_or(0);
     double scales_w_attr = scales_w.value_or(0);
     at::Tensor grad_input = npu_preparation::apply_tensor_without_format(grad_output, input_size);
-    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dBackward, grad_output, output_size, input_size, scales_d_attr, scales_h_attr, scales_w_attr, grad_input);
+    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dBackward, grad_output, output_size, input_size, scales_d_attr,
+        scales_h_attr, scales_w_attr, grad_input);
     return grad_input;
 }
 
-}  // namespace op_api
+} // namespace op_api

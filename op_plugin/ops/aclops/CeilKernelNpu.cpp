@@ -21,20 +21,23 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor &ceil_out_npu_nocheck(at::Tensor &result, const at::Tensor &self) {
+at::Tensor &ceil_out_npu_nocheck(at::Tensor &result, const at::Tensor &self)
+{
     at_npu::native::OpCommand cmd;
     cmd.Name("Ceil").Input(self).Output(result).Run();
     return result;
 }
 
-bool ceil_integral_identity(const at::Tensor &self) {
+bool ceil_integral_identity(const at::Tensor &self)
+{
     // Match PyTorch CPU: ceil on integer tensors is the identity (no rounding needed).
     // CANN aclnnInplaceCeil / Ceil only supports floating dtypes; skip the kernel for integers.
     return at::isIntegralType(self.scalar_type(), /*includeBool=*/false);
 }
 } // namespace
 
-at::Tensor &ceil_out(const at::Tensor &self, at::Tensor &result) {
+at::Tensor &ceil_out(const at::Tensor &self, at::Tensor &result)
+{
     npu_preparation::CheckOut({self}, result, self);
     if (ceil_integral_identity(self)) {
         if (!npu_utils::check_match(&result)) {
@@ -56,7 +59,8 @@ at::Tensor &ceil_out(const at::Tensor &self, at::Tensor &result) {
     return result;
 }
 
-at::Tensor ceil(const at::Tensor &self) {
+at::Tensor ceil(const at::Tensor &self)
+{
     if (ceil_integral_identity(self)) {
         return self.clone();
     }

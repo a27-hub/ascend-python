@@ -18,11 +18,7 @@
 
 namespace acl_op {
 
-at::Tensor scatter_update(
-    const at::Tensor &self,
-    const at::Tensor &indices,
-    const at::Tensor &updates,
-    int64_t axis)
+at::Tensor scatter_update(const at::Tensor &self, const at::Tensor &indices, const at::Tensor &updates, int64_t axis)
 {
     at::Tensor result = self.clone();
 
@@ -41,11 +37,7 @@ at::Tensor scatter_update(
     return result;
 }
 
-at::Tensor &scatter_update_(
-    at::Tensor &self,
-    const at::Tensor &indices,
-    const at::Tensor &updates,
-    int64_t axis)
+at::Tensor &scatter_update_(at::Tensor &self, const at::Tensor &indices, const at::Tensor &updates, int64_t axis)
 {
     // Note:
     // The attribute 'reduce' of Scatter only supports setting it to 'update'.

@@ -22,14 +22,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& upsample_bilinear2d_backward_out_nocheck(
-    at::Tensor& grad_input,
-    const at::Tensor& grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    bool align_corners,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w) {
+at::Tensor &upsample_bilinear2d_backward_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
+    at::IntArrayRef output_size, at::IntArrayRef input_size, bool align_corners, c10::optional<double> scales_h,
+    c10::optional<double> scales_w)
+{
     at_npu::native::OpCommand cmd;
     at::Tensor original_image = npu_preparation::apply_tensor(grad_output, input_size);
     bool half_pixel_centers = !align_corners;
@@ -44,19 +40,11 @@ at::Tensor& upsample_bilinear2d_backward_out_nocheck(
 }
 } // namespace
 
-at::Tensor& upsample_bilinear2d_backward_out(
-    const at::Tensor& grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    bool align_corners,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w,
-    at::Tensor& grad_input) {
-    npu_preparation::CheckOut(
-        {grad_output},
-        grad_input,
-        grad_output,
-        input_size);
+at::Tensor &upsample_bilinear2d_backward_out(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, bool align_corners, c10::optional<double> scales_h, c10::optional<double> scales_w,
+    at::Tensor &grad_input)
+{
+    npu_preparation::CheckOut({grad_output}, grad_input, grad_output, input_size);
     if (!npu_utils::check_match(&grad_input)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(grad_input);
         upsample_bilinear2d_backward_out_nocheck(
@@ -69,13 +57,9 @@ at::Tensor& upsample_bilinear2d_backward_out(
     return grad_input;
 }
 
-at::Tensor upsample_bilinear2d_backward(
-    const at::Tensor& grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    bool align_corners,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w) {
+at::Tensor upsample_bilinear2d_backward(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, bool align_corners, c10::optional<double> scales_h, c10::optional<double> scales_w)
+{
     auto op_infer_output_size = input_size;
     at::Tensor grad_input = npu_preparation::apply_tensor(grad_output, op_infer_output_size);
 

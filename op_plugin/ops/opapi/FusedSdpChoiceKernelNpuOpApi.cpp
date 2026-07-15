@@ -21,14 +21,8 @@ namespace op_api {
 // SDPBackend::overrideable = 4
 constexpr int64_t SDP_BACKEND_OVERRIDEABLE = 4;
 
-int64_t _fused_sdp_choice(
-    const at::Tensor& query,
-    const at::Tensor& key,
-    const at::Tensor& value,
-    const c10::optional<at::Tensor>& attn_mask,
-    double dropout_p,
-    bool is_causal,
-    c10::optional<double> scale,
+int64_t _fused_sdp_choice(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const c10::optional<at::Tensor> &attn_mask, double dropout_p, bool is_causal, c10::optional<double> scale,
     bool enable_gqa)
 {
     return SDP_BACKEND_OVERRIDEABLE;

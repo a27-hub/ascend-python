@@ -22,38 +22,24 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-inline void upsample_linear1d_check(
-    const at::Tensor& self,
-    at::IntArrayRef output_size)
+inline void upsample_linear1d_check(const at::Tensor &self, at::IntArrayRef output_size)
 {
-    TORCH_CHECK(
-        output_size.size() == 1,
-        "It is expected output_size equals to 1, but got size ",
-        output_size.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() == 1, "It is expected output_size equals to 1, but got size ", output_size.size(),
+        OPS_ERROR(ErrCode::PARAM));
 
-    TORCH_CHECK(
-        (self.size(1) != 0 && self.size(2) != 0) && self.dim() == 3,
-        "Non-empty 3D data tensor expected but got a tensor with sizes ",
-        self.sizes(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((self.size(1) != 0 && self.size(2) != 0) && self.dim() == 3,
+        "Non-empty 3D data tensor expected but got a tensor with sizes ", self.sizes(), OPS_ERROR(ErrCode::PARAM));
 
     int64_t input_width = self.size(2);
     int64_t output_width = output_size[0];
 
-    TORCH_CHECK(
-        input_width > 0 && output_width > 0,
-        "Input and output sizes should be greater than 0, but got input (W: ",
-        input_width,
-        ") and output (W: ",
-        output_width,
-        ")" + OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(input_width > 0 && output_width > 0,
+        "Input and output sizes should be greater than 0, but got input (W: ", input_width,
+        ") and output (W: ", output_width, ")" + OPS_ERROR(ErrCode::VALUE));
 }
 
-at::Tensor& upsample_linear1d_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales)
+at::Tensor &upsample_linear1d_out_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef output_size,
+    bool align_corners, c10::optional<double> scales)
 {
     upsample_linear1d_check(self, output_size);
     // Since only NCHW format input is currently supported, first convert the
@@ -85,21 +71,12 @@ at::Tensor& upsample_linear1d_out_nocheck(
 }
 } // namespace
 
-at::Tensor& upsample_linear1d_out(
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales,
-    at::Tensor& out)
+at::Tensor &upsample_linear1d_out(const at::Tensor &self, at::IntArrayRef output_size, bool align_corners,
+    c10::optional<double> scales, at::Tensor &out)
 {
-    auto output_sizes = op_infer::upsample_linear1d_npu_output_size(
-        self, output_size);
+    auto output_sizes = op_infer::upsample_linear1d_npu_output_size(self, output_size);
 
-    npu_preparation::CheckOut(
-        {self},
-        out,
-        self,
-        output_sizes);
+    npu_preparation::CheckOut({self}, out, self, output_sizes);
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -113,13 +90,9 @@ at::Tensor& upsample_linear1d_out(
 }
 
 at::Tensor upsample_linear1d(
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales)
+    const at::Tensor &self, at::IntArrayRef output_size, bool align_corners, c10::optional<double> scales)
 {
-    auto output_sizes = op_infer::upsample_linear1d_npu_output_size(
-        self, output_size);
+    auto output_sizes = op_infer::upsample_linear1d_npu_output_size(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor(self, output_sizes);
 
     upsample_linear1d_out_nocheck(result, self, output_size, align_corners, scales);

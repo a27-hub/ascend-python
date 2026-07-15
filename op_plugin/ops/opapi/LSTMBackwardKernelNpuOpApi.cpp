@@ -17,10 +17,10 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::vector<at::Tensor> squeeze_chunk_result(const at::TensorList& chunk_result)
+std::vector<at::Tensor> squeeze_chunk_result(const at::TensorList &chunk_result)
 {
     std::vector<at::Tensor> squeezed_result;
-    for (const auto& chunk : chunk_result) {
+    for (const auto &chunk : chunk_result) {
         if (chunk.defined()) {
             at::Tensor squeezed_chunk = (chunk.dim() > 0 && chunk.size(0) == 1) ? chunk.squeeze(0) : chunk;
             squeezed_result.push_back(squeezed_chunk);
@@ -31,31 +31,17 @@ std::vector<at::Tensor> squeeze_chunk_result(const at::TensorList& chunk_result)
     return squeezed_result;
 }
 
-std::tuple<at::Tensor, std::vector<at::Tensor>, std::vector<at::Tensor>> _lstm_npu_backward(
-    const at::Tensor &grad_y,
-    const at::Tensor &grad_hy,
-    const at::Tensor &grad_cy,
-    const at::Tensor &input,
-    const at::TensorList hx,
-    const at::TensorList params,
-    const at::Tensor &i,
-    const at::Tensor &j,
-    const at::Tensor &f,
-    const at::Tensor &o,
-    const at::Tensor &h,
-    const at::Tensor &c,
-    const at::Tensor &tanhc,
-    bool has_biases,
-    int64_t num_layers,
-    double dropout,
-    bool train,
-    bool bidirectional,
-    c10::optional<bool> batch_first,
+std::tuple<at::Tensor, std::vector<at::Tensor>, std::vector<at::Tensor>> _lstm_npu_backward(const at::Tensor &grad_y,
+    const at::Tensor &grad_hy, const at::Tensor &grad_cy, const at::Tensor &input, const at::TensorList hx,
+    const at::TensorList params, const at::Tensor &i, const at::Tensor &j, const at::Tensor &f, const at::Tensor &o,
+    const at::Tensor &h, const at::Tensor &c, const at::Tensor &tanhc, bool has_biases, int64_t num_layers,
+    double dropout, bool train, bool bidirectional, c10::optional<bool> batch_first,
     const c10::optional<at::Tensor> &batch_sizes)
 {
     const bool batch_first_1 = batch_first.value_or(false);
     auto out0_shape = op_infer::lstm_backward_npu_output_size(input, batch_first_1, batch_sizes);
-    auto out1_shape = op_infer::lstm_backward_npu_hc_prev_output_size(input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
+    auto out1_shape = op_infer::lstm_backward_npu_hc_prev_output_size(
+        input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
 
     int64_t per_layer_params = has_biases ? 4 : 2;
     int64_t D = bidirectional ? 2 : 1;
@@ -98,42 +84,15 @@ std::tuple<at::Tensor, std::vector<at::Tensor>, std::vector<at::Tensor>> _lstm_n
 
     at::TensorList param_list_ = at::TensorList(param_list);
     std::nullptr_t temp_nullptr = nullptr;
-    EXEC_NPU_CMD(
-        aclnnLstmBackward,
-        input,
-        hx,
-        params,
-        grad_y,
-        grad_hy,
-        grad_cy,
-        i_list,
-        j_list,
-        f_list,
-        o_list,
-        h_list,
-        c_list,
-        tanhc_list,
-        batch_sizes,
-        has_biases,
-        num_layers,
-        dropout,
-        train,
-        bidirectional,
-        batch_first_1,
-        temp_nullptr,
-        out0,
-        out_h_prev,
-        out_c_prev,
-        param_list_);
+    EXEC_NPU_CMD(aclnnLstmBackward, input, hx, params, grad_y, grad_hy, grad_cy, i_list, j_list, f_list, o_list, h_list,
+        c_list, tanhc_list, batch_sizes, has_biases, num_layers, dropout, train, bidirectional, batch_first_1,
+        temp_nullptr, out0, out_h_prev, out_c_prev, param_list_);
 
     std::vector<at::Tensor> hx_prev_vec;
     hx_prev_vec.push_back(out_h_prev);
     hx_prev_vec.push_back(out_c_prev);
     at::TensorList out_hx_prev = at::TensorList(hx_prev_vec);
-    return std::make_tuple(
-        out0,
-        out_hx_prev.vec(),
-        param_list_.vec());
+    return std::make_tuple(out0, out_hx_prev.vec(), param_list_.vec());
 }
 
 }

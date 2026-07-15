@@ -32,8 +32,7 @@ static inline int64_t calculate_prod_output_format(const at::Tensor &self, at::I
 }
 
 at::Tensor &prod_out_npu_nocheck(at::Tensor &result, const at::Tensor &self,
-                                 c10::SmallVector<int64_t, at_npu::native::N> dim_list, bool keepdim,
-                                 c10::optional<at::ScalarType> dtype)
+    c10::SmallVector<int64_t, at_npu::native::N> dim_list, bool keepdim, c10::optional<at::ScalarType> dtype)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("ReduceProd").Input(self).Input(dim_list).Output(result).Attr("keep_dims", keepdim).Run();
@@ -64,8 +63,8 @@ at::ScalarType get_dst_type(const at::Tensor &self, const c10::optional<at::Scal
 }
 } // namespace
 
-at::Tensor &prod_out(const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype,
-                     at::Tensor &result)
+at::Tensor &prod_out(
+    const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype, at::Tensor &result)
 {
     auto output_size = op_infer::prod_npu_output_size(self, dim, keepdim);
     at::ScalarType dst_type = dtype.has_value() ? dtype.value() : result.scalar_type();

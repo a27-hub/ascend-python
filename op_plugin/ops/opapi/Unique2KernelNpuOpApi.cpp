@@ -22,21 +22,16 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 #if VERSION_BETWEEN(V2R1, V2R1)
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
-    const at::Tensor& self,
-    bool sorted,
-    bool return_inverse,
-    bool return_counts)
+    const at::Tensor &self, bool sorted, bool return_inverse, bool return_counts)
 {
     DO_COMPATIBILITY(aclnnUnique2, acl_op::_unique2(self, sorted, return_inverse, return_counts));
     at::Tensor y = npu_preparation::apply_tensor_without_format(self, self.numel());
     at::Tensor y_inverse = (return_inverse || return_counts)
-                               ? npu_preparation::apply_tensor_without_format(self.sizes(),
-                                                                              self.options().dtype(at::kLong))
-                               : npu_preparation::apply_tensor_without_format({0}, self.options().dtype(at::kLong));
-    at::Tensor y_counts = return_counts ? npu_preparation::apply_tensor_without_format(self.numel(),
-                                                                                       self.options().dtype(at::kLong))
-                                        : npu_preparation::apply_tensor_without_format({0},
-                                                                                       self.options().dtype(at::kLong));
+        ? npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kLong))
+        : npu_preparation::apply_tensor_without_format({0}, self.options().dtype(at::kLong));
+    at::Tensor y_counts = return_counts
+        ? npu_preparation::apply_tensor_without_format(self.numel(), self.options().dtype(at::kLong))
+        : npu_preparation::apply_tensor_without_format({0}, self.options().dtype(at::kLong));
     static auto opApiFuncAddr = []() {
         auto ret = GetOpApiFuncAddr("aclGetViewShape");
         TORCH_CHECK(ret != nullptr, OPS_ERROR(ErrCode::PTR));
@@ -45,8 +40,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
     using aclGetViewShapeFunc = int (*)(const aclTensor *tensor, int64_t **view_dims, uint64_t *view_dims_num);
     auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
     OP_EXEC_LOG(aclnnUnique2, "EXEC_NPU_CMD_SYNC", self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
-    auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnUnique2, self, sorted, return_inverse, return_counts, y, y_inverse,
-                                          y_counts);
+    auto npuAclParams =
+        EXEC_NPU_CMD_SYNC(aclnnUnique2, self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
     int64_t *view_dims = nullptr;
     uint64_t view_dim_num = 0;
     auto ret = aclGetViewShape(npuAclParams.Get<4>(), &view_dims, &view_dim_num);
@@ -63,34 +58,29 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
 }
 #endif
 
-
 #if VERSION_BETWEEN(V2R2, VERSION_NEWEST)
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
-    const at::Tensor& self,
-    bool sorted,
-    bool return_inverse,
-    bool return_counts)
+    const at::Tensor &self, bool sorted, bool return_inverse, bool return_counts)
 {
     DO_COMPATIBILITY(aclnnUnique2, acl_op::_unique2(self, sorted, return_inverse, return_counts));
     at::Tensor y = npu_preparation::apply_tensor_without_format(self, self.numel());
     at::Tensor y_inverse = (return_inverse || return_counts)
-                              ? npu_preparation::apply_tensor_without_format(self.sizes(),
-                                                                             self.options().dtype(at::kLong))
-                              : npu_preparation::apply_tensor_without_format({0}, self.options().dtype(at::kLong));
-    at::Tensor y_counts = return_counts ? npu_preparation::apply_tensor_without_format(self.numel(),
-                                                                                       self.options().dtype(at::kLong))
-                                        : npu_preparation::apply_tensor_without_format({0}, self.options().dtype(at::kLong));
+        ? npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kLong))
+        : npu_preparation::apply_tensor_without_format({0}, self.options().dtype(at::kLong));
+    at::Tensor y_counts = return_counts
+        ? npu_preparation::apply_tensor_without_format(self.numel(), self.options().dtype(at::kLong))
+        : npu_preparation::apply_tensor_without_format({0}, self.options().dtype(at::kLong));
     static auto opApiFuncAddr = []() {
         auto ret = GetOpApiFuncAddr("aclGetViewShape");
         TORCH_CHECK(ret != nullptr, OPS_ERROR(ErrCode::VALUE));
         return ret;
     }();
-    using aclGetViewShapeFunc = int (*)(const aclTensor* tensor, int64_t** view_dims, uint64_t* view_dims_num);
+    using aclGetViewShapeFunc = int (*)(const aclTensor *tensor, int64_t **view_dims, uint64_t *view_dims_num);
     auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
     OP_EXEC_LOG(aclnnUnique2, "EXEC_NPU_CMD_SYNC", self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
-    auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnUnique2, self, sorted, return_inverse, return_counts, y, y_inverse,
-                                          y_counts);
-    int64_t* view_dims = nullptr;
+    auto npuAclParams =
+        EXEC_NPU_CMD_SYNC(aclnnUnique2, self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
+    int64_t *view_dims = nullptr;
     uint64_t view_dim_num = 0;
     auto ret = aclGetViewShape(npuAclParams.Get<4>(), &view_dims, &view_dim_num);
     TORCH_CHECK(ret == 0, "aclGetViewShape failed.", OPS_ERROR(ErrCode::VALUE));
