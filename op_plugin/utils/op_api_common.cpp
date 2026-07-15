@@ -1612,6 +1612,11 @@ bool CacheParams::GetDeterministicStatus() const
     return deterministic_status_;
 }
 
+uint32_t CacheParams::GetDeterministicEffectiveLevel() const
+{
+    return deterministic_effective_level_;
+}
+
 uint32_t CacheParams::GetAicNum() const
 {
     return aic_num_;
@@ -1627,6 +1632,7 @@ CacheParams GetCacheParams()
     CacheParams params;
 
     params.deterministic_status_ = at::globalContext().deterministicAlgorithms();
+    params.deterministic_effective_level_ = at::globalContext().deterministicEffectiveLevel();
 
     if (c10_npu::is_core_control_enabled()) {
         params.aic_num_ = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);
@@ -1710,7 +1716,7 @@ void SetExecConfig()
 
 void SetExecConfigV2(const CacheParams& cache_params)
 {
-    at_npu::native::SetDeterministicOps(cache_params.GetDeterministicStatus());
+    at_npu::native::SetDeterministicLevelOps(cache_params.GetDeterministicEffectiveLevel());
 }
 
 void* GetWorkSpaceAddr(
@@ -1825,11 +1831,11 @@ bool CheckAndInitFuncV2(const char* aclnn_api)
 
 void AddCacheConfigParams(aclrtStream acl_stream, const CacheParams& cache_params)
 {
-    bool deterministic_status = cache_params.GetDeterministicStatus();
+    bool deterministic_effective_level = cache_params.GetDeterministicEffectiveLevel();
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
 
-    add_param_to_buf(deterministic_status);
+    add_param_to_buf(deterministic_effective_level);
     if (aic_num != UINT32_MAX && aiv_num != UINT32_MAX) {
         add_param_to_buf(aic_num);
         add_param_to_buf(aiv_num);
@@ -1841,11 +1847,11 @@ void AddCacheConfigParams(aclrtStream acl_stream, const CacheParams& cache_param
 
 void AddCacheConfigParamsV2(aclrtStream acl_stream, const CacheParams& cache_params, const char* aclnn_api)
 {
-    bool deterministic_status = cache_params.GetDeterministicStatus();
+    bool deterministic_effective_level = cache_params.GetDeterministicEffectiveLevel();
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
 
-    add_param_to_buf_v2(deterministic_status);
+    add_param_to_buf_v2(deterministic_effective_level);
     if (aic_num != UINT32_MAX && aiv_num != UINT32_MAX) {
         add_param_to_buf_v2(aic_num);
         add_param_to_buf_v2(aiv_num);
