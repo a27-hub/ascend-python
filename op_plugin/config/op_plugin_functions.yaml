@@ -7521,7 +7521,7 @@ custom:
         restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
       exec: aclnnMoeTokenUnpermuteGrad, permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, grad_permuted_tokens, grad_probs
 
-  - func: npu_moe_token_unpermute_grad_v2(Tensor? permuted_tokens, Tensor grad_unpermuted_tokens, Tensor sorted_indices, int permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> (Tensor, Tensor)
+  - func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, int permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
     gen_opapi:
       grad_permuted_tokens:

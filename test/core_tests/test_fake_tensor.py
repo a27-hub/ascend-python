@@ -4263,7 +4263,6 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
             grad_unpermuted_tokens = torch.randn(num_tokens, hidden_size).npu().to(torch.bfloat16)
 
             grad_permuted_tokens, grad_probs = torch_npu.npu_moe_token_unpermute_grad_v2(
-                permuted_tokens=None,
                 grad_unpermuted_tokens=grad_unpermuted_tokens,
                 sorted_indices=sorted_indices,
                 permuted_tokens_size_0=permuted_tokens.shape[0],
@@ -4271,6 +4270,7 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
                 probs=None,
                 padded_mode=False,
                 restore_shape=None,
+                permuted_tokens=None,
             )
 
             self.assertEqual(grad_permuted_tokens.dtype, permuted_tokens.dtype)
@@ -4292,7 +4292,6 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
             grad_unpermuted_tokens = torch.randn(num_tokens, hidden_size).npu().to(torch.bfloat16)
 
             grad_permuted_tokens, grad_probs = torch_npu.npu_moe_token_unpermute_grad_v2(
-                permuted_tokens=permuted_tokens,
                 grad_unpermuted_tokens=grad_unpermuted_tokens,
                 sorted_indices=sorted_indices,
                 permuted_tokens_size_0=permuted_tokens.shape[0],
@@ -4300,6 +4299,7 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
                 probs=probs,
                 padded_mode=False,
                 restore_shape=None,
+                permuted_tokens=permuted_tokens,
             )
 
             self.assertEqual(grad_permuted_tokens.dtype, permuted_tokens.dtype)
