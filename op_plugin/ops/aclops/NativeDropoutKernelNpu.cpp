@@ -19,11 +19,7 @@
 
 namespace acl_op {
 
-std::tuple<at::Tensor, at::Tensor> native_dropout(
-    const at::Tensor& input,
-    double p,
-    c10::optional<bool> train)
-{
+std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor &input, double p, c10::optional<bool> train) {
     if (input.numel() == 0) {
         return std::make_tuple(input, at::empty_like(input, input.options()));
     }
@@ -32,12 +28,8 @@ std::tuple<at::Tensor, at::Tensor> native_dropout(
 
     at::TensorOptions options = input.options();
     if (p == static_cast<double>(0) || !dropout_train) {
-        at::Tensor mask = acl_op::ones(
-            input.sizes(),
-            at::kBool,
-            options.layout(),
-            options.device(),
-            options.pinned_memory());
+        at::Tensor mask =
+            acl_op::ones(input.sizes(), at::kBool, options.layout(), options.device(), options.pinned_memory());
         return std::make_tuple(input.clone(), mask);
     }
     if (p == static_cast<double>(1)) {
@@ -49,11 +41,7 @@ std::tuple<at::Tensor, at::Tensor> native_dropout(
     return acl_op::_npu_dropout(input, p);
 }
 
-at::Tensor native_dropout_backward(
-    const at::Tensor& grad_output,
-    const at::Tensor& mask,
-    double scale)
-{
+at::Tensor native_dropout_backward(const at::Tensor &grad_output, const at::Tensor &mask, double scale) {
     double p = (scale == static_cast<double>(0.0)) ? 1 : (1 - 1 / scale);
     at::TensorOptions options = grad_output.options();
     if (mask.numel() == 0) {

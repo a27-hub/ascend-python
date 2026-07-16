@@ -21,23 +21,15 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor &scatter_out_npu_nocheck(at::Tensor &result, at::Tensor &self, int64_t dim, const at::Tensor &index,
-                                    const at::Tensor &src)
-{
+at::Tensor &scatter_out_npu_nocheck(
+    at::Tensor &result, at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("ScatterElements")
-        .Input(self)
-        .Input(index)
-        .Input(src)
-        .Output(result)
-        .Attr("axis", dim)
-        .Run();
+    cmd.Name("ScatterElements").Input(self).Input(index).Input(src).Output(result).Attr("axis", dim).Run();
     return result;
 }
 
-at::Tensor &scatter_out_nocheck(at::Tensor &result, const at::Tensor &self_ex, int64_t dim, const at::Tensor &index,
-                                const at::Tensor &src_ex)
-{
+at::Tensor &scatter_out_nocheck(
+    at::Tensor &result, const at::Tensor &self_ex, int64_t dim, const at::Tensor &index, const at::Tensor &src_ex) {
     at::Tensor self = self_ex;
     at::Tensor result_ex = result;
     at::ScalarType self_type = self.scalar_type();
@@ -62,8 +54,7 @@ at::Tensor &scatter_out_nocheck(at::Tensor &result, const at::Tensor &self_ex, i
     return result;
 }
 
-at::Tensor &scatter_inplace_nocheck(at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src_ex)
-{
+at::Tensor &scatter_inplace_nocheck(at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src_ex) {
     at::ScalarType self_type = self.scalar_type();
     at::Tensor self_ex(self);
     if (self_type == at::ScalarType::Half) {
@@ -85,9 +76,8 @@ at::Tensor &scatter_inplace_nocheck(at::Tensor &self, int64_t dim, const at::Ten
 }
 } // namespace
 
-at::Tensor &scatter_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src,
-                        at::Tensor &result)
-{
+at::Tensor &scatter_out(
+    const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src, at::Tensor &result) {
     npu_preparation::CheckOut({self, src, index}, result, self);
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -99,9 +89,8 @@ at::Tensor &scatter_out(const at::Tensor &self, int64_t dim, const at::Tensor &i
     return result;
 }
 
-at::Tensor &scatter_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Scalar &value,
-                        at::Tensor &result)
-{
+at::Tensor &scatter_out(
+    const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Scalar &value, at::Tensor &result) {
     npu_preparation::CheckOut({self, index}, result, self);
     at::Tensor src_tensor = scalar_to_tensor(value).to(at::ScalarType::Float);
     src_tensor = npu_preparation::copy_tensor_host_to_device(src_tensor);
@@ -117,8 +106,7 @@ at::Tensor &scatter_out(const at::Tensor &self, int64_t dim, const at::Tensor &i
     return result;
 }
 
-at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, const at::Tensor &src)
-{
+at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, const at::Tensor &src) {
     npu_preparation::check_memory({self, index_ex, src}, {self});
 
     if (!npu_utils::check_match(&self)) {
@@ -131,8 +119,7 @@ at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, 
     return self;
 }
 
-at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, const at::Scalar &src)
-{
+at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, const at::Scalar &src) {
     npu_preparation::check_memory({self, index_ex}, {self});
 
     at::Tensor src_tensor = npu_preparation::copy_scalar_to_device(src, self.scalar_type());

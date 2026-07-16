@@ -29,8 +29,7 @@ using tensor_list7 = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, 
 
 namespace {
 tuple_tensor lstm_cell_npu_impl(const at::Tensor &input, const at::Tensor &w_ih, const at::Tensor &w_hh,
-                                const at::Tensor &h, const at::Tensor &c, const at::Tensor &bias)
-{
+    const at::Tensor &h, const at::Tensor &c, const at::Tensor &bias) {
     at::Tensor input_reshape = input.reshape({1, input.size(0), input.size(1)});
     at::Tensor h_reshape = h.reshape({1, h.size(0), h.size(1)});
     at::Tensor c_reshape = c.reshape({1, c.size(0), c.size(1)});
@@ -83,13 +82,12 @@ tuple_tensor lstm_cell_npu_impl(const at::Tensor &input, const at::Tensor &w_ih,
     return std::make_tuple(y_output, h_out, c_out, i_output, j_output, f_output, o_output, tanhc);
 }
 
-tensor_list lstm_cell_backward_npu_impl_nocheck(
-    at::Tensor &grad_input, at::Tensor &grad_wih, at::Tensor &grad_whh, at::Tensor &grad_bias, at::Tensor &grad_ht,
-    at::Tensor &grad_ct, const at::Tensor &grad_y, const at::Tensor &grad_h, const at::Tensor &grad_c,
-    const at::Tensor &input, const at::Tensor &w_ih, const at::Tensor &w_hh, const at::Tensor &h, const at::Tensor &c,
-    const at::Tensor &y_output, const at::Tensor &h_output, const at::Tensor &c_output, const at::Tensor &i,
-    const at::Tensor &j, const at::Tensor &f, const at::Tensor &o, const at::Tensor &tanhc)
-{
+tensor_list lstm_cell_backward_npu_impl_nocheck(at::Tensor &grad_input, at::Tensor &grad_wih, at::Tensor &grad_whh,
+    at::Tensor &grad_bias, at::Tensor &grad_ht, at::Tensor &grad_ct, const at::Tensor &grad_y, const at::Tensor &grad_h,
+    const at::Tensor &grad_c, const at::Tensor &input, const at::Tensor &w_ih, const at::Tensor &w_hh,
+    const at::Tensor &h, const at::Tensor &c, const at::Tensor &y_output, const at::Tensor &h_output,
+    const at::Tensor &c_output, const at::Tensor &i, const at::Tensor &j, const at::Tensor &f, const at::Tensor &o,
+    const at::Tensor &tanhc) {
     at::Tensor seq_length = at::zeros({}, input.options());
     at::Tensor mask = at::zeros({}, input.options().dtype(at::kByte));
     at::Tensor wci = at::zeros({}, input.options());
@@ -144,13 +142,10 @@ tensor_list lstm_cell_backward_npu_impl_nocheck(
 } // namespace
 
 tensor_list7 npu_lstm_cell_backward(const c10::optional<at::Tensor> &grad_y_opt,
-                                    const c10::optional<at::Tensor> &grad_h_opt,
-                                    const c10::optional<at::Tensor> &grad_c_opt, const at::Tensor &input,
-                                    const at::Tensor &w_ih, const at::Tensor &w_hh, const at::Tensor &h,
-                                    const at::Tensor &c, const at::Tensor &y_output, const at::Tensor &h_output,
-                                    const at::Tensor &c_output, const at::Tensor &i, const at::Tensor &j,
-                                    const at::Tensor &f, const at::Tensor &o, const at::Tensor &tanhc)
-{
+    const c10::optional<at::Tensor> &grad_h_opt, const c10::optional<at::Tensor> &grad_c_opt, const at::Tensor &input,
+    const at::Tensor &w_ih, const at::Tensor &w_hh, const at::Tensor &h, const at::Tensor &c,
+    const at::Tensor &y_output, const at::Tensor &h_output, const at::Tensor &c_output, const at::Tensor &i,
+    const at::Tensor &j, const at::Tensor &f, const at::Tensor &o, const at::Tensor &tanhc) {
     const at::Tensor &grad_y_opt_val = c10::value_or_else(grad_y_opt, [] { return at::Tensor(); });
     const at::Tensor &grad_h_opt_val = c10::value_or_else(grad_h_opt, [] { return at::Tensor(); });
     const at::Tensor &grad_c_opt_val = c10::value_or_else(grad_c_opt, [] { return at::Tensor(); });
@@ -166,15 +161,12 @@ tensor_list7 npu_lstm_cell_backward(const c10::optional<at::Tensor> &grad_y_opt,
     at::Tensor grad_ht = npu_preparation::apply_tensor(h);
     at::Tensor grad_ct = npu_preparation::apply_tensor(c);
     lstm_cell_backward_npu_impl_nocheck(grad_input, grad_wih, grad_whh, grad_bias, grad_ht, grad_ct, grad_y, grad_h,
-                                        grad_c, input, w_ih, w_hh, h, c, y_output, h_output, c_output, i, j, f, o,
-                                        tanhc);
+        grad_c, input, w_ih, w_hh, h, c, y_output, h_output, c_output, i, j, f, o, tanhc);
     return std::tie(grad_input, grad_wih, grad_whh, grad_bias, grad_bias, grad_ht, grad_ct);
 }
 
 tuple_tensor npu_lstm_cell(const at::Tensor &input, const at::Tensor &w_ih, const at::Tensor &w_hh, const at::Tensor &h,
-                           const at::Tensor &c, const c10::optional<at::Tensor> &b_ih_opt,
-                           const c10::optional<at::Tensor> &b_hh_opt)
-{
+    const at::Tensor &c, const c10::optional<at::Tensor> &b_ih_opt, const c10::optional<at::Tensor> &b_hh_opt) {
     const at::Tensor &b_ih = c10::value_or_else(b_ih_opt, [] { return at::Tensor(); });
     const at::Tensor &b_hh = c10::value_or_else(b_hh_opt, [] { return at::Tensor(); });
     at::Tensor bias;
@@ -185,9 +177,7 @@ tuple_tensor npu_lstm_cell(const at::Tensor &input, const at::Tensor &w_ih, cons
 }
 
 std::tuple<at::Tensor, at::Tensor> lstm_cell(const at::Tensor &input, at::TensorList hx, const at::Tensor &w_ih,
-                                             const at::Tensor &w_hh, const c10::optional<at::Tensor> &b_ih_opt,
-                                             const c10::optional<at::Tensor> &b_hh_opt)
-{
+    const at::Tensor &w_hh, const c10::optional<at::Tensor> &b_ih_opt, const c10::optional<at::Tensor> &b_hh_opt) {
     at::Tensor weight_ih = w_ih.t().to(input.dtype());
     at::Tensor weight_hh = w_hh.t().to(input.dtype());
     at::Tensor h = hx[0];

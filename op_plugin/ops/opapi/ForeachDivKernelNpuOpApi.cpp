@@ -20,11 +20,9 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-void _foreach_div_v1_(const at::TensorList self, const at::Scalar &scalar)
-{
+void _foreach_div_v1_(const at::TensorList self, const at::Scalar &scalar) {
     at::native::check_foreach_api_restrictions(self);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, true)) {
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route(self, scalar, true)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
 
@@ -36,12 +34,10 @@ void _foreach_div_v1_(const at::TensorList self, const at::Scalar &scalar)
     EXEC_NPU_CMD(aclnnForeachDivScalar, self, scalar_tensor, self);
 }
 
-std::vector<at::Tensor> _foreach_div_v1(at::TensorList self, const at::Scalar &scalar)
-{
+std::vector<at::Tensor> _foreach_div_v1(at::TensorList self, const at::Scalar &scalar) {
     // Fallback
     at::native::check_foreach_api_restrictions(self);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, true)) {
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route(self, scalar, true)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
     }
 
@@ -66,16 +62,15 @@ std::vector<at::Tensor> _foreach_div_v1(at::TensorList self, const at::Scalar &s
     return result;
 }
 
-void _split_and_exec_npu_cmd_div(at::TensorList &tensors1, at::TensorList &tensors2,
-                                 at::TensorList &result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_div(
+    at::TensorList &tensors1, at::TensorList &tensors2, at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 24 : 16;
 
     size_t loop_time = tensor_count / max_tensor_count;
     if (tensor_count <= max_tensor_count) {
-            EXEC_NPU_CMD(aclnnForeachDivList, tensors1, tensors2, result_list);
-            return;
+        EXEC_NPU_CMD(aclnnForeachDivList, tensors1, tensors2, result_list);
+        return;
     }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
@@ -93,17 +88,16 @@ void _split_and_exec_npu_cmd_div(at::TensorList &tensors1, at::TensorList &tenso
     }
 }
 
-void _split_and_exec_npu_cmd_div_scalar_list(at::TensorList& tensors1, at::ArrayRef<at::Scalar> scalars,
-                                             at::TensorList& result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_div_scalar_list(
+    at::TensorList &tensors1, at::ArrayRef<at::Scalar> scalars, at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 50 : 24;
 
     size_t loop_time = tensor_count / max_tensor_count;
 
     if (tensor_count <= max_tensor_count) {
-            EXEC_NPU_CMD(aclnnForeachDivScalarList, tensors1, scalars, result_list);
-            return;
+        EXEC_NPU_CMD(aclnnForeachDivScalarList, tensors1, scalars, result_list);
+        return;
     }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
@@ -121,12 +115,11 @@ void _split_and_exec_npu_cmd_div_scalar_list(at::TensorList& tensors1, at::Array
     }
 }
 
-std::vector<at::Tensor> _foreach_div(at::TensorList tensors1, at::TensorList tensors2)
-{
+std::vector<at::Tensor> _foreach_div(at::TensorList tensors1, at::TensorList tensors2) {
     DO_COMPATIBILITY(aclnnForeachDivList, at::native::foreach_tensor_div_list_kernel_slow(tensors1, tensors2));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_list_kernel_slow(tensors1, tensors2);
     }
@@ -141,8 +134,8 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors1, at::TensorList ten
 
     for (const at::Tensor &tensor : tensors1) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size,
-            tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 
@@ -150,12 +143,11 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors1, at::TensorList ten
     return result;
 }
 
-void _foreach_div_(at::TensorList tensors1, at::TensorList tensors2)
-{
+void _foreach_div_(at::TensorList tensors1, at::TensorList tensors2) {
     DO_COMPATIBILITY(aclnnForeachDivList, at::native::foreach_tensor_div_list_kernel_slow_(tensors1, tensors2));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_list_kernel_slow_(tensors1, tensors2);
     }
@@ -169,13 +161,12 @@ void _foreach_div_(at::TensorList tensors1, at::TensorList tensors2)
     return;
 }
 
-std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
-{
-    DO_COMPATIBILITY(aclnnForeachDivScalarList,
-                     at::native::foreach_tensor_div_scalarlist_kernel_slow(tensors, scalars));
+std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars) {
+    DO_COMPATIBILITY(
+        aclnnForeachDivScalarList, at::native::foreach_tensor_div_scalarlist_kernel_slow(tensors, scalars));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_scalarlist_kernel_slow(tensors, scalars);
     }
@@ -188,9 +179,8 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Sc
 
     // Type Check
     auto scalar_type = tensors[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half
-        && scalar_type != at::ScalarType::Float
-        && scalar_type != at::ScalarType::BFloat16) {
+    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::BFloat16) {
         TORCH_CHECK(false, "input must be half, float or bfloat16");
     }
 
@@ -199,8 +189,8 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Sc
     result.reserve(tensors.size());
     for (const at::Tensor &tensor : tensors) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size,
-                                                                      tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 
@@ -209,13 +199,12 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Sc
     return result;
 }
 
-void _foreach_div_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
-{
-    DO_COMPATIBILITY(aclnnForeachDivScalarList,
-                     at::native::foreach_tensor_div_scalarlist_kernel_slow_(tensors, scalars));
+void _foreach_div_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars) {
+    DO_COMPATIBILITY(
+        aclnnForeachDivScalarList, at::native::foreach_tensor_div_scalarlist_kernel_slow_(tensors, scalars));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_scalarlist_kernel_slow_(tensors, scalars);
     }
@@ -227,17 +216,15 @@ void _foreach_div_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
     }
 
     auto scalar_type = tensors[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half
-        && scalar_type != at::ScalarType::Float
-        && scalar_type != at::ScalarType::BFloat16) {
+    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::BFloat16) {
         TORCH_CHECK(false, "input must be half, float or bfloat16");
     }
     _split_and_exec_npu_cmd_div_scalar_list(tensors, scalars, tensors, true);
 }
 
-void _split_and_exec_npu_cmd_div_scalar(at::TensorList& tensors1, const at::Scalar& scalar,
-                                        at::TensorList& result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_div_scalar(
+    at::TensorList &tensors1, const at::Scalar &scalar, at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 50 : 24;
 
@@ -246,9 +233,9 @@ void _split_and_exec_npu_cmd_div_scalar(at::TensorList& tensors1, const at::Scal
     at::Scalar scalar_ = op_api::adaptToDouble(scalar, tensors1);
 
     if (tensor_count <= max_tensor_count) {
-            EXEC_NPU_CMD(aclnnForeachDivScalarV2, tensors1, scalar_, result_list);
-            return;
-        }
+        EXEC_NPU_CMD(aclnnForeachDivScalarV2, tensors1, scalar_, result_list);
+        return;
+    }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
         at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
@@ -263,11 +250,10 @@ void _split_and_exec_npu_cmd_div_scalar(at::TensorList& tensors1, const at::Scal
     }
 }
 
-void _foreach_div_(at::TensorList self, const at::Scalar& scalar)
-{
+void _foreach_div_(at::TensorList self, const at::Scalar &scalar) {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
@@ -277,19 +263,17 @@ void _foreach_div_(at::TensorList self, const at::Scalar& scalar)
         return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
     auto scalar_type = self[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half
-        && scalar_type != at::ScalarType::Float
-        && scalar_type != at::ScalarType::BFloat16) {
+    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::BFloat16) {
         TORCH_CHECK(false, "input must be half, float or bfloat16");
     }
     _split_and_exec_npu_cmd_div_scalar(self, scalar, self, true);
 }
 
-std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scalar)
-{
+std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar &scalar) {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
     }
@@ -302,9 +286,8 @@ std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scal
 
     // Type Check
     auto scalar_type = self[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half
-        && scalar_type != at::ScalarType::Float
-        && scalar_type != at::ScalarType::BFloat16) {
+    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::BFloat16) {
         TORCH_CHECK(false, "input must be half, float or bfloat16");
     }
 
@@ -321,4 +304,4 @@ std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scal
 
     return result;
 }
-}  // namespace op_api
+} // namespace op_api

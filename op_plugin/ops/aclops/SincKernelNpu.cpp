@@ -18,10 +18,8 @@
 
 namespace acl_op {
 
-at::Tensor& sinc_out(const at::Tensor& self, at::Tensor& result)
-{
-    TORCH_NPU_WARN_ONCE(
-        "Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
+at::Tensor &sinc_out(const at::Tensor &self, at::Tensor &result) {
+    TORCH_NPU_WARN_ONCE("Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
     const auto self_cpu = self.to("cpu");
     auto result_cpu = result.to("cpu");
     at::sinc_out(result_cpu, self_cpu);
@@ -29,19 +27,15 @@ at::Tensor& sinc_out(const at::Tensor& self, at::Tensor& result)
     return result;
 }
 
-at::Tensor sinc(const at::Tensor& self)
-{
-    TORCH_NPU_WARN_ONCE(
-        "Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
+at::Tensor sinc(const at::Tensor &self) {
+    TORCH_NPU_WARN_ONCE("Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
     const auto self_cpu = self.to("cpu");
     at::sinc(self_cpu);
     return at::sinc(self_cpu).to(self.device());
 }
 
-at::Tensor& sinc_(at::Tensor& self)
-{
-    TORCH_NPU_WARN_ONCE(
-        "Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
+at::Tensor &sinc_(at::Tensor &self) {
+    TORCH_NPU_WARN_ONCE("Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
     auto self_cpu = self.to("cpu");
     at::sinc_(self_cpu);
     self.copy_(self_cpu);
