@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
+at::Tensor &eq_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq_out(self, other, result));
     if (is_ascend950_path()) {
         auto [self_device, other_device] = prepare_binary_tensors(self, other);
@@ -47,14 +47,14 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
     return result;
 }
 
-at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
+at::Tensor eq(const at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq(self, other));
     if (is_ascend950_path()) {
         auto [self_device, other_device] = prepare_binary_tensors(self, other);
         auto maybe_names = op_plugin::utils::compute_names_npu({self, other});
         auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
-        at::Tensor result = npu_preparation::apply_tensor_without_format(
-            output_size, self_device.options().dtype(at::kBool));
+        at::Tensor result =
+            npu_preparation::apply_tensor_without_format(output_size, self_device.options().dtype(at::kBool));
         EXEC_NPU_CMD(aclnnEqTensor, self_device, other_device, result);
         at::namedinference::propagate_names_if_nonempty(result, maybe_names);
         return result;
@@ -72,8 +72,7 @@ at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
 
     // construct the output tensor of the NPU
-    at::Tensor result =
-        npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
 
     // calculate the output result of the NPU
     EXEC_NPU_CMD(aclnnEqTensor, self, other, result);
@@ -81,41 +80,40 @@ at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
     return result;
 }
 
-at::Tensor& eq_out_npu_scalar(at::Tensor& result, const at::Tensor& self, at::Scalar other) {
+at::Tensor &eq_out_npu_scalar(at::Tensor &result, const at::Tensor &self, at::Scalar other) {
     EXEC_NPU_CMD(aclnnEqScalar, self, other, result);
     at::namedinference::propagate_names(result, self);
     return result;
 }
 
-at::Tensor eq(const at::Tensor& self, const at::Scalar& other) {
-  DO_COMPATIBILITY(aclnnEqScalar, acl_op::eq(self, other));
+at::Tensor eq(const at::Tensor &self, const at::Scalar &other) {
+    DO_COMPATIBILITY(aclnnEqScalar, acl_op::eq(self, other));
 
-  // calculate the output size
-  auto output_size = op_infer::input_same_output_size(self);
+    // calculate the output size
+    auto output_size = op_infer::input_same_output_size(self);
 
-  // construct the output tensor of the NPU
-  at::Tensor result =
-      npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
+    // construct the output tensor of the NPU
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
 
-  // calculate the output result of the NPU
-  eq_out_npu_scalar(result, self, other);
-  return result;
+    // calculate the output result of the NPU
+    eq_out_npu_scalar(result, self, other);
+    return result;
 }
 
-at::Tensor& eq_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnEqScalar, acl_op::eq_out(self, other, result));
-  npu_preparation::check_tensor({self}, result, self.sizes());
+at::Tensor &eq_out(const at::Tensor &self, const at::Scalar &other, at::Tensor &result) {
+    DO_COMPATIBILITY(aclnnEqScalar, acl_op::eq_out(self, other, result));
+    npu_preparation::check_tensor({self}, result, self.sizes());
 
-  eq_out_npu_scalar(result, self, other);
+    eq_out_npu_scalar(result, self, other);
 
-  return result;
+    return result;
 }
 
-at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
-  DO_COMPATIBILITY(aclnnInplaceEqTensor, acl_op::eq_(self, other));
+at::Tensor &eq_(at::Tensor &self, const at::Tensor &other) {
+    DO_COMPATIBILITY(aclnnInplaceEqTensor, acl_op::eq_(self, other));
     if (is_ascend950_path()) {
-        TORCH_CHECK(torch_npu::utils::is_npu(self),
-            "inplace eq_ requires self to be NPU tensor", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            torch_npu::utils::is_npu(self), "inplace eq_ requires self to be NPU tensor", OPS_ERROR(ErrCode::PARAM));
         at::Tensor other_device = other;
         if (!torch_npu::utils::is_npu(other)) {
             other_device = other.to(self.device());
@@ -125,18 +123,18 @@ at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
         return self;
     }
 
-  const std::initializer_list<at::Tensor> inputs = {self, other};
-  const std::initializer_list<at::Tensor> outputs = {self};
-  npu_preparation::check_memory(inputs, outputs);
+    const std::initializer_list<at::Tensor> inputs = {self, other};
+    const std::initializer_list<at::Tensor> outputs = {self};
+    npu_preparation::check_memory(inputs, outputs);
 
-  EXEC_NPU_CMD(aclnnInplaceEqTensor, self, other);
-  return self;
+    EXEC_NPU_CMD(aclnnInplaceEqTensor, self, other);
+    return self;
 }
 
-at::Tensor& eq_(at::Tensor &self, const at::Scalar& other) {
-  DO_COMPATIBILITY(aclnnInplaceEqScalar, acl_op::eq_(self, other));
+at::Tensor &eq_(at::Tensor &self, const at::Scalar &other) {
+    DO_COMPATIBILITY(aclnnInplaceEqScalar, acl_op::eq_(self, other));
 
-  EXEC_NPU_CMD(aclnnInplaceEqScalar, self, other);
-  return self;
+    EXEC_NPU_CMD(aclnnInplaceEqScalar, self, other);
+    return self;
 }
 }

@@ -20,23 +20,16 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor&, at::Tensor&> topk_out(
-    const at::Tensor& self,
-    int64_t k,
-    int64_t dim,
-    bool largest,
-    bool sorted,
-    at::Tensor& values,
-    at::Tensor& indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> topk_out(const at::Tensor &self, int64_t k, int64_t dim, bool largest,
+    bool sorted, at::Tensor &values, at::Tensor &indices) {
     if (self.dim() == 0 && k == 0) {
         TORCH_CHECK(values.dtype() == at::ScalarType::Long, "Expected out tensor to have dtype long int, bug got ",
-                    values.dtype(), "instead.", OPS_ERROR(ErrCode::PARAM));
+            values.dtype(), "instead.", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(indices.dtype() == at::ScalarType::Long, "Expected out tensor to have dtype long int, bug got ",
-                    indices.dtype(), "instead.", OPS_ERROR(ErrCode::PARAM));
+            indices.dtype(), "instead.", OPS_ERROR(ErrCode::PARAM));
         values.resize_as_(self).fill_(self);
         indices.resize_as_(self).fill_(0);
-        return std::tuple<at::Tensor&, at::Tensor&>(values, indices);
+        return std::tuple<at::Tensor &, at::Tensor &>(values, indices);
     }
     DO_COMPATIBILITY(aclnnTopk, acl_op::topk_out(self, k, dim, largest, sorted, values, indices));
     auto output_size = op_infer::topk_npu_output_size(self, k, dim);
@@ -44,16 +37,10 @@ std::tuple<at::Tensor&, at::Tensor&> topk_out(
     npu_preparation::check_tensor({self}, indices, at::ScalarType::Long, output_size);
 
     EXEC_NPU_CMD(aclnnTopk, self, k, dim, largest, sorted, values, indices);
-    return std::tuple<at::Tensor&, at::Tensor&>(values, indices);
+    return std::tuple<at::Tensor &, at::Tensor &>(values, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> topk(
-    const at::Tensor& self,
-    int64_t k,
-    int64_t dim,
-    bool largest,
-    bool sorted)
-{
+std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor &self, int64_t k, int64_t dim, bool largest, bool sorted) {
     DO_COMPATIBILITY(aclnnTopk, acl_op::topk(self, k, dim, largest, sorted));
     auto output_size = op_infer::topk_npu_output_size(self, k, dim);
     at::Tensor values;

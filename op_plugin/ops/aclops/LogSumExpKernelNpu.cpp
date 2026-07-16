@@ -24,13 +24,11 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-c10::SmallVector<int64_t, SIZE> logsumexp_npu_output_size(const at::Tensor &self, at::IntArrayRef dims, bool keepdim)
-{
+c10::SmallVector<int64_t, SIZE> logsumexp_npu_output_size(const at::Tensor &self, at::IntArrayRef dims, bool keepdim) {
     return op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
 }
 
-at::Tensor squeeze_multiple(const at::Tensor &self, at::IntArrayRef dims)
-{
+at::Tensor squeeze_multiple(const at::Tensor &self, at::IntArrayRef dims) {
     int ndims = static_cast<int>(self.sizes().size());
     auto dims_to_squeeze = at::dim_list_to_bitset(dims, ndims);
     at::Tensor result = self;
@@ -42,8 +40,7 @@ at::Tensor squeeze_multiple(const at::Tensor &self, at::IntArrayRef dims)
     return result;
 }
 
-at::Tensor &logsumexp_out_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef dims, bool keepdim)
-{
+at::Tensor &logsumexp_out_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef dims, bool keepdim) {
     at::NoNamesGuard guard;
     if (self.numel() != 0) {
         at_npu::native::OpCommand cmd;
@@ -62,14 +59,12 @@ at::Tensor &logsumexp_out_nocheck(at::Tensor &result, const at::Tensor &self, at
 } // namespace
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor &logsumexp_out(const at::Tensor &self, at::DimnameList dims, bool keepdim, at::Tensor &result)
-{
+at::Tensor &logsumexp_out(const at::Tensor &self, at::DimnameList dims, bool keepdim, at::Tensor &result) {
     return logsumexp_out(self, dimnames_to_positions(self, dims), keepdim, result);
 }
 #endif
 
-at::Tensor &logsumexp_out(const at::Tensor &self, at::IntArrayRef dims, bool keepdim, at::Tensor &result)
-{
+at::Tensor &logsumexp_out(const at::Tensor &self, at::IntArrayRef dims, bool keepdim, at::Tensor &result) {
     auto output_size = logsumexp_npu_output_size(self, dims, keepdim);
     npu_preparation::CheckOut({self}, result, self, output_size);
     if (!npu_utils::check_match(&result)) {
@@ -82,16 +77,14 @@ at::Tensor &logsumexp_out(const at::Tensor &self, at::IntArrayRef dims, bool kee
     return result;
 }
 
-at::Tensor logsumexp(const at::Tensor &self, at::IntArrayRef dims, bool keepdim)
-{
+at::Tensor logsumexp(const at::Tensor &self, at::IntArrayRef dims, bool keepdim) {
     auto output_size = logsumexp_npu_output_size(self, dims, keepdim);
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
     return logsumexp_out_nocheck(result, self, dims, keepdim);
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor logsumexp(const at::Tensor &self, at::DimnameList dims, bool keepdim)
-{
+at::Tensor logsumexp(const at::Tensor &self, at::DimnameList dims, bool keepdim) {
     return acl_op::logsumexp(self, dimnames_to_positions(self, dims), keepdim);
 }
 #endif

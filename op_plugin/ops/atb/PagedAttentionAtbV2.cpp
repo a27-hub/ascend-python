@@ -19,22 +19,12 @@ using namespace std;
 namespace atb {
 
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
-at::Tensor& _npu_paged_attention_v2(
-    const at::Tensor &query,
-    const at::Tensor &key_cache,
-    const at::Tensor &block_table,
-    c10::SymIntArrayRef context_lens,
-    const c10::optional<at::Tensor> &value_cache,
-    const c10::optional<at::Tensor> &mask,
-    int64_t num_kv_heads,
-    int64_t num_heads,
-    double scale_value,
-    int64_t mask_type,
-    const c10::optional<at::Tensor> &workspace,
-    at::Tensor &out)
-{
+at::Tensor &_npu_paged_attention_v2(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &block_table,
+    c10::SymIntArrayRef context_lens, const c10::optional<at::Tensor> &value_cache,
+    const c10::optional<at::Tensor> &mask, int64_t num_kv_heads, int64_t num_heads, double scale_value,
+    int64_t mask_type, const c10::optional<at::Tensor> &workspace, at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
+    OpParamCache<PagedAttentionParam> &pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
     pagedparam.headNum = num_heads;
     pagedparam.qkScale = scale_value;
@@ -79,21 +69,12 @@ at::Tensor& _npu_paged_attention_v2(
     return out;
 }
 
-at::Tensor _npu_paged_attention_v2_get_workspace(
-    const at::Tensor &query,
-    const at::Tensor &key_cache,
-    const at::Tensor &block_table,
-    c10::SymIntArrayRef context_lens,
-    const c10::optional<at::Tensor> &value_cache,
-    const c10::optional<at::Tensor> &mask,
-    int64_t num_kv_heads,
-    int64_t num_heads,
-    double scale_value,
-    int64_t mask_type,
-    at::Tensor &out)
-{
+at::Tensor _npu_paged_attention_v2_get_workspace(const at::Tensor &query, const at::Tensor &key_cache,
+    const at::Tensor &block_table, c10::SymIntArrayRef context_lens, const c10::optional<at::Tensor> &value_cache,
+    const c10::optional<at::Tensor> &mask, int64_t num_kv_heads, int64_t num_heads, double scale_value,
+    int64_t mask_type, at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
+    OpParamCache<PagedAttentionParam> &pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
     pagedparam.headNum = num_heads;
     pagedparam.qkScale = scale_value;
@@ -130,21 +111,23 @@ at::Tensor _npu_paged_attention_v2_get_workspace(
     }
     auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
     uint64_t workspace_size = GetAtbWorkspaceSizeCmd(opPaged, paramsetter, "PagedAttentionOperation");
-    at::Tensor workspace_tensor =  at::empty({workspace_size}, query.options().dtype(at::kByte));
+    at::Tensor workspace_tensor = at::empty({workspace_size}, query.options().dtype(at::kByte));
     return workspace_tensor;
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
-    m.def("_npu_paged_attention_v2.out(Tensor query, Tensor key_cache, Tensor block_table, SymInt[] context_lens, *, Tensor? value_cache=None, Tensor? mask=None, int num_kv_heads=0, int num_heads=0, float scale_value=1.0, int mask_type=0, Tensor? workspace=None, Tensor(a!) out) -> Tensor(a!)");
-    m.def("_npu_paged_attention_v2_get_workspace(Tensor query, Tensor key_cache, Tensor block_table, SymInt[] context_lens, *, Tensor? value_cache=None, Tensor? mask=None, int num_kv_heads=0, int num_heads=0, float scale_value=1.0, int mask_type=0, Tensor(a!) out) -> Tensor");
+TORCH_LIBRARY_FRAGMENT(atb, m) {
+    m.def("_npu_paged_attention_v2.out(Tensor query, Tensor key_cache, Tensor block_table, SymInt[] context_lens, *, "
+          "Tensor? value_cache=None, Tensor? mask=None, int num_kv_heads=0, int num_heads=0, float scale_value=1.0, "
+          "int mask_type=0, Tensor? workspace=None, Tensor(a!) out) -> Tensor(a!)");
+    m.def("_npu_paged_attention_v2_get_workspace(Tensor query, Tensor key_cache, Tensor block_table, SymInt[] "
+          "context_lens, *, Tensor? value_cache=None, Tensor? mask=None, int num_kv_heads=0, int num_heads=0, float "
+          "scale_value=1.0, int mask_type=0, Tensor(a!) out) -> Tensor");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_paged_attention_v2.out", TORCH_FN(atb::_npu_paged_attention_v2));
     m.impl("_npu_paged_attention_v2_get_workspace", TORCH_FN(atb::_npu_paged_attention_v2_get_workspace));
 }

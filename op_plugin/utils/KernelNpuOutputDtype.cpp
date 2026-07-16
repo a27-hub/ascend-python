@@ -21,8 +21,7 @@
 #include "op_plugin/OpApiInterface.h"
 namespace op_infer {
 
-at::ScalarType angle_out_dtype(const at::Tensor& self)
-{
+at::ScalarType angle_out_dtype(const at::Tensor &self) {
     auto out_dtype = self.scalar_type();
     if (self.is_complex()) {
         out_dtype = self.scalar_type() == at::kComplexFloat ? at::kFloat : at::kDouble;
@@ -32,8 +31,7 @@ at::ScalarType angle_out_dtype(const at::Tensor& self)
     return out_dtype;
 }
 
-at::ScalarType polar_out_dtype(const at::Tensor& abs, const at::Tensor& angle)
-{
+at::ScalarType polar_out_dtype(const at::Tensor &abs, const at::Tensor &angle) {
     at::ScalarType high_type = at::native::result_type(abs, angle);
     if (high_type == at::ScalarType::Float) {
         high_type = at::ScalarType::ComplexFloat;
@@ -45,9 +43,8 @@ at::ScalarType polar_out_dtype(const at::Tensor& abs, const at::Tensor& angle)
     return high_type;
 }
 
-at::ScalarType npu_group_norm_silu_dst_type(const at::Tensor& input, const c10::optional<at::Tensor>& weight,
-                                            const c10::optional<at::Tensor>& bias)
-{
+at::ScalarType npu_group_norm_silu_dst_type(
+    const at::Tensor &input, const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias) {
     at::native::ResultTypeState state = {};
     state = at::native::update_result_type_state(input, state);
 
@@ -62,25 +59,23 @@ at::ScalarType npu_group_norm_silu_dst_type(const at::Tensor& input, const c10::
     return at::native::result_type(state);
 }
 
-at::ScalarType npu_group_quant_dst_type(c10::optional<at::ScalarType> dst_dtype)
-{
-    at::ScalarType dst_type = c10::value_or_else(dst_dtype, [] {return at::ScalarType::Char;});
+at::ScalarType npu_group_quant_dst_type(c10::optional<at::ScalarType> dst_dtype) {
+    at::ScalarType dst_type = c10::value_or_else(dst_dtype, [] { return at::ScalarType::Char; });
     if (dst_type == at::kQInt8) {
         dst_type = at::kChar;
     }
     TORCH_CHECK(dst_type == at::ScalarType::Char || dst_type == at::ScalarType::QUInt4x2,
-                "dst_dtype must be Int8 or Int4" + OPS_ERROR(ErrCode::TYPE));
+        "dst_dtype must be Int8 or Int4" + OPS_ERROR(ErrCode::TYPE));
     if (dst_type == at::ScalarType::QUInt4x2) {
         dst_type = at::ScalarType::Int;
     }
     return dst_type;
 }
 
-at::ScalarType npu_add_rms_norm_dynamic_quant_y_dtype(c10::optional<at::ScalarType> y_dtype)
-{
+at::ScalarType npu_add_rms_norm_dynamic_quant_y_dtype(c10::optional<at::ScalarType> y_dtype) {
     at::ScalarType dtype = c10::value_or_else(y_dtype, [] { return at::ScalarType::Char; });
     TORCH_CHECK(dtype == at::ScalarType::Char || dtype == at::ScalarType::QUInt4x2,
-                "y_dtype must be torch.int8 or torch.quint4x2, but got ", dtype, OPS_ERROR(ErrCode::PARAM));
+        "y_dtype must be torch.int8 or torch.quint4x2, but got ", dtype, OPS_ERROR(ErrCode::PARAM));
     // aclnn int4 output uses DT_INT32 (8 int4 packed per int32)
     if (dtype == at::ScalarType::QUInt4x2) {
         return at::ScalarType::Int;
@@ -88,8 +83,8 @@ at::ScalarType npu_add_rms_norm_dynamic_quant_y_dtype(c10::optional<at::ScalarTy
     return dtype;
 }
 
-at::ScalarType clamp_out_dtype(const at::Tensor& self, const c10::optional<at::Tensor>& min, const c10::optional<at::Tensor>& max)
-{
+at::ScalarType clamp_out_dtype(
+    const at::Tensor &self, const c10::optional<at::Tensor> &min, const c10::optional<at::Tensor> &max) {
     TORCH_CHECK(min.has_value() || max.has_value(), "torch.clamp:At least one of 'min' or 'max' must be not None!");
 
     at::native::ResultTypeState state = {};
@@ -107,8 +102,8 @@ at::ScalarType clamp_out_dtype(const at::Tensor& self, const c10::optional<at::T
     return at::native::result_type(state);
 }
 
-at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optional<at::Scalar>& min, const c10::optional<at::Scalar>& max)
-{
+at::ScalarType clamp_scalar_out_dtype(
+    const at::Tensor &self, const c10::optional<at::Scalar> &min, const c10::optional<at::Scalar> &max) {
     TORCH_CHECK(min.has_value() || max.has_value(), "torch.clamp:At least one of 'min' or 'max' must be not None!");
 
     at::native::ResultTypeState state = {};
@@ -126,8 +121,7 @@ at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optiona
     return at::native::result_type(state);
 }
 
-at::ScalarType abs_out_dtype(const at::Tensor& self)
-{
+at::ScalarType abs_out_dtype(const at::Tensor &self) {
     at::ScalarType output = self.scalar_type();
     if (output == at::ScalarType::ComplexFloat) {
         output = at::ScalarType::Float;
@@ -139,8 +133,7 @@ at::ScalarType abs_out_dtype(const at::Tensor& self)
     return output;
 }
 
-at::ScalarType npu_moe_distribute_dispatch_setup_out_dtype(c10::optional<int64_t> y_dtype)
-{
+at::ScalarType npu_moe_distribute_dispatch_setup_out_dtype(c10::optional<int64_t> y_dtype) {
     auto output_dtype = at::kChar;
     output_dtype = at_npu::native::OpPreparation::convert_to_scalar_type(c10_npu::GetAclDataType(y_dtype.value()));
     return output_dtype;

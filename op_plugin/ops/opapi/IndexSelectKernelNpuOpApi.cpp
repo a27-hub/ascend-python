@@ -20,31 +20,31 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& index_select_out(const at::Tensor& self, int64_t dim, const at::Tensor& index, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select_out(self, dim, index, result));
-  auto output_size = op_infer::index_select_npu_output_size(self, dim, index);
-  npu_preparation::check_tensor({self, index}, result, self.scalar_type(), output_size);
-  EXEC_NPU_CMD(aclnnIndexSelect, self, dim, index, result);
-  return result;
+at::Tensor &index_select_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, at::Tensor &result) {
+    DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select_out(self, dim, index, result));
+    auto output_size = op_infer::index_select_npu_output_size(self, dim, index);
+    npu_preparation::check_tensor({self, index}, result, self.scalar_type(), output_size);
+    EXEC_NPU_CMD(aclnnIndexSelect, self, dim, index, result);
+    return result;
 }
 
-at::Tensor index_select(const at::Tensor& self, int64_t dim, const at::Tensor& index) {
-  DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select(self, dim, index));
-  auto output_size = op_infer::index_select_npu_output_size(self, dim, index);
-  at::Tensor result = npu_preparation::apply_tensor_without_format(self, output_size);
-  EXEC_NPU_CMD(aclnnIndexSelect, self, dim, index, result);
-  return result;
+at::Tensor index_select(const at::Tensor &self, int64_t dim, const at::Tensor &index) {
+    DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select(self, dim, index));
+    auto output_size = op_infer::index_select_npu_output_size(self, dim, index);
+    at::Tensor result = npu_preparation::apply_tensor_without_format(self, output_size);
+    EXEC_NPU_CMD(aclnnIndexSelect, self, dim, index, result);
+    return result;
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor& index_select_out(const at::Tensor& self, at::Dimname dim, const at::Tensor& index, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select_out(self, dim, index, result));
-  return op_api::index_select_out(self, dimname_to_position(self, dim), index, result);
+at::Tensor &index_select_out(const at::Tensor &self, at::Dimname dim, const at::Tensor &index, at::Tensor &result) {
+    DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select_out(self, dim, index, result));
+    return op_api::index_select_out(self, dimname_to_position(self, dim), index, result);
 }
 
-at::Tensor index_select(const at::Tensor& self, at::Dimname dim, const at::Tensor& index) {
-  DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select(self, dim, index));
-  return op_api::index_select(self, dimname_to_position(self, dim), index);
+at::Tensor index_select(const at::Tensor &self, at::Dimname dim, const at::Tensor &index) {
+    DO_COMPATIBILITY(aclnnIndexSelect, acl_op::index_select(self, dim, index));
+    return op_api::index_select(self, dimname_to_position(self, dim), index);
 }
 #endif
 
