@@ -46,7 +46,6 @@
             initPTACacheThreadLocalFunc();                                                                             \
             setPTAHashKeyFunc(0);                                                                                      \
         }                                                                                                              \
-        at_npu::native::SetDeterministic();                                                                            \
         if (initMemFunc) {                                                                                             \
             initMemFunc(nullptr, false);                                                                               \
         }                                                                                                              \
@@ -113,7 +112,6 @@
                 initPTACacheThreadLocalFunc();                                                                         \
                 setPTAHashKeyFunc(nullptr, 0);                                                                         \
             }                                                                                                          \
-            at_npu::native::SetDeterministic();                                                                        \
             if (initMemFunc) {                                                                                         \
                 initMemFunc(nullptr, false);                                                                           \
             }                                                                                                          \
@@ -157,7 +155,6 @@
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
         aclOpExecutor **executor_addr = &executor;                                                                     \
-        at_npu::native::SetDeterministic();                                                                            \
         auto converted_params = ConvertTypes(args..., workspace_size_addr, executor_addr);                             \
         static auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);             \
         auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                          \

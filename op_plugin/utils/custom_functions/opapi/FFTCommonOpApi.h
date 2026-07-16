@@ -87,7 +87,6 @@ namespace op_api {
 #define EXEC_ASDSIP_FFT_NPU_CMD(fftExecApi, inData, outData, fftParam)                                                 \
     do {                                                                                                               \
         auto sip_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
-        at_npu::native::SetDeterministic();                                                                            \
         asdFftHandle handle = op_api::getHandle(fftParam);                                                             \
         size_t workspace_size = 0;                                                                                     \
         asdSipFftGetWorkspaceSize(handle, workspace_size);                                                             \
