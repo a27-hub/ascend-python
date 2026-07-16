@@ -20,11 +20,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_iou(
-    const at::Tensor& bboxes,
-    const at::Tensor& gtboxes,
-    int64_t mode)
-{
+at::Tensor npu_iou(const at::Tensor &bboxes, const at::Tensor &gtboxes, int64_t mode) {
     at::Tensor bboxes_fp16 = bboxes;
     if (bboxes.scalar_type() != at::ScalarType::Half) {
         bboxes_fp16 = at_npu::native::custom_ops::_npu_dtype_cast(bboxes, at::kHalf);
@@ -36,9 +32,7 @@ at::Tensor npu_iou(
 
     auto output_size = {gtboxes.size(0), bboxes.size(0)};
     at::Tensor overlap = npu_preparation::apply_tensor_with_format(
-        bboxes_fp16,
-        output_size,
-        npu_preparation::get_tensor_npu_format(bboxes));
+        bboxes_fp16, output_size, npu_preparation::get_tensor_npu_format(bboxes));
     string mode_str = "iou";
     if (mode == 1) {
         mode_str = "iof";
@@ -59,11 +53,7 @@ at::Tensor npu_iou(
     return overlap;
 }
 
-at::Tensor npu_ptiou(
-    const at::Tensor& bboxes,
-    const at::Tensor& gtboxes,
-    int64_t mode)
-{
+at::Tensor npu_ptiou(const at::Tensor &bboxes, const at::Tensor &gtboxes, int64_t mode) {
     return acl_op::npu_iou(bboxes, gtboxes, mode);
 }
 } // namespace acl_op

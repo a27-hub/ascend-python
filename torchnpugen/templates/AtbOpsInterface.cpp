@@ -18,13 +18,13 @@
 #include "op_plugin/include/AtbOpsInterface.h"
 
 namespace atb {
-${forward_declarations}
-}  // namespace atb
+$ { forward_declarations }
+} // namespace atb
 
 namespace at_npu {
 namespace native {
 namespace atb {
-${definitions}
-}  // namespace atb
-}  // namespace native
-}  // namespace at_npu
+$ { definitions }
+} // namespace atb
+} // namespace native
+} // namespace at_npu
