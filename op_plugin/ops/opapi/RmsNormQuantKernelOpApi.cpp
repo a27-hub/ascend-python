@@ -21,9 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 const int64_t INT4_IN_INT32_NUM = 8;
 
 at::Tensor npu_rms_norm_quant(const at::Tensor &x, const at::Tensor &gamma, const at::Tensor &beta,
-                              const at::Tensor &scale, const at::Tensor &offset, double epsilon,
-                              c10::optional<int64_t> dst_dtype)
-{
+    const at::Tensor &scale, const at::Tensor &offset, double epsilon, c10::optional<int64_t> dst_dtype) {
     at::ScalarType scalar_dtype = at::ScalarType::Undefined;
     aclDataType y_acltype = aclDataType::ACL_INT8;
     at::Tensor y;

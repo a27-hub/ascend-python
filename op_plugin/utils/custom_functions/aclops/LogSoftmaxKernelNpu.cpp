@@ -16,27 +16,15 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-at::Tensor& log_softmax_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    int64_t dim)
-{
+at::Tensor &log_softmax_nocheck(at::Tensor &result, const at::Tensor &self, int64_t dim) {
     c10::SmallVector<int64_t, N> dim_list = {dim};
     at_npu::native::OpCommand cmd;
-    cmd.Name("LogSoftmaxV2")
-        .Input(self)
-        .Attr("axes", dim_list)
-        .Output(result)
-        .Run();
+    cmd.Name("LogSoftmaxV2").Input(self).Attr("axes", dim_list).Output(result).Run();
     return result;
 }
 
 at::Tensor log_softmax_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    int64_t dim,
-    c10::optional<c10::ScalarType> dtype)
-{
+    at::Tensor &result, const at::Tensor &self, int64_t dim, c10::optional<c10::ScalarType> dtype) {
     c10::ScalarType dst_type;
     if (dtype.has_value()) {
         dst_type = dtype.value();

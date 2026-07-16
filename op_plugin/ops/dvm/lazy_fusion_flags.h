@@ -29,31 +29,31 @@ namespace lazy_fusion {
 // `TORCH_NPU_LAZY_FUSION=True` defaults to kO2 (enable everything). Setting
 // `level=O1` / `level=O2` via the env flag list is internal-debug only.
 enum class Level : int {
-  kO1 = 1,
-  kO2 = 2,
+    kO1 = 1,
+    kO2 = 2,
 };
 
 class LazyFusionFlags {
- public:
-  LazyFusionFlags();
-  ~LazyFusionFlags() = default;
+  public:
+    LazyFusionFlags();
+    ~LazyFusionFlags() = default;
 
-  // Public knobs.
-  bool enabled{false};
-  Level level{Level::kO2};
+    // Public knobs.
+    bool enabled{false};
+    Level level{Level::kO2};
 
-  // Internal debug knobs (not advertised in user-facing docs).
-  bool dump_as_text{false};
-  std::string dump_dir{"./lazy_fusion_dump"};
-  bool synchronize{false};
-  bool online_tuning{false};
-  std::vector<std::string> disable_ops;
-  std::vector<std::string> enable_ops;
-  std::vector<std::string> enable_ops_only;
+    // Internal debug knobs (not advertised in user-facing docs).
+    bool dump_as_text{false};
+    std::string dump_dir{"./lazy_fusion_dump"};
+    bool synchronize{false};
+    bool online_tuning{false};
+    std::vector<std::string> disable_ops;
+    std::vector<std::string> enable_ops;
+    std::vector<std::string> enable_ops_only;
 
-  // foreach launch-bound gate
-  uint64_t foreach_max_tensors{8};
-  uint64_t foreach_min_numel{65536};
+    // foreach launch-bound gate
+    uint64_t foreach_max_tensors{8};
+    uint64_t foreach_min_numel{65536};
 };
-}  // namespace lazy_fusion
-#endif  // DVM_LAZY_FUSION_FLAGS_H
+} // namespace lazy_fusion
+#endif // DVM_LAZY_FUSION_FLAGS_H

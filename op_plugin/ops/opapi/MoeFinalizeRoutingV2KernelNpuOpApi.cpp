@@ -18,15 +18,11 @@ const size_t INDEX_ONE = 1;
 const size_t INDEX_TWO = 2;
 const size_t DIM_TREE = 3;
 
-at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, const c10::optional<at::Tensor>& skip1,
-                                    const c10::optional<at::Tensor>& skip2,
-                                    const c10::optional<at::Tensor>& bias,
-                                    const c10::optional<at::Tensor>& scales,
-                                    const at::Tensor& expanded_src_to_dst_row,
-                                    const c10::optional<at::Tensor>& expert_for_source_row,
-                                    const c10::optional<int64_t> drop_pad_mode,
-                                    const c10::optional<int64_t> k)
-{
+at::Tensor npu_moe_finalize_routing(const at::Tensor &expanded_permuted_rows, const c10::optional<at::Tensor> &skip1,
+    const c10::optional<at::Tensor> &skip2, const c10::optional<at::Tensor> &bias,
+    const c10::optional<at::Tensor> &scales, const at::Tensor &expanded_src_to_dst_row,
+    const c10::optional<at::Tensor> &expert_for_source_row, const c10::optional<int64_t> drop_pad_mode,
+    const c10::optional<int64_t> k) {
     static const bool is_moe_finalize_routing_v4_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV4");
     static const bool is_moe_finalize_routing_v2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV2");
     if (!is_moe_finalize_routing_v4_available && !is_moe_finalize_routing_v2_available) {
@@ -40,7 +36,8 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
 
     int64_t kAttr = c10::value_or_else(k, [] { return 1; });
     if (!is_moe_finalize_routing_v4_available) {
-        TORCH_CHECK(!k.has_value() || k.value() == 1, "k parameter (non-default) is not supported by "
+        TORCH_CHECK(!k.has_value() || k.value() == 1,
+            "k parameter (non-default) is not supported by "
             "aclnnMoeFinalizeRoutingV2, please upgrade CANN to support aclnnMoeFinalizeRoutingV4",
             OPS_ERROR(ErrCode::PARAM));
     }
@@ -62,14 +59,14 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
     result = npu_preparation::apply_tensor_without_format(output_size, expanded_permuted_rows.options());
     int64_t mode = c10::value_or_else(drop_pad_mode, [] { return 0; });
     if (is_moe_finalize_routing_v4_available) {
-        const aclTensor* nullTensor = nullptr;
-        const aclIntArray* nullIntArray = nullptr;
-        EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV4, expanded_permuted_rows, expanded_src_to_dst_row,
-                     skip1, skip2, bias, scales, expert_for_source_row, nullTensor, nullTensor, nullTensor, nullTensor,
-                     mode, nullIntArray, nullIntArray, nullIntArray, kAttr, result);
+        const aclTensor *nullTensor = nullptr;
+        const aclIntArray *nullIntArray = nullptr;
+        EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV4, expanded_permuted_rows, expanded_src_to_dst_row, skip1, skip2, bias,
+            scales, expert_for_source_row, nullTensor, nullTensor, nullTensor, nullTensor, mode, nullIntArray,
+            nullIntArray, nullIntArray, kAttr, result);
     } else {
-        EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV2, expanded_permuted_rows, expanded_src_to_dst_row,
-                     skip1, skip2, bias, scales, expert_for_source_row, mode, result);
+        EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV2, expanded_permuted_rows, expanded_src_to_dst_row, skip1, skip2, bias,
+            scales, expert_for_source_row, mode, result);
     }
 
     return result;

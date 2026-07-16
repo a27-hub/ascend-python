@@ -21,12 +21,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& soft_margin_loss_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction)
-{
+at::Tensor &soft_margin_loss_out_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &target, int64_t reduction) {
     at::Tensor target_broadcast = target;
     if (target.sizes() != self.sizes()) {
         target_broadcast = acl_op::npu_broadcast(target, self.sizes());
@@ -43,18 +39,9 @@ at::Tensor& soft_margin_loss_out_nocheck(
 }
 } // namespace
 
-at::Tensor& soft_margin_loss_out(
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    at::Tensor& out)
-{
+at::Tensor &soft_margin_loss_out(const at::Tensor &self, const at::Tensor &target, int64_t reduction, at::Tensor &out) {
     auto output_size = op_infer::soft_margin_loss_npu_output_size(self, reduction);
-    npu_preparation::CheckOut(
-        {self, target},
-        out,
-        self,
-        output_size);
+    npu_preparation::CheckOut({self, target}, out, self, output_size);
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_out = npu_utils::format_contiguous(out);
@@ -66,8 +53,7 @@ at::Tensor& soft_margin_loss_out(
     return out;
 }
 
-at::Tensor soft_margin_loss(const at::Tensor& self, const at::Tensor& target, int64_t reduction)
-{
+at::Tensor soft_margin_loss(const at::Tensor &self, const at::Tensor &target, int64_t reduction) {
     auto output_size = op_infer::soft_margin_loss_npu_output_size(self, reduction);
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
 

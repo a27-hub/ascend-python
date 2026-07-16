@@ -27,18 +27,21 @@ const static int64_t DIM_3 = 3;
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(const at::Tensor& query,
-    const at::Tensor& key, const c10::optional<at::Tensor> &actual_seq_lengths_query, int64_t sparse_count,
-    std::string query_layout_str, std::string key_layout_str, bool return_value)
-{
+std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(const at::Tensor &query,
+    const at::Tensor &key, const c10::optional<at::Tensor> &actual_seq_lengths_query, int64_t sparse_count,
+    std::string query_layout_str, std::string key_layout_str, bool return_value) {
     at::SmallVector<int64_t, SIZE> output_size;
     for (size_t i = 0; i < query.sizes().size(); i++) {
-        TORCH_CHECK(query.size(i) > 0, "All values within query's shape should be greater "
-            "than 0, but shape[", i, "] is ", query.size(i));
+        TORCH_CHECK(query.size(i) > 0,
+            "All values within query's shape should be greater "
+            "than 0, but shape[",
+            i, "] is ", query.size(i));
     }
     for (size_t i = 0; i < key.sizes().size(); i++) {
-        TORCH_CHECK(key.size(i) > 0, "All values within key's shape should be greater "
-            "than 0, but shape[", i, "] is ", key.size(i));
+        TORCH_CHECK(key.size(i) > 0,
+            "All values within key's shape should be greater "
+            "than 0, but shape[",
+            i, "] is ", key.size(i));
     }
     TORCH_CHECK(sparse_count > 0, "sparse count should be greater than 0, but now is ", sparse_count);
     if (query_layout_str == "BSND") {
@@ -59,14 +62,11 @@ std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(con
     return std::tuple<at::Tensor, at::Tensor>(sparse_indices_out, sparse_values_out);
 }
 
-std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
-    const at::Tensor &query, const at::Tensor &key, const at::Tensor &weights,
-    const c10::optional<at::Tensor> &actual_seq_lengths_query,
-    const c10::optional<at::Tensor> &actual_seq_lengths_key,
-    const c10::optional<at::Tensor> &block_table, c10::string_view layout_query,
-    c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode,
-    int64_t pre_tokens, int64_t next_tokens, bool return_value)
-{
+std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(const at::Tensor &query, const at::Tensor &key,
+    const at::Tensor &weights, const c10::optional<at::Tensor> &actual_seq_lengths_query,
+    const c10::optional<at::Tensor> &actual_seq_lengths_key, const c10::optional<at::Tensor> &block_table,
+    c10::string_view layout_query, c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode,
+    int64_t pre_tokens, int64_t next_tokens, bool return_value) {
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
 
@@ -82,10 +82,9 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
     char *query_layout_ptr = const_cast<char *>(query_layout_str.c_str());
     char *key_layout_ptr = const_cast<char *>(key_layout_str.c_str());
 
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnLightningIndexer, query,
-        key, weights, actual_seq_lengths_query, actual_seq_lengths_key, block_table,
-        query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode, pre_tokens, next_tokens,
-        return_value, sparse_indices_out, sparse_values_out);
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnLightningIndexer, query, key, weights, actual_seq_lengths_query,
+        actual_seq_lengths_key, block_table, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode, pre_tokens,
+        next_tokens, return_value, sparse_indices_out, sparse_values_out);
 
     return std::tuple<at::Tensor, at::Tensor>(sparse_indices_out, sparse_values_out);
 }
