@@ -21,9 +21,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 
-c10::SmallVector<int64_t, SIZE> _embedding_bag_npu_output_size(const at::Tensor &weight, const at::Tensor &indices,
-                                                               const at::Tensor &offsets, bool include_last_offset)
-{
+c10::SmallVector<int64_t, SIZE> _embedding_bag_npu_output_size(
+    const at::Tensor &weight, const at::Tensor &indices, const at::Tensor &offsets, bool include_last_offset) {
     TORCH_CHECK(weight.dim() == 2, "weight has to be a 2D Tensor, but got Tensor of dimension ", weight.dim(),
         OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> outputSize = {};
@@ -39,8 +38,7 @@ c10::SmallVector<int64_t, SIZE> _embedding_bag_npu_output_size(const at::Tensor 
     return outputSize;
 }
 
-string get_mode_str(const int64_t mode)
-{
+string get_mode_str(const int64_t mode) {
     string modeStr = "mean";
     if (mode == 0) {
         modeStr = "sum";
@@ -52,12 +50,11 @@ string get_mode_str(const int64_t mode)
     return modeStr;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_out_npu_nocheck(
-    const at::Tensor &weight, const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq,
-    int64_t mode, bool sparse, const at::Tensor &per_sample_weights, bool include_last_offset, int64_t padding_idx,
-    at::Tensor &output, at::Tensor &offset2bag, at::Tensor &bag_size, at::Tensor &max_indices,
-    const at::Tensor &indices_ori, const at::Tensor &offsets_ori)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_out_npu_nocheck(const at::Tensor &weight,
+    const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq, int64_t mode, bool sparse,
+    const at::Tensor &per_sample_weights, bool include_last_offset, int64_t padding_idx, at::Tensor &output,
+    at::Tensor &offset2bag, at::Tensor &bag_size, at::Tensor &max_indices, const at::Tensor &indices_ori,
+    const at::Tensor &offsets_ori) {
     string mode_str = get_mode_str(mode);
     at_npu::native::OpCommand cmd;
 
@@ -102,11 +99,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_out_np
 }
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
-    const at::Tensor &weight, const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq,
-    int64_t mode, bool sparse, const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset,
-    int64_t padding_idx)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(const at::Tensor &weight,
+    const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq, int64_t mode, bool sparse,
+    const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset, int64_t padding_idx) {
     TORCH_CHECK((indices.dim() > 0), "indices.dim() must be greater than 0" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((weight.dim() > 0), "weight.dim() must be greater than 0" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((offsets.dim() > 0), "offsets.dim() must be greater than 0" + OPS_ERROR(ErrCode::PARAM));
@@ -151,15 +146,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
     }
 
     return _embedding_bag_out_npu_nocheck(weight, indices_cast, offsets_cast, scale_grad_by_freq, mode, sparse,
-                                          per_sample_weights_core, include_last_offset, padding_idx, output_tensor,
-                                          offset2bag, bag_size, max_indices, indices, offsets);
+        per_sample_weights_core, include_last_offset, padding_idx, output_tensor, offset2bag, bag_size, max_indices,
+        indices, offsets);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forward_only(
-    const at::Tensor &weight, const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq,
-    int64_t mode, bool sparse, const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset,
-    int64_t padding_idx)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forward_only(const at::Tensor &weight,
+    const at::Tensor &indices, const at::Tensor &offsets, bool scale_grad_by_freq, int64_t mode, bool sparse,
+    const c10::optional<at::Tensor> &per_sample_weights, bool include_last_offset, int64_t padding_idx) {
     TORCH_CHECK((indices.dim() > 0), "indices.dim() must be greater than 0" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((weight.dim() > 0), "weight.dim() must be greater than 0" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((offsets.dim() > 0), "offsets.dim() must be greater than 0" + OPS_ERROR(ErrCode::PARAM));
@@ -204,7 +197,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forwar
     }
 
     return _embedding_bag_out_npu_nocheck(weight, indices_cast, offsets_cast, scale_grad_by_freq, mode, sparse,
-                                          per_sample_weights_core, include_last_offset, padding_idx, output_tensor,
-                                          offset2bag, bag_size, max_indices, indices, offsets);
+        per_sample_weights_core, include_last_offset, padding_idx, output_tensor, offset2bag, bag_size, max_indices,
+        indices, offsets);
 }
 } // namespace acl_op

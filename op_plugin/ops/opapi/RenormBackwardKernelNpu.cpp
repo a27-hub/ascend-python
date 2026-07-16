@@ -14,14 +14,8 @@
 
 namespace op_api {
 
-at::Tensor norm_backward_impl(
-    at::Tensor grad,
-    const at::Tensor& self,
-    const std::optional<at::Scalar>& p_,
-    at::Tensor norm,
-    at::IntArrayRef dim,
-    bool /* keepdim */) {
-
+at::Tensor norm_backward_impl(at::Tensor grad, const at::Tensor &self, const std::optional<at::Scalar> &p_,
+    at::Tensor norm, at::IntArrayRef dim, bool /* keepdim */) {
     double p = p_.value_or(2.0).toDouble();
     at::Tensor self_scaled;
     at::Tensor scale_v;
@@ -37,8 +31,7 @@ at::Tensor norm_backward_impl(
         auto mask = self_abs.eq(norm).logical_or(self_abs.isnan());
         return self.sgn() * ((grad / mask.sum(dim, true)) * mask);
     } else if (p < 1.0) {
-        self_scaled =
-            self.sgn() * self.abs().pow_(p - 1).masked_fill_(self == 0, 0);
+        self_scaled = self.sgn() * self.abs().pow_(p - 1).masked_fill_(self == 0, 0);
         return self_scaled * grad * norm.pow(1 - p);
     } else if (p < 2.0) {
         self_scaled = self.sgn() * self.abs().pow_(p - 1);
@@ -54,12 +47,7 @@ at::Tensor norm_backward_impl(
 }
 
 at::Tensor npu_renorm_backward(
-    const at::Tensor& grad,
-    const at::Tensor& self,
-    const at::Scalar& p,
-    int64_t dim,
-    const at::Scalar& maxnorm) {
-
+    const at::Tensor &grad, const at::Tensor &self, const at::Scalar &p, int64_t dim, const at::Scalar &maxnorm) {
     auto n = self.dim();
     dim = c10::maybe_wrap_dim(dim, n);
     auto reduce_dims = at::DimVector(n);
@@ -68,14 +56,12 @@ at::Tensor npu_renorm_backward(
 
     // NPU: BFloat16/Half/float → float
     auto scalar_type = self.scalar_type();
-    auto acc_type = (scalar_type == c10::ScalarType::BFloat16 ||
-                     scalar_type == c10::ScalarType::Half ||
-                     scalar_type == c10::ScalarType::Float)
-                    ? c10::ScalarType::Float
-                    : scalar_type;
+    auto acc_type = (scalar_type == c10::ScalarType::BFloat16 || scalar_type == c10::ScalarType::Half ||
+                        scalar_type == c10::ScalarType::Float)
+        ? c10::ScalarType::Float
+        : scalar_type;
 
-    auto norm = op_api::linalg_vector_norm(
-        self, p, reduce_dims, /*keepdim=*/true, /*dtype=*/acc_type);
+    auto norm = op_api::linalg_vector_norm(self, p, reduce_dims, /*keepdim=*/true, /*dtype=*/acc_type);
 
     const auto real_acc_type = c10::toRealValueType(acc_type);
     auto grad_output = (self.conj() * grad);
@@ -84,12 +70,10 @@ at::Tensor npu_renorm_backward(
         grad_output = at::real(grad_output);
     }
 
-    grad_output = grad_output.sum(
-        reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
+    grad_output = grad_output.sum(reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
 
     std::optional<at::Scalar> opt_p = p;
-    auto nb = norm_backward_impl(
-        std::move(grad_output), self, opt_p, norm, reduce_dims, /*keepdim=*/true);
+    auto nb = norm_backward_impl(std::move(grad_output), self, opt_p, norm, reduce_dims, /*keepdim=*/true);
 
     auto invnorm = (norm + 1e-7).reciprocal();
     auto grad_norm = maxnorm * invnorm * (grad - invnorm * nb);

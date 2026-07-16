@@ -22,9 +22,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor &mse_loss_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &target,
-                                     int64_t reduction)
-{
+at::Tensor &mse_loss_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &target, int64_t reduction) {
     if (self.numel() == 0 || target.numel() == 0) {
         // In this scenario, needs to return nan. And the nan of the NPU can only be fp32.
         result = at_npu::native::custom_ops::_npu_dtype_cast(result, at::kFloat).fill_(NAN);
@@ -44,8 +43,7 @@ at::Tensor &mse_loss_out_npu_nocheck(at::Tensor &result, const at::Tensor &self,
 }
 } // namespace
 
-at::Tensor &mse_loss_out(const at::Tensor &self, const at::Tensor &target, int64_t reduction, at::Tensor &result)
-{
+at::Tensor &mse_loss_out(const at::Tensor &self, const at::Tensor &target, int64_t reduction, at::Tensor &result) {
     at::IntArrayRef output_size;
     if (reduction == at::Reduction::None) {
         output_size = op_infer::input_same_output_size(self);
@@ -63,15 +61,14 @@ at::Tensor &mse_loss_out(const at::Tensor &self, const at::Tensor &target, int64
     return result;
 }
 
-at::Tensor mse_loss(const at::Tensor &self, const at::Tensor &target, int64_t reduction)
-{
+at::Tensor mse_loss(const at::Tensor &self, const at::Tensor &target, int64_t reduction) {
     at::IntArrayRef output_size;
     if (reduction == at::Reduction::None) {
         output_size = op_infer::input_same_output_size(self);
     }
-    at::Tensor result = (reduction == at::Reduction::None) ?
-                            npu_preparation::apply_tensor(self, output_size) :
-                            npu_preparation::apply_tensor_with_format(self, output_size, ACL_FORMAT_ND);
+    at::Tensor result = (reduction == at::Reduction::None)
+        ? npu_preparation::apply_tensor(self, output_size)
+        : npu_preparation::apply_tensor_with_format(self, output_size, ACL_FORMAT_ND);
 
     mse_loss_out_npu_nocheck(result, self, target, reduction);
     return result;

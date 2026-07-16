@@ -30,9 +30,9 @@
 namespace at_npu {
 namespace native {
 namespace atb {
-${declarations}
-}  // namespace atb
-}  // namespace native
-}  // namespace at_npu
+$ { declarations }
+} // namespace atb
+} // namespace native
+} // namespace at_npu
 
-#endif  // OP_PLUGIN_INCLUDE_ATB_OPS_INTERFACE_H
+#endif // OP_PLUGIN_INCLUDE_ATB_OPS_INTERFACE_H

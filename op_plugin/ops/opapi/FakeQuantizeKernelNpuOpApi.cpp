@@ -22,54 +22,32 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
-std::tuple<at::Tensor, at::Tensor> fake_quantize_per_channel_affine_cachemask(
-    const at::Tensor& self,
-    const at::Tensor& scale,
-    const at::Tensor& zero_point,
-    int64_t axis,
-    int64_t quant_min,
-    int64_t quant_max)
-{
+std::tuple<at::Tensor, at::Tensor> fake_quantize_per_channel_affine_cachemask(const at::Tensor &self,
+    const at::Tensor &scale, const at::Tensor &zero_point, int64_t axis, int64_t quant_min, int64_t quant_max) {
     at::Tensor out = npu_preparation::apply_tensor(self, self.sizes());
     at::Tensor mask = npu_preparation::apply_tensor(self.sizes(), self.options().dtype(at::kBool), self);
-    EXEC_NPU_CMD(aclnnFakeQuantPerChannelAffineCachemask, self, scale, zero_point, axis, quant_min, quant_max,
-                 out, mask);
+    EXEC_NPU_CMD(
+        aclnnFakeQuantPerChannelAffineCachemask, self, scale, zero_point, axis, quant_min, quant_max, out, mask);
     return std::tie(out, mask);
 }
 
-std::tuple<at::Tensor, at::Tensor> _fake_quantize_per_tensor_affine_cachemask_tensor_qparams(
-    const at::Tensor& self,
-    const at::Tensor& scale,
-    const at::Tensor& zero_point,
-    const at::Tensor& fake_quant_enabled,
-    int64_t quant_min,
-    int64_t quant_max)
-{
+std::tuple<at::Tensor, at::Tensor> _fake_quantize_per_tensor_affine_cachemask_tensor_qparams(const at::Tensor &self,
+    const at::Tensor &scale, const at::Tensor &zero_point, const at::Tensor &fake_quant_enabled, int64_t quant_min,
+    int64_t quant_max) {
     at::Tensor out = npu_preparation::apply_tensor(self, self.sizes());
     at::Tensor mask = npu_preparation::apply_tensor(self.sizes(), self.options().dtype(at::kBool), self);
     float fake_enabled = fake_quant_enabled.item().toFloat();
-    EXEC_NPU_CMD(aclnnFakeQuantPerTensorAffineCachemask, self, scale, zero_point, fake_enabled, quant_min, quant_max,
-                 out, mask);
+    EXEC_NPU_CMD(
+        aclnnFakeQuantPerTensorAffineCachemask, self, scale, zero_point, fake_enabled, quant_min, quant_max, out, mask);
     return std::tie(out, mask);
 }
 
-std::tuple<at::Tensor, at::Tensor> _fused_moving_avg_obs_fq_helper(
-    const at::Tensor& self,
-    const at::Tensor& observer_on,
-    const at::Tensor& fake_quant_on,
-    at::Tensor& running_min,
-    at::Tensor& running_max,
-    at::Tensor& scale,
-    at::Tensor& zero_point,
-    const double averaging_const,
-    const int64_t quant_min,
-    const int64_t quant_max,
-    const int64_t ch_axis,
-    bool per_row_fake_quant,
-    bool symmetric_quant)
-{
-    return _fused_moving_avg_obs_fq_helper_common(self, observer_on, fake_quant_on, running_min, running_max,
-        scale, zero_point, averaging_const, quant_min, quant_max, ch_axis, per_row_fake_quant, symmetric_quant);
+std::tuple<at::Tensor, at::Tensor> _fused_moving_avg_obs_fq_helper(const at::Tensor &self,
+    const at::Tensor &observer_on, const at::Tensor &fake_quant_on, at::Tensor &running_min, at::Tensor &running_max,
+    at::Tensor &scale, at::Tensor &zero_point, const double averaging_const, const int64_t quant_min,
+    const int64_t quant_max, const int64_t ch_axis, bool per_row_fake_quant, bool symmetric_quant) {
+    return _fused_moving_avg_obs_fq_helper_common(self, observer_on, fake_quant_on, running_min, running_max, scale,
+        zero_point, averaging_const, quant_min, quant_max, ch_axis, per_row_fake_quant, symmetric_quant);
 }
 #endif
 
