@@ -22,8 +22,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor &im2col_out(const at::Tensor &self, at::IntArrayRef kernel_size, at::IntArrayRef dilation,
-                       at::IntArrayRef padding, at::IntArrayRef stride, at::Tensor &out)
-{
+    at::IntArrayRef padding, at::IntArrayRef stride, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnIm2col, acl_op::im2col_out(self, kernel_size, dilation, padding, stride, out));
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
         return acl_op::im2col_out(self, kernel_size, dilation, padding, stride, out);
@@ -35,8 +34,7 @@ at::Tensor &im2col_out(const at::Tensor &self, at::IntArrayRef kernel_size, at::
 }
 
 at::Tensor im2col(const at::Tensor &self, at::IntArrayRef kernel_size, at::IntArrayRef dilation,
-                  at::IntArrayRef padding, at::IntArrayRef stride)
-{
+    at::IntArrayRef padding, at::IntArrayRef stride) {
     DO_COMPATIBILITY(aclnnIm2col, acl_op::im2col(self, kernel_size, dilation, padding, stride));
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
         return acl_op::im2col(self, kernel_size, dilation, padding, stride);

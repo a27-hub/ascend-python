@@ -21,9 +21,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_dim(const at::Tensor &self, const int64_t dim, const bool sorted,
-                                                          const bool return_inverse, const bool return_counts)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_dim(
+    const at::Tensor &self, const int64_t dim, const bool sorted, const bool return_inverse, const bool return_counts) {
     DO_COMPATIBILITY(aclnnUniqueDim, acl_op::unique_dim(self, dim, sorted, return_inverse, return_counts));
     TORCH_CHECK(dim < self.dim(), "Dim's value must be smaller than self's dim.", OPS_ERROR(ErrCode::VALUE));
     auto sizes = self.sizes().vec();
@@ -31,18 +30,21 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_dim(const at::Tensor &self
     auto num_zero_dims = std::count(sizes.begin(), sizes.end(), 0);
     // tensor is not well formed as it has 0 sized dimensions
     if (self.size(dim) == 0) {
-        TORCH_CHECK(num_zero_dims == 1, "Number of zero sized dimensions is more than one, so unique cannot be applied.",
-                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(num_zero_dims == 1,
+            "Number of zero sized dimensions is more than one, so unique cannot be applied.",
+            OPS_ERROR(ErrCode::PARAM));
         at::Tensor y = at::empty(sizes, self.options());
         at::Tensor y_inverse = at::empty({0}, self.options().dtype(at::kLong));
         at::Tensor y_counts = at::empty({0}, self.options().dtype(at::kLong));
         return std::tuple<at::Tensor, at::Tensor, at::Tensor>(y, y_inverse, y_counts);
     }
-    TORCH_CHECK(num_zero_dims == 0, "There are 0 sized dimensions, and they aren't selected, so unique cannot be applied.",
-                OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(num_zero_dims == 0,
+        "There are 0 sized dimensions, and they aren't selected, so unique cannot be applied.",
+        OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor y = npu_preparation::apply_tensor_without_format(self);
-    at::Tensor y_inverse = npu_preparation::apply_tensor_without_format(self.size(dim), self.options().dtype(at::kLong));
+    at::Tensor y_inverse =
+        npu_preparation::apply_tensor_without_format(self.size(dim), self.options().dtype(at::kLong));
     at::Tensor y_counts = npu_preparation::apply_tensor_without_format(self.size(dim), self.options().dtype(at::kLong));
 
     static auto opApiFuncAddr = []() {
@@ -53,8 +55,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_dim(const at::Tensor &self
     using aclGetViewShapeFunc = int (*)(const aclTensor *tensor, int64_t **view_dims, uint64_t *view_dims_num);
     auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
     OP_EXEC_LOG(aclnnUniqueDim, "EXEC_NPU_CMD_SYNC", self, sorted, return_inverse, dim, y, y_inverse, y_counts);
-    auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnUniqueDim, self, sorted, return_inverse, dim, y,
-                                          y_inverse, y_counts);
+    auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnUniqueDim, self, sorted, return_inverse, dim, y, y_inverse, y_counts);
 
     int64_t *view_dims = nullptr;
     uint64_t view_dim_num = 0;

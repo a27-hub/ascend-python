@@ -23,13 +23,10 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 at::SmallVector<int64_t, SIZE> upsample_nearest3d_infer_size(const at::Tensor &input, at::IntArrayRef output_size,
-                                                             c10::optional<double> scales_d,
-                                                             c10::optional<double> scales_h,
-                                                             c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w) {
     TORCH_CHECK(input.dim() == 5, "The input should be 5D, but got ", input.dim(), "D" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(output_size.size() == 3, "The length of output_size should be equal to 3, but got ",
-                output_size.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() == 3, "The length of output_size should be equal to 3, but got ", output_size.size(),
+        OPS_ERROR(ErrCode::PARAM));
 
     int64_t output_depth = output_size[0];
     int64_t output_height = output_size[1];
@@ -44,9 +41,7 @@ at::SmallVector<int64_t, SIZE> upsample_nearest3d_infer_size(const at::Tensor &i
 }
 
 at::Tensor &upsample_nearest3d_out_nocheck(at::Tensor &result, const at::Tensor &input, at::IntArrayRef output_size,
-                                           c10::optional<double> scales_d, c10::optional<double> scales_h,
-                                           c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w) {
     at_npu::native::OpCommand cmd;
     cmd.Name("UpsampleNearest3d").Input(input).Output(result).Attr("output_size", output_size).Run();
 
@@ -55,8 +50,7 @@ at::Tensor &upsample_nearest3d_out_nocheck(at::Tensor &result, const at::Tensor 
 } // namespace
 
 at::Tensor &upsample_nearest3d_out(const at::Tensor &input, at::IntArrayRef output_size, c10::optional<double> scales_d,
-                                   c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result)
-{
+    c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result) {
     auto op_infer_output_size = upsample_nearest3d_infer_size(input, output_size, scales_d, scales_h, scales_w);
     npu_preparation::CheckOut({input}, result, input, op_infer_output_size);
 
@@ -71,8 +65,7 @@ at::Tensor &upsample_nearest3d_out(const at::Tensor &input, at::IntArrayRef outp
 }
 
 at::Tensor upsample_nearest3d(const at::Tensor &input, at::IntArrayRef output_size, c10::optional<double> scales_d,
-                              c10::optional<double> scales_h, c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_h, c10::optional<double> scales_w) {
     auto op_infer_output_size = upsample_nearest3d_infer_size(input, output_size, scales_d, scales_h, scales_w);
     at::Tensor result = npu_preparation::apply_tensor(input, op_infer_output_size);
     upsample_nearest3d_out_nocheck(result, input, output_size, scales_d, scales_h, scales_w);

@@ -20,14 +20,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor&, at::Tensor&> kthvalue_out(
-    const at::Tensor& self,
-    int64_t k,
-    int64_t dim,
-    bool keepdim,
-    at::Tensor& values,
-    at::Tensor& indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> kthvalue_out(
+    const at::Tensor &self, int64_t k, int64_t dim, bool keepdim, at::Tensor &values, at::Tensor &indices) {
     DO_COMPATIBILITY(aclnnKthvalue, acl_op::kthvalue_out(self, k, dim, keepdim, values, indices));
     at::IntArrayRef dims(dim);
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
@@ -35,18 +29,12 @@ std::tuple<at::Tensor&, at::Tensor&> kthvalue_out(
     npu_preparation::check_tensor({self}, indices, at::ScalarType::Long, output_size);
 
     EXEC_NPU_CMD(aclnnKthvalue, self, k, dim, keepdim, values, indices);
-    return std::tuple<at::Tensor&, at::Tensor&>(values, indices);
+    return std::tuple<at::Tensor &, at::Tensor &>(values, indices);
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor&, at::Tensor&> kthvalue_out(
-    const at::Tensor& self,
-    int64_t k,
-    at::Dimname dim,
-    bool keepdim,
-    at::Tensor& values,
-    at::Tensor& indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> kthvalue_out(
+    const at::Tensor &self, int64_t k, at::Dimname dim, bool keepdim, at::Tensor &values, at::Tensor &indices) {
     DO_COMPATIBILITY(aclnnKthvalue, acl_op::kthvalue_out(self, k, dim, keepdim, values, indices));
     const int64_t real_dim = dimname_to_position(self, dim);
     at::IntArrayRef dims(real_dim);
@@ -55,16 +43,11 @@ std::tuple<at::Tensor&, at::Tensor&> kthvalue_out(
     npu_preparation::check_tensor({self}, indices, at::ScalarType::Long, output_size);
 
     EXEC_NPU_CMD(aclnnKthvalue, self, k, real_dim, keepdim, values, indices);
-    return std::tuple<at::Tensor&, at::Tensor&>(values, indices);
+    return std::tuple<at::Tensor &, at::Tensor &>(values, indices);
 }
 #endif
 
-std::tuple<at::Tensor, at::Tensor> kthvalue(
-    const at::Tensor& self,
-    int64_t k,
-    int64_t dim,
-    bool keepdim)
-{
+std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor &self, int64_t k, int64_t dim, bool keepdim) {
     DO_COMPATIBILITY(aclnnKthvalue, acl_op::kthvalue(self, k, dim, keepdim));
     at::IntArrayRef dims(dim);
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
@@ -76,12 +59,7 @@ std::tuple<at::Tensor, at::Tensor> kthvalue(
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor, at::Tensor> kthvalue(
-    const at::Tensor& self,
-    int64_t k,
-    at::Dimname dim,
-    bool keepdim)
-{
+std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor &self, int64_t k, at::Dimname dim, bool keepdim) {
     DO_COMPATIBILITY(aclnnKthvalue, acl_op::kthvalue(self, k, dim, keepdim));
     const int64_t real_dim = dimname_to_position(self, dim);
     at::IntArrayRef dims(real_dim);

@@ -21,19 +21,14 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& sqrt_out_npu_nocheck(at::Tensor& result, const at::Tensor& self)
-{
+at::Tensor &sqrt_out_npu_nocheck(at::Tensor &result, const at::Tensor &self) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Sqrt")
-        .Input(self)
-        .Output(result)
-        .Run();
+    cmd.Name("Sqrt").Input(self).Output(result).Run();
     return result;
 }
 } // namespace
 
-at::Tensor& sqrt_out(const at::Tensor& self, at::Tensor& out)
-{
+at::Tensor &sqrt_out(const at::Tensor &self, at::Tensor &out) {
     npu_preparation::CheckOut({self}, out, self);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -45,16 +40,12 @@ at::Tensor& sqrt_out(const at::Tensor& self, at::Tensor& out)
     return out;
 }
 
-at::Tensor sqrt(const at::Tensor& self)
-{
+at::Tensor sqrt(const at::Tensor &self) {
     at::Tensor result = npu_preparation::apply_tensor(self);
 
     sqrt_out_npu_nocheck(result, self);
     return result;
 }
 
-at::Tensor& sqrt_(at::Tensor& self)
-{
-    return acl_op::sqrt_out(self, self);
-}
+at::Tensor &sqrt_(at::Tensor &self) { return acl_op::sqrt_out(self, self); }
 } // namespace acl_op
