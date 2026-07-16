@@ -1,0 +1,78 @@
+name: Build Job
+
+on:
+  workflow_call:
+    inputs:
+      py_version:
+        required: false
+        type: string
+        default: "3.10"
+      REMOTE_URL:
+        required: false
+        type: string
+        default: ${{ env.ATOMGIT_REPOSITORY_URL }}
+      pr_id:
+        required: false
+        type: string
+        default: ${{ atomgit.event.pull_request.number }}
+      CP_DOCKER_IMG:
+        required: true
+        type: string
+      pytorch_branch:
+        required: true
+        type: string
+      runs_on_arch:
+        required: true
+        type: string
+      runs_on_os:
+        required: true
+        type: string
+    secrets:
+      OBS_AK:
+        required: true
+      OBS_SK:
+        required: true
+
+jobs:
+  JOB_compile:
+    name: JOB_compile
+    select: selected_by_default
+    # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+    # runs-on:  [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]
+    runs-on: [ dedicate-hosted, x64, large ]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      options: --user root
+    steps:
+      - name: print env
+        run: |
+          echo "[ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]"
+          echo "pytorch_branch=${{ inputs.pytorch_branch }}"
+          echo "py_version=${{ inputs.py_version }}"
+          echo "pr_id=${{ env.pr_id }}"
+          echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
+          echo "REMOTE_URL=${{ env.REMOTE_URL }}"
+
+      - name: compile
+        run: |
+          rm -rf *
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 5000
+          git config --global http.lowSpeedTime 300
+          git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+          bash cie/common/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ env.REMOTE_URL }} ${{ env.pr_id }} ${ATOMGIT_WORKSPACE}
+          cd ./CODE
+          git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
+          cat ../modify_files.txt
+          cd -
+          source cie/common/common/ccache_env.sh
+          bash cie/common/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ env.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+      - name: Upload to OBS
+        uses: obs-upload
+        with:
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pta-pr"
+          access-key: "${{ secrets.OBS_AK }}"
+          secret-key: "${{ secrets.OBS_SK }}"
+          artifact-path: "*.tar.gz*"
+          object-prefix: "op-plugin/PR/${{ env.pr_id }}/"
