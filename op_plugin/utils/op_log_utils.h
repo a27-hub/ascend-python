@@ -26,12 +26,12 @@
 #include "torch_npu/csrc/core/npu/NPUGraphsUtils.h"
 
 typedef struct {
-    const at::Tensor& tensor_;
+    const at::Tensor &tensor_;
     aclDataType dtype;
 } TensorWrapper;
 
 typedef struct {
-    const at::TensorList& tensor_list_;
+    const at::TensorList &tensor_list_;
     aclDataType dtype;
 } TensorListWrapper;
 
@@ -40,9 +40,7 @@ namespace logging {
 const static size_t SHOW_LIMIT = 20;
 const static size_t REPLACE_WORKSPACE = 2;
 
-template<typename T>
-inline void append_size_and_elements(std::stringstream& ss, size_t size, const T& array)
-{
+template <typename T> inline void append_size_and_elements(std::stringstream &ss, size_t size, const T &array) {
     ss << " size: " << size;
     if (size > SHOW_LIMIT) {
         ss << ", first " << SHOW_LIMIT << " elements: ";
@@ -58,8 +56,7 @@ inline void append_size_and_elements(std::stringstream& ss, size_t size, const T
 }
 
 // convert "x\n, weight\n" -> "x, weight\n"
-inline void replace_and_append_newline(std::string& str)
-{
+inline void replace_and_append_newline(std::string &str) {
     size_t count = std::count(str.begin(), str.end(), '\n');
     str.reserve(str.size() + count + 1);
 
@@ -71,8 +68,7 @@ inline void replace_and_append_newline(std::string& str)
 }
 
 // Generate basic log info
-inline std::string convert_info(const at::Tensor &at_tensor)
-{
+inline std::string convert_info(const at::Tensor &at_tensor) {
     std::stringstream ss;
     if (!at_tensor.defined()) {
         ss << "Undefined Tensor!" << "\n";
@@ -101,17 +97,9 @@ inline std::string convert_info(const at::Tensor &at_tensor)
         }
     }
 
-    ss << "Tensor size: "
-       << at_tensor.sizes()
-       << ", stride: "
-       << at_tensor.strides()
-       << ", offset: "
-       << at_tensor.storage_offset()
-       << ", dtype: "
-       << at_tensor.dtype()
-       << ", device ID: "
-       << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: ";
+    ss << "Tensor size: " << at_tensor.sizes() << ", stride: " << at_tensor.strides()
+       << ", offset: " << at_tensor.storage_offset() << ", dtype: " << at_tensor.dtype()
+       << ", device ID: " << static_cast<int>(at_tensor.device().index()) << ", data_ptr: ";
     if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
         ss << at_tensor.data_ptr();
     } else {
@@ -122,15 +110,13 @@ inline std::string convert_info(const at::Tensor &at_tensor)
     return ss.str();
 }
 
-inline std::string convert_info(const at::Scalar &at_scalar)
-{
+inline std::string convert_info(const at::Scalar &at_scalar) {
     std::stringstream ss;
     ss << "Scalar: " << at_scalar << ", type: " << at_scalar.type() << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(const at::IntArrayRef &at_array)
-{
+inline std::string convert_info(const at::IntArrayRef &at_array) {
     std::stringstream ss;
     ss << "IntArrayRef";
     append_size_and_elements(ss, at_array.size(), at_array);
@@ -138,8 +124,7 @@ inline std::string convert_info(const at::IntArrayRef &at_array)
     return ss.str();
 }
 
-inline std::string convert_info(const at::ArrayRef<c10::SymInt> &int_array)
-{
+inline std::string convert_info(const at::ArrayRef<c10::SymInt> &int_array) {
     std::stringstream ss;
     ss << "ArrayRef<c10::SymInt>";
     auto at_array = c10::asIntArrayRefUnchecked(int_array);
@@ -149,22 +134,19 @@ inline std::string convert_info(const at::ArrayRef<c10::SymInt> &int_array)
 }
 
 // std::array<bool, N> cannot be print derectly using operator<<.
-template <std::size_t N>
-inline void print_std_array(const std::array<bool, N> &value, std::stringstream& ss)
-{
+template <std::size_t N> inline void print_std_array(const std::array<bool, N> &value, std::stringstream &ss) {
     ss << "[";
     size_t print_end = std::min(N, SHOW_LIMIT);
     for (size_t i = 0; i < print_end; ++i) {
-        if (i > 0) ss << ", ";
+        if (i > 0) {
+            ss << ", ";
+        }
         ss << value[i];
     }
     ss << "]";
 }
 
-
-template <std::size_t N>
-inline std::string convert_info(const std::array<bool, N> &value)
-{
+template <std::size_t N> inline std::string convert_info(const std::array<bool, N> &value) {
     std::stringstream ss;
     if (N == 0) {
         ss << "Empty std::array<bool, N>";
@@ -181,8 +163,7 @@ inline std::string convert_info(const std::array<bool, N> &value)
     return ss.str();
 }
 
-inline std::string convert_info(const at::ArrayRef<bool> &value)
-{
+inline std::string convert_info(const at::ArrayRef<bool> &value) {
     std::stringstream ss;
     if (value.size() == 0) {
         ss << "Empty at::ArrayRef<bool>";
@@ -194,8 +175,7 @@ inline std::string convert_info(const at::ArrayRef<bool> &value)
     return ss.str();
 }
 
-inline std::string convert_info(const at::TensorList &at_tensor_list)
-{
+inline std::string convert_info(const at::TensorList &at_tensor_list) {
     std::stringstream ss;
     if (at_tensor_list.size() == 0) {
         ss << "Empty TensorList" << "\n";
@@ -207,8 +187,7 @@ inline std::string convert_info(const at::TensorList &at_tensor_list)
     }
 }
 
-inline std::string convert_info(const at::ArrayRef<at::Scalar> &at_scalar_list)
-{
+inline std::string convert_info(const at::ArrayRef<at::Scalar> &at_scalar_list) {
     std::stringstream ss;
     if (at_scalar_list.size() == 0) {
         ss << "Empty ArrayRef<at::Scalar>" << "\n";
@@ -220,8 +199,7 @@ inline std::string convert_info(const at::ArrayRef<at::Scalar> &at_scalar_list)
     return ss.str();
 }
 
-inline std::string convert_info(const c10::optional<at::Tensor> &opt_tensor)
-{
+inline std::string convert_info(const c10::optional<at::Tensor> &opt_tensor) {
     if (opt_tensor.has_value() && opt_tensor.value().defined()) {
         return convert_info(opt_tensor.value());
     }
@@ -231,8 +209,7 @@ inline std::string convert_info(const c10::optional<at::Tensor> &opt_tensor)
     return ss.str();
 }
 
-inline std::string convert_info(const c10::optional<at::TensorList> &opt_at_tensor_list)
-{
+inline std::string convert_info(const c10::optional<at::TensorList> &opt_at_tensor_list) {
     if (opt_at_tensor_list.has_value()) {
         return convert_info(opt_at_tensor_list.value());
     }
@@ -242,8 +219,7 @@ inline std::string convert_info(const c10::optional<at::TensorList> &opt_at_tens
     return ss.str();
 }
 
-inline std::string convert_info(const c10::optional<at::IntArrayRef> &opt_array)
-{
+inline std::string convert_info(const c10::optional<at::IntArrayRef> &opt_array) {
     if (opt_array.has_value()) {
         return convert_info(opt_array.value());
     }
@@ -253,8 +229,7 @@ inline std::string convert_info(const c10::optional<at::IntArrayRef> &opt_array)
     return ss.str();
 }
 
-inline std::string convert_info(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
-{
+inline std::string convert_info(const c10::OptionalArrayRef<c10::SymInt> &opt_array) {
     if (opt_array.has_value()) {
         return convert_info(opt_array.value());
     }
@@ -264,8 +239,7 @@ inline std::string convert_info(const c10::OptionalArrayRef<c10::SymInt> &opt_ar
     return ss.str();
 }
 
-inline std::string convert_info(const c10::optional<at::Scalar> &opt_scalar)
-{
+inline std::string convert_info(const c10::optional<at::Scalar> &opt_scalar) {
     if (opt_scalar.has_value()) {
         return convert_info(opt_scalar.value());
     }
@@ -275,64 +249,55 @@ inline std::string convert_info(const c10::optional<at::Scalar> &opt_scalar)
     return ss.str();
 }
 
-inline std::string convert_info(const at::ScalarType scalar_type)
-{
+inline std::string convert_info(const at::ScalarType scalar_type) {
     std::stringstream ss;
     ss << "ScalarType: " << scalar_type << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(int64_t int64_t_value)
-{
+inline std::string convert_info(int64_t int64_t_value) {
     std::stringstream ss;
     ss << "int64_t: " << int64_t_value << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(int8_t int8_t_value)
-{
+inline std::string convert_info(int8_t int8_t_value) {
     std::stringstream ss;
     ss << "int8_t: " << int8_t_value << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(int int_value)
-{
+inline std::string convert_info(int int_value) {
     std::stringstream ss;
     ss << "int: " << int_value << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(bool bool_value)
-{
+inline std::string convert_info(bool bool_value) {
     std::stringstream ss;
     ss << "bool: " << bool_value << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(float float_value)
-{
+inline std::string convert_info(float float_value) {
     std::stringstream ss;
     ss << "float: " << float_value << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(double double_value)
-{
+inline std::string convert_info(double double_value) {
     std::stringstream ss;
     ss << "double: " << double_value << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(char* char_value)
-{
+inline std::string convert_info(char *char_value) {
     std::stringstream ss;
     ss << "char*: " << char_value << "\n";
     return ss.str();
 }
 
-inline std::string convert_info(const TensorWrapper &tensor_r)
-{
+inline std::string convert_info(const TensorWrapper &tensor_r) {
     const at::Tensor &at_tensor = tensor_r.tensor_;
     std::stringstream ss;
     if (!at_tensor.defined()) {
@@ -362,17 +327,9 @@ inline std::string convert_info(const TensorWrapper &tensor_r)
         }
     }
 
-    ss << "Tensor size: "
-       << at_tensor.sizes()
-       << ", stride: "
-       << at_tensor.strides()
-       << ", offset: "
-       << at_tensor.storage_offset()
-       << ", dtype: "
-       << at_tensor.dtype()
-       << ", device ID: "
-       << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: ";
+    ss << "Tensor size: " << at_tensor.sizes() << ", stride: " << at_tensor.strides()
+       << ", offset: " << at_tensor.storage_offset() << ", dtype: " << at_tensor.dtype()
+       << ", device ID: " << static_cast<int>(at_tensor.device().index()) << ", data_ptr: ";
     if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
         ss << at_tensor.data_ptr();
     } else {
@@ -383,8 +340,7 @@ inline std::string convert_info(const TensorWrapper &tensor_r)
     return ss.str();
 }
 
-inline std::string convert_info(const TensorListWrapper &tensor_list_wrapper)
-{
+inline std::string convert_info(const TensorListWrapper &tensor_list_wrapper) {
     const at::TensorList &at_tensor_list = tensor_list_wrapper.tensor_list_;
     std::stringstream ss;
     if (at_tensor_list.size() == 0) {
@@ -397,15 +353,13 @@ inline std::string convert_info(const TensorListWrapper &tensor_list_wrapper)
     }
 }
 
-template <typename T> std::string convert_info(T value)
-{
+template <typename T> std::string convert_info(T value) {
     std::string ss("unknown dtype, please report an issue to op-plugin.\n");
     return ss;
 }
 
 // Generate extra debug log info
-inline std::string convert_debug_info(const at::Tensor &at_tensor)
-{
+inline std::string convert_debug_info(const at::Tensor &at_tensor) {
     std::stringstream ss;
     if (!at_tensor.defined()) {
         ss << "Undefined Tensor!" << "\n";
@@ -420,35 +374,20 @@ inline std::string convert_debug_info(const at::Tensor &at_tensor)
         auto at_tensor_sizes = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->get_npu_desc();
         if (at_tensor.dim() == 0) {
             if (c10_npu::currentStreamCaptureStatus() != c10_npu::CaptureStatus::None) {
-                ss << "NPU scalar Tensor(capturing), npu_format: "
-                   << at_tensor_sizes.npu_format_
-                   << ", base_sizes: "
-                   << at_tensor_sizes.base_sizes_
-                   << ", base_strides: "
-                   << at_tensor_sizes.base_strides_
-                   << ", storage_sizes: "
-                   << at_tensor_sizes.storage_sizes_;
+                ss << "NPU scalar Tensor(capturing), npu_format: " << at_tensor_sizes.npu_format_
+                   << ", base_sizes: " << at_tensor_sizes.base_sizes_
+                   << ", base_strides: " << at_tensor_sizes.base_strides_
+                   << ", storage_sizes: " << at_tensor_sizes.storage_sizes_;
             } else {
-                ss << "NPU scalar Tensor: "
-                   << at_tensor
-                   << ", npu_format: "
-                   << at_tensor_sizes.npu_format_
-                   << ", base_sizes: "
-                   << at_tensor_sizes.base_sizes_
-                   << ", base_strides: "
-                   << at_tensor_sizes.base_strides_
-                   << ", storage_sizes: "
-                   << at_tensor_sizes.storage_sizes_;
+                ss << "NPU scalar Tensor: " << at_tensor << ", npu_format: " << at_tensor_sizes.npu_format_
+                   << ", base_sizes: " << at_tensor_sizes.base_sizes_
+                   << ", base_strides: " << at_tensor_sizes.base_strides_
+                   << ", storage_sizes: " << at_tensor_sizes.storage_sizes_;
             }
         } else {
-            ss << "Tensor npu_format: "
-               << at_tensor_sizes.npu_format_
-               << ", base_sizes: "
-               << at_tensor_sizes.base_sizes_
-               << ", base_strides: "
-               << at_tensor_sizes.base_strides_
-               << ", storage_sizes: "
-               << at_tensor_sizes.storage_sizes_;
+            ss << "Tensor npu_format: " << at_tensor_sizes.npu_format_
+               << ", base_sizes: " << at_tensor_sizes.base_sizes_ << ", base_strides: " << at_tensor_sizes.base_strides_
+               << ", storage_sizes: " << at_tensor_sizes.storage_sizes_;
         }
         std::string res = ss.str();
         replace_and_append_newline(res);
@@ -461,8 +400,7 @@ inline std::string convert_debug_info(const at::Tensor &at_tensor)
     }
 }
 
-inline std::string convert_debug_info(const at::TensorList &at_tensor_list)
-{
+inline std::string convert_debug_info(const at::TensorList &at_tensor_list) {
     std::stringstream ss;
     if (at_tensor_list.size() == 0) {
         ss << "No extra debug info for this param" << "\n";
@@ -473,8 +411,7 @@ inline std::string convert_debug_info(const at::TensorList &at_tensor_list)
     }
 }
 
-inline std::string convert_debug_info(const c10::optional<at::Tensor> &opt_tensor)
-{
+inline std::string convert_debug_info(const c10::optional<at::Tensor> &opt_tensor) {
     if (opt_tensor.has_value() && opt_tensor.value().defined()) {
         return convert_debug_info(opt_tensor.value());
     }
@@ -484,8 +421,7 @@ inline std::string convert_debug_info(const c10::optional<at::Tensor> &opt_tenso
     return ss.str();
 }
 
-inline std::string convert_debug_info(const c10::optional<at::TensorList> &opt_at_tensor_list)
-{
+inline std::string convert_debug_info(const c10::optional<at::TensorList> &opt_at_tensor_list) {
     if (opt_at_tensor_list.has_value()) {
         return convert_debug_info(opt_at_tensor_list.value());
     }
@@ -495,8 +431,7 @@ inline std::string convert_debug_info(const c10::optional<at::TensorList> &opt_a
     return ss.str();
 }
 
-inline std::string convert_debug_info(const TensorWrapper &tensor_r)
-{
+inline std::string convert_debug_info(const TensorWrapper &tensor_r) {
     const at::Tensor &at_tensor = tensor_r.tensor_;
     std::stringstream ss;
     if (!at_tensor.defined()) {
@@ -512,35 +447,20 @@ inline std::string convert_debug_info(const TensorWrapper &tensor_r)
         auto at_tensor_sizes = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->get_npu_desc();
         if (at_tensor.dim() == 0) {
             if (c10_npu::currentStreamCaptureStatus() != c10_npu::CaptureStatus::None) {
-                ss << "NPU scalar Tensor(capturing), npu_format: "
-                   << at_tensor_sizes.npu_format_
-                   << ", base_sizes: "
-                   << at_tensor_sizes.base_sizes_
-                   << ", base_strides: "
-                   << at_tensor_sizes.base_strides_
-                   << ", storage_sizes: "
-                   << at_tensor_sizes.storage_sizes_;
+                ss << "NPU scalar Tensor(capturing), npu_format: " << at_tensor_sizes.npu_format_
+                   << ", base_sizes: " << at_tensor_sizes.base_sizes_
+                   << ", base_strides: " << at_tensor_sizes.base_strides_
+                   << ", storage_sizes: " << at_tensor_sizes.storage_sizes_;
             } else {
-                ss << "NPU scalar Tensor: "
-                   << at_tensor
-                   << ", npu_format: "
-                   << at_tensor_sizes.npu_format_
-                   << ", base_sizes: "
-                   << at_tensor_sizes.base_sizes_
-                   << ", base_strides: "
-                   << at_tensor_sizes.base_strides_
-                   << ", storage_sizes: "
-                   << at_tensor_sizes.storage_sizes_;
+                ss << "NPU scalar Tensor: " << at_tensor << ", npu_format: " << at_tensor_sizes.npu_format_
+                   << ", base_sizes: " << at_tensor_sizes.base_sizes_
+                   << ", base_strides: " << at_tensor_sizes.base_strides_
+                   << ", storage_sizes: " << at_tensor_sizes.storage_sizes_;
             }
         } else {
-            ss << "Tensor npu_format: "
-               << at_tensor_sizes.npu_format_
-               << ", base_sizes: "
-               << at_tensor_sizes.base_sizes_
-               << ", base_strides: "
-               << at_tensor_sizes.base_strides_
-               << ", storage_sizes: "
-               << at_tensor_sizes.storage_sizes_;
+            ss << "Tensor npu_format: " << at_tensor_sizes.npu_format_
+               << ", base_sizes: " << at_tensor_sizes.base_sizes_ << ", base_strides: " << at_tensor_sizes.base_strides_
+               << ", storage_sizes: " << at_tensor_sizes.storage_sizes_;
         }
         std::string res = ss.str();
         replace_and_append_newline(res);
@@ -553,8 +473,7 @@ inline std::string convert_debug_info(const TensorWrapper &tensor_r)
     }
 }
 
-inline std::string convert_debug_info(const TensorListWrapper &tensor_list_wrapper)
-{
+inline std::string convert_debug_info(const TensorListWrapper &tensor_list_wrapper) {
     const at::TensorList &at_tensor_list = tensor_list_wrapper.tensor_list_;
     std::stringstream ss;
     if (at_tensor_list.size() == 0) {
@@ -566,15 +485,13 @@ inline std::string convert_debug_info(const TensorListWrapper &tensor_list_wrapp
     }
 }
 
-template <typename T> std::string convert_debug_info(T value)
-{
+template <typename T> std::string convert_debug_info(T value) {
     std::string ss("No extra debug info for this param\n");
     return ss;
 }
 
 // convert "x, weight" -> {"x: ", "weight: "}
-inline std::vector<std::string> split_and_processing_args(const char* args)
-{
+inline std::vector<std::string> split_and_processing_args(const char *args) {
     std::vector<std::string> result;
     std::string s(args);
     size_t pos = 0;
@@ -588,15 +505,13 @@ inline std::vector<std::string> split_and_processing_args(const char* args)
     return result;
 }
 
-template <typename Tuple>
-inline bool compare_length_vector_tuple(std::vector<std::string>& vec, Tuple& tup)
-{
+template <typename Tuple> inline bool compare_length_vector_tuple(std::vector<std::string> &vec, Tuple &tup) {
     return vec.size() == std::tuple_size<std::remove_reference_t<decltype(tup)>>::value;
 }
 
 template <size_t Index = 0, typename... T>
-inline void concat_element_info_impl(const std::tuple<T...>& tpl, const std::vector<std::string>& vec, std::string& result)
-{
+inline void concat_element_info_impl(
+    const std::tuple<T...> &tpl, const std::vector<std::string> &vec, std::string &result) {
     if constexpr (Index < sizeof...(T)) {
         result += vec[Index];
         result += std::get<Index>(tpl);
@@ -605,15 +520,13 @@ inline void concat_element_info_impl(const std::tuple<T...>& tpl, const std::vec
 }
 
 template <typename... T>
-inline std::string concat_element_info(const std::vector<std::string>& vec, const std::tuple<T...>& tpl)
-{
+inline std::string concat_element_info(const std::vector<std::string> &vec, const std::tuple<T...> &tpl) {
     std::string result;
     concat_element_info_impl(tpl, vec, result);
     return result;
 }
 
-template <typename... Ts> inline std::string generate_log_infos(const char* arg_names, Ts &...args)
-{
+template <typename... Ts> inline std::string generate_log_infos(const char *arg_names, Ts &...args) {
     if constexpr (sizeof...(Ts) == 0) {
         return "";
     }
@@ -625,8 +538,7 @@ template <typename... Ts> inline std::string generate_log_infos(const char* arg_
     return log_info;
 }
 
-template <typename... Ts> inline std::string generate_debug_log_infos(const char* arg_names, Ts &...args)
-{
+template <typename... Ts> inline std::string generate_debug_log_infos(const char *arg_names, Ts &...args) {
     if constexpr (sizeof...(Ts) == 0) {
         return "";
     }
@@ -638,7 +550,7 @@ template <typename... Ts> inline std::string generate_debug_log_infos(const char
     return log_info;
 }
 
-}  // namespace utils
-}  // namespace op_plugin
+} // namespace utils
+} // namespace op_plugin
 
 #endif //  TORCHNPU_TORCH_NPU_UTILS_OP_LOG_UTILS_H_

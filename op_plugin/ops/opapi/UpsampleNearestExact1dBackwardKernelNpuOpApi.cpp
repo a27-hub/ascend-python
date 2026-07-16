@@ -20,20 +20,15 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor &upsample_nearest_exact1d_backward_out_slow(const at::Tensor &grad_output, at::IntArrayRef output_size,
-    at::IntArrayRef input_size, c10::optional<double> scales, at::Tensor &grad_input)
-{
+    at::IntArrayRef input_size, c10::optional<double> scales, at::Tensor &grad_input) {
     at::Tensor grad_input_slow =
         at::_upsample_nearest_exact1d_backward(grad_output.cpu(), output_size, input_size, scales);
     grad_input.copy_(grad_input_slow);
     return grad_input;
 }
 
-at::Tensor upsample_nearest_exact1d_backward_slow(
-    const at::Tensor &grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<double> scales)
-{
+at::Tensor upsample_nearest_exact1d_backward_slow(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, c10::optional<double> scales) {
     at::Tensor grad_input = npu_preparation::apply_tensor_without_format(grad_output, input_size);
 
     at::Tensor grad_input_slow =
@@ -43,8 +38,7 @@ at::Tensor upsample_nearest_exact1d_backward_slow(
 }
 
 at::Tensor &_upsample_nearest_exact1d_backward_out(const at::Tensor &grad_output, at::IntArrayRef output_size,
-    at::IntArrayRef input_size, c10::optional<double> scales, at::Tensor &grad_input)
-{
+    at::IntArrayRef input_size, c10::optional<double> scales, at::Tensor &grad_input) {
     DO_COMPATIBILITY(aclnnUpsampleNearestExact1dBackward,
         upsample_nearest_exact1d_backward_out_slow(grad_output, output_size, input_size, scales, grad_input));
 
@@ -56,8 +50,7 @@ at::Tensor &_upsample_nearest_exact1d_backward_out(const at::Tensor &grad_output
 }
 
 at::Tensor _upsample_nearest_exact1d_backward(const at::Tensor &grad_output, at::IntArrayRef output_size,
-    at::IntArrayRef input_size, c10::optional<double> scales)
-{
+    at::IntArrayRef input_size, c10::optional<double> scales) {
     DO_COMPATIBILITY(aclnnUpsampleNearestExact1dBackward,
         upsample_nearest_exact1d_backward_slow(grad_output, output_size, input_size, scales));
 
@@ -68,4 +61,4 @@ at::Tensor _upsample_nearest_exact1d_backward(const at::Tensor &grad_output, at:
     return grad_input;
 }
 
-}  // namespace op_api
+} // namespace op_api

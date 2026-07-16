@@ -18,6 +18,4 @@ TORCH_LIBRARY(myops, m) {
 }
 
 // 通过pybind将c++接口和python接口绑定
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("add_custom", &add_custom_autograd, "x + y");
-}
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) { m.def("add_custom", &add_custom_autograd, "x + y"); }

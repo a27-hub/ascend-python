@@ -19,8 +19,7 @@
 
 namespace acl_op {
 
-at::Tensor isposinf(const at::Tensor &self)
-{
+at::Tensor isposinf(const at::Tensor &self) {
     // convert args to cpu in order to use at kernel
     TORCH_NPU_WARN_ONCE(
         "Warning: kernel [isposinf] is not supported by NPU currently. Now this kernel is running on CPU.");
@@ -29,8 +28,7 @@ at::Tensor isposinf(const at::Tensor &self)
     return result.to(self.device());
 }
 
-at::Tensor& isposinf_out(const at::Tensor &self, at::Tensor &out)
-{
+at::Tensor &isposinf_out(const at::Tensor &self, at::Tensor &out) {
     // convert args to cpu in order to use at::native kernel
     TORCH_NPU_WARN_ONCE(
         "Warning: kernel [isposinf.out] is not supported by NPU currently. Now this kernel is running on CPU.");
@@ -40,4 +38,4 @@ at::Tensor& isposinf_out(const at::Tensor &self, at::Tensor &out)
     out.copy_(out_cpu);
     return out;
 }
-}  // acl_op
+} // acl_op

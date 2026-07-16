@@ -21,8 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace op_api {
 
-at::Tensor &maximum_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &maximum_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnMaximum, acl_op::maximum_out(self, other, result));
     if (is_ascend950_path()) {
         auto [self_device, other_device] = prepare_binary_tensors(self, other);
@@ -47,15 +46,14 @@ at::Tensor &maximum_out(const at::Tensor &self, const at::Tensor &other, at::Ten
     return result;
 }
 
-at::Tensor maximum(const at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor maximum(const at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnMaximum, acl_op::maximum(self, other));
     if (is_ascend950_path()) {
         auto [self_device, other_device] = prepare_binary_tensors(self, other);
         at::ScalarType result_dtype = at::native::result_type(self_device, other_device);
         auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
-        at::Tensor result = npu_preparation::apply_tensor_without_format(
-            output_size, self_device.options().dtype(result_dtype));
+        at::Tensor result =
+            npu_preparation::apply_tensor_without_format(output_size, self_device.options().dtype(result_dtype));
         EXEC_NPU_CMD(aclnnMaximum, self_device, other_device, result);
         return result;
     }
@@ -77,11 +75,10 @@ at::Tensor maximum(const at::Tensor &self, const at::Tensor &other)
     return result;
 }
 
-at::Tensor max(const at::Tensor &self)
-{
+at::Tensor max(const at::Tensor &self) {
     TORCH_CHECK(self.numel() > 0,
-    "max(): Expected reduction dim to be specified for input.numel() == 0. "
-    "Specify the reduction dim with the 'dim' argument.");
+        "max(): Expected reduction dim to be specified for input.numel() == 0. "
+        "Specify the reduction dim with the 'dim' argument.");
     DO_COMPATIBILITY(aclnnMax, acl_op::max(self));
     at::SmallVector<int64_t, op_infer::SIZE> dims = op_plugin::utils::get_dimlist_for_tensor(self);
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, false);
@@ -90,9 +87,8 @@ at::Tensor max(const at::Tensor &self)
     return result;
 }
 
-std::tuple<at::Tensor &, at::Tensor &> max_out(const at::Tensor &self, int64_t dim, bool keepdim, at::Tensor &output,
-                                               at::Tensor &indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> max_out(
+    const at::Tensor &self, int64_t dim, bool keepdim, at::Tensor &output, at::Tensor &indices) {
     DO_COMPATIBILITY(aclnnMaxDim, acl_op::max_out(self, dim, keepdim, output, indices));
     at::SmallVector<int64_t, op_infer::SIZE> dims = {dim};
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
@@ -102,8 +98,7 @@ std::tuple<at::Tensor &, at::Tensor &> max_out(const at::Tensor &self, int64_t d
     return std::tie(output, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> max(const at::Tensor &self, int64_t dim, bool keepdim)
-{
+std::tuple<at::Tensor, at::Tensor> max(const at::Tensor &self, int64_t dim, bool keepdim) {
     DO_COMPATIBILITY(aclnnMaxDim, acl_op::max(self, dim, keepdim));
     at::SmallVector<int64_t, op_infer::SIZE> dims = {dim};
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
@@ -114,8 +109,7 @@ std::tuple<at::Tensor, at::Tensor> max(const at::Tensor &self, int64_t dim, bool
     return std::tie(outputs, indices);
 }
 
-at::Tensor &max_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &max_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnMaximum, acl_op::max_out(self, other, result));
     at::Tensor cp_self = self;
     if (at_npu::native::OpPreparation::IsCPUScalar(self)) {
@@ -134,16 +128,14 @@ at::Tensor &max_out(const at::Tensor &self, const at::Tensor &other, at::Tensor 
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor &, at::Tensor &> max_out(const at::Tensor &self, at::Dimname dim, bool keepdim,
-                                               at::Tensor &output, at::Tensor &indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> max_out(
+    const at::Tensor &self, at::Dimname dim, bool keepdim, at::Tensor &output, at::Tensor &indices) {
     DO_COMPATIBILITY(aclnnMaxDim, acl_op::max_out(self, dim, keepdim, output, indices));
 
     return max_out(self, dimname_to_position(self, dim), keepdim, output, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> max(const at::Tensor &self, at::Dimname dim, bool keepdim)
-{
+std::tuple<at::Tensor, at::Tensor> max(const at::Tensor &self, at::Dimname dim, bool keepdim) {
     DO_COMPATIBILITY(aclnnMaxDim, acl_op::max(self, dim, keepdim));
     return op_api::max(self, dimname_to_position(self, dim), keepdim);
 }

@@ -1,62 +1,62 @@
 ---
-Language: Cpp
-Standard: c++17
+Language: Cpp                        # 格式化语言：C++
+Standard: c++17                      # C++ 标准版本：C++17
 
 # ====================== 行宽不超过 120 ======================
-ColumnLimit: 120
+ColumnLimit: 120                     # 单行最大列数，超出会自动换行
 
 # ====================== 空格缩进 ======================
-IndentWidth: 4
-TabWidth: 4
-UseTab: Never
+IndentWidth: 4                       # 每级缩进 4 个空格
+TabWidth: 4                          # Tab 显示宽度 4 列
+UseTab: Never                        # 永不使用 Tab，一律用空格
 
 # ====================== &/* 跟随变量名 ======================
-PointerAlignment: Right
-ReferenceAlignment: Right
+PointerAlignment: Right              # 指针 * 紧贴变量名：int *p
+ReferenceAlignment: Right            # 引用 & 紧贴变量名：int &r
 
 # ====================== if/for/while语句必须加大括号 ======================
-InsertBraces: true
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
-AllowShortBlocksOnASingleLine: false
+InsertBraces: true                   # 自动为单行 if/for/while 补 {}
+AllowShortIfStatementsOnASingleLine: false   # 禁止 if 单行写法
+AllowShortLoopsOnASingleLine: false  # 禁止 for/while 单行写法
+AllowShortBlocksOnASingleLine: false # 禁止空块单行写法 {}
 
 # ====================== 表达式换行保持一致性，运算符放行末 ======================
-BreakBeforeBinaryOperators: None
+BreakBeforeBinaryOperators: None     # 二元运算符放行末：a +\n b（不换到行首）
 
 # ====================== 使用 K&R 缩进风格 ======================
-BreakBeforeBraces: Custom
+BreakBeforeBraces: Custom            # 自定义大括号位置（配合 BraceWrapping）
 BraceWrapping:
-  AfterClass: false
-  AfterControlStatement: false
-  AfterEnum: false
-  AfterFunction: false
-  AfterNamespace: false
-  AfterStruct: false
-  AfterUnion: false
-  BeforeElse: false
-  IndentBraces: false
+  AfterClass: false                  # class { 不换行
+  AfterControlStatement: false       # if/for/while { 不换行
+  AfterEnum: false                   # enum { 不换行
+  AfterFunction: false               # 函数 { 不换行
+  AfterNamespace: false              # namespace { 不换行
+  AfterStruct: false                 # struct { 不换行
+  AfterUnion: false                  # union { 不换行
+  BeforeElse: false                  # } else { 不换行
+  IndentBraces: false                # 大括号本身不额外缩进
 
 # ====================== 合理安排空行，保持代码紧凑 ======================
-MaxEmptyLinesToKeep: 1
-KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1               # 最多保留 1 个连续空行
+KeepEmptyLinesAtTheStartOfBlocks: false  # 删除代码块开头的空行
 
 # ====================== 注释格式 ======================
-SpacesBeforeTrailingComments: 1  # 代码与注释之间 1 个空格
+SpacesBeforeTrailingComments: 1      # 行尾注释前留 1 个空格
 
 # ###########################################################
 # 强制关闭所有额外自动行为（无隐藏规则）
 # ###########################################################
-SortIncludes: false                  # 关闭头文件排序
-FixNamespaceComments: false          # 不修改命名空间注释
-ReflowComments: false                # 不自动重排注释换行
-SortUsingDeclarations: false         # 不排序 using
-IndentPPDirectives: None             # 不缩进宏
-AlignAfterOpenBracket: DontAlign     # 不自动对齐括号
-AlignArrayOfStructures: None         # 不自动对齐结构体
-AlignConsecutiveAssignments: false   # 不自动对齐赋值
-AlignConsecutiveBitFields: false
-AlignConsecutiveDeclarations: false
-AlignConsecutiveMacros: false
-AlignEscapedNewlines: DontAlign
-AlignOperands: DontAlign
-AlignTrailingComments: false
+SortIncludes: false                  # 关闭头文件排序（保留原序）
+FixNamespaceComments: false          # 不自动补/改 namespace 结尾注释
+ReflowComments: false                # 不自动重排多行注释换行
+SortUsingDeclarations: false         # 不排序 using 声明
+IndentPPDirectives: None             # 不缩进多行宏的 #
+AlignAfterOpenBracket: DontAlign     # 不自动对齐括号内换行参数
+AlignArrayOfStructures: None         # 不自动对齐结构体数组初始化
+AlignConsecutiveAssignments: false   # 不自动对齐连续 = 赋值
+AlignConsecutiveBitFields: false     # 不自动对齐连续位域
+AlignConsecutiveDeclarations: false  # 不自动对齐连续变量名
+AlignConsecutiveMacros: false        # 不自动对齐连续宏定义
+AlignEscapedNewlines: DontAlign      # 不对齐续行反斜杠 \
+AlignOperands: DontAlign             # 不自动对齐二元运算的操作数
+AlignTrailingComments: false         # 不自动对齐行尾注释

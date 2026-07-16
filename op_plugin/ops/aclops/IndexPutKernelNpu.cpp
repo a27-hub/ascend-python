@@ -35,23 +35,20 @@ const std::string indexed_sizes_str = "indexed_sizes";
 const std::string indexed_strides_str = "indexed_strides";
 const std::string aicore_str = "AiCore";
 
-void check_no_overlap(const at::Tensor& a, const at::Tensor& b)
-{
+void check_no_overlap(const at::Tensor &a, const at::Tensor &b) {
     const auto overlap_status = at_npu::native::get_overlap_status(a, b);
     TORCH_CHECK(overlap_status != at_npu::native::MemOverlapStatus::PARTIAL &&
-                    overlap_status != at_npu::native::MemOverlapStatus::FULL,
-                "unsupported operation: some elements of the input tensor and "
-                "the written-to tensor refer to a single memory location. "
-                "Please clone() the tensor before performing the operation.",
-                OPS_ERROR(ErrCode::NOT_SUPPORT));
+            overlap_status != at_npu::native::MemOverlapStatus::FULL,
+        "unsupported operation: some elements of the input tensor and "
+        "the written-to tensor refer to a single memory location. "
+        "Please clone() the tensor before performing the operation.",
+        OPS_ERROR(ErrCode::NOT_SUPPORT));
 }
 
 bool is_aicpu_valid(const at::Tensor &self, const std::vector<at::Tensor> &all_defined_indices,
-                    const at::SmallVector<int64_t, N> masks)
-{
+    const at::SmallVector<int64_t, N> masks) {
     // using aicpu at non-binary scene
-    if (!at_npu::native::env::CheckJitDisable() &&
-        c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+    if (!at_npu::native::env::CheckJitDisable() && c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
         return true;
     }
     // using aicore when index is continous, otherwise aicpu
@@ -85,17 +82,16 @@ bool is_aicpu_valid(const at::Tensor &self, const std::vector<at::Tensor> &all_d
     for (uint32_t i = all_defined_indices.size(); i < self.dim(); i++) {
         tail_size = tail_size * self.sizes()[i];
     }
-    if (self.scalar_type() != at::kHalf && self.scalar_type() != at::kFloat &&
-        self.scalar_type() != at::kBFloat16 && (all_defined_indices[0].numel() > 200 || tail_size > 128)) {
+    if (self.scalar_type() != at::kHalf && self.scalar_type() != at::kFloat && self.scalar_type() != at::kBFloat16 &&
+        (all_defined_indices[0].numel() > 200 || tail_size > 128)) {
         return true;
     }
     return false;
 }
 
 at::Tensor &index_put_aicore_nocheck(at::Tensor &self, const std::vector<at::Tensor> &all_defined_indices,
-                                     at::SmallVector<int64_t, N> masks, at::SmallVector<int64_t, N> expand_masks,
-                                     const at::Tensor &value, bool accumulate)
-{
+    at::SmallVector<int64_t, N> masks, at::SmallVector<int64_t, N> expand_masks, const at::Tensor &value,
+    bool accumulate) {
     if (value.numel() == 0) {
         return self;
     }
@@ -121,9 +117,7 @@ at::Tensor &index_put_aicore_nocheck(at::Tensor &self, const std::vector<at::Ten
         string input_name = "indices" + std::to_string(i);
         cmd.Input(all_defined_indices[i], input_name);
     }
-    cmd.Output(temp_self, x_str)
-       .Attr("accumulate", accumulate)
-       .Run();
+    cmd.Output(temp_self, x_str).Attr("accumulate", accumulate).Run();
     if (self.scalar_type() == at::ScalarType::Half) {
         temp_self = at_npu::native::custom_ops::_npu_dtype_cast(temp_self, at::ScalarType::Half);
         self.copy_(temp_self);
@@ -133,9 +127,8 @@ at::Tensor &index_put_aicore_nocheck(at::Tensor &self, const std::vector<at::Ten
     return self;
 }
 
-at::SmallVector<int64_t, N> npu_expand_tensors_mask(const at::Tensor &self,
-                                                    const torch::List<c10::optional<at::Tensor>> &indices)
-{
+at::SmallVector<int64_t, N> npu_expand_tensors_mask(
+    const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &indices) {
     at::SmallVector<int64_t, N> result;
     for (c10::optional<at::Tensor> index_opt : indices) {
         if (!index_opt.has_value()) {
@@ -155,9 +148,8 @@ at::SmallVector<int64_t, N> npu_expand_tensors_mask(const at::Tensor &self,
 }
 
 at::Tensor &index_put_aicpu_nocheck(at::Tensor &result, const at::Tensor &self,
-                                    std::vector<at::Tensor> all_defined_indices, at::SmallVector<int64_t, N> masks,
-                                    const at::Tensor &value, bool accumulate)
-{
+    std::vector<at::Tensor> all_defined_indices, at::SmallVector<int64_t, N> masks, const at::Tensor &value,
+    bool accumulate) {
     if (value.numel() == 0) {
         return result;
     }
@@ -180,10 +172,7 @@ at::Tensor &index_put_aicpu_nocheck(at::Tensor &result, const at::Tensor &self,
         string input_name = "indices" + std::to_string(i);
         cmd.Input(all_defined_indices[i], input_name);
     }
-    cmd.Output(result, x_str)
-       .Attr("_exclude_engines", aicore_str)
-       .Attr("accumulate", accumulate)
-       .Run();
+    cmd.Output(result, x_str).Attr("_exclude_engines", aicore_str).Attr("accumulate", accumulate).Run();
 
     if (self.scalar_type() == at::ScalarType::Half) {
         result = at_npu::native::custom_ops::_npu_dtype_cast(result, at::ScalarType::Half);
@@ -192,8 +181,7 @@ at::Tensor &index_put_aicpu_nocheck(at::Tensor &result, const at::Tensor &self,
 }
 
 at::Tensor &index_put_aicpu(at::Tensor &result, at::Tensor &self, std::vector<at::Tensor> all_defined_indices,
-                            at::SmallVector<int64_t, N> masks, const at::Tensor &value, bool accumulate)
-{
+    at::SmallVector<int64_t, N> masks, const at::Tensor &value, bool accumulate) {
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
         index_put_aicpu_nocheck(contiguous_self, contiguous_self, all_defined_indices, masks, value, accumulate);
@@ -205,9 +193,8 @@ at::Tensor &index_put_aicpu(at::Tensor &result, at::Tensor &self, std::vector<at
 }
 
 at::Tensor &index_put_aicore(at::Tensor &self, std::vector<at::Tensor> indices_expand,
-                             at::SmallVector<int64_t, N> masks, at::SmallVector<int64_t, N> bool_masks,
-                             const at::Tensor &value_broadcast, bool accumulate)
-{
+    at::SmallVector<int64_t, N> masks, at::SmallVector<int64_t, N> bool_masks, const at::Tensor &value_broadcast,
+    bool accumulate) {
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
         index_put_aicore_nocheck(contiguous_self, indices_expand, masks, bool_masks, value_broadcast, accumulate);
@@ -220,31 +207,27 @@ at::Tensor &index_put_aicore(at::Tensor &self, std::vector<at::Tensor> indices_e
 } // namespace
 
 at::Tensor index_put(const at::Tensor &self, const c10::List<c10::optional<at::Tensor>> &indices,
-                     const at::Tensor &value, bool accumulate)
-{
+    const at::Tensor &value, bool accumulate) {
     return self.clone(at::MemoryFormat::Contiguous).index_put_(indices, value, accumulate);
 }
 
 at::Tensor &index_put_(at::Tensor &self, const c10::List<c10::optional<at::Tensor>> &indices, const at::Tensor &value,
-                       const bool accumulate)
-{
+    const bool accumulate) {
     return at::_index_put_impl_(self, indices, value, accumulate, false);
 }
 
 at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at::Tensor>> &indices,
-                             const at::Tensor &value, const bool accumulate, const bool unsafe)
-{
+    const at::Tensor &value, const bool accumulate, const bool unsafe) {
     if (self.device().type() == at::kCPU) {
         return at::native::_index_put_impl_(self, indices, value, accumulate, unsafe);
     }
     if (at_npu::native::has_internal_overlap(self) == at_npu::native::MemOverlap::YES) {
-        TORCH_WARN(
-            "Use of index_put_ on expanded tensors is deprecated. "
-            "Please clone() the tensor before performing this operation. "
-            "This also applies to advanced indexing e.g. tensor[indices] = tensor");
+        TORCH_WARN("Use of index_put_ on expanded tensors is deprecated. "
+                   "Please clone() the tensor before performing this operation. "
+                   "This also applies to advanced indexing e.g. tensor[indices] = tensor");
     }
     check_no_overlap(self, value);
-    for (const c10::optional<at::Tensor>& index : indices) {
+    for (const c10::optional<at::Tensor> &index : indices) {
         if (index.has_value()) {
             check_no_overlap(self, *index);
         }
@@ -261,9 +244,8 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
     }
     auto info = op_plugin::AdvanceIndex::make_info(self, indices_expand_list);
     TORCH_CHECK(op_plugin::AdvanceIndex::is_expandable_to(value.sizes(), info.src.sizes()),
-        "shape mismatch: value tensor of shape ", value.sizes(),
-        " cannot be broadcast to indexing result of shape ", info.src.sizes(),
-        OPS_ERROR(ErrCode::PARAM));
+        "shape mismatch: value tensor of shape ", value.sizes(), " cannot be broadcast to indexing result of shape ",
+        info.src.sizes(), OPS_ERROR(ErrCode::PARAM));
     for (c10::optional<at::Tensor> index_opt : indices_expand) {
         if (index_opt.has_value()) {
             const auto &index = *index_opt;

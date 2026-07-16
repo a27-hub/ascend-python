@@ -22,8 +22,7 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self, const at::Tensor &gamma)
-{
+c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self, const at::Tensor &gamma) {
     c10::SmallVector<int64_t, SIZE> ret;
     auto rstd_dim = self.dim() - gamma.dim();
     for (int64_t i = 0; i < self.dim(); i++) {
@@ -38,9 +37,9 @@ c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self, const at:
 
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor> npu_rms_norm(const at::Tensor &self, const at::Tensor &gamma, double epsilon)
-{
-    TORCH_CHECK(self.dim() >= gamma.dim(), "The gamma shape should not be bigger than self shape." + OPS_ERROR(ErrCode::PARAM));
+std::tuple<at::Tensor, at::Tensor> npu_rms_norm(const at::Tensor &self, const at::Tensor &gamma, double epsilon) {
+    TORCH_CHECK(
+        self.dim() >= gamma.dim(), "The gamma shape should not be bigger than self shape." + OPS_ERROR(ErrCode::PARAM));
     at::Tensor y = npu_preparation::apply_tensor(self.sizes(), self.options(), self);
     auto rstd_shape = get_rstd_shape(self, gamma);
     at::Tensor rstd = npu_preparation::apply_tensor(rstd_shape, self.options().dtype(at::kFloat), self);

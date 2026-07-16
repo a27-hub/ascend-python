@@ -22,10 +22,9 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_calcu_util = at_npu::native::CalcuOpUtil;
 
-void _split_and_exec_npu_cmd_reciprocal(const at::TensorList tensors1, at::TensorList result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_reciprocal(const at::TensorList tensors1, at::TensorList result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
-    
+
     size_t max_tensor_count = is_inplace ? SINGLE_FOREACH_OP_TENSOR_COUNT : DOUBLE_FOREACH_OP_TENSOR_COUNT;
 
     size_t loop_time = tensor_count / max_tensor_count;
@@ -47,12 +46,11 @@ void _split_and_exec_npu_cmd_reciprocal(const at::TensorList tensors1, at::Tenso
     }
 }
 
-void _foreach_reciprocal_(const at::TensorList self)
-{
+void _foreach_reciprocal_(const at::TensorList self) {
     DO_COMPATIBILITY(aclnnForeachReciprocal, at::native::foreach_tensor_reciprocal_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_reciprocal_slow_(self);
     }
@@ -68,18 +66,17 @@ void _foreach_reciprocal_(const at::TensorList self)
 
     auto scalar_type = self[0].scalar_type();
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::BFloat16,
-                "input must be half, float or bfloat16", OPS_ERROR(ErrCode::TYPE));
+            scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float or bfloat16", OPS_ERROR(ErrCode::TYPE));
 
     _split_and_exec_npu_cmd_reciprocal(self, self, true);
 }
 
-std::vector<at::Tensor> _foreach_reciprocal(const at::TensorList tensors)
-{
+std::vector<at::Tensor> _foreach_reciprocal(const at::TensorList tensors) {
     DO_COMPATIBILITY(aclnnForeachReciprocal, at::native::foreach_tensor_reciprocal_slow(tensors));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_reciprocal_slow(tensors);
     }
@@ -91,15 +88,15 @@ std::vector<at::Tensor> _foreach_reciprocal(const at::TensorList tensors)
 
     auto scalar_type = tensors[0].scalar_type();
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::BFloat16,
-                "input must be half, float or bfloat16", OPS_ERROR(ErrCode::TYPE));
+            scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float or bfloat16", OPS_ERROR(ErrCode::TYPE));
 
     // construct output tensorlist
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size,
-                                                                      tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 

@@ -18,15 +18,11 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-    using npu_preparation = at_npu::native::OpPreparation;
+using npu_preparation = at_npu::native::OpPreparation;
 
-    at::Tensor npu_interleave_rope(
-        const at::Tensor &x,
-        const at::Tensor &cos,
-        const at::Tensor &sin)
-    {
-        at::Tensor out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-        EXEC_NPU_CMD(aclnnInterleaveRope, x, cos, sin, out);
-        return out;
-    }
+at::Tensor npu_interleave_rope(const at::Tensor &x, const at::Tensor &cos, const at::Tensor &sin) {
+    at::Tensor out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+    EXEC_NPU_CMD(aclnnInterleaveRope, x, cos, sin, out);
+    return out;
+}
 } // namespace op_api

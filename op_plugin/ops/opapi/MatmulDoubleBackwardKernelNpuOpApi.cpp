@@ -26,10 +26,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 const int8_t ALLOW_FP32_DOWN_PRECISION = 1;
 const int8_t KEEP_DTYPE = 0;
 
-static inline void matmul_implement_npu(at::Tensor &out,
-                                        const at::Tensor &self,
-                                        const at::Tensor &mat2)
-{
+static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self, const at::Tensor &mat2) {
     // allow dicrease precision
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     EXEC_NPU_CMD(aclnnMatmul, self, mat2, out, cube_math_type);
@@ -37,12 +34,8 @@ static inline void matmul_implement_npu(at::Tensor &out,
     return;
 }
 
-at::Tensor matmul_grad_double_backward(const at::Tensor &self,
-                                       const at::Tensor &other,
-                                       const at::Tensor &grad_self,
-                                       const at::Tensor &grad_other,
-                                       const at::Tensor &grad_out)
-{
+at::Tensor matmul_grad_double_backward(const at::Tensor &self, const at::Tensor &other, const at::Tensor &grad_self,
+    const at::Tensor &grad_other, const at::Tensor &grad_out) {
     /* grad_grad = grad_self * other + self * grad_other */
     at::Tensor grad_self_to_grad = at::zeros_like(grad_out);
     at::Tensor grad_other_to_grad = at::zeros_like(grad_out);
@@ -56,12 +49,8 @@ at::Tensor matmul_grad_double_backward(const at::Tensor &self,
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> matmul_double_backward(const c10::optional<at::Tensor> &grad_self_opt,
-                                                                      const c10::optional<at::Tensor> &grad_other_opt,
-                                                                      const at::Tensor &grad_out,
-                                                                      const at::Tensor &self,
-                                                                      const at::Tensor &other,
-                                                                      std::array<bool, 3> grad_input_mask)
-{
+    const c10::optional<at::Tensor> &grad_other_opt, const at::Tensor &grad_out, const at::Tensor &self,
+    const at::Tensor &other, std::array<bool, 3> grad_input_mask) {
     if (!grad_out.defined()) {
         return std::make_tuple(at::Tensor(), at::Tensor(), at::Tensor());
     }
@@ -103,4 +92,3 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> matmul_double_backward(const c10:
 }
 
 } // namespace op_api
-
