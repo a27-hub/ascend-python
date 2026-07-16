@@ -24,8 +24,7 @@ namespace {
 // format are base format (the format of src and dst are all nchw now)
 // dtype are same
 // so the view_value and ReflushDescBySelf are base on the hypothesis above.
-bool AicoreValid(at::Tensor &self, const at::Tensor &src)
-{
+bool AicoreValid(at::Tensor &self, const at::Tensor &src) {
     const auto &dst_storage_sizes = torch_npu::NPUBridge::GetNpuStorageImpl(self)->npu_desc_.storage_sizes_;
     auto self_size = self.sizes();
     auto self_stride = self.strides();
@@ -77,8 +76,7 @@ bool AicoreValid(at::Tensor &self, const at::Tensor &src)
 }
 } // namespace
 
-at::Tensor &npu_view_copy(at::Tensor &self, const at::Tensor &other, bool non_blocking)
-{
+at::Tensor &npu_view_copy(at::Tensor &self, const at::Tensor &other, bool non_blocking) {
     auto self_size = self.sizes();
     auto self_stride = self.strides();
     auto src_size = other.sizes();

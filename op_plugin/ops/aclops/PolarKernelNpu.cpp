@@ -19,8 +19,7 @@
 
 namespace acl_op {
 
-at::Tensor& polar_out(const at::Tensor& abs, const at::Tensor& angle, at::Tensor& out)
-{
+at::Tensor &polar_out(const at::Tensor &abs, const at::Tensor &angle, at::Tensor &out) {
     TORCH_WARN_ONCE(
         "Warning: kernel [polar.out] is not supported by NPU currently. Now this kernel is running on CPU.");
     auto abs_cpu = abs.cpu();
@@ -32,10 +31,8 @@ at::Tensor& polar_out(const at::Tensor& abs, const at::Tensor& angle, at::Tensor
     return out;
 }
 
-at::Tensor polar(const at::Tensor& abs, const at::Tensor& angle)
-{
-    TORCH_WARN_ONCE(
-        "Warning: kernel [polar] is not supported by NPU currently. Now this kernel is running on CPU.");
+at::Tensor polar(const at::Tensor &abs, const at::Tensor &angle) {
+    TORCH_WARN_ONCE("Warning: kernel [polar] is not supported by NPU currently. Now this kernel is running on CPU.");
 
     auto abs_cpu = abs.cpu();
     auto angle_cpu = angle.cpu();

@@ -22,22 +22,18 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-inline void max_unpool2d_check(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size)
-{
-    TORCH_CHECK(output_size.size() == 2, "There should be exactly two elements (height, width) in output_size"
-        + OPS_ERROR(ErrCode::PARAM));
+inline void max_unpool2d_check(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size) {
+    TORCH_CHECK(output_size.size() == 2,
+        "There should be exactly two elements (height, width) in output_size" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((self.ndimension() == 3 || self.ndimension() == 4),
-        "Input to max_unpooling2d should be a 3d or 4d Tensor"
-        + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.sizes() == indices.sizes(), "Shape of indices should match shape of input"
-        + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.numel() > 0, "Input must be non-empty"
-        + OPS_ERROR(ErrCode::PARAM));
+        "Input to max_unpooling2d should be a 3d or 4d Tensor" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        self.sizes() == indices.sizes(), "Shape of indices should match shape of input" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(self.numel() > 0, "Input must be non-empty" + OPS_ERROR(ErrCode::PARAM));
 }
 
-at::Tensor &max_unpool2d_out_nocheck(at::Tensor &output, const at::Tensor &self, const at::Tensor &indices,
-                                     at::IntArrayRef output_size)
-{
+at::Tensor &max_unpool2d_out_nocheck(
+    at::Tensor &output, const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size) {
     auto oheight = output_size[0];
     auto owidth = output_size[1];
     auto self_contiguous = self.contiguous();
@@ -76,9 +72,8 @@ at::Tensor &max_unpool2d_out_nocheck(at::Tensor &output, const at::Tensor &self,
 }
 } // namespace
 
-at::Tensor &max_unpool2d_out(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size,
-                             at::Tensor &out)
-{
+at::Tensor &max_unpool2d_out(
+    const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size, at::Tensor &out) {
     max_unpool2d_check(self, indices, output_size);
     npu_preparation::CheckOut({self, indices}, out, self, {0});
     if (!npu_utils::check_match(&out)) {
@@ -92,8 +87,7 @@ at::Tensor &max_unpool2d_out(const at::Tensor &self, const at::Tensor &indices, 
     return out;
 }
 
-at::Tensor max_unpool2d(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size)
-{
+at::Tensor max_unpool2d(const at::Tensor &self, const at::Tensor &indices, at::IntArrayRef output_size) {
     max_unpool2d_check(self, indices, output_size);
     auto output = npu_preparation::apply_tensor(self, {0});
     max_unpool2d_out_nocheck(output, self, indices, output_size);

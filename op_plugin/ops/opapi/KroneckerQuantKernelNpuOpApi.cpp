@@ -24,14 +24,14 @@ const int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 const int64_t FP4_IN_UINT8_NUM = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 
-c10::SmallVector<int64_t, SIZE> cal_out_size(const at::Tensor& self, aclDataType dst_type)
-{
+c10::SmallVector<int64_t, SIZE> cal_out_size(const at::Tensor &self, aclDataType dst_type) {
     auto outputSize = op_infer::array_to_small_vector(self.sizes());
     auto dimNum = self.dim();
     if (dst_type == aclDataType::ACL_FLOAT4_E2M1) {
         TORCH_CHECK(outputSize[dimNum - 1] % FP4_IN_UINT8_NUM == 0,
-                    "The last dim input shape must be divisible by 2 if "
-                    "output dtype is torch_npu.float4_e2m1" + OPS_ERROR(ErrCode::PARAM));
+            "The last dim input shape must be divisible by 2 if "
+            "output dtype is torch_npu.float4_e2m1" +
+                OPS_ERROR(ErrCode::PARAM));
         c10::SmallVector<int64_t, SIZE> output;
         output = {outputSize[0], outputSize[dimNum - 1] * outputSize[dimNum - 2] / FP4_IN_UINT8_NUM};
         return output;
@@ -42,8 +42,7 @@ c10::SmallVector<int64_t, SIZE> cal_out_size(const at::Tensor& self, aclDataType
     return outputSize;
 }
 
-c10::SmallVector<int64_t, SIZE> cal_quant_scale_size(const at::Tensor& self, aclDataType dst_type)
-{
+c10::SmallVector<int64_t, SIZE> cal_quant_scale_size(const at::Tensor &self, aclDataType dst_type) {
     int64_t resultSize = self.size(0);
     auto outputSize = op_infer::array_to_small_vector(self.sizes());
     auto dimNum = self.dim();
@@ -57,22 +56,19 @@ c10::SmallVector<int64_t, SIZE> cal_quant_scale_size(const at::Tensor& self, acl
     return outputSize;
 }
 
-::std::tuple<at::Tensor, at::Tensor> npu_kronecker_quant(const at::Tensor& x, const at::Tensor& kronecker_p1,
-                                                         const at::Tensor& kronecker_p2,
-                                                         c10::optional<double> clip_ratio,
-                                                         c10::optional<int64_t> dst_dtype,
-                                                         c10::optional<double> dst_type_max)
-{
+::std::tuple<at::Tensor, at::Tensor> npu_kronecker_quant(const at::Tensor &x, const at::Tensor &kronecker_p1,
+    const at::Tensor &kronecker_p2, c10::optional<double> clip_ratio, c10::optional<int64_t> dst_dtype,
+    c10::optional<double> dst_type_max) {
     aclDataType dst_acltype = aclDataType::ACL_INT32;
     if (dst_dtype.has_value()) {
         dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
     }
     auto out_dtype = dst_acltype == aclDataType::ACL_FLOAT4_E2M1
-                         ? npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E2M1)
-                         : at::kInt;
+        ? npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E2M1)
+        : at::kInt;
     auto scale_dtype = dst_acltype == aclDataType::ACL_FLOAT4_E2M1
-                         ? npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT8_E8M0)
-                         : at::kFloat;
+        ? npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT8_E8M0)
+        : at::kFloat;
     auto clip_ratio_attr = clip_ratio.value_or(1.0);
     auto dst_type_max_attr = dst_type_max.value_or(0.0);
     at::SmallVector<int64_t, SIZE> out_size = cal_out_size(x, dst_acltype);
@@ -82,9 +78,10 @@ c10::SmallVector<int64_t, SIZE> cal_quant_scale_size(const at::Tensor& self, acl
         npu_preparation::apply_tensor_without_format(quant_scale_size, x.options().dtype(scale_dtype));
     TensorWrapper out_wrapper = {out, dst_acltype};
     TensorWrapper scale_wrapper = {quant_scale,
-        dst_acltype == aclDataType::ACL_FLOAT4_E2M1? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
+        dst_acltype == aclDataType::ACL_FLOAT4_E2M1 ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
     if (check_aclnn_kernel_available("aclnnFlatQuantV2")) {
-        EXEC_NPU_CMD(aclnnFlatQuantV2, x, kronecker_p1, kronecker_p2, clip_ratio_attr, dst_type_max_attr, out_wrapper, scale_wrapper);
+        EXEC_NPU_CMD(aclnnFlatQuantV2, x, kronecker_p1, kronecker_p2, clip_ratio_attr, dst_type_max_attr, out_wrapper,
+            scale_wrapper);
     } else {
         EXEC_NPU_CMD(aclnnFlatQuant, x, kronecker_p1, kronecker_p2, clip_ratio_attr, out_wrapper, scale_wrapper);
     }

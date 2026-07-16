@@ -20,13 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& __ior__(at::Tensor& self, const at::Tensor& other)
-{
-    return self.bitwise_or_(other);
-}
+at::Tensor &__ior__(at::Tensor &self, const at::Tensor &other) { return self.bitwise_or_(other); }
 
-at::Tensor& __ior__(at::Tensor& self, const at::Scalar& other)
-{
-    return self.bitwise_or_(other);
-}
+at::Tensor &__ior__(at::Tensor &self, const at::Scalar &other) { return self.bitwise_or_(other); }
 }

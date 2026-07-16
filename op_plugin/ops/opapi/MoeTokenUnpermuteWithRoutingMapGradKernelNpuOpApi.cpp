@@ -21,15 +21,9 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> npu_moe_token_unpermute_with_routing_map_grad(
-    const at::Tensor &unpermuted_tokens_grad,
-    const at::Tensor &out_index,
-    const at::Tensor &permuted_token_id,
-    const c10::optional<at::Tensor> &routing_map,
-    const c10::optional<at::Tensor> &permuted_tokens,
-    const c10::optional<at::Tensor> &probs,
-    bool drop_and_pad,
-    at::IntArrayRef restore_shape)
-{
+    const at::Tensor &unpermuted_tokens_grad, const at::Tensor &out_index, const at::Tensor &permuted_token_id,
+    const c10::optional<at::Tensor> &routing_map, const c10::optional<at::Tensor> &permuted_tokens,
+    const c10::optional<at::Tensor> &probs, bool drop_and_pad, at::IntArrayRef restore_shape) {
     at::Tensor permuted_tokens_grad_out;
     at::Tensor probs_grad_out;
 
@@ -40,17 +34,8 @@ std::tuple<at::Tensor, at::Tensor> npu_moe_token_unpermute_with_routing_map_grad
             probs.value().sizes(), unpermuted_tokens_grad.options().dtype());
     }
 
-    EXEC_NPU_CMD(aclnnMoeTokenUnpermuteWithRoutingMapGrad,
-        unpermuted_tokens_grad,
-        out_index,
-        permuted_token_id,
-        routing_map,
-        permuted_tokens,
-        probs,
-        drop_and_pad,
-        restore_shape,
-        permuted_tokens_grad_out,
-        probs_grad_out);
+    EXEC_NPU_CMD(aclnnMoeTokenUnpermuteWithRoutingMapGrad, unpermuted_tokens_grad, out_index, permuted_token_id,
+        routing_map, permuted_tokens, probs, drop_and_pad, restore_shape, permuted_tokens_grad_out, probs_grad_out);
     return std::tie(permuted_tokens_grad_out, probs_grad_out);
 }
-}  // namespace op_api
+} // namespace op_api

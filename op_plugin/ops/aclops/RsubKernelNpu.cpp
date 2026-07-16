@@ -20,15 +20,14 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor rsub_dest_output(const at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor rsub_dest_output(const at::Tensor &self, const at::Tensor &other) {
     bool is_self_wrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
 
     return is_self_wrapped ? other : self;
 }
 
-at::Tensor &rsub_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &other, at::Scalar alpha)
-{
+at::Tensor &rsub_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &other, at::Scalar alpha) {
     // other*alpha
     at::Tensor other_mul_result;
     if (!op_plugin::utils::is_scalar_one(alpha)) {
@@ -45,8 +44,7 @@ at::Tensor &rsub_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, con
     return result;
 }
 
-at::Tensor &rsub_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, at::Scalar other, at::Scalar alpha)
-{
+at::Tensor &rsub_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, at::Scalar other, at::Scalar alpha) {
     // other*alpha
     at::Tensor scalar_value(at::mul(self, alpha));
 
@@ -57,8 +55,7 @@ at::Tensor &rsub_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, at:
 }
 } // namespace
 
-at::Tensor rsub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha)
-{
+at::Tensor rsub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha) {
     at::Tensor output_tensor = rsub_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor result = npu_preparation::apply_tensor(output_tensor, output_size);
@@ -67,8 +64,7 @@ at::Tensor rsub(const at::Tensor &self, const at::Tensor &other, const at::Scala
     return result;
 }
 
-at::Tensor rsub(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
-{
+at::Tensor rsub(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha) {
     at::Tensor result = npu_preparation::apply_tensor(self);
     rsub_out_npu_nocheck(result, self, other, alpha);
 

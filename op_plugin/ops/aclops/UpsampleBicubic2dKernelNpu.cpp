@@ -22,18 +22,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& upsample_bicubic2d_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w)
-{
-    TORCH_CHECK(
-        output_size.size() == 2,
-        "It is expected output_size equals to 2, but got size ",
-        output_size.size(), OPS_ERROR(ErrCode::PARAM));
+at::Tensor &upsample_bicubic2d_out_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef output_size,
+    bool align_corners, c10::optional<double> scales_h, c10::optional<double> scales_w) {
+    TORCH_CHECK(output_size.size() == 2, "It is expected output_size equals to 2, but got size ", output_size.size(),
+        OPS_ERROR(ErrCode::PARAM));
 
     float temp_h = 0.0;
     float temp_w = 0.0;
@@ -61,27 +53,20 @@ at::Tensor& upsample_bicubic2d_out_nocheck(
         .Attr("cubic_coeff_a", (float)-0.75)
         .Attr("exclude_outside", (int64_t)0)
         .Attr("extrapolation_value", (float)0.0)
-        .Attr("mode", (string)"cubic")
-        .Attr("nearest_mode", (string)"round_prefer_floor")
+        .Attr("mode", (string) "cubic")
+        .Attr("nearest_mode", (string) "round_prefer_floor")
         .Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor& upsample_bicubic2d_out(
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w,
-    at::Tensor& result)
-{
-    TORCH_CHECK(self.dim() >= 2, "The self shoud be at least 2D, but self got", self.dim(),
-        "D" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(output_size.size() == 2,
-        "It is expected output_size equals to 2, but got size ",
-        output_size.size(), OPS_ERROR(ErrCode::PARAM));
+at::Tensor &upsample_bicubic2d_out(const at::Tensor &self, at::IntArrayRef output_size, bool align_corners,
+    c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result) {
+    TORCH_CHECK(
+        self.dim() >= 2, "The self shoud be at least 2D, but self got", self.dim(), "D" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() == 2, "It is expected output_size equals to 2, but got size ", output_size.size(),
+        OPS_ERROR(ErrCode::PARAM));
 
     int64_t N = self.size(0);
     int64_t C = self.size(1);
@@ -89,11 +74,7 @@ at::Tensor& upsample_bicubic2d_out(
     int64_t W = output_size[1];
 
     c10::SmallVector<int64_t, SIZE> op_infer_output_size = {N, C, H, W};
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        self,
-        op_infer_output_size);
+    npu_preparation::CheckOut({self}, result, self, op_infer_output_size);
 
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -106,18 +87,11 @@ at::Tensor& upsample_bicubic2d_out(
     return result;
 }
 
-at::Tensor upsample_bicubic2d(
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    bool align_corners,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w)
-{
-    TORCH_CHECK(self.dim() >= 2, "The self shoud be at least 2D, but self got", self.dim(),
+at::Tensor upsample_bicubic2d(const at::Tensor &self, at::IntArrayRef output_size, bool align_corners,
+    c10::optional<double> scales_h, c10::optional<double> scales_w) {
+    TORCH_CHECK(self.dim() >= 2, "The self shoud be at least 2D, but self got", self.dim(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() == 2, "It is expected output_size equals to 2, but got size ", output_size.size(),
         OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(output_size.size() == 2,
-        "It is expected output_size equals to 2, but got size ",
-        output_size.size(), OPS_ERROR(ErrCode::PARAM));
 
     int64_t N = self.size(0);
     int64_t C = self.size(1);

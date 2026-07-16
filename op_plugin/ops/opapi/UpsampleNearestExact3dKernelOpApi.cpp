@@ -20,16 +20,15 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor &upsample_nearest_exact3d_out_slow(const at::Tensor &self, at::IntArrayRef output_size,
-    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result)
-{
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w,
+    at::Tensor &result) {
     at::Tensor result_slow = at::_upsample_nearest_exact3d(self.cpu(), output_size, scales_d, scales_h, scales_w);
     result.copy_(result_slow);
     return result;
 }
 
 at::Tensor upsample_nearest_exact3d_slow(const at::Tensor &self, at::IntArrayRef output_size,
-    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w) {
     auto outputSize = op_infer::upsample_nearest3d_npu_output_size(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options());
 
@@ -39,8 +38,7 @@ at::Tensor upsample_nearest_exact3d_slow(const at::Tensor &self, at::IntArrayRef
 }
 
 at::Tensor &_upsample_nearest_exact3d_out(const at::Tensor &self, at::IntArrayRef output_size,
-    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &out)
-{
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnUpsampleNearestExact3d,
         upsample_nearest_exact3d_out_slow(self, output_size, scales_d, scales_h, scales_w, out));
 
@@ -54,8 +52,7 @@ at::Tensor &_upsample_nearest_exact3d_out(const at::Tensor &self, at::IntArrayRe
 }
 
 at::Tensor _upsample_nearest_exact3d(const at::Tensor &self, at::IntArrayRef output_size,
-    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w) {
     DO_COMPATIBILITY(
         aclnnUpsampleNearestExact3d, upsample_nearest_exact3d_slow(self, output_size, scales_d, scales_h, scales_w));
 
@@ -68,4 +65,4 @@ at::Tensor _upsample_nearest_exact3d(const at::Tensor &self, at::IntArrayRef out
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

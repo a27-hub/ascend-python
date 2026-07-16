@@ -16,15 +16,13 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 
-
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::SmallVector<int64_t, SIZE> stack_npu_output_size(at::TensorList tensors, int64_t dim)
-{
+at::SmallVector<int64_t, SIZE> stack_npu_output_size(at::TensorList tensors, int64_t dim) {
     dim = op_plugin::utils::make_warp_dim(dim, tensors[0].dim() + 1);
     at::SmallVector<int64_t, SIZE> shape;
     for (int i = 0; i < dim; i++) {
@@ -38,8 +36,7 @@ at::SmallVector<int64_t, SIZE> stack_npu_output_size(at::TensorList tensors, int
     return shape;
 }
 
-at::Tensor &stack_out_nocheck(at::Tensor &result, at::TensorList tensors, int64_t dim)
-{
+at::Tensor &stack_out_nocheck(at::Tensor &result, at::TensorList tensors, int64_t dim) {
     c10::SmallVector<at::Tensor, N> input_tensors;
     for (uint i = 0; i < tensors.size(); i++) {
         input_tensors.emplace_back(tensors[i]);
@@ -58,8 +55,7 @@ at::Tensor &stack_out_nocheck(at::Tensor &result, at::TensorList tensors, int64_
 }
 } // namespace
 
-at::Tensor &stack_out(at::TensorList tensors, int64_t dim, at::Tensor &out)
-{
+at::Tensor &stack_out(at::TensorList tensors, int64_t dim, at::Tensor &out) {
     auto output_size = stack_npu_output_size(tensors, dim);
 
     npu_preparation::CheckOut({tensors[0]}, out, ACL_FORMAT_ND, tensors[0].scalar_type(), output_size);
@@ -74,8 +70,7 @@ at::Tensor &stack_out(at::TensorList tensors, int64_t dim, at::Tensor &out)
     return out;
 }
 
-at::Tensor stack(at::TensorList tensors, int64_t dim)
-{
+at::Tensor stack(at::TensorList tensors, int64_t dim) {
     auto output_size = stack_npu_output_size(tensors, dim);
 
     at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, tensors[0].options(), ACL_FORMAT_ND);
