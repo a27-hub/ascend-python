@@ -64,8 +64,8 @@ at::Tensor le(const at::Tensor &self, const at::Tensor &other)
         auto [self_device, other_device] = prepare_binary_tensors(self, other);
         auto maybe_names = op_plugin::utils::compute_names_npu({self, other});
         auto outputSize = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
-        at::Tensor result = npu_preparation::apply_tensor_without_format(
-            outputSize, self_device.options().dtype(at::kBool));
+        at::Tensor result =
+            npu_preparation::apply_tensor_without_format(outputSize, self_device.options().dtype(at::kBool));
         EXEC_NPU_CMD(aclnnLeTensor, self_device, other_device, result);
         at::namedinference::propagate_names_if_nonempty(result, maybe_names);
         return result;
@@ -106,8 +106,8 @@ at::Tensor &le_(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnInplaceLeTensor, acl_op::le_(self, other));
     if (is_ascend950_path()) {
-        TORCH_CHECK(torch_npu::utils::is_npu(self),
-            "inplace le_ requires self to be NPU tensor", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            torch_npu::utils::is_npu(self), "inplace le_ requires self to be NPU tensor", OPS_ERROR(ErrCode::PARAM));
         at::Tensor other_device = other;
         if (!torch_npu::utils::is_npu(other)) {
             other_device = other.to(self.device());
@@ -120,7 +120,8 @@ at::Tensor &le_(at::Tensor &self, const at::Tensor &other)
         return op_api::le_(self, other.item());
     } else {
         TORCH_CHECK(self.device() == other.device(),
-                    "Expected all tensors to be on the same device, but found at least two devices", OPS_ERROR(ErrCode::INTERNAL));
+            "Expected all tensors to be on the same device, but found at least two devices",
+            OPS_ERROR(ErrCode::INTERNAL));
         at_npu::native::OpPreparation::CheckMemory({self, other}, {self});
         EXEC_NPU_CMD(aclnnInplaceLeTensor, self, other);
         return self;

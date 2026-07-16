@@ -26,16 +26,13 @@ bool checkBicubicScales(float realScale_h, float realScale_w)
     return !(realScale_h > MAX_SUPPORT_SCALE || realScale_w > MAX_SUPPORT_SCALE);
 }
 
-bool checkBicubicUseFast(
-    const at::Tensor &self, double scales_h, double scales_w, at::Tensor &result)
+bool checkBicubicUseFast(const at::Tensor &self, double scales_h, double scales_w, at::Tensor &result)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                               c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    double realScale_h =
-        op_plugin::utils::compute_scale(self.size(H_INDEX), result.size(H_INDEX), scales_h);
-    double realScale_w =
-        op_plugin::utils::compute_scale(self.size(W_INDEX), result.size(W_INDEX), scales_w);
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+    double realScale_h = op_plugin::utils::compute_scale(self.size(H_INDEX), result.size(H_INDEX), scales_h);
+    double realScale_w = op_plugin::utils::compute_scale(self.size(W_INDEX), result.size(W_INDEX), scales_w);
     if (!is_support_nd_out || !checkBicubicScales(realScale_h, realScale_w)) {
         return false;
     }
@@ -100,4 +97,4 @@ at::Tensor _upsample_bicubic2d_aa(const at::Tensor &self, at::IntArrayRef output
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

@@ -22,52 +22,48 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-    using npu_preparation = at_npu::native::OpPreparation;
-    using npu_compile_type = at_npu::native::CompileType;
-    using npu_utils = at_npu::native::NpuUtils;
+using npu_preparation = at_npu::native::OpPreparation;
+using npu_compile_type = at_npu::native::CompileType;
+using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-    at::Tensor &bernoulli_npu_nocheck(at::Tensor &result, double p, c10::optional<at::Generator> gen)
-    {
-        auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(
-            gen,
-            at_npu::detail::getDefaultNPUGenerator());
-        auto pair = gen_->philox_engine_inputs(10);
-        const int64_t seed = static_cast<int64_t>(pair.first);
-        const int64_t offset = static_cast<int64_t>(pair.second);
+at::Tensor &bernoulli_npu_nocheck(at::Tensor &result, double p, c10::optional<at::Generator> gen)
+{
+    auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
+    auto pair = gen_->philox_engine_inputs(10);
+    const int64_t seed = static_cast<int64_t>(pair.first);
+    const int64_t offset = static_cast<int64_t>(pair.second);
 
-        at_npu::native::OpCommand cmd;
-        cmd.Name("StatelessBernoulli")
-            .Input(result.sizes(), at::kLong, npu_compile_type::MEMORY_HOST_COMPILE_INDEPENDENT)
-            .Input(at::Scalar(p), at::kFloat)
-            .Input(at::Scalar(seed), at::kLong)
-            .Input(at::Scalar(offset), at::kLong)
-            .Output(result)
-            .Attr("dtype", result.scalar_type())
-            .Run();
-        return result;
-    }
+    at_npu::native::OpCommand cmd;
+    cmd.Name("StatelessBernoulli")
+        .Input(result.sizes(), at::kLong, npu_compile_type::MEMORY_HOST_COMPILE_INDEPENDENT)
+        .Input(at::Scalar(p), at::kFloat)
+        .Input(at::Scalar(seed), at::kLong)
+        .Input(at::Scalar(offset), at::kLong)
+        .Output(result)
+        .Attr("dtype", result.scalar_type())
+        .Run();
+    return result;
+}
 
-    at::Tensor &bernoulli_npu_nocheck(at::Tensor &result, const at::Tensor &p, c10::optional<at::Generator> gen)
-    {
-        auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(
-            gen,
-            at_npu::detail::getDefaultNPUGenerator());
-        auto pair = gen_->philox_engine_inputs(10);
-        const int64_t seed = static_cast<int64_t>(pair.first);
-        const int64_t offset = static_cast<int64_t>(pair.second);
+at::Tensor &bernoulli_npu_nocheck(at::Tensor &result, const at::Tensor &p, c10::optional<at::Generator> gen)
+{
+    auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
+    auto pair = gen_->philox_engine_inputs(10);
+    const int64_t seed = static_cast<int64_t>(pair.first);
+    const int64_t offset = static_cast<int64_t>(pair.second);
 
-        at_npu::native::OpCommand cmd;
-        cmd.Name("StatelessBernoulli")
-            .Input(result.sizes(), at::kLong, npu_compile_type::MEMORY_HOST_COMPILE_INDEPENDENT)
-            .Input(p)
-            .Input(at::Scalar(seed), at::kLong)
-            .Input(at::Scalar(offset), at::kLong)
-            .Output(result)
-            .Attr("dtype", result.scalar_type())
-            .Run();
-        return result;
-    }
+    at_npu::native::OpCommand cmd;
+    cmd.Name("StatelessBernoulli")
+        .Input(result.sizes(), at::kLong, npu_compile_type::MEMORY_HOST_COMPILE_INDEPENDENT)
+        .Input(p)
+        .Input(at::Scalar(seed), at::kLong)
+        .Input(at::Scalar(offset), at::kLong)
+        .Output(result)
+        .Attr("dtype", result.scalar_type())
+        .Run();
+    return result;
+}
 } // namespace
 
 at::Tensor &bernoulli_(at::Tensor &self, double p, c10::optional<at::Generator> gen)

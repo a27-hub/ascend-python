@@ -49,8 +49,8 @@ void _foreach_log2_(at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachLog2, at::native::foreach_tensor_log2_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_log2_slow_(self);
     }
@@ -65,18 +65,18 @@ void _foreach_log2_(at::TensorList self)
     }
     auto scalar_type = self[0].scalar_type();
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
+            scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float or bfloat16");
 
     _split_and_exec_npu_cmd_log2(self, self, true);
 }
-
 
 std::vector<at::Tensor> _foreach_log2(at::TensorList tensors)
 {
     DO_COMPATIBILITY(aclnnForeachLog2, at::native::foreach_tensor_log2_slow(tensors));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_log2_slow(tensors);
     }
@@ -88,7 +88,8 @@ std::vector<at::Tensor> _foreach_log2(at::TensorList tensors)
 
     auto scalar_type = tensors[0].scalar_type();
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
+            scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float or bfloat16");
 
     // construct output tensorlist
     std::vector<at::Tensor> result;

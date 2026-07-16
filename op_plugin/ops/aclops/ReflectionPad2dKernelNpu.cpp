@@ -27,8 +27,8 @@ c10::SmallVector<int64_t, SIZE> reflection_pad2d_npu_output_size(const at::Tenso
 {
     TORCH_CHECK(self.dim() >= 3, "The self is expected to be at least 3D, but got: ", self.dim(),
         "D" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(padding.size() >= 4, "padding size is expected to be at least 4, but got: ",
-        padding.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(padding.size() >= 4, "padding size is expected to be at least 4, but got: ", padding.size(),
+        OPS_ERROR(ErrCode::PARAM));
     int64_t N = self.dim() == 3 ? 1 : self.size(-4);
     int64_t C = self.size(-3);
     int64_t H = self.size(-2);

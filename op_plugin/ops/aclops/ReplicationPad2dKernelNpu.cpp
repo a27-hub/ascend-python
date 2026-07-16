@@ -23,7 +23,8 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::Tensor& replication_pad2d_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, at::IntArrayRef padding) {
+at::Tensor &replication_pad2d_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef padding)
+{
     TORCH_CHECK(padding.size() == 4, "padding size is expected to be 4" + OPS_ERROR(ErrCode::PARAM));
     at::Tensor self_cp = self.dim() == 3 ? self.unsqueeze(0) : self;
     c10::SmallVector<int64_t, N> vector_int;
@@ -42,7 +43,7 @@ at::Tensor& replication_pad2d_out_npu_nocheck(at::Tensor& result, const at::Tens
         .Input(vector_int, at::kInt)
         .Input(value_tensor, self.scalar_type())
         .Output(result)
-        .Attr("mode", (string)"edge")
+        .Attr("mode", (string) "edge")
         .Attr("paddings_contiguous", true)
         .Run();
     if (self.dim() == 3) {
@@ -52,31 +53,26 @@ at::Tensor& replication_pad2d_out_npu_nocheck(at::Tensor& result, const at::Tens
 }
 } // namespace
 
-at::Tensor& replication_pad2d_out(
-    const at::Tensor& self,
-    at::IntArrayRef padding,
-    at::Tensor& result) {
-  auto output_size = op_infer::replication_pad2d_npu_output_size(self, padding);
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self,
-      output_size);
-  if (!npu_utils::check_match(&result)) {
-    at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-    replication_pad2d_out_npu_nocheck(contiguous_result, self, padding);
-    npu_utils::format_fresh_view(result, contiguous_result);
-  } else {
-    replication_pad2d_out_npu_nocheck(result, self, padding);
-  }
-  return result;
+at::Tensor &replication_pad2d_out(const at::Tensor &self, at::IntArrayRef padding, at::Tensor &result)
+{
+    auto output_size = op_infer::replication_pad2d_npu_output_size(self, padding);
+    npu_preparation::CheckOut({self}, result, self, output_size);
+    if (!npu_utils::check_match(&result)) {
+        at::Tensor contiguous_result = npu_utils::format_contiguous(result);
+        replication_pad2d_out_npu_nocheck(contiguous_result, self, padding);
+        npu_utils::format_fresh_view(result, contiguous_result);
+    } else {
+        replication_pad2d_out_npu_nocheck(result, self, padding);
+    }
+    return result;
 }
 
-at::Tensor replication_pad2d(const at::Tensor& self, at::IntArrayRef padding) {
-  auto output_size = op_infer::replication_pad2d_npu_output_size(self, padding);
-  at::Tensor result = npu_preparation::apply_tensor(self, output_size);
-  replication_pad2d_out_npu_nocheck(result, self, padding);
-  return result;
+at::Tensor replication_pad2d(const at::Tensor &self, at::IntArrayRef padding)
+{
+    auto output_size = op_infer::replication_pad2d_npu_output_size(self, padding);
+    at::Tensor result = npu_preparation::apply_tensor(self, output_size);
+    replication_pad2d_out_npu_nocheck(result, self, padding);
+    return result;
 }
 
 } // namespace acl_op

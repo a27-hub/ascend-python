@@ -25,8 +25,8 @@ using npu_calcu_util = at_npu::native::CalcuOpUtil;
 bool check_zero_is_supported_data_type(at::ScalarType scalar_type)
 {
     return (scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-            scalar_type == at::ScalarType::Int || scalar_type == at::ScalarType::Short ||
-            scalar_type == at::ScalarType::BFloat16);
+        scalar_type == at::ScalarType::Int || scalar_type == at::ScalarType::Short ||
+        scalar_type == at::ScalarType::BFloat16);
 }
 
 void _split_and_exec_npu_cmd_zero(at::TensorList tensors1)
@@ -39,7 +39,7 @@ void _split_and_exec_npu_cmd_zero(at::TensorList tensors1)
         return;
     }
     size_t loop_time = tensor_count / max_tensor_count;
-    
+
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
         EXEC_NPU_CMD(aclnnForeachZeroInplace, temp_tensors1);
@@ -56,8 +56,8 @@ void _foreach_zero_(const at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachZeroInplace, at::native::foreach_tensor_zero_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_zero_slow_(self);
     }

@@ -25,10 +25,8 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 at::Tensor &max_pool3d_with_indices_backward_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
-                                                         const at::Tensor &self, at::IntArrayRef kernel_size,
-                                                         at::IntArrayRef stride, at::IntArrayRef padding,
-                                                         at::IntArrayRef dilation, bool ceil_mode,
-                                                         const at::Tensor &indices)
+    const at::Tensor &self, at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef dilation, bool ceil_mode, const at::Tensor &indices)
 {
     int64_t stride_T = 1;
     int64_t stride_H = 1;
@@ -76,32 +74,26 @@ at::Tensor &max_pool3d_with_indices_backward_out_nocheck(at::Tensor &grad_input,
 }
 
 void max_pool3d_with_indices_backward_parameter_check(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                                      at::IntArrayRef stride, at::IntArrayRef padding,
-                                                      at::IntArrayRef dilation)
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation)
 {
     TORCH_CHECK(kernel_size.size() == 1 || kernel_size.size() == 3,
-        "max_pool3d: kernel_size must either be a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: kernel_size must either be a single int, or a tuple of three ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(stride.size() == 0 || stride.size() == 1 || stride.size() == 3,
-        "max_pool3d: stride must either be omitted, a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: stride must either be omitted, a single int, or a tuple of three ints" +
+            OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(padding.size() == 1 || padding.size() == 3,
-        "max_pool3d: padding must be either be a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: padding must be either be a single int, or a tuple of three ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(dilation.size() == 1 || dilation.size() == 3,
-        "max_pool3d: dilation must be either a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: dilation must be either a single int, or a tuple of three ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((self.ndimension() == 5 || self.ndimension() == 4),
         "maxpool3d expected input to be non-empty 5D(batch mode) or 4D tensor",
-        "but input has dim: ", self.ndimension(),
-        OPS_ERROR(ErrCode::PARAM));
+        "but input has dim: ", self.ndimension(), OPS_ERROR(ErrCode::PARAM));
 }
 } // namespace
 
 at::Tensor &max_pool3d_with_indices_backward_out(const at::Tensor &grad_output, const at::Tensor &self,
-                                                 at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                                 at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
-                                                 const at::Tensor &indices, at::Tensor &grad_input)
+    at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    bool ceil_mode, const at::Tensor &indices, at::Tensor &grad_input)
 {
     max_pool3d_with_indices_backward_parameter_check(self, kernel_size, stride, padding, dilation);
 
@@ -110,24 +102,23 @@ at::Tensor &max_pool3d_with_indices_backward_out(const at::Tensor &grad_output, 
         self_cp = self_cp.unsqueeze(0);
     }
     auto output_size = op_infer::input_same_output_size(self_cp);
-    npu_preparation::CheckOut({self, indices, grad_output}, grad_input, ACL_FORMAT_NDC1HWC0, self_cp.scalar_type(),
-                              output_size);
+    npu_preparation::CheckOut(
+        {self, indices, grad_output}, grad_input, ACL_FORMAT_NDC1HWC0, self_cp.scalar_type(), output_size);
     if (!npu_utils::check_match(&grad_input)) {
         at::Tensor contig_grad_input = npu_utils::format_contiguous(grad_input);
-        max_pool3d_with_indices_backward_out_nocheck(contig_grad_input, grad_output, self, kernel_size, stride, padding,
-                                                     dilation, ceil_mode, indices);
+        max_pool3d_with_indices_backward_out_nocheck(
+            contig_grad_input, grad_output, self, kernel_size, stride, padding, dilation, ceil_mode, indices);
         npu_utils::format_fresh_view(grad_input, contig_grad_input);
     } else {
-        max_pool3d_with_indices_backward_out_nocheck(grad_input, grad_output, self, kernel_size, stride, padding,
-                                                     dilation, ceil_mode, indices);
+        max_pool3d_with_indices_backward_out_nocheck(
+            grad_input, grad_output, self, kernel_size, stride, padding, dilation, ceil_mode, indices);
     }
     return grad_input;
 }
 
 at::Tensor max_pool3d_with_indices_backward(const at::Tensor &grad_output, const at::Tensor &self,
-                                            at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                            at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
-                                            const at::Tensor &indices)
+    at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    bool ceil_mode, const at::Tensor &indices)
 {
     max_pool3d_with_indices_backward_parameter_check(self, kernel_size, stride, padding, dilation);
 
@@ -138,12 +129,12 @@ at::Tensor max_pool3d_with_indices_backward(const at::Tensor &grad_output, const
     at::IntArrayRef kernel_sizess = at::IntArrayRef(kernel_sizes);
 
     const int d_T = stride.empty() ? k_T : at::native::safe_downcast<int, int64_t>(stride[0]);
-    const int d_H = stride.empty()     ? k_H :
-                    stride.size() == 1 ? d_T :
-                                         at::native::safe_downcast<int, int64_t>(stride[1]);
-    const int d_W = stride.empty()     ? k_W :
-                    stride.size() == 1 ? d_T :
-                                         at::native::safe_downcast<int, int64_t>(stride[2]);
+    const int d_H = stride.empty() ? k_H
+        : stride.size() == 1       ? d_T
+                                   : at::native::safe_downcast<int, int64_t>(stride[1]);
+    const int d_W = stride.empty() ? k_W
+        : stride.size() == 1       ? d_T
+                                   : at::native::safe_downcast<int, int64_t>(stride[2]);
     c10::SmallVector<int64_t, SIZE> strides = {d_T, d_H, d_W};
     at::IntArrayRef stridess = at::IntArrayRef(strides);
 
@@ -168,8 +159,8 @@ at::Tensor max_pool3d_with_indices_backward(const at::Tensor &grad_output, const
     const int64_t owidth = grad_output.size(-1);
 
     at::native::max_pool3d_backward_shape_check(self, grad_output, indices, nslices, k_T, k_H, k_W, d_T, d_H, d_W, p_T,
-                                                p_H, p_W, dilation_T, dilation_H, dilation_W, itime, iheight, iwidth,
-                                                otime, oheight, owidth, "max_pool3d_with_indices_backward()");
+        p_H, p_W, dilation_T, dilation_H, dilation_W, itime, iheight, iwidth, otime, oheight, owidth,
+        "max_pool3d_with_indices_backward()");
     at::Tensor self_cp = self;
     at::Tensor grad_output_cp = grad_output.clone();
     at::Tensor indices_cp = indices;
@@ -182,8 +173,8 @@ at::Tensor max_pool3d_with_indices_backward(const at::Tensor &grad_output, const
     at::Tensor grad_input = npu_preparation::apply_tensor_with_format(
         output_size, self_cp.options().dtype(c10::ScalarType::Float), ACL_FORMAT_NDC1HWC0);
 
-    max_pool3d_with_indices_backward_out_nocheck(grad_input, grad_output_cp, self_cp, kernel_sizess, stridess,
-                                                 paddingss, dilationss, ceil_mode, indices_cp);
+    max_pool3d_with_indices_backward_out_nocheck(
+        grad_input, grad_output_cp, self_cp, kernel_sizess, stridess, paddingss, dilationss, ceil_mode, indices_cp);
     grad_input = self.ndimension() == 4 ? grad_input.squeeze(0) : grad_input;
     return grad_input;
 }

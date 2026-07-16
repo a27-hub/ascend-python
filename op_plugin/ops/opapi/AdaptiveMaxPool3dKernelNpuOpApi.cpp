@@ -30,16 +30,18 @@ bool is_npu_supported(at::ScalarType dtype)
 }
 } // namespace
 
-std::tuple<at::Tensor&, at::Tensor&> adaptive_max_pool3d_out(const at::Tensor& self, at::IntArrayRef output_size, at::Tensor& out, at::Tensor& indices)
+std::tuple<at::Tensor &, at::Tensor &> adaptive_max_pool3d_out(
+    const at::Tensor &self, at::IntArrayRef output_size, at::Tensor &out, at::Tensor &indices)
 {
     if (!is_npu_supported(self.scalar_type())) {
-        TORCH_WARN_ONCE("adaptive_max_pool3d.out is not supported by NPU currently. Now this kernel is running on CPU.");
+        TORCH_WARN_ONCE(
+            "adaptive_max_pool3d.out is not supported by NPU currently. Now this kernel is running on CPU.");
         auto out_cpu = out.cpu();
         auto indices_cpu = indices.cpu();
         auto cpuout = at::adaptive_max_pool3d_out(out_cpu, indices_cpu, self.cpu(), output_size);
         out.copy_(std::get<0>(cpuout));
         indices.copy_(std::get<1>(cpuout));
-        return std::tuple<at::Tensor&, at::Tensor&>(out, indices);
+        return std::tuple<at::Tensor &, at::Tensor &>(out, indices);
     }
     auto out_size = op_infer::max_pool3d_output_size(self, output_size);
     npu_preparation::check_tensor({self}, out, self.scalar_type(), out_size);
@@ -51,10 +53,10 @@ std::tuple<at::Tensor&, at::Tensor&> adaptive_max_pool3d_out(const at::Tensor& s
     }
 
     EXEC_NPU_CMD(aclnnAdaptiveMaxPool3d, self, output_size, out, indices);
-    return std::tuple<at::Tensor&, at::Tensor&>(out, indices);
+    return std::tuple<at::Tensor &, at::Tensor &>(out, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> adaptive_max_pool3d(const at::Tensor& self, at::IntArrayRef output_size)
+std::tuple<at::Tensor, at::Tensor> adaptive_max_pool3d(const at::Tensor &self, at::IntArrayRef output_size)
 {
     if (!is_npu_supported(self.scalar_type())) {
         TORCH_WARN_ONCE("adaptive_max_pool3d is not supported by NPU currently. Now this kernel is running on CPU.");

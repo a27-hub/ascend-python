@@ -20,15 +20,8 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor& rotated_iou_npu_nocheck(
-    at::Tensor& iou,
-    const at::Tensor& boxes,
-    const at::Tensor& query_boxes,
-    bool trans,
-    int64_t mode,
-    bool is_cross,
-    double v_threshold,
-    double e_threshold)
+at::Tensor &rotated_iou_npu_nocheck(at::Tensor &iou, const at::Tensor &boxes, const at::Tensor &query_boxes, bool trans,
+    int64_t mode, bool is_cross, double v_threshold, double e_threshold)
 {
     string mode_str = (mode == 0) ? "iou" : "iof";
 
@@ -47,14 +40,8 @@ at::Tensor& rotated_iou_npu_nocheck(
 }
 } // namespace
 
-at::Tensor npu_rotated_iou(
-    const at::Tensor& self,
-    const at::Tensor& query_boxes,
-    bool trans,
-    int64_t mode,
-    bool is_cross,
-    double v_threshold,
-    double e_threshold)
+at::Tensor npu_rotated_iou(const at::Tensor &self, const at::Tensor &query_boxes, bool trans, int64_t mode,
+    bool is_cross, double v_threshold, double e_threshold)
 {
     TORCH_CHECK(self.ndimension() == 3 && query_boxes.ndimension() == 3, OPS_ERROR(ErrCode::PARAM));
 

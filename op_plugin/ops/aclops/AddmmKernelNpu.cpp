@@ -88,11 +88,11 @@ bool is_transpose_both_inner_axis(const at::Tensor &self, const at::Tensor &mat2
         mat2_outer_axis = mat2.size(mat2.dim() - 1);
     }
     return self_inner_axis > kInnerAxisMaxLimit && self_outer_axis <= kInnerAxisMaxLimit &&
-           mat2_inner_axis > kInnerAxisMaxLimit && mat2_outer_axis <= kInnerAxisMaxLimit;
+        mat2_inner_axis > kInnerAxisMaxLimit && mat2_outer_axis <= kInnerAxisMaxLimit;
 }
 
-at::Tensor &addmm_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &mat1,
-                                  const at::Tensor &mat2)
+at::Tensor &addmm_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2)
 {
     const auto mat1_desc = torch_npu::NPUBridge::GetNpuStorageImpl(mat1)->npu_desc_;
     const auto mat2_desc = torch_npu::NPUBridge::GetNpuStorageImpl(mat2)->npu_desc_;
@@ -138,7 +138,7 @@ at::Tensor &addmm_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, co
 }
 
 at::Tensor &addmm_out(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, const at::Scalar &beta,
-                      const at::Scalar &alpha, at::Tensor &result)
+    const at::Scalar &alpha, at::Tensor &result)
 {
     static const bool is_support_nd_out = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
     bool check_bias_shape = (self.dim() == 1 || (self.dim() == 2 && self.size(0) == 1));
@@ -160,7 +160,7 @@ at::Tensor &addmm_out(const at::Tensor &self, const at::Tensor &mat1, const at::
 }
 
 at::Tensor addmm(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, const at::Scalar &beta,
-                 const at::Scalar &alpha)
+    const at::Scalar &alpha)
 {
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     at::Tensor result = npu_preparation::apply_tensor(output_size, self.options(), self);
@@ -169,8 +169,8 @@ at::Tensor addmm(const at::Tensor &self, const at::Tensor &mat1, const at::Tenso
     return result;
 }
 
-at::Tensor &addmm_(at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, const at::Scalar &beta,
-                   const at::Scalar &alpha)
+at::Tensor &addmm_(
+    at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, const at::Scalar &beta, const at::Scalar &alpha)
 {
     npu_preparation::CheckMemory({self, mat1, mat2}, {self});
     if (!npu_utils::check_match(&self)) {

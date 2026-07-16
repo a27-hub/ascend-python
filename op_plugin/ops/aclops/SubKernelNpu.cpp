@@ -70,14 +70,14 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
     at::Tensor output_tensor = npu_preparation::is_scalar_wrapped_to_tensor(self) ? other : self;
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
-    at::Tensor self_cp = (self.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(self)) ?
-                             at_npu::native::custom_ops::_npu_dtype_cast(self, result_type) :
-                             self;
-    at::Tensor other_cp = (other.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(other)) ?
-                              at_npu::native::custom_ops::_npu_dtype_cast(other, result_type) :
-                              other;
-    npu_preparation::CheckOut({self_cp}, result, npu_preparation::get_tensor_npu_format(output_tensor), result_type,
-                              output_size);
+    at::Tensor self_cp = (self.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(self))
+        ? at_npu::native::custom_ops::_npu_dtype_cast(self, result_type)
+        : self;
+    at::Tensor other_cp = (other.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(other))
+        ? at_npu::native::custom_ops::_npu_dtype_cast(other, result_type)
+        : other;
+    npu_preparation::CheckOut(
+        {self_cp}, result, npu_preparation::get_tensor_npu_format(output_tensor), result_type, output_size);
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
         sub_out_npu_nocheck(contiguous_result, self_cp, other_cp, alpha);
@@ -96,12 +96,12 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
 
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
-    at::Tensor self_cp = (self.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(self)) ?
-                             at_npu::native::custom_ops::_npu_dtype_cast(self, result_type) :
-                             self;
-    at::Tensor other_cp = (other.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(other)) ?
-                              at_npu::native::custom_ops::_npu_dtype_cast(other, result_type) :
-                              other;
+    at::Tensor self_cp = (self.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(self))
+        ? at_npu::native::custom_ops::_npu_dtype_cast(self, result_type)
+        : self;
+    at::Tensor other_cp = (other.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(other))
+        ? at_npu::native::custom_ops::_npu_dtype_cast(other, result_type)
+        : other;
 
     at::Tensor result = npu_preparation::apply_tensor_with_format(
         output_size, output_tensor.options().dtype(result_type), npu_preparation::get_tensor_npu_format(output_tensor));
@@ -121,13 +121,13 @@ at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &al
     at::ScalarType result_type = at::native::result_type(self, other);
     at::ScalarType self_type = self.scalar_type();
     TORCH_CHECK(canCast(result_type, self_type), "result type ", result_type,
-                " can't be cast to the desired output type ", self_type, OPS_ERROR(ErrCode::TYPE));
-    at::Tensor self_cp = (self_type != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(self)) ?
-                             at_npu::native::custom_ops::_npu_dtype_cast(self, result_type) :
-                             self;
-    at::Tensor other_cp = (other.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(other)) ?
-                              at_npu::native::custom_ops::_npu_dtype_cast(other, result_type) :
-                              other;
+        " can't be cast to the desired output type ", self_type, OPS_ERROR(ErrCode::TYPE));
+    at::Tensor self_cp = (self_type != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(self))
+        ? at_npu::native::custom_ops::_npu_dtype_cast(self, result_type)
+        : self;
+    at::Tensor other_cp = (other.scalar_type() != result_type && !npu_preparation::is_scalar_wrapped_to_tensor(other))
+        ? at_npu::native::custom_ops::_npu_dtype_cast(other, result_type)
+        : other;
 
     npu_preparation::CheckMemory({self_cp, other_cp}, {self_cp});
     if (!npu_utils::check_match(&self_cp)) {

@@ -21,27 +21,20 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor& repeat_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef repeats)
+at::Tensor &repeat_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef repeats)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Tile")
-        .Input(self)
-        .Input(repeats)
-        .Output(result)
-        .Run();
+    cmd.Name("Tile").Input(self).Input(repeats).Output(result).Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor repeat(const at::Tensor& self, at::IntArrayRef repeats)
+at::Tensor repeat(const at::Tensor &self, at::IntArrayRef repeats)
 {
     TORCH_CHECK(repeats.size() >= self.ndimension(),
-                "Number of dimensions of repeat dims can not be smaller than number of dimensions of tensor"
-                + OPS_ERROR(ErrCode::PARAM));
+        "Number of dimensions of repeat dims can not be smaller than number of dimensions of tensor" +
+            OPS_ERROR(ErrCode::PARAM));
     at::Tensor self_cp = self;
     if (static_cast<int>(repeats.size()) > self_cp.ndimension()) {
         int diff = static_cast<int>(repeats.size()) - self_cp.ndimension();

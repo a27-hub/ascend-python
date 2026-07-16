@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& eye_out(int64_t n, at::Tensor& out)
+at::Tensor &eye_out(int64_t n, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnEye, acl_op::eye_out(n, out));
     TORCH_CHECK(n >= 0, "n must be greater or equal to 0, got ", n, OPS_ERROR(ErrCode::PARAM));
@@ -29,7 +29,7 @@ at::Tensor& eye_out(int64_t n, at::Tensor& out)
     return out;
 }
 
-at::Tensor& eye_out(int64_t n, int64_t m, at::Tensor& out)
+at::Tensor &eye_out(int64_t n, int64_t m, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnEye, acl_op::eye_out(n, m, out));
     TORCH_CHECK(n >= 0, "n must be greater or equal to 0, got ", n, OPS_ERROR(ErrCode::PARAM));
@@ -39,20 +39,13 @@ at::Tensor& eye_out(int64_t n, int64_t m, at::Tensor& out)
     return out;
 }
 
-at::Tensor eye(
-    int64_t n,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory)
+at::Tensor eye(int64_t n, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
+    c10::optional<at::Device> device, c10::optional<bool> pin_memory)
 {
     DO_COMPATIBILITY(aclnnEye, acl_op::eye(n, dtype, layout, device, pin_memory));
     TORCH_CHECK(n >= 0, "n must be greater or equal to 0, got ", n, OPS_ERROR(ErrCode::PARAM));
     auto device_value = device_or_default(device);
-    at::TensorOptions option = option.dtype(dtype)
-                                     .layout(layout)
-                                     .device(device_value)
-                                     .pinned_memory(pin_memory);
+    at::TensorOptions option = option.dtype(dtype).layout(layout).device(device_value).pinned_memory(pin_memory);
 
     // get the output size
     c10::SmallVector<int64_t, op_infer::N> output_size = {n, n};
@@ -63,22 +56,14 @@ at::Tensor eye(
     return result;
 }
 
-at::Tensor eye(
-    int64_t n,
-    int64_t m,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory)
+at::Tensor eye(int64_t n, int64_t m, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
+    c10::optional<at::Device> device, c10::optional<bool> pin_memory)
 {
     DO_COMPATIBILITY(aclnnEye, acl_op::eye(n, m, dtype, layout, device, pin_memory));
     TORCH_CHECK(n >= 0, "n must be greater or equal to 0, got ", n, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(m >= 0, "m must be greater or equal to 0, got ", m, OPS_ERROR(ErrCode::PARAM));
     auto device_value = device_or_default(device);
-    at::TensorOptions option = option.dtype(dtype)
-                                     .layout(layout)
-                                     .device(device_value)
-                                     .pinned_memory(pin_memory);
+    at::TensorOptions option = option.dtype(dtype).layout(layout).device(device_value).pinned_memory(pin_memory);
 
     // get the output size
     c10::SmallVector<int64_t, op_infer::N> output_size = {n, m};

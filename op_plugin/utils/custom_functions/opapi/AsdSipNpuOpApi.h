@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef __TORCH_NPU_OP_PLUGIN_UTILS_ASD_SIP_NPU_OP_API__
 #define __TORCH_NPU_OP_PLUGIN_UTILS_ASD_SIP_NPU_OP_API__
 
@@ -33,7 +32,7 @@ constexpr size_t MAX_SVECTOR_SIZE = 256;
 constexpr size_t DEFAULT_SVECTOR_SIZE = 48;
 
 template <class T, std::size_t MAX_SIZE = DEFAULT_SVECTOR_SIZE> class SVector {
-public:
+  public:
     constexpr SVector() : size_(0)
     {
         static_assert(MAX_SIZE > 0 && MAX_SIZE <= MAX_SVECTOR_SIZE);
@@ -42,7 +41,7 @@ public:
         }
     }
 
-private:
+  private:
     T storage_[MAX_SIZE + 1];
     std::size_t size_{0};
 };
@@ -80,7 +79,8 @@ enum asdFft1dDimType {
     ASCEND_FFT_VERTICAL = 0x11,
 };
 
-typedef MkiTensor (*_asdCreateTensor)(void *data, void *hostData, std::vector<int64_t> dims, int dtype, int format, int size);
+typedef MkiTensor (*_asdCreateTensor)(
+    void *data, void *hostData, std::vector<int64_t> dims, int dtype, int format, int size);
 
 typedef void *asdFftHandle;
 typedef int (*_asdFftCreate)(asdFftHandle &handle);
@@ -90,18 +90,15 @@ typedef int (*_asdFftSynchronize)(asdFftHandle handle);
 typedef int (*_asdFftGetWorkspaceSize)(asdFftHandle handle, size_t &workSize);
 typedef int (*_asdFftSetWorkspace)(asdFftHandle handle, void *workspace);
 typedef int (*_asdFftMakePlan1D)(asdFftHandle handle, int64_t fftSize, asdFftType fftType, asdFftDirection direction,
-                                 int64_t batchSize, asdFft1dDimType dimType);
+    int64_t batchSize, asdFft1dDimType dimType);
 typedef int (*_asdFftMakePlan2D)(asdFftHandle handle, int64_t fftSizeX, int64_t fftSizeY, asdFftType fftType,
-                                 asdFftDirection direction, int32_t batchSize);
+    asdFftDirection direction, int32_t batchSize);
 
 using FftExecApiFunc = int (*)(asdFftHandle handle, const aclTensor *inData, const aclTensor *outData);
 
 #define GET_SIP_API_FUNC(apiName) reinterpret_cast<_##apiName>(GetAsdSipApiFuncAddr(#apiName))
 
-inline const char *GetAsdSipApiLibName(void)
-{
-    return "libasdsip.so";
-}
+inline const char *GetAsdSipApiLibName(void) { return "libasdsip.so"; }
 
 inline void *GetAsdSipApiFuncAddr(const char *apiName)
 {
@@ -110,7 +107,7 @@ inline void *GetAsdSipApiFuncAddr(const char *apiName)
         ASCEND_LOGW("dlopen %s failed, error:%s.", GetAsdSipApiLibName(), dlerror());
         return nullptr;
     }
-    
+
     auto funcAddr = dlsym(opApiHandler, apiName);
     if (funcAddr == nullptr) {
         ASCEND_LOGW("dlsym %s from %s failed, error:%s.", apiName, GetAsdSipApiLibName(), dlerror());
@@ -145,7 +142,7 @@ inline MkiTensor ConvertMkiTensor(const at::Tensor &at_tensor)
 
     int dtype = ConvertDataType(at_tensor.scalar_type());
     auto sip_tensor = asdCreateTensor(const_cast<void *>(at_tensor.storage().data()), nullptr, at_tensor.sizes().vec(),
-                                      dtype, TENSOR_FORMAT_ND, at_tensor.storage().nbytes());
+        dtype, TENSOR_FORMAT_ND, at_tensor.storage().nbytes());
     return sip_tensor;
 }
 
@@ -204,7 +201,7 @@ inline int asdSipFftSetWorkspace(asdFftHandle handle, void *workspace)
 }
 
 inline int asdSipFftMakePlan1D(asdFftHandle handle, int64_t fftSize, asdFftType fftType, asdFftDirection direction,
-                               int64_t batchSize, asdFft1dDimType dimType)
+    int64_t batchSize, asdFft1dDimType dimType)
 {
     static const auto asdFftMakePlan1D = GET_SIP_API_FUNC(asdFftMakePlan1D);
     if (asdFftMakePlan1D == nullptr) {
@@ -214,7 +211,7 @@ inline int asdSipFftMakePlan1D(asdFftHandle handle, int64_t fftSize, asdFftType 
 }
 
 inline int asdSipFftMakePlan2D(asdFftHandle handle, int64_t fftSizeX, int64_t fftSizeY, asdFftType fftType,
-                               asdFftDirection direction, int64_t batchSize)
+    asdFftDirection direction, int64_t batchSize)
 {
     static const auto asdFftMakePlan2D = GET_SIP_API_FUNC(asdFftMakePlan2D);
     if (asdFftMakePlan2D == nullptr) {
@@ -234,24 +231,21 @@ struct FFTParam {
 
 inline bool operator==(const FFTParam &one, const FFTParam &other)
 {
-    return one.fftXSize == other.fftXSize
-        && one.fftYSize == other.fftYSize
-        && one.fftType == other.fftType
-        && one.direction == other.direction
-        && one.batchSize == other.batchSize
-        && one.dimType == other.dimType;
+    return one.fftXSize == other.fftXSize && one.fftYSize == other.fftYSize && one.fftType == other.fftType &&
+        one.direction == other.direction && one.batchSize == other.batchSize && one.dimType == other.dimType;
 }
 
 inline asdFftHandle createHandle(const FFTParam &param)
 {
     asdFftHandle handle;
-    TORCH_CHECK(asdSipFftCreate(handle) == 0,
-        "asdSipFftCreate failed", OPS_ERROR(ErrCode::INTERNAL));
+    TORCH_CHECK(asdSipFftCreate(handle) == 0, "asdSipFftCreate failed", OPS_ERROR(ErrCode::INTERNAL));
     if (param.fftYSize == 0) {
-        TORCH_CHECK(asdSipFftMakePlan1D(handle, param.fftXSize, param.fftType, param.direction, param.batchSize, param.dimType) == 0,
+        TORCH_CHECK(asdSipFftMakePlan1D(
+                        handle, param.fftXSize, param.fftType, param.direction, param.batchSize, param.dimType) == 0,
             "asdSipFftMakePlan1D failed", OPS_ERROR(ErrCode::INTERNAL));
     } else {
-        TORCH_CHECK(asdSipFftMakePlan2D(handle, param.fftXSize, param.fftYSize, param.fftType, param.direction, param.batchSize) == 0,
+        TORCH_CHECK(asdSipFftMakePlan2D(
+                        handle, param.fftXSize, param.fftYSize, param.fftType, param.direction, param.batchSize) == 0,
             "asdSipFftMakePlan2D failed", OPS_ERROR(ErrCode::INTERNAL));
     }
     return handle;
@@ -259,10 +253,8 @@ inline asdFftHandle createHandle(const FFTParam &param)
 
 inline void destoryHandle(asdFftHandle handle)
 {
-    TORCH_CHECK(asdSipFftSynchronize(handle) == 0,
-        "asdSipFftSynchronize failed", OPS_ERROR(ErrCode::INTERNAL));
-    TORCH_CHECK(asdSipFftDestroy(handle) == 0,
-        "asdSipFftDestroy failed", OPS_ERROR(ErrCode::INTERNAL));
+    TORCH_CHECK(asdSipFftSynchronize(handle) == 0, "asdSipFftSynchronize failed", OPS_ERROR(ErrCode::INTERNAL));
+    TORCH_CHECK(asdSipFftDestroy(handle) == 0, "asdSipFftDestroy failed", OPS_ERROR(ErrCode::INTERNAL));
 }
 
 #endif //  __TORCH_NPU_OP_PLUGIN_UTILS_ASD_SIP_NPU_OP_API__

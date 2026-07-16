@@ -19,10 +19,10 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-at::Tensor bucketize(const at::Tensor& self, const at::Tensor& boundaries, bool out_int32, bool right)
+at::Tensor bucketize(const at::Tensor &self, const at::Tensor &boundaries, bool out_int32, bool right)
 {
-    TORCH_CHECK(boundaries.dim() == 1, "boundaries tensor must be 1 dimension, but got dim(",
-        boundaries.dim(), ")" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(boundaries.dim() == 1, "boundaries tensor must be 1 dimension, but got dim(", boundaries.dim(),
+        ")" + OPS_ERROR(ErrCode::PARAM));
 
     static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
     bool typeSupport = self.dtype() != at::kDouble && boundaries.dtype() != at::kDouble;
@@ -38,7 +38,7 @@ at::Tensor bucketize(const at::Tensor& self, const at::Tensor& boundaries, bool 
     }
 }
 
-at::Tensor bucketize(const at::Scalar& self, const at::Tensor& boundaries, bool out_int32, bool right)
+at::Tensor bucketize(const at::Scalar &self, const at::Tensor &boundaries, bool out_int32, bool right)
 {
     TORCH_CHECK(boundaries.dim() == 1, "boundaries tensor must be 1 dimension, but got dim(", boundaries.dim(),
         ")" + OPS_ERROR(ErrCode::PARAM));
@@ -46,11 +46,7 @@ at::Tensor bucketize(const at::Scalar& self, const at::Tensor& boundaries, bool 
 }
 
 at::Tensor &bucketize_out(
-    const at::Tensor& self,
-    const at::Tensor& boundaries,
-    bool out_int32,
-    bool right,
-    at::Tensor& out)
+    const at::Tensor &self, const at::Tensor &boundaries, bool out_int32, bool right, at::Tensor &out)
 {
     TORCH_CHECK(boundaries.dim() == 1, "boundaries tensor must be 1 dimension, but got dim(", boundaries.dim(),
         ")" + OPS_ERROR(ErrCode::PARAM));
@@ -59,10 +55,7 @@ at::Tensor &bucketize_out(
     bool typeSupport = self.dtype() != at::kDouble && boundaries.dtype() != at::kDouble;
     static const bool is_bucketize_available = check_aclnn_kernel_available("aclnnBucketize");
     if (isRegBaseSoc && typeSupport && is_bucketize_available) {
-        at_npu::native::OpPreparation::check_tensor({self, boundaries},
-                                                    out,
-                                                    out.scalar_type(),
-                                                    self.sizes());
+        at_npu::native::OpPreparation::check_tensor({self, boundaries}, out, out.scalar_type(), self.sizes());
         EXEC_NPU_CMD(aclnnBucketize, self, boundaries, out_int32, right, out);
         return out;
     } else {

@@ -48,8 +48,8 @@ void _foreach_sigmoid_(const at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachSigmoid, at::native::foreach_tensor_sigmoid_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_sigmoid_slow_(self);
     }
@@ -66,8 +66,8 @@ std::vector<at::Tensor> _foreach_sigmoid(const at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachSigmoid, at::native::foreach_tensor_sigmoid_slow(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_sigmoid_slow(self);
     }
@@ -84,7 +84,8 @@ std::vector<at::Tensor> _foreach_sigmoid(const at::TensorList self)
     result.reserve(self.size());
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 
@@ -92,4 +93,3 @@ std::vector<at::Tensor> _foreach_sigmoid(const at::TensorList self)
     return result;
 }
 } // namespace op_api
-

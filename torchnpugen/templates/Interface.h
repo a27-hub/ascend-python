@@ -14,14 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef __TORCH_NPU_OP_PLUGIN_${namespace}_INTERFACE__
-#define __TORCH_NPU_OP_PLUGIN_${namespace}_INTERFACE__
+#ifndef __TORCH_NPU_OP_PLUGIN_${namespace } _INTERFACE__
+#define __TORCH_NPU_OP_PLUGIN_$ {namespace} _INTERFACE__
 
 #include <ATen/Tensor.h>
 #include <ATen/ATen.h>
 #include "op_plugin/utils/Export.h"
 
-namespace ${namespace} {
-${declarations}
-}  // namespace acl_op
+namespace $ {namespace}
+{
+    $ { declarations }
+} // namespace acl_op
 #endif

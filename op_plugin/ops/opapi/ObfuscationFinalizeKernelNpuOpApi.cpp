@@ -36,7 +36,7 @@ at::Tensor obfuscation_finalize(const at::Tensor &fd_to_close)
     int32_t thread_num = 0;
     float obf_cft = 1.0;
     EXEC_NPU_CMD(aclnnObfuscationSetupV2, fd_to_close_real, data_type, hidden_size, tp_rank, model_obf_seed_id,
-                 data_obf_seed_id, mode, thread_num, obf_cft, fd);
+        data_obf_seed_id, mode, thread_num, obf_cft, fd);
     return fd;
 }
 }

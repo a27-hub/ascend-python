@@ -37,13 +37,13 @@ void single_check_errors(int64_t info, const char *name, bool allow_singular = f
     if (info < 0) {
         TORCH_CHECK(false, name, batch_info, ": Argument ", -info, " has illegal value", OPS_ERROR(ErrCode::VALUE));
     } else if (info > 0) {
-        TORCH_CHECK(!strstr(name, "svd"), name, ": the updating process of SBDSDC did not converge (error: ", info,
-                    ")", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(!strstr(name, "svd"), name, ": the updating process of SBDSDC did not converge (error: ", info, ")",
+            OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(!strstr(name, "symeig"), name, batch_info, ": the algorithm failed to converge; ", info,
-                    " off-diagonal elements of an intermediate tridiagonal form did not converge to zero.",
-                    OPS_ERROR(ErrCode::PARAM));
+            " off-diagonal elements of an intermediate tridiagonal form did not converge to zero.",
+            OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(allow_singular, name, batch_info, ": U(", info, ",", info, ") is zero, singular U.",
-                    OPS_ERROR(ErrCode::PARAM));
+            OPS_ERROR(ErrCode::PARAM));
     }
 }
 
@@ -79,18 +79,18 @@ inline at::Tensor cloneBatchedColumnMajor(const at::Tensor &src)
 /*
  * contig chooses between C-contig (true) and F-contig (false)
  */
-inline c10::MaybeOwned<at::Tensor> borrow_else_clone(const bool cond, const at::Tensor &borrow, const at::Tensor &clone,
-                                                     const bool contig)
+inline c10::MaybeOwned<at::Tensor> borrow_else_clone(
+    const bool cond, const at::Tensor &borrow, const at::Tensor &clone, const bool contig)
 {
-    return cond ? c10::MaybeOwned<at::Tensor>::borrowed(borrow) :
-                  c10::MaybeOwned<at::Tensor>::owned(contig ? clone.clone(at::MemoryFormat::Contiguous) :
-                                                              cloneBatchedColumnMajor(clone));
+    return cond ? c10::MaybeOwned<at::Tensor>::borrowed(borrow)
+                : c10::MaybeOwned<at::Tensor>::owned(
+                      contig ? clone.clone(at::MemoryFormat::Contiguous) : cloneBatchedColumnMajor(clone));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _svd_helper(const at::Tensor &self, bool some, bool compute_uv)
 {
-    TORCH_CHECK(self.dtype() == at::kFloat, "svd_npu only supported Float, but get", self.dtype(),
-        OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(
+        self.dtype() == at::kFloat, "svd_npu only supported Float, but get", self.dtype(), OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(self.dim() >= 2, "The dim of input tensor must larger than two.", OPS_ERROR(ErrCode::VALUE));
     std::vector<int64_t> infos(batch_count(self), 0);
     int64_t m = self.size(-2);
@@ -186,19 +186,18 @@ static void linalg_check_errors(const at::Tensor &infos, const c10::string_view 
         // Here we check for the case where `info` is -4 and raise an error
         if (api_name.find("svd") != api_name.npos) {
             TORCH_CHECK(info != -4, api_name, batch_str,
-                        ": The algorithm failed to converge because the input matrix contained non-finite values.",
-                        OPS_ERROR(ErrCode::VALUE));
+                ": The algorithm failed to converge because the input matrix contained non-finite values.",
+                OPS_ERROR(ErrCode::VALUE));
         }
-        TORCH_CHECK(
-            false, api_name, batch_str, ": Argument ", -info,
+        TORCH_CHECK(false, api_name, batch_str, ": Argument ", -info,
             " has illegal value. Most certainly there is a bug in the implementation calling the backend library.",
             OPS_ERROR(ErrCode::VALUE));
     } else if (info > 0) {
         if (api_name.find("svd") != api_name.npos) {
             TORCH_CHECK(false, api_name, batch_str,
-                        ": The algorithm failed to converge because the input matrix is ill-conditioned or has too "
-                        "many repeated singular values (error code: ",
-                        info, ").", OPS_ERROR(ErrCode::PARAM));
+                ": The algorithm failed to converge because the input matrix is ill-conditioned or has too "
+                "many repeated singular values (error code: ",
+                info, ").", OPS_ERROR(ErrCode::PARAM));
         } else {
             TORCH_CHECK(false, api_name, ": Unknown error code: ", info, ".", OPS_ERROR(ErrCode::INTERNAL));
         }
@@ -207,10 +206,8 @@ static void linalg_check_errors(const at::Tensor &infos, const c10::string_view 
     TORCH_CHECK(false, OPS_ERROR(ErrCode::INTERNAL));
 }
 
-std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> linalg_svd_out_common(const at::Tensor &A,
-                                                                           const bool full_matrices,
-                                                                           const bool compute_uv, at::Tensor &U,
-                                                                           at::Tensor &S, at::Tensor &Vh)
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> linalg_svd_out_common(
+    const at::Tensor &A, const bool full_matrices, const bool compute_uv, at::Tensor &U, at::Tensor &S, at::Tensor &Vh)
 {
     // Half optimisation half precondition for some parts of the LAPACK / cuSOLVER
     // In particular, the call to lapackSvd to compute lwork fails otherwise

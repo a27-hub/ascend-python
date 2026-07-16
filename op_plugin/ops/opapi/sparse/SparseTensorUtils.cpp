@@ -19,7 +19,7 @@
 #include <ATen/native/DispatchStub.h>
 
 namespace sparse {
-at::Tensor flatten_indices_npu_kernel(const at::Tensor& indices, c10::IntArrayRef size)
+at::Tensor flatten_indices_npu_kernel(const at::Tensor &indices, c10::IntArrayRef size)
 {
     std::vector<int64_t> flatten_size(size.size(), 1);
     for (size_t i = size.size() - 1; i > 0; i--) {
@@ -36,7 +36,7 @@ at::Tensor flatten_indices_npu_kernel(const at::Tensor& indices, c10::IntArrayRe
 // mul(SparseTensor, Scalar)
 // --------------------------------------------------------------------
 
-SparseTensor& mul_out_sparse_zerodim(SparseTensor& r, const SparseTensor& t, const at::Tensor& value)
+SparseTensor &mul_out_sparse_zerodim(SparseTensor &r, const SparseTensor &t, const at::Tensor &value)
 {
     AT_ASSERT(r.is_sparse());
     AT_ASSERT(t.is_sparse());
@@ -71,19 +71,20 @@ SparseTensor& mul_out_sparse_zerodim(SparseTensor& r, const SparseTensor& t, con
     return r;
 }
 
-SparseTensor& mul_out_sparse_scalar(SparseTensor& r, const SparseTensor& t, const at::Scalar& value)
+SparseTensor &mul_out_sparse_scalar(SparseTensor &r, const SparseTensor &t, const at::Scalar &value)
 {
     return mul_out_sparse_zerodim(r, t, at::native::wrapped_scalar_tensor(value));
 }
 
-at::Tensor& mul_out_sparse(const at::Tensor& self, const at::Tensor& other, at::Tensor& out)
+at::Tensor &mul_out_sparse(const at::Tensor &self, const at::Tensor &other, at::Tensor &out)
 {
-    TORCH_CHECK(self.is_sparse() || other.is_sparse(), "mul: expected at least one sparse input",
-        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(
+        self.is_sparse() || other.is_sparse(), "mul: expected at least one sparse input", OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(out.is_sparse(), "mul: expected 'out' to be a sparse tensor", OPS_ERROR(ErrCode::VALUE));
 
     const auto sparse_dim = self.is_sparse() ? self.sparse_dim() : other.sparse_dim();
-    auto dense_result = at::mul(self.is_sparse() ? self.to_dense() : self, other.is_sparse() ? other.to_dense() : other);
+    auto dense_result =
+        at::mul(self.is_sparse() ? self.to_dense() : self, other.is_sparse() ? other.to_dense() : other);
     return at::copy_sparse_to_sparse_(out, dense_result.to_sparse(sparse_dim));
 }
 
@@ -91,7 +92,7 @@ at::Tensor& mul_out_sparse(const at::Tensor& self, const at::Tensor& other, at::
 
 namespace at {
 namespace native {
-using flatten_indices_fn = at::Tensor (*)(const at::Tensor& indices, at::IntArrayRef size);
+using flatten_indices_fn = at::Tensor (*)(const at::Tensor &indices, at::IntArrayRef size);
 DECLARE_DISPATCH(flatten_indices_fn, flatten_indices_stub);
 REGISTER_PRIVATEUSE1_DISPATCH(flatten_indices_stub, &::sparse::flatten_indices_npu_kernel);
 }

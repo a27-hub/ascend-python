@@ -29,7 +29,8 @@ constexpr int64_t ROW_BLOCK_SIZE_INVALID = 0;
 
 std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_block_quant(const at::Tensor &x, const at::Tensor &group_list,
     double min_scale, c10::string_view round_mode, int64_t dst_type, int64_t row_block_size, int64_t col_block_size,
-    int64_t group_list_type, double dst_type_max) {
+    int64_t group_list_type, double dst_type_max)
+{
     at::Tensor y;
     at::Tensor scale;
     auto y_shape = op_infer::array_to_small_vector(x.sizes());

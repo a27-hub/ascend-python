@@ -21,11 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using calcu_op_util = at_npu::native::CalcuOpUtil;
 
 at::Tensor kl_div_backward(
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    bool log_target)
+    const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &target, int64_t reduction, bool log_target)
 {
     auto output_size = op_infer::input_same_output_size(self);
     at::Tensor grad_input = npu_preparation::apply_tensor(output_size, self.options(), self);

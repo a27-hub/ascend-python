@@ -20,11 +20,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor &sum_out_common_nocheck(const at::Tensor &self,
-                                   at::IntArrayRef dim,
-                                   bool keepdim,
-                                   c10::optional<c10::ScalarType> dtype,
-                                   at::Tensor &result)
+at::Tensor &sum_out_common_nocheck(
+    const at::Tensor &self, at::IntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype, at::Tensor &result)
 {
     DO_COMPATIBILITY(aclnnReduceSum, acl_op::sum_out(self, dim, keepdim, dtype, result));
     auto output_size = op_infer::sum_npu_output_size(self, dim, keepdim);
@@ -35,10 +32,8 @@ at::Tensor &sum_out_common_nocheck(const at::Tensor &self,
     return result;
 }
 
-at::Tensor sum_common_nocheck(const at::Tensor &self,
-                              at::IntArrayRef dim,
-                              bool keepdim,
-                              c10::optional<c10::ScalarType> dtype)
+at::Tensor sum_common_nocheck(
+    const at::Tensor &self, at::IntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype)
 {
     DO_COMPATIBILITY(aclnnReduceSum, acl_op::sum(self, dim, keepdim, dtype));
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);

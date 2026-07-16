@@ -18,10 +18,11 @@
 using namespace std;
 namespace atb {
 using ReshapeAndCacheParam = atb::infer::ReshapeAndCacheParam;
-void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::Tensor &key_cache, at::Tensor &value_cache, const at::Tensor &slot_indices)
+void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::Tensor &key_cache,
+    at::Tensor &value_cache, const at::Tensor &slot_indices)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(key));
-    OpParamCache<ReshapeAndCacheParam>& reshapeAndCacheParamCache = OpParamCache<ReshapeAndCacheParam>::getInstance();
+    OpParamCache<ReshapeAndCacheParam> &reshapeAndCacheParamCache = OpParamCache<ReshapeAndCacheParam>::getInstance();
     ReshapeAndCacheParam reshapeparam;
     reshapeparam.compressType = ReshapeAndCacheParam::COMPRESS_TYPE_UNDEFINED;
 
@@ -35,7 +36,7 @@ void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::
     } else {
         reshapeparam.kvCacheCfg = ReshapeAndCacheParam::K_CACHE_V_CACHE;
     }
-    
+
     ParamSetter parametter;
     parametter.Input(key, true)
         .Input(value, true)
@@ -53,14 +54,12 @@ void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_reshape_and_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_indices) -> ()");
+    m.def("_npu_reshape_and_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor "
+          "slot_indices) -> ()");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
-    m.impl("_npu_reshape_and_cache", TORCH_FN(atb::_npu_reshape_and_cache));
-}
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) { m.impl("_npu_reshape_and_cache", TORCH_FN(atb::_npu_reshape_and_cache)); }
 }
 } // namespace

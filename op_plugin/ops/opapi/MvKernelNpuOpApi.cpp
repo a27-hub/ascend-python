@@ -53,4 +53,4 @@ at::Tensor mv(const at::Tensor &self, const at::Tensor &vec)
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

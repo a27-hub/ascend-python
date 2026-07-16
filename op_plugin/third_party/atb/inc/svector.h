@@ -44,7 +44,7 @@ struct MaxSizeExceeded : public std::exception {};
 //! 封装动态数组的顺序容器
 //!
 template <class T> class SVector {
-public:
+  public:
     //! \brief 默认构造函数
     //!
     //! \note 容量为DEFAULT_SVECTOR_SIZE
@@ -273,10 +273,7 @@ public:
     //!
     //! \return size
     //!
-    std::size_t size() const noexcept
-    {
-        return size_;
-    }
+    std::size_t size() const noexcept { return size_; }
 
     //! \brief 向容器内指定位置插入元素
     //!
@@ -285,8 +282,8 @@ public:
     //!
     //! \note pos必须小于SVector容量，否则会抛出异常
     //!
-    void insert(const std::size_t pos,
-                const T &value) noexcept((!CHECK_BOUND) && std::is_nothrow_assignable<T, const T &>::value)
+    void insert(const std::size_t pos, const T &value) noexcept(
+        (!CHECK_BOUND) && std::is_nothrow_assignable<T, const T &>::value)
     {
         if (heap_) {
             if (pos > size_ || pos == capacity_) {
@@ -318,16 +315,10 @@ public:
     //!
     //! \return bool值
     //!
-    bool empty() const noexcept
-    {
-        return size_ == 0;
-    }
+    bool empty() const noexcept { return size_ == 0; }
 
     //! \brief 清空容器
-    void clear() noexcept
-    {
-        size_ = 0;
-    }
+    void clear() noexcept { size_ = 0; }
 
     //! \brief 获取容器起始元素地址
     //!
@@ -538,7 +529,7 @@ public:
         }
     }
 
-private:
+  private:
     std::size_t capacity_ = 0;
     std::size_t size_ = 0;
     T storage_[DEFAULT_SVECTOR_SIZE + 1];

@@ -22,32 +22,24 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& glu_npu_out_nocheck(at::Tensor& result, const at::Tensor& self, int64_t dim)
+at::Tensor &glu_npu_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_t dim)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("GLU")
-        .Input(self)
-        .Output(result)
-        .Attr("dim", dim)
-        .Run();
+    cmd.Name("GLU").Input(self).Output(result).Attr("dim", dim).Run();
     return result;
 }
-}  // namespace
+} // namespace
 
-at::Tensor& glu_out(const at::Tensor& self, int64_t dim, at::Tensor& out)
+at::Tensor &glu_out(const at::Tensor &self, int64_t dim, at::Tensor &out)
 {
     auto output_size = op_infer::glu_npu_output_size(self, dim);
-    npu_preparation::CheckOut(
-        {self},
-        out,
-        self,
-        output_size);
+    npu_preparation::CheckOut({self}, out, self, output_size);
 
     TORCH_CHECK(self.dim() > 0, "glu does not support 0-dimensional at::Tensors" + OPS_ERROR(ErrCode::NOT_SUPPORT));
     auto wrap_dim = at::maybe_wrap_dim(dim, self.dim());
     const int64_t n_in = self.size(wrap_dim);
     TORCH_CHECK(n_in % 2 == 0, "Halving dimension must be even, but dimension ", wrap_dim, " is size ", n_in,
-                OPS_ERROR(ErrCode::PARAM));
+        OPS_ERROR(ErrCode::PARAM));
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -60,17 +52,17 @@ at::Tensor& glu_out(const at::Tensor& self, int64_t dim, at::Tensor& out)
     return out;
 }
 
-at::Tensor glu(const at::Tensor& self, int64_t dim)
+at::Tensor glu(const at::Tensor &self, int64_t dim)
 {
     TORCH_CHECK(self.dim() > 0, "glu does not support 0-dimensional at::Tensors" + OPS_ERROR(ErrCode::NOT_SUPPORT));
     auto wrap_dim = at::maybe_wrap_dim(dim, self.dim());
     const int64_t n_in = self.size(wrap_dim);
     TORCH_CHECK(n_in % 2 == 0, "Halving dimension must be even, but dimension ", wrap_dim, " is size ", n_in,
-                OPS_ERROR(ErrCode::PARAM));
+        OPS_ERROR(ErrCode::PARAM));
 
     auto output_size = op_infer::glu_npu_output_size(self, dim);
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
     glu_npu_out_nocheck(result, self, dim);
     return result;
 }
-}  // namespace acl_op
+} // namespace acl_op

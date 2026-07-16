@@ -22,11 +22,8 @@ namespace {
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
 // Sorting-based algorithm for isin(); used when the number of test elements is large.
-static void isin_sorting(const at::Tensor& elements,
-                         const at::Tensor& test_elements,
-                         bool assume_unique,
-                         bool invert,
-                         const at::Tensor& out)
+static void isin_sorting(
+    const at::Tensor &elements, const at::Tensor &test_elements, bool assume_unique, bool invert, const at::Tensor &out)
 {
     // 1. Concatenate unique elements with unique test elements in 1D form. If
     //    assume_unique is true, skip calls to unique().
@@ -37,8 +34,8 @@ static void isin_sorting(const at::Tensor& elements,
         elements_flat = elements.ravel();
         test_elements_flat = test_elements.ravel();
     } else {
-        std::tie (elements_flat, unique_order) = at::_unique(elements, false, true);
-        std::tie (test_elements_flat, std::ignore) = at::_unique(test_elements, false);
+        std::tie(elements_flat, unique_order) = at::_unique(elements, false, true);
+        std::tie(test_elements_flat, std::ignore) = at::_unique(test_elements, false);
     }
 
     // 2. Stable sort all elements, maintaining order indices to reverse the
@@ -47,7 +44,7 @@ static void isin_sorting(const at::Tensor& elements,
     at::Tensor all_elements = at::cat({std::move(elements_flat), std::move(test_elements_flat)});
     at::Tensor sorted_elements;
     at::Tensor sorted_order;
-    std::tie (sorted_elements, sorted_order) = all_elements.sort(true, 0, false);
+    std::tie(sorted_elements, sorted_order) = all_elements.sort(true, 0, false);
 
     // 3. Create a mask for locations of adjacent duplicate values within the
     //    sorted list. Duplicate values are in both elements and test elements.
@@ -72,22 +69,17 @@ static void isin_sorting(const at::Tensor& elements,
     }
 }
 
-void isin_default_kernel_npu(const at::Tensor& elements,
-                             const at::Tensor& test_elements,
-                             bool invert,
-                             const at::Tensor& out)
+void isin_default_kernel_npu(
+    const at::Tensor &elements, const at::Tensor &test_elements, bool invert, const at::Tensor &out)
 {
     std::vector<int64_t> bc_shape(elements.dim(), 1);
     bc_shape.push_back(-1);
     out.copy_(invert ? elements.unsqueeze(-1).ne(test_elements.view(bc_shape)).all(-1)
-                : elements.unsqueeze(-1).eq(test_elements.view(bc_shape)).any(-1));
+                     : elements.unsqueeze(-1).eq(test_elements.view(bc_shape)).any(-1));
 }
 
-void isin_Tensor_Tensor_out_impl(const at::Tensor& elements,
-                                 const at::Tensor& test_elements,
-                                 bool assume_unique,
-                                 bool invert,
-                                 const at::Tensor& out)
+void isin_Tensor_Tensor_out_impl(
+    const at::Tensor &elements, const at::Tensor &test_elements, bool assume_unique, bool invert, const at::Tensor &out)
 {
     if (elements.numel() == 0) {
         return;
@@ -95,8 +87,7 @@ void isin_Tensor_Tensor_out_impl(const at::Tensor& elements,
 
     // Heuristic taken from numpy's implementation.
     // See https://github.com/numpy/numpy/blob/fb215c76967739268de71aa4bda55dd1b062bc2e/numpy/lib/arraysetops.py#L575
-    if (test_elements.numel() < static_cast<int64_t>(
-            10.0f * std::pow(static_cast<double>(elements.numel()), 0.145))) {
+    if (test_elements.numel() < static_cast<int64_t>(10.0f * std::pow(static_cast<double>(elements.numel()), 0.145))) {
         out.fill_(invert);
         isin_default_kernel_npu(elements, test_elements, invert, out);
     } else {
@@ -110,19 +101,17 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
-at::Tensor& isin_out(const at::Tensor& elements, const at::Tensor &test_elements,
-                     bool assume_unique, bool invert, at::Tensor& result)
+at::Tensor &isin_out(
+    const at::Tensor &elements, const at::Tensor &test_elements, bool assume_unique, bool invert, at::Tensor &result)
 {
     npu_preparation::check_tensor({elements, test_elements}, result, at::kBool, elements.sizes());
     isin_Tensor_Tensor_out_impl(elements, test_elements, assume_unique, invert, result);
     return result;
 }
-at::Tensor isin(const at::Tensor& elements, const at::Tensor &test_elements,
-                bool assume_unique, bool invert)
+at::Tensor isin(const at::Tensor &elements, const at::Tensor &test_elements, bool assume_unique, bool invert)
 {
-    at::Tensor result = npu_preparation::apply_tensor_without_format(
-        elements.sizes(),
-        elements.options().dtype(at::kBool));
+    at::Tensor result =
+        npu_preparation::apply_tensor_without_format(elements.sizes(), elements.options().dtype(at::kBool));
     isin_Tensor_Tensor_out_impl(elements, test_elements, assume_unique, invert, result);
     return result;
 }

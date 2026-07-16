@@ -24,12 +24,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-std::tuple<at::Tensor&, at::Tensor&> min_out_npu_nocheck(
-    at::Tensor& output,
-    at::Tensor& indices,
-    const at::Tensor& self,
-    int64_t dim,
-    bool keepdim)
+std::tuple<at::Tensor &, at::Tensor &> min_out_npu_nocheck(
+    at::Tensor &output, at::Tensor &indices, const at::Tensor &self, int64_t dim, bool keepdim)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("ArgMinWithValue")
@@ -42,60 +38,30 @@ std::tuple<at::Tensor&, at::Tensor&> min_out_npu_nocheck(
     return std::tie(output, indices);
 }
 
-at::Tensor& min_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& other)
+at::Tensor &min_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &other)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Minimum")
-        .Input(self)
-        .Input(other)
-        .Output(result)
-        .Run();
+    cmd.Name("Minimum").Input(self).Input(other).Output(result).Run();
     return result;
 }
 
-at::Tensor& min_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef dims,
-    bool keepdim)
+at::Tensor &min_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef dims, bool keepdim)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("ReduceMin")
-        .Input(self)
-        .Input(dims)
-        .Output(result)
-        .Attr("keep_dims", keepdim)
-        .Run();
+    cmd.Name("ReduceMin").Input(self).Input(dims).Output(result).Attr("keep_dims", keepdim).Run();
     return result;
 }
 } // namespace
 
-std::tuple<at::Tensor&, at::Tensor&> min_out(
-    const at::Tensor& self,
-    int64_t dim,
-    bool keepdim,
-    at::Tensor& output,
-    at::Tensor& indices)
+std::tuple<at::Tensor &, at::Tensor &> min_out(
+    const at::Tensor &self, int64_t dim, bool keepdim, at::Tensor &output, at::Tensor &indices)
 {
     c10::SmallVector<int64_t, SIZE> dims = {dim};
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
 
-    npu_preparation::CheckOut(
-        {self},
-        output,
-        ACL_FORMAT_ND,
-        self.scalar_type(),
-        output_size);
+    npu_preparation::CheckOut({self}, output, ACL_FORMAT_ND, self.scalar_type(), output_size);
 
-    npu_preparation::CheckOut(
-        {self},
-        indices,
-        ACL_FORMAT_ND,
-        at::ScalarType::Long,
-        output_size);
+    npu_preparation::CheckOut({self}, indices, ACL_FORMAT_ND, at::ScalarType::Long, output_size);
 
     at::Tensor indices_dtype_cast = at_npu::native::custom_ops::_npu_dtype_cast(indices, at::kInt);
     bool output_match = npu_utils::check_match(&output);
@@ -120,7 +86,7 @@ std::tuple<at::Tensor&, at::Tensor&> min_out(
     return std::tie(output, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim, bool keepdim)
+std::tuple<at::Tensor, at::Tensor> min(const at::Tensor &self, int64_t dim, bool keepdim)
 {
     at::Tensor self_cast = self;
     if (self.dtype() == at::ScalarType::Bool) {
@@ -129,15 +95,10 @@ std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim, bool
     c10::SmallVector<int64_t, SIZE> dims = {dim};
     auto output_size = op_infer::reduce_ops_npu_output_size(self_cast, dims, keepdim);
 
-    at::Tensor outputs = npu_preparation::apply_tensor_with_format(
-        output_size,
-        self_cast.options(),
-        ACL_FORMAT_ND);
+    at::Tensor outputs = npu_preparation::apply_tensor_with_format(output_size, self_cast.options(), ACL_FORMAT_ND);
 
     at::Tensor indices = npu_preparation::apply_tensor_with_format(
-        output_size,
-        self_cast.options().dtype(at::ScalarType::Int),
-        ACL_FORMAT_NCHW);
+        output_size, self_cast.options().dtype(at::ScalarType::Int), ACL_FORMAT_NCHW);
 
     min_out_npu_nocheck(outputs, indices, self_cast, dim, keepdim);
     indices = at_npu::native::custom_ops::_npu_dtype_cast(indices, at::ScalarType::Long);
@@ -148,30 +109,21 @@ std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim, bool
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor&, at::Tensor&> min_out(
-    const at::Tensor& self,
-    at::Dimname dim,
-    bool keepdim,
-    at::Tensor& output,
-    at::Tensor& indices)
+std::tuple<at::Tensor &, at::Tensor &> min_out(
+    const at::Tensor &self, at::Dimname dim, bool keepdim, at::Tensor &output, at::Tensor &indices)
 {
     return acl_op::min_out(self, dimname_to_position(self, dim), keepdim, output, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, at::Dimname dim, bool keepdim)
+std::tuple<at::Tensor, at::Tensor> min(const at::Tensor &self, at::Dimname dim, bool keepdim)
 {
     return acl_op::min(self, dimname_to_position(self, dim), keepdim);
 }
 #endif
 
-at::Tensor& min_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
+at::Tensor &min_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
 {
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        ACL_FORMAT_ND,
-        self.scalar_type(),
-        self.sizes());
+    npu_preparation::CheckOut({self}, result, ACL_FORMAT_ND, self.scalar_type(), self.sizes());
 
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -184,7 +136,7 @@ at::Tensor& min_out(const at::Tensor& self, const at::Tensor& other, at::Tensor&
     return result;
 }
 
-at::Tensor minimum(const at::Tensor& self, const at::Tensor& other)
+at::Tensor minimum(const at::Tensor &self, const at::Tensor &other)
 {
     auto result_type = at::result_type(self, other);
     at::Tensor self_copy = self;
@@ -196,10 +148,12 @@ at::Tensor minimum(const at::Tensor& self, const at::Tensor& other)
         at::Scalar scalar = self.item();
         self_copy = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, self.scalar_type(), other.device());
     }
-    self_copy = (self.scalar_type() != result_type) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(self_copy, result_type) : self_copy;
-    other_copy = (other.scalar_type() != result_type) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(other_copy, result_type) : other_copy;
+    self_copy = (self.scalar_type() != result_type)
+        ? at_npu::native::custom_ops::_npu_dtype_cast(self_copy, result_type)
+        : self_copy;
+    other_copy = (other.scalar_type() != result_type)
+        ? at_npu::native::custom_ops::_npu_dtype_cast(other_copy, result_type)
+        : other_copy;
 
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor result = npu_preparation::apply_tensor(self_copy, output_size);
@@ -207,13 +161,12 @@ at::Tensor minimum(const at::Tensor& self, const at::Tensor& other)
     return result;
 }
 
-at::Tensor& minimum_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
+at::Tensor &minimum_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
 {
     auto high_type = at::result_type(self, other);
     auto result_type = result.scalar_type();
     TORCH_CHECK(canCast(high_type, result_type), "result type ", high_type,
-        " can't be cast to the desired output type ", result_type,
-        OPS_ERROR(ErrCode::TYPE));
+        " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
     at::Tensor self_copy = self;
     at::Tensor other_copy = other;
     if (at_npu::native::OpPreparation::IsCPUScalar(other)) {
@@ -223,15 +176,17 @@ at::Tensor& minimum_out(const at::Tensor& self, const at::Tensor& other, at::Ten
         at::Scalar scalar = self.item();
         self_copy = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, self.scalar_type(), other.device());
     }
-    self_copy = (self.scalar_type() != result_type) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(self_copy, result_type) : self_copy;
-    other_copy = (other.scalar_type() != result_type) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(other_copy, result_type) : other_copy;
+    self_copy = (self.scalar_type() != result_type)
+        ? at_npu::native::custom_ops::_npu_dtype_cast(self_copy, result_type)
+        : self_copy;
+    other_copy = (other.scalar_type() != result_type)
+        ? at_npu::native::custom_ops::_npu_dtype_cast(other_copy, result_type)
+        : other_copy;
 
     return acl_op::min_out(self_copy, other_copy, result);
 }
 
-at::Tensor amin(const at::Tensor& self, at::IntArrayRef dims, bool keepdim)
+at::Tensor amin(const at::Tensor &self, at::IntArrayRef dims, bool keepdim)
 {
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
     int64_t npu_format = output_size.empty() ? ACL_FORMAT_NCHW : npu_preparation::get_tensor_npu_format(self);
@@ -240,25 +195,16 @@ at::Tensor amin(const at::Tensor& self, at::IntArrayRef dims, bool keepdim)
     return result;
 }
 
-at::Tensor min(const at::Tensor& self)
+at::Tensor min(const at::Tensor &self)
 {
     c10::SmallVector<int64_t, SIZE> dims = op_plugin::utils::get_dimlist_for_tensor(self);
     return acl_op::amin(self, dims, false);
 }
 
-at::Tensor& amin_out(
-    const at::Tensor& self,
-    at::IntArrayRef dims,
-    bool keepdim,
-    at::Tensor& result)
+at::Tensor &amin_out(const at::Tensor &self, at::IntArrayRef dims, bool keepdim, at::Tensor &result)
 {
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        ACL_FORMAT_ND,
-        self.scalar_type(),
-        output_size);
+    npu_preparation::CheckOut({self}, result, ACL_FORMAT_ND, self.scalar_type(), output_size);
 
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);

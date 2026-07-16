@@ -20,14 +20,15 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> npu_geglu(const at::Tensor &self, int64_t dim, int64_t approximate, bool activate_left)
+std::tuple<at::Tensor, at::Tensor> npu_geglu(
+    const at::Tensor &self, int64_t dim, int64_t approximate, bool activate_left)
 {
     auto dim_num = self.dim();
     if (dim_num == 0) {
         dim_num = 1;
     }
-    TORCH_CHECK(-dim_num - 1 < dim && dim < dim_num, " Expected npu_swiglu dim value ", dim,
-                " to be in range [", -dim_num, ", ", (dim_num - 1), "] but check failed.", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(-dim_num - 1 < dim && dim < dim_num, " Expected npu_swiglu dim value ", dim, " to be in range [",
+        -dim_num, ", ", (dim_num - 1), "] but check failed.", OPS_ERROR(ErrCode::VALUE));
     auto output_size = op_infer::array_to_small_vector(self.sizes());
     int64_t slice_dim = dim < 0 ? dim_num + dim : dim;
 
@@ -40,8 +41,8 @@ std::tuple<at::Tensor, at::Tensor> npu_geglu(const at::Tensor &self, int64_t dim
     return std::tuple<at::Tensor, at::Tensor>(result, result_gelu);
 }
 
-at::Tensor npu_geglu_grad(const at::Tensor& grad_output, const at::Tensor& self, const at::Tensor& gelu, int64_t dim,
-                          int64_t approximate, bool activate_left)
+at::Tensor npu_geglu_grad(const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &gelu, int64_t dim,
+    int64_t approximate, bool activate_left)
 {
     at::Tensor grad_input = npu_preparation::apply_tensor_without_format(self);
     EXEC_NPU_CMD(aclnnGeGluV3Backward, grad_output, self, gelu, dim, approximate, activate_left, grad_input);

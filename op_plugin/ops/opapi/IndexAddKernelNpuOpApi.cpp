@@ -20,13 +20,9 @@
 
 namespace op_api {
 
-at::Tensor& index_add_out(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    const at::Scalar& alpha,
-    at::Tensor& result) {
+at::Tensor &index_add_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &source,
+    const at::Scalar &alpha, at::Tensor &result)
+{
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add_out(self, dim, index, source, alpha, result));
     auto self_sizes = self.sizes().vec();
     auto source_sizes = source.sizes().vec();
@@ -36,15 +32,9 @@ at::Tensor& index_add_out(
         source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
     TORCH_CHECK(self_sizes == source_sizes,
-                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
-                self.sizes(),
-                " source.shape = ",
-                source.sizes(),
-                OPS_ERROR(ErrCode::PARAM));
-    at_npu::native::OpPreparation::check_tensor({self, index, source},
-                                                result,
-                                                result.scalar_type(),
-                                                self.sizes());
+        "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
+        self.sizes(), " source.shape = ", source.sizes(), OPS_ERROR(ErrCode::PARAM));
+    at_npu::native::OpPreparation::check_tensor({self, index, source}, result, result.scalar_type(), self.sizes());
     if (!result.is_same(self)) {
         result.copy_(self);
     }
@@ -70,11 +60,8 @@ at::Tensor& index_add_out(
 }
 
 at::Tensor index_add(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    const at::Scalar& alpha) {
+    const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &source, const at::Scalar &alpha)
+{
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add(self, dim, index, source, alpha));
     auto self_sizes = self.sizes().vec();
     auto source_sizes = source.sizes().vec();
@@ -84,11 +71,8 @@ at::Tensor index_add(
         source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
     TORCH_CHECK(self_sizes == source_sizes,
-                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
-                self.sizes(),
-                " source.shape = ",
-                source.sizes(),
-                OPS_ERROR(ErrCode::PARAM));
+        "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
+        self.sizes(), " source.shape = ", source.sizes(), OPS_ERROR(ErrCode::PARAM));
     at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self.sizes(), self.options());
 
     if (at::globalContext().deterministicAlgorithms()) {
@@ -114,11 +98,8 @@ at::Tensor index_add(
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
 at::Tensor index_add(
-    const at::Tensor& self,
-    at::Dimname dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    const at::Scalar& alpha) {
+    const at::Tensor &self, at::Dimname dim, const at::Tensor &index, const at::Tensor &source, const at::Scalar &alpha)
+{
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 #endif

@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include <ATen/ops/_empty_affine_quantized.h>
 #include <torch/library.h>
 
@@ -33,30 +32,19 @@ at::Tensor add(at::Tensor qa, at::Tensor qb, double output_scale, int64_t output
         return at::Tensor{};
     }
 
-    TORCH_CHECK(
-        output_scale != 0, "output_scale can not be zero");
+    TORCH_CHECK(output_scale != 0, "output_scale can not be zero");
     // For now we just assume the input tensors are the same shape and don't consider broadcasted add.
     TORCH_CHECK(
-        qa.sizes() == qb.sizes(),
-        "Quantized npu add currently expects both input tensors to be the same shape");
-    TORCH_CHECK(
-        qa.qscheme() == c10::kPerTensorAffine,
-        "Only per tensor quantization is supported in Add.");
-    TORCH_CHECK(
-        qa.qscheme() == qb.qscheme(),
-        "Both inputs to Add must have the same quantization scheme.");
-    TORCH_CHECK(
-        qa.scalar_type() == qb.scalar_type(),
-        "Add operands should have same data type.");
-    TORCH_CHECK(
-        qa.scalar_type() == at::ScalarType::QInt8,
-        "Add operands expect scalar type QInt8");
+        qa.sizes() == qb.sizes(), "Quantized npu add currently expects both input tensors to be the same shape");
+    TORCH_CHECK(qa.qscheme() == c10::kPerTensorAffine, "Only per tensor quantization is supported in Add.");
+    TORCH_CHECK(qa.qscheme() == qb.qscheme(), "Both inputs to Add must have the same quantization scheme.");
+    TORCH_CHECK(qa.scalar_type() == qb.scalar_type(), "Add operands should have same data type.");
+    TORCH_CHECK(qa.scalar_type() == at::ScalarType::QInt8, "Add operands expect scalar type QInt8");
 
     at::Tensor qa_float = qa.int_repr().to(at::kFloat);
     at::Tensor qb_float = qb.int_repr().to(at::kFloat);
-    at::Tensor calc_tensor = at::empty(
-        qa.sizes(),
-        qa.options().dtype(at::ScalarType::Float).memory_format(qa.suggest_memory_format()));
+    at::Tensor calc_tensor =
+        at::empty(qa.sizes(), qa.options().dtype(at::ScalarType::Float).memory_format(qa.suggest_memory_format()));
 
     // computes relu ( (qa + qb * ( b_scale / a_scale) ) ) * ( a_scale / out_scale )
     calc_tensor = qa_float + qb_float * (qb.q_scale() / qa.q_scale());
@@ -67,13 +55,14 @@ at::Tensor add(at::Tensor qa, at::Tensor qb, double output_scale, int64_t output
     calc_tensor = at::clamp(calc_tensor, -128.0, 127.0);
 
     at::Tensor tmp_result = calc_tensor.round().to(at::kChar);
-    at::Tensor result = at::_empty_affine_quantized(qa.sizes(), qa.options().dtype(at::ScalarType::QInt8),
-                                                    output_scale, output_zero_point, qa.suggest_memory_format());
+    at::Tensor result = at::_empty_affine_quantized(qa.sizes(), qa.options().dtype(at::ScalarType::QInt8), output_scale,
+        output_zero_point, qa.suggest_memory_format());
     at_npu::native::NPUNativeFunctions::set_(result, tmp_result);
     return result;
 }
 
-TORCH_LIBRARY_IMPL(quantized, QuantizedPrivateUse1, m) {
+TORCH_LIBRARY_IMPL(quantized, QuantizedPrivateUse1, m)
+{
     m.impl("quantized::add", TORCH_FN(add<false>));
     m.impl("quantized::add_relu", TORCH_FN(add<true>));
 }

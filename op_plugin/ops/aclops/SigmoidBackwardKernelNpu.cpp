@@ -22,28 +22,18 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::Tensor& sigmoid_backward_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& grad_output,
-    const at::Tensor& output)
+at::Tensor &sigmoid_backward_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &grad_output, const at::Tensor &output)
 {
     auto unified_result = npu_preparation::binary_op_check(result, output, grad_output, true);
     at_npu::native::OpCommand cmd;
-    cmd.Name("SigmoidGrad")
-        .Expect(unified_result)
-        .Input(output)
-        .Input(grad_output)
-        .Output(result)
-        .Run();
+    cmd.Name("SigmoidGrad").Expect(unified_result).Input(output).Input(grad_output).Output(result).Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor& sigmoid_backward_out(
-    const at::Tensor& grad_output,
-    const at::Tensor& output,
-    at::Tensor& grad_input)
+at::Tensor &sigmoid_backward_out(const at::Tensor &grad_output, const at::Tensor &output, at::Tensor &grad_input)
 {
     npu_preparation::CheckOut({grad_output, output}, grad_input, grad_output);
 
@@ -57,7 +47,7 @@ at::Tensor& sigmoid_backward_out(
     return grad_input;
 }
 
-at::Tensor sigmoid_backward(const at::Tensor& grad_output, const at::Tensor& output)
+at::Tensor sigmoid_backward(const at::Tensor &grad_output, const at::Tensor &output)
 {
     at::Tensor grad_input = npu_preparation::apply_tensor(grad_output);
     sigmoid_backward_out_npu_nocheck(grad_input, grad_output, output);

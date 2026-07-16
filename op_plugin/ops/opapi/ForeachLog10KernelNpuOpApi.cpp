@@ -26,7 +26,7 @@ void _split_and_exec_npu_cmd_log10(at::TensorList tensors1, at::TensorList resul
 {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
-    
+
     size_t loop_time = tensor_count / max_tensor_count;
     if (tensor_count <= max_tensor_count) {
         EXEC_NPU_CMD(aclnnForeachLog10, tensors1, result_list);
@@ -50,8 +50,8 @@ void _foreach_log10_(const at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachLog10, at::native::foreach_tensor_log10_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_log10_slow_(self);
     }
@@ -66,17 +66,17 @@ void _foreach_log10_(const at::TensorList self)
     }
     auto scalar_type = self[0].scalar_type();
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
+            scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float or bfloat16");
     _split_and_exec_npu_cmd_log10(self, self, true);
 }
-
 
 std::vector<at::Tensor> _foreach_log10(const at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachLog10, at::native::foreach_tensor_log10_slow(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_log10_slow(self);
     }
@@ -88,16 +88,15 @@ std::vector<at::Tensor> _foreach_log10(const at::TensorList self)
 
     auto scalar_type = self[0].scalar_type();
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
-                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
+            scalar_type == at::ScalarType::BFloat16,
+        "input must be half, float or bfloat16");
 
     // construct output tensorlist
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
         result.push_back(
-            npu_preparation::apply_tensor_without_format(
-                output_size,
-                tensor.options().dtype(scalar_type)));
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 

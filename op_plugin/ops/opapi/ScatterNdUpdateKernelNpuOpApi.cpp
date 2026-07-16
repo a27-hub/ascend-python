@@ -18,22 +18,16 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-    using npu_preparation = at_npu::native::OpPreparation;
+using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_scatter_nd_update(
-    const at::Tensor &self,
-    const at::Tensor &indices,
-    const at::Tensor &updates)
+at::Tensor npu_scatter_nd_update(const at::Tensor &self, const at::Tensor &indices, const at::Tensor &updates)
 {
     at::Tensor result = self.clone();
     EXEC_NPU_CMD(aclnnScatterNdUpdate, result, indices, updates);
     return result;
 }
 
-at::Tensor &npu_scatter_nd_update_(
-    at::Tensor &self,
-    const at::Tensor &indices,
-    const at::Tensor &updates)
+at::Tensor &npu_scatter_nd_update_(at::Tensor &self, const at::Tensor &indices, const at::Tensor &updates)
 {
     EXEC_NPU_CMD(aclnnScatterNdUpdate, self, indices, updates);
     return self;

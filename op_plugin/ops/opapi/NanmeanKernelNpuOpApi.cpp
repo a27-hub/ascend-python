@@ -19,17 +19,14 @@
 
 namespace op_api {
 
-at::Tensor& nanmean_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
-                        c10::optional<c10::ScalarType> dtype, at::Tensor& out)
+at::Tensor &nanmean_out(const at::Tensor &self, at::OptionalIntArrayRef dim, bool keepdim,
+    c10::optional<c10::ScalarType> dtype, at::Tensor &out)
 {
     // Check if dtype is an integral type or Bool and raise an error
-    TORCH_CHECK(
-        !at::isIntegralType(self.scalar_type(), /*includeBool=*/true),
+    TORCH_CHECK(!at::isIntegralType(self.scalar_type(), /*includeBool=*/true),
         "nanmean(): integral types and 'Bool' are not supported for nanmean, even for empty tensors.");
-    TORCH_CHECK(
-        self.is_floating_point() || self.is_complex(),
-        "nanmean(): expected input to have floating point or complex dtype but got ",
-        self.scalar_type());
+    TORCH_CHECK(self.is_floating_point() || self.is_complex(),
+        "nanmean(): expected input to have floating point or complex dtype but got ", self.scalar_type());
 
     // Calculate the factor: count of non-NaN values
     const auto factor = at::isnan(self).logical_not_().sum(dim, keepdim);

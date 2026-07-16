@@ -22,37 +22,21 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& log_softmax_backward_data_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& grad_output,
-    const at::Tensor& output,
-    int64_t dim)
+at::Tensor &log_softmax_backward_data_out_nocheck(
+    at::Tensor &result, const at::Tensor &grad_output, const at::Tensor &output, int64_t dim)
 {
     c10::SmallVector<int64_t, N> dim_list = {dim};
     at_npu::native::OpCommand cmd;
-    cmd.Name("LogSoftmaxGrad")
-        .Input(grad_output)
-        .Input(output)
-        .Output(result)
-        .Attr("axis", dim_list)
-        .Run();
+    cmd.Name("LogSoftmaxGrad").Input(grad_output).Input(output).Output(result).Attr("axis", dim_list).Run();
     return result;
 }
 }
 
-at::Tensor& _log_softmax_backward_data_out(
-    const at::Tensor& grad_output,
-    const at::Tensor& output,
-    int64_t dim,
-    c10::ScalarType input_dtype,
-    at::Tensor& out)
+at::Tensor &_log_softmax_backward_data_out(
+    const at::Tensor &grad_output, const at::Tensor &output, int64_t dim, c10::ScalarType input_dtype, at::Tensor &out)
 {
     auto output_size = op_infer::input_same_output_size(grad_output);
-    npu_preparation::CheckOut(
-        {grad_output, output},
-        out,
-        grad_output,
-        output_size);
+    npu_preparation::CheckOut({grad_output, output}, out, grad_output, output_size);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contig_result = npu_utils::format_contiguous(out);
         log_softmax_backward_data_out_nocheck(contig_result, grad_output, output, dim);
@@ -64,10 +48,7 @@ at::Tensor& _log_softmax_backward_data_out(
 }
 
 at::Tensor _log_softmax_backward_data(
-    const at::Tensor& grad_output,
-    const at::Tensor& output,
-    int64_t dim,
-    at::ScalarType input_dtype)
+    const at::Tensor &grad_output, const at::Tensor &output, int64_t dim, at::ScalarType input_dtype)
 {
     auto output_size = op_infer::input_same_output_size(grad_output);
 

@@ -131,7 +131,7 @@ bool mm_check_nd_to_nz_on_the_fly(const at::Tensor &self, const at::Tensor &mat2
         return false;
     }
     return !((self_inner_axis > kInnerAxisMaxLimit && self_outer_axis > kInnerAxisMaxLimit) ||
-             (mat2_inner_axis > kInnerAxisMaxLimit && mat2_outer_axis > kInnerAxisMaxLimit));
+        (mat2_inner_axis > kInnerAxisMaxLimit && mat2_outer_axis > kInnerAxisMaxLimit));
 }
 
 bool is_transpose_inner_axis(const at::Tensor &self)
@@ -140,7 +140,7 @@ bool is_transpose_inner_axis(const at::Tensor &self)
     const static int64_t kInnerAxisMaxLimit = 65535;
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1 || self.dim() < DIMENSION_2D ||
         (self.scalar_type() != at::ScalarType::Half && self.scalar_type() != at::ScalarType::Float &&
-         self.scalar_type() != at::ScalarType::BFloat16)) {
+            self.scalar_type() != at::ScalarType::BFloat16)) {
         return false;
     }
     int64_t data_type = static_cast<int64_t>(elementSize(self.scalar_type()));
@@ -158,18 +158,17 @@ bool is_transpose_inner_axis(const at::Tensor &self)
         return false;
     }
     return ((self_inner_axis > kInnerAxisMaxLimit) ||
-            (self_inner_axis * data_type < kInnerAxisMinBytes &&
-             bool((static_cast<uint64_t>(self_inner_axis) * static_cast<uint64_t>(data_type)) & 0x1F))) &&
-           ((self_outer_axis * data_type >= kInnerAxisMinBytes && self_outer_axis <= kInnerAxisMaxLimit) ||
+               (self_inner_axis * data_type < kInnerAxisMinBytes &&
+                   bool((static_cast<uint64_t>(self_inner_axis) * static_cast<uint64_t>(data_type)) & 0x1F))) &&
+        ((self_outer_axis * data_type >= kInnerAxisMinBytes && self_outer_axis <= kInnerAxisMaxLimit) ||
             (self_outer_axis * data_type < kInnerAxisMinBytes &&
-             ((static_cast<uint64_t>(self_outer_axis) * static_cast<uint64_t>(data_type)) & 0x1F) == 0));
+                ((static_cast<uint64_t>(self_outer_axis) * static_cast<uint64_t>(data_type)) & 0x1F) == 0));
 }
 
 bool is_transpose_both_inner_axis(const at::Tensor &self, const at::Tensor &mat2)
 {
     TORCH_CHECK(self.dim() >= 2 && mat2.dim() >= 2,
-        "is_transpose_both_inner_axis expects tensors with at least 2 dimensions"
-        + OPS_ERROR(ErrCode::PARAM));
+        "is_transpose_both_inner_axis expects tensors with at least 2 dimensions" + OPS_ERROR(ErrCode::PARAM));
     const static int64_t kInnerAxisMaxLimit = 65535;
     int64_t self_inner_axis = self.size(self.dim() - 1);
     int64_t self_outer_axis = self.size(self.dim() - 2);
@@ -184,7 +183,7 @@ bool is_transpose_both_inner_axis(const at::Tensor &self, const at::Tensor &mat2
         mat2_outer_axis = mat2.size(mat2.dim() - 1);
     }
     return self_inner_axis > kInnerAxisMaxLimit && self_outer_axis <= kInnerAxisMaxLimit &&
-           mat2_inner_axis > kInnerAxisMaxLimit && mat2_outer_axis <= kInnerAxisMaxLimit;
+        mat2_inner_axis > kInnerAxisMaxLimit && mat2_outer_axis <= kInnerAxisMaxLimit;
 }
 
 int64_t ceil(int64_t x, int64_t y)
@@ -198,7 +197,6 @@ int64_t ceil_div(int64_t x, int64_t y)
     TORCH_CHECK(y != 0, "Error, zero division." + OPS_ERROR(ErrCode::VALUE));
     return (x + y - 1) / y;
 }
-
 
 at::Tensor &mm_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &mat2)
 {
@@ -266,10 +264,10 @@ at::Tensor &mm_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const
 at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &out)
 {
     TORCH_CHECK(self.dim() == DIMENSION_2D && mat2.dim() == DIMENSION_2D,
-                "both arguments to matmul need to be 2D, but they are ",
-                self.dim(), "D and ", mat2.dim(), "D", OPS_ERROR(ErrCode::PARAM));
+        "both arguments to matmul need to be 2D, but they are ", self.dim(), "D and ", mat2.dim(), "D",
+        OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
-                "mm_out is not support int8 dtype", OPS_ERROR(ErrCode::PARAM))
+        "mm_out is not support int8 dtype", OPS_ERROR(ErrCode::PARAM))
     if (!out.is_contiguous()) {
         at::Tensor contiguous_out = npu_utils::format_contiguous(out);
         mm_out_npu_nocheck(contiguous_out, self, mat2);
@@ -283,14 +281,14 @@ at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &o
 at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
 {
     TORCH_CHECK(self.dim() == DIMENSION_2D && mat2.dim() == DIMENSION_2D,
-                "both arguments to matmul need to be 2D, but they are ",
-                self.dim(), "D and ", mat2.dim(), "D", OPS_ERROR(ErrCode::PARAM));
+        "both arguments to matmul need to be 2D, but they are ", self.dim(), "D and ", mat2.dim(), "D",
+        OPS_ERROR(ErrCode::PARAM));
 
     // 1.cann bmm support int8(input)->int32(out)
     // 2.onnx can support because of change y dtype to be int32.
     // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
-                "mm is not support int8 dtype", OPS_ERROR(ErrCode::PARAM))
+        "mm is not support int8 dtype", OPS_ERROR(ErrCode::PARAM))
     auto output_size = {self.size(0), mat2.size(1)};
 
     at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options(), ACL_FORMAT_ND);
@@ -301,9 +299,9 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
         // check is 16-algined with high-performance
         auto is_align = [&]() {
             return ((static_cast<uint64_t>(self.size(0)) & 0xF) == 0) &&
-                   ((static_cast<uint64_t>(self.size(1)) & 0xF) == 0) &&
-                   ((static_cast<uint64_t>(mat2.size(0)) & 0xF) == 0) &&
-                   ((static_cast<uint64_t>(mat2.size(1)) & 0xF) == 0);
+                ((static_cast<uint64_t>(self.size(1)) & 0xF) == 0) &&
+                ((static_cast<uint64_t>(mat2.size(0)) & 0xF) == 0) &&
+                ((static_cast<uint64_t>(mat2.size(1)) & 0xF) == 0);
         };
         // There is a data trampling problem in non-aligned scenes. For the time
         // being, only aligned scenes are supported.

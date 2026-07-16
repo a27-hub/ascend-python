@@ -20,13 +20,9 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_deep_norm_backward(const at::Tensor& dy,
-                                                                                  const at::Tensor& x,
-                                                                                  const at::Tensor& gx,
-                                                                                  const at::Tensor& gamma,
-                                                                                  const at::Tensor& mean,
-                                                                                  const at::Tensor& rstd,
-                                                                                  double alpha)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_deep_norm_backward(const at::Tensor &dy,
+    const at::Tensor &x, const at::Tensor &gx, const at::Tensor &gamma, const at::Tensor &mean, const at::Tensor &rstd,
+    double alpha)
 {
     at::Tensor dx = npu_preparation::apply_tensor(x);
     at::Tensor dgx = npu_preparation::apply_tensor(gx);
@@ -50,4 +46,3 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_deep_norm_backwar
     return std::make_tuple(dx, dgx, dbeta, dgamma);
 }
 } // namespace acl_op
-

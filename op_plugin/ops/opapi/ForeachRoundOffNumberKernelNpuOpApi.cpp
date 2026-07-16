@@ -27,11 +27,8 @@ const char ROUND_MODE_FRAC = char(7);
 bool is_integral_tensor_list(at::TensorList self)
 {
     auto scalarType = self[0].scalar_type();
-    return (scalarType == at::ScalarType::Byte
-        || scalarType == at::ScalarType::Char
-        || scalarType == at::ScalarType::Short
-        || scalarType == at::ScalarType::Int
-        || scalarType == at::ScalarType::Long);
+    return (scalarType == at::ScalarType::Byte || scalarType == at::ScalarType::Char ||
+        scalarType == at::ScalarType::Short || scalarType == at::ScalarType::Int || scalarType == at::ScalarType::Long);
 }
 
 void exec_npu_cmd_v2_(at::TensorList self, const char roundMode)
@@ -39,8 +36,8 @@ void exec_npu_cmd_v2_(at::TensorList self, const char roundMode)
     if (is_integral_tensor_list(self)) {
         return;
     }
-    at::Tensor round_mode_scalar_tensor = at_npu::native::OpPreparation::copy_scalar_to_device(
-        roundMode, at::ScalarType::Char, self[0].device());
+    at::Tensor round_mode_scalar_tensor =
+        at_npu::native::OpPreparation::copy_scalar_to_device(roundMode, at::ScalarType::Char, self[0].device());
     // dispatch hostAPI
     EXEC_NPU_CMD(aclnnForeachRoundOffNumber, self, round_mode_scalar_tensor, self);
 }
@@ -54,9 +51,8 @@ std::vector<at::Tensor> exec_npu_cmd_v2(at::TensorList self, const char roundMod
     for (uint32_t i = 0; i < self.size(); i++) {
         at::Tensor tensor = self[i];
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(
-            at_npu::native::OpPreparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalarType))
-        );
+        result.push_back(at_npu::native::OpPreparation::apply_tensor_without_format(
+            output_size, tensor.options().dtype(scalarType)));
         if (is_integral) {
             result[i] = tensor.clone();
         }
@@ -68,14 +64,15 @@ std::vector<at::Tensor> exec_npu_cmd_v2(at::TensorList self, const char roundMod
 
     at::TensorList result_ = at::TensorList(result);
 
-    at::Tensor round_mode_scalar_tensor = at_npu::native::OpPreparation::copy_scalar_to_device(
-        roundMode, at::ScalarType::Char, self[0].device());
+    at::Tensor round_mode_scalar_tensor =
+        at_npu::native::OpPreparation::copy_scalar_to_device(roundMode, at::ScalarType::Char, self[0].device());
     // dispatch hostAPI
     EXEC_NPU_CMD(aclnnForeachRoundOffNumber, self, round_mode_scalar_tensor, result_);
     return result;
 }
 
-void _split_and_exec_npu_cmd_round(at::TensorList &tensors1, const char roundMode, at::TensorList &result_list, bool is_inplace)
+void _split_and_exec_npu_cmd_round(
+    at::TensorList &tensors1, const char roundMode, at::TensorList &result_list, bool is_inplace)
 {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? SINGLE_FOREACH_OP_TENSOR_COUNT : DOUBLE_FOREACH_OP_TENSOR_COUNT;
@@ -122,7 +119,8 @@ std::vector<at::Tensor> exec_npu_cmd(at::TensorList self, const char roundMode)
         if (is_integral) {
             result[i] = tensor.clone();
         } else {
-            result[i] = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalarType));
+            result[i] = at_npu::native::OpPreparation::apply_tensor_without_format(
+                output_size, tensor.options().dtype(scalarType));
         }
     }
 
@@ -143,16 +141,13 @@ bool if_use_slow_route(at::TensorList tensors, const bool isFrac)
     return !at::native::can_use_fast_route(tensors) || (isFrac && at::native::has_integral_tensor(tensors, true));
 }
 
-bool if_use_slow_route(at::TensorList tensors)
-{
-    return if_use_slow_route(tensors, false);
-}
+bool if_use_slow_route(at::TensorList tensors) { return if_use_slow_route(tensors, false); }
 
 void _foreach_floor_(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_floor_slow_(self);
     }
@@ -167,8 +162,8 @@ void _foreach_floor_(at::TensorList self)
 std::vector<at::Tensor> _foreach_floor(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_floor_slow(self);
     }
@@ -183,8 +178,8 @@ std::vector<at::Tensor> _foreach_floor(at::TensorList self)
 void _foreach_ceil_(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_ceil_slow_(self);
     }
@@ -199,8 +194,8 @@ void _foreach_ceil_(at::TensorList self)
 std::vector<at::Tensor> _foreach_ceil(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_ceil_slow(self);
     }
@@ -215,8 +210,8 @@ std::vector<at::Tensor> _foreach_ceil(at::TensorList self)
 void _foreach_round_(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_round_slow_(self);
     }
@@ -231,8 +226,8 @@ void _foreach_round_(at::TensorList self)
 std::vector<at::Tensor> _foreach_round(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_round_slow(self);
     }
@@ -247,8 +242,8 @@ std::vector<at::Tensor> _foreach_round(at::TensorList self)
 void _foreach_trunc_(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_trunc_slow_(self);
     }
@@ -263,8 +258,8 @@ void _foreach_trunc_(at::TensorList self)
 std::vector<at::Tensor> _foreach_trunc(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_trunc_slow(self);
     }
@@ -279,8 +274,8 @@ std::vector<at::Tensor> _foreach_trunc(at::TensorList self)
 void _foreach_frac_(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_frac_slow_(self);
     }
@@ -295,8 +290,8 @@ void _foreach_frac_(at::TensorList self)
 std::vector<at::Tensor> _foreach_frac(at::TensorList self)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_frac_slow(self);
     }

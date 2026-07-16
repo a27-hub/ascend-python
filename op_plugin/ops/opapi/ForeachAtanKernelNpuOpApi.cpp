@@ -50,17 +50,15 @@ void _foreach_atan_(const at::TensorList self_atan)
 {
     DO_COMPATIBILITY(aclnnForeachAtan, at::native::foreach_tensor_atan_slow_(self_atan));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_atan_slow_(self_atan);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(
-        self_atan[0].scalar_type(),
-        op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-        op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self_atan[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_atan_slow_(self_atan);
     }
 
@@ -72,26 +70,23 @@ void _foreach_atan_(const at::TensorList self_atan)
     if (self_atan.empty()) {
         return;
     }
-    
+
     _split_and_exec_npu_cmd_atan(self_atan, self_atan, true);
 }
-
 
 std::vector<at::Tensor> _foreach_atan(const at::TensorList self_atan)
 {
     DO_COMPATIBILITY(aclnnForeachAtan, at::native::foreach_tensor_atan_slow(self_atan));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_atan_slow(self_atan);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(
-        self_atan[0].scalar_type(),
-        op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-        op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self_atan[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_atan_slow(self_atan);
     }
 
@@ -107,9 +102,7 @@ std::vector<at::Tensor> _foreach_atan(const at::TensorList self_atan)
     for (const at::Tensor &tensor : self_atan) {
         auto output_size = op_infer::input_same_output_size(tensor);
         result.push_back(
-            npu_preparation::apply_tensor_without_format(
-                output_size,
-                tensor.options().dtype(scalar_type)));
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 

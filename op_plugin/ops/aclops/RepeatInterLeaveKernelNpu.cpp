@@ -20,20 +20,14 @@
 namespace acl_op {
 #if VERSION_BETWEEN(V2R1, V2R1)
 at::Tensor repeat_interleave_symint(
-    const at::Tensor& self,
-    c10::SymInt repeats,
-    c10::optional<int64_t> dim,
-    c10::optional<int64_t> output_size)
+    const at::Tensor &self, c10::SymInt repeats, c10::optional<int64_t> dim, c10::optional<int64_t> output_size)
 {
     int64_t repeats_val = repeats.guard_int(__FILE__, __LINE__);
     return repeat_interleave_common_nocheck(self, repeats_val, dim);
 }
 
 at::Tensor repeat_interleave(
-    const at::Tensor& self,
-    const at::Tensor& repeats,
-    c10::optional<int64_t> dim,
-    c10::optional<int64_t> output_size)
+    const at::Tensor &self, const at::Tensor &repeats, c10::optional<int64_t> dim, c10::optional<int64_t> output_size)
 {
     return repeat_interleave_common_nocheck(self, repeats, dim);
 }
@@ -41,10 +35,7 @@ at::Tensor repeat_interleave(
 
 #if VERSION_BETWEEN(V2R2, VERSION_NEWEST)
 at::Tensor repeat_interleave_symint(
-    const at::Tensor& self,
-    c10::SymInt repeats,
-    c10::optional<int64_t> dim,
-    c10::optional<c10::SymInt> output_size)
+    const at::Tensor &self, c10::SymInt repeats, c10::optional<int64_t> dim, c10::optional<c10::SymInt> output_size)
 {
     int64_t repeats_val = repeats.guard_int(__FILE__, __LINE__);
     c10::optional<int64_t> _output_size = c10::nullopt;
@@ -55,10 +46,7 @@ at::Tensor repeat_interleave_symint(
     return repeat_interleave_common_nocheck(self, repeats_val, dim);
 }
 
-at::Tensor repeat_interleave_symint(
-    const at::Tensor& self,
-    const at::Tensor& repeats,
-    c10::optional<int64_t> dim,
+at::Tensor repeat_interleave_symint(const at::Tensor &self, const at::Tensor &repeats, c10::optional<int64_t> dim,
     c10::optional<c10::SymInt> output_size)
 {
     c10::optional<int64_t> _output_size = c10::nullopt;

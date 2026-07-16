@@ -22,12 +22,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& _quantize_per_tensor_impl_out(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    at::ScalarType dtype,
-    at::Tensor& result)
+at::Tensor &_quantize_per_tensor_impl_out(const at::Tensor &self, const at::Tensor &scales,
+    const at::Tensor &zero_points, at::ScalarType dtype, at::Tensor &result)
 {
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
@@ -43,11 +39,7 @@ at::Tensor& _quantize_per_tensor_impl_out(
     return result;
 }
 
-at::Tensor quantize_per_tensor(
-    const at::Tensor& self,
-    double scale,
-    int64_t zero_point,
-    at::ScalarType dtype)
+at::Tensor quantize_per_tensor(const at::Tensor &self, double scale, int64_t zero_point, at::ScalarType dtype)
 {
     float scale_float = static_cast<float>(scale);
     auto output_size = op_infer::input_same_output_size(self);
@@ -60,19 +52,13 @@ at::Tensor quantize_per_tensor(
         output_dtype = at::kInt;
     }
     at::Tensor scale_tensor = npu_preparation::apply_tensor_with_format(
-        {1},
-        self.options().dtype(at::kFloat),
-        npu_preparation::get_tensor_npu_format(self));
+        {1}, self.options().dtype(at::kFloat), npu_preparation::get_tensor_npu_format(self));
     scale_tensor[0] = scale_float;
     at::Tensor zp_tensor = npu_preparation::apply_tensor_with_format(
-        {1},
-        self.options().dtype(at::kInt),
-        npu_preparation::get_tensor_npu_format(self));
+        {1}, self.options().dtype(at::kInt), npu_preparation::get_tensor_npu_format(self));
     zp_tensor[0] = zero_point;
     at::Tensor result = npu_preparation::apply_tensor_with_format(
-        output_size,
-        self.options().dtype(output_dtype),
-        npu_preparation::get_tensor_npu_format(self));
+        output_size, self.options().dtype(output_dtype), npu_preparation::get_tensor_npu_format(self));
     op_api::_quantize_per_tensor_impl_out(self, scale_tensor, zp_tensor, dtype, result);
 
     return result;
@@ -88,12 +74,8 @@ at::Tensor quantize_per_tensor(
 #include <torch/library.h>
 
 namespace op_api {
-at::Tensor& _quantize_per_tensor_impl_out(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    at::ScalarType dtype,
-    at::Tensor& result)
+at::Tensor &_quantize_per_tensor_impl_out(const at::Tensor &self, const at::Tensor &scales,
+    const at::Tensor &zero_points, at::ScalarType dtype, at::Tensor &result)
 {
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
@@ -109,11 +91,7 @@ at::Tensor& _quantize_per_tensor_impl_out(
     return result;
 }
 
-at::Tensor quantize_per_tensor(
-    const at::Tensor& self,
-    double scale,
-    int64_t zero_point,
-    at::ScalarType dtype)
+at::Tensor quantize_per_tensor(const at::Tensor &self, double scale, int64_t zero_point, at::ScalarType dtype)
 {
     return at::native::quantize_per_tensor(self, scale, zero_point, dtype);
 }
@@ -124,10 +102,7 @@ namespace native {
 using npu_preparation = at_npu::native::OpPreparation;
 
 void quantize_tensor_per_tensor_affine_npu(
-    const at::Tensor& rtensor,
-    at::Tensor& qtensor,
-    double scale,
-    int64_t zero_point)
+    const at::Tensor &rtensor, at::Tensor &qtensor, double scale, int64_t zero_point)
 {
     float scale_float = static_cast<float>(scale);
     auto dtype = qtensor.options().dtype().toScalarType();
@@ -141,29 +116,19 @@ void quantize_tensor_per_tensor_affine_npu(
         output_dtype = at::kInt;
     }
     at::Tensor scale_tensor = npu_preparation::apply_tensor_with_format(
-        {1},
-        rtensor.options().dtype(at::kFloat),
-        npu_preparation::get_tensor_npu_format(rtensor));
+        {1}, rtensor.options().dtype(at::kFloat), npu_preparation::get_tensor_npu_format(rtensor));
     scale_tensor[0] = scale_float;
     at::Tensor zero_point_tensor = npu_preparation::apply_tensor_with_format(
-        {1},
-        rtensor.options().dtype(at::kInt),
-        npu_preparation::get_tensor_npu_format(rtensor));
+        {1}, rtensor.options().dtype(at::kInt), npu_preparation::get_tensor_npu_format(rtensor));
     zero_point_tensor[0] = zero_point;
     at::Tensor result = npu_preparation::apply_tensor_with_format(
-        output_size,
-        rtensor.options().dtype(output_dtype),
-        npu_preparation::get_tensor_npu_format(rtensor));
-    at_npu::native::custom_ops::_quantize_per_tensor_impl_out(rtensor, scale_tensor,
-        zero_point_tensor, dtype, result);
+        output_size, rtensor.options().dtype(output_dtype), npu_preparation::get_tensor_npu_format(rtensor));
+    at_npu::native::custom_ops::_quantize_per_tensor_impl_out(rtensor, scale_tensor, zero_point_tensor, dtype, result);
     at_npu::native::NPUNativeFunctions::set_(qtensor, result);
 }
 
 void dequantize_tensor_per_tensor_affine_npu(
-    const at::Tensor& qtensor,
-    at::Tensor& rtensor,
-    double scale,
-    int64_t zero_point)
+    const at::Tensor &qtensor, at::Tensor &rtensor, double scale, int64_t zero_point)
 {
     auto dtype = qtensor.scalar_type();
     auto output_dtype = at::kInt;
@@ -173,8 +138,7 @@ void dequantize_tensor_per_tensor_affine_npu(
         output_dtype = at::kByte;
     }
     at::Tensor result = at::empty(
-        qtensor.sizes(),
-        qtensor.options().dtype(output_dtype).memory_format(qtensor.suggest_memory_format()));
+        qtensor.sizes(), qtensor.options().dtype(output_dtype).memory_format(qtensor.suggest_memory_format()));
 
     at_npu::native::NPUNativeFunctions::set_(result, qtensor);
     rtensor = at_npu::native::custom_ops::_npu_dtype_cast(result, at::ScalarType::Float);

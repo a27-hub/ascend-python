@@ -22,37 +22,35 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& mish_out_npu_nocheck(at::Tensor& result, const at::Tensor& self) {
-  at_npu::native::OpCommand cmd;
-  cmd.Name("Mish")
-      .Input(self)
-      .Output(result)
-      .Run();
-  return result;
+at::Tensor &mish_out_npu_nocheck(at::Tensor &result, const at::Tensor &self)
+{
+    at_npu::native::OpCommand cmd;
+    cmd.Name("Mish").Input(self).Output(result).Run();
+    return result;
 }
 } // namespace
 
-at::Tensor& mish_out(const at::Tensor& self, at::Tensor& result) {
-  npu_preparation::CheckOut({self}, result, self);
+at::Tensor &mish_out(const at::Tensor &self, at::Tensor &result)
+{
+    npu_preparation::CheckOut({self}, result, self);
 
-  if (!npu_utils::check_match(&result)) {
-    at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-    mish_out_npu_nocheck(contiguous_result, self);
-    npu_utils::format_fresh_view(result, contiguous_result);
-  } else {
+    if (!npu_utils::check_match(&result)) {
+        at::Tensor contiguous_result = npu_utils::format_contiguous(result);
+        mish_out_npu_nocheck(contiguous_result, self);
+        npu_utils::format_fresh_view(result, contiguous_result);
+    } else {
+        mish_out_npu_nocheck(result, self);
+    }
+
+    return result;
+}
+
+at::Tensor mish(const at::Tensor &self)
+{
+    at::Tensor result = npu_preparation::apply_tensor(self);
     mish_out_npu_nocheck(result, self);
-  }
-
-  return result;
+    return result;
 }
 
-at::Tensor mish(const at::Tensor& self) {
-  at::Tensor result = npu_preparation::apply_tensor(self);
-  mish_out_npu_nocheck(result, self);
-  return result;
-}
-
-at::Tensor& mish_(at::Tensor& self) {
-  return acl_op::mish_out(self, self);
-}
+at::Tensor &mish_(at::Tensor &self) { return acl_op::mish_out(self, self); }
 } // namespace acl_op

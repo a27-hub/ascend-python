@@ -20,11 +20,9 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::vector<at::Tensor> npu_fused_attention_qkv_grad(const at::Tensor &grad_output_query,
-                                                     const at::Tensor &grad_output_key,
-                                                     const at::Tensor &grad_output_value,
-                                                     const at::Tensor &query_kernel, const at::Tensor &key_kernel,
-                                                     const at::Tensor &value_kernel, const at::Tensor &hidden_states,
-                                                     const at::Tensor &grad_output_ln)
+    const at::Tensor &grad_output_key, const at::Tensor &grad_output_value, const at::Tensor &query_kernel,
+    const at::Tensor &key_kernel, const at::Tensor &value_kernel, const at::Tensor &hidden_states,
+    const at::Tensor &grad_output_ln)
 {
     TORCH_CHECK(query_kernel.dim() >= 1, "query_kernel must be at least 1 dimensions, but got ", query_kernel.dim(),
         OPS_ERROR(ErrCode::PARAM));
@@ -76,8 +74,8 @@ std::vector<at::Tensor> npu_fused_attention_qkv_grad(const at::Tensor &grad_outp
         .Attr("trans_b", false)
         .Run();
 
-    std::vector<at::Tensor> results = {grad_hidden_states, grad_w_query, grad_w_key,  grad_w_value,
-                                       grad_b_query,       grad_b_key,   grad_b_value};
+    std::vector<at::Tensor> results = {
+        grad_hidden_states, grad_w_query, grad_w_key, grad_w_value, grad_b_query, grad_b_key, grad_b_value};
     return results;
 }
 } // namespace acl_op

@@ -38,34 +38,34 @@ constexpr uint32_t MAX_DIM = 8;
 //! \brief 加速库日志中定义的错误类型
 //!
 enum ErrorType : int {
-    NO_ERROR = 0,                         //!< 正确
-    ERROR_INVALID_PARAM,                  //!< 无效参数
-    ERROR_INVALID_GRAPH,                  //!< 计算图错误
-    ERROR_INTERNAL_ERROR,                 //!< 内部错误
-    ERROR_RT_FAIL,                        //!< 调用Runtime接口失败
-    ERROR_INVALID_IN_TENSOR_NUM,          //!< 算子输入Tensor数量与定义不一致
-    ERROR_INVALID_TENSOR_DTYPE,           //!< Tensor数据类型错误
-    ERROR_INVALID_TENSOR_FORMAT,          //!< Tensor数据格式错误
-    ERROR_INVALID_TENSOR_DIM,             //!< Tensor数据维度错误
-    ERROR_INVALID_TENSOR_SIZE,            //!< Tensor数据size错误
-    ERROR_OPERATION_NULL_RUNNER,          //!< Operation内部错误
-    ERROR_GRAPH_INFERSHAPE_FUNC_FAIL,     //!< 图infershapeFunc错误
-    ERROR_CANN_ERROR,                     //!< 调用CANN接口错误
-    ERROR_INVALID_TENSOR_INI_MATCH,       //!< ini配置文件校验失败
-    ERROR_INVALID_TENSOR_ADDR,            //!< Tensor地址错误
-    ERROR_INVALID_TENSOR_NUM,             //!< Tensor数量错误
-    ERROR_INVALID_TENSOR_DIM_NUM,         //!< Tensor维度数错误
+    NO_ERROR = 0, //!< 正确
+    ERROR_INVALID_PARAM, //!< 无效参数
+    ERROR_INVALID_GRAPH, //!< 计算图错误
+    ERROR_INTERNAL_ERROR, //!< 内部错误
+    ERROR_RT_FAIL, //!< 调用Runtime接口失败
+    ERROR_INVALID_IN_TENSOR_NUM, //!< 算子输入Tensor数量与定义不一致
+    ERROR_INVALID_TENSOR_DTYPE, //!< Tensor数据类型错误
+    ERROR_INVALID_TENSOR_FORMAT, //!< Tensor数据格式错误
+    ERROR_INVALID_TENSOR_DIM, //!< Tensor数据维度错误
+    ERROR_INVALID_TENSOR_SIZE, //!< Tensor数据size错误
+    ERROR_OPERATION_NULL_RUNNER, //!< Operation内部错误
+    ERROR_GRAPH_INFERSHAPE_FUNC_FAIL, //!< 图infershapeFunc错误
+    ERROR_CANN_ERROR, //!< 调用CANN接口错误
+    ERROR_INVALID_TENSOR_INI_MATCH, //!< ini配置文件校验失败
+    ERROR_INVALID_TENSOR_ADDR, //!< Tensor地址错误
+    ERROR_INVALID_TENSOR_NUM, //!< Tensor数量错误
+    ERROR_INVALID_TENSOR_DIM_NUM, //!< Tensor维度数错误
     ERROR_INVALID_SINGLE_OPERATION_PARAM, //!< 单Operation参数错误
-    ERROR_GRAPH_NODE_RESHAPE_FUNC_FAIL,   //!< 图节点reshapeFuncs设置有误
-    ERROR_INVALID_GRAPH_NODE_CHUNK,       //!< 图节点Chunk参数错误
-    ERROR_INVALID_CONTEXT_ADDR,           //!< Context地址错误
-    ERROR_INVALID_STREAM,                 //!< Stream错误
-    ERROR_INVALID_WORKSPACE_SIZE,         //!< Workspace大小有误
-    ERROR_INVALID_WORKSPACE_ADDR,         //!< Workspace地址有误
-    ERROR_INVALID_OPERATION_ADDR,         //!< Operation地址有误
-    ERROR_HCCL_FAIL,                      //!< HCCL接口调用失败
-    ERROR_OUT_OF_DEVICE_MEMORY,           //!< Device内存不足
-    ERROR_OUT_OF_HOST_MEMORY              //!< Host内存不足
+    ERROR_GRAPH_NODE_RESHAPE_FUNC_FAIL, //!< 图节点reshapeFuncs设置有误
+    ERROR_INVALID_GRAPH_NODE_CHUNK, //!< 图节点Chunk参数错误
+    ERROR_INVALID_CONTEXT_ADDR, //!< Context地址错误
+    ERROR_INVALID_STREAM, //!< Stream错误
+    ERROR_INVALID_WORKSPACE_SIZE, //!< Workspace大小有误
+    ERROR_INVALID_WORKSPACE_ADDR, //!< Workspace地址有误
+    ERROR_INVALID_OPERATION_ADDR, //!< Operation地址有误
+    ERROR_HCCL_FAIL, //!< HCCL接口调用失败
+    ERROR_OUT_OF_DEVICE_MEMORY, //!< Device内存不足
+    ERROR_OUT_OF_HOST_MEMORY //!< Host内存不足
 };
 //!
 //! \struct Dims

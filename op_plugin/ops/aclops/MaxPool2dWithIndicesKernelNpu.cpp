@@ -26,8 +26,8 @@ using tensor_list = std::tuple<at::Tensor &, at::Tensor &>;
 
 namespace {
 tensor_list max_pool2d_with_indices_out_nocheck(at::Tensor &output, at::Tensor &indices, const at::Tensor &self,
-                                                at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                                at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode)
+    at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    bool ceil_mode)
 {
     at::Tensor self_cp = self.dim() == 3 ? self.unsqueeze(0) : self;
     int64_t stride_H = 1;
@@ -65,30 +65,24 @@ tensor_list max_pool2d_with_indices_out_nocheck(at::Tensor &output, at::Tensor &
 }
 
 void max_pool2d_with_indices_parameter_check(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                             at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation)
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation)
 {
     TORCH_CHECK(kernel_size.size() == 1 || kernel_size.size() == 2,
-        "max_pool2d: kernel_size must either be a single int, or a tuple of two ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool2d: kernel_size must either be a single int, or a tuple of two ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(stride.size() == 0 || stride.size() == 1 || stride.size() == 2,
-        "max_pool2d: stride must either be omitted, a single int, or a tuple of two ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool2d: stride must either be omitted, a single int, or a tuple of two ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(padding.size() == 1 || padding.size() == 2,
-        "max_pool2d: padding must be either be a single int, or a tuple of two ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool2d: padding must be either be a single int, or a tuple of two ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(dilation.size() == 1 || dilation.size() == 2,
-        "max_pool2d: dilation must be either a single int, or a tuple of two ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool2d: dilation must be either a single int, or a tuple of two ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((self.ndimension() == 3 || self.ndimension() == 4),
-        "non-empty 3D or 4D (batch mode) tensor expected for input"
-        + OPS_ERROR(ErrCode::PARAM));
+        "non-empty 3D or 4D (batch mode) tensor expected for input" + OPS_ERROR(ErrCode::PARAM));
 }
 } // namespace
 
 std::tuple<at::Tensor &, at::Tensor &> max_pool2d_with_indices_out(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                                                   at::IntArrayRef stride, at::IntArrayRef padding,
-                                                                   at::IntArrayRef dilation, bool ceil_mode,
-                                                                   at::Tensor &output, at::Tensor &indices)
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode, at::Tensor &output,
+    at::Tensor &indices)
 {
     max_pool2d_with_indices_parameter_check(self, kernel_size, stride, padding, dilation);
 
@@ -100,9 +94,9 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool2d_with_indices_out(const at::Ten
     // NB: stride default is not expressible as an integer constant, so we accept
     // empty stride for this case
     const int d_H = stride.empty() ? k_H : at::native::safe_downcast<int, int64_t>(stride[0]);
-    const int d_W = stride.empty()     ? k_W :
-                    stride.size() == 1 ? d_H :
-                                         at::native::safe_downcast<int, int64_t>(stride[1]);
+    const int d_W = stride.empty() ? k_W
+        : stride.size() == 1       ? d_H
+                                   : at::native::safe_downcast<int, int64_t>(stride[1]);
     c10::SmallVector<int64_t, SIZE> stride_size = {d_H, d_W};
     at::IntArrayRef strides = at::IntArrayRef(stride_size);
 
@@ -127,8 +121,7 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool2d_with_indices_out(const at::Ten
         at::native::pooling_output_shape<int64_t>(input_width, k_W, pad_W, d_W, dilation_W, ceil_mode);
 
     at::native::pool2d_shape_check(self, k_H, k_W, d_H, d_W, pad_H, pad_W, dilation_H, dilation_W, n_input_plane,
-                                   input_height, input_width, output_height, output_width,
-                                   self.suggest_memory_format());
+        input_height, input_width, output_height, output_width, self.suggest_memory_format());
 
     c10::SmallVector<int64_t, SIZE> output_size = {n_batch, n_input_plane, output_height, output_width};
 
@@ -144,8 +137,8 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool2d_with_indices_out(const at::Ten
     if (!(output_match && indices_match)) {
         at::Tensor contiguous_output = output_match ? output : npu_utils::format_contiguous(output);
         at::Tensor contiguous_indices = indices_match ? indices : npu_utils::format_contiguous(indices);
-        max_pool2d_with_indices_out_nocheck(contiguous_output, contiguous_indices, self, kernel_sizes,
-                                            strides, paddings, dilations, ceil_mode);
+        max_pool2d_with_indices_out_nocheck(
+            contiguous_output, contiguous_indices, self, kernel_sizes, strides, paddings, dilations, ceil_mode);
         if (!output_match) {
             npu_utils::format_fresh_view(output, contiguous_output);
         }
@@ -153,16 +146,15 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool2d_with_indices_out(const at::Ten
             npu_utils::format_fresh_view(indices, contiguous_indices);
         }
     } else {
-        max_pool2d_with_indices_out_nocheck(output, indices, self, kernel_sizes, strides, paddings,
-                                            dilations, ceil_mode);
+        max_pool2d_with_indices_out_nocheck(
+            output, indices, self, kernel_sizes, strides, paddings, dilations, ceil_mode);
     }
 
     return std::tie(output, indices);
 }
 
 std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                                           at::IntArrayRef stride, at::IntArrayRef padding,
-                                                           at::IntArrayRef dilation, bool ceil_mode)
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode)
 {
     max_pool2d_with_indices_parameter_check(self, kernel_size, stride, padding, dilation);
 
@@ -174,9 +166,9 @@ std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(const at::Tensor &sel
     // NB: stride default is not expressible as an integer constant, so we accept
     // empty stride for this case
     const int d_H = stride.empty() ? k_H : at::native::safe_downcast<int, int64_t>(stride[0]);
-    const int d_W = stride.empty()     ? k_W :
-                    stride.size() == 1 ? d_H :
-                                         at::native::safe_downcast<int, int64_t>(stride[1]);
+    const int d_W = stride.empty() ? k_W
+        : stride.size() == 1       ? d_H
+                                   : at::native::safe_downcast<int, int64_t>(stride[1]);
     c10::SmallVector<int64_t, SIZE> stride_size = {d_H, d_W};
     at::IntArrayRef strides = at::IntArrayRef(stride_size);
 
@@ -201,8 +193,7 @@ std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(const at::Tensor &sel
         at::native::pooling_output_shape<int64_t>(input_width, k_W, pad_W, d_W, dilation_W, ceil_mode);
 
     at::native::pool2d_shape_check(self, k_H, k_W, d_H, d_W, pad_H, pad_W, dilation_H, dilation_W, n_input_plane,
-                                   input_height, input_width, output_height, output_width,
-                                   self.suggest_memory_format());
+        input_height, input_width, output_height, output_width, self.suggest_memory_format());
 
     c10::SmallVector<int64_t, SIZE> output_size = {n_batch, n_input_plane, output_height, output_width};
 
@@ -214,8 +205,7 @@ std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(const at::Tensor &sel
     at::Tensor output = npu_preparation::apply_tensor(self, output_size);
     at::Tensor indices = npu_preparation::apply_tensor_with_format(self, indices_size, ACL_FORMAT_NC1HWC0, true);
 
-    max_pool2d_with_indices_out_nocheck(output, indices, self, kernel_sizes, strides, paddings,
-                                        dilations, ceil_mode);
+    max_pool2d_with_indices_out_nocheck(output, indices, self, kernel_sizes, strides, paddings, dilations, ceil_mode);
     return std::make_tuple(output, indices);
 }
 

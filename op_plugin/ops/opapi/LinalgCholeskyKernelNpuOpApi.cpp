@@ -18,7 +18,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 const int DIM_2D = 2;
 
-at::Tensor& linalg_cholesky_out(const at::Tensor& self, bool upper, at::Tensor& out)
+at::Tensor &linalg_cholesky_out(const at::Tensor &self, bool upper, at::Tensor &out)
 {
     if (!check_aclnn_kernel_available("aclnnLinalgCholesky")) {
         auto info = at::empty({0}, self.options().dtype(at::kInt));
@@ -33,7 +33,7 @@ at::Tensor& linalg_cholesky_out(const at::Tensor& self, bool upper, at::Tensor& 
     return out;
 }
 
-at::Tensor linalg_cholesky(const at::Tensor& self, bool upper)
+at::Tensor linalg_cholesky(const at::Tensor &self, bool upper)
 {
     if (!check_aclnn_kernel_available("aclnnLinalgCholesky")) {
         auto [out, info] = at::linalg_cholesky_ex(self, upper, false);

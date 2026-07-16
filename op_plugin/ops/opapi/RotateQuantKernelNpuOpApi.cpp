@@ -32,7 +32,8 @@ constexpr int64_t DEFAULT_AXIS = -1LL;
 std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const at::Tensor &rotation,
     const c10::optional<at::Tensor> &alpha, c10::optional<int64_t> dst_dtype, c10::optional<int64_t> axis,
     c10::optional<c10::string_view> round_mode, c10::optional<int64_t> scale_alg, c10::optional<double> dst_type_max,
-    c10::optional<bool> transpose_y) {
+    c10::optional<bool> transpose_y)
+{
     TORCH_CHECK(x.defined(), "Input tensor(x) must be defined" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(rotation.defined(), "Input tensor(rotation) must be defined" + OPS_ERROR(ErrCode::PARAM));
     if (alpha.has_value()) {

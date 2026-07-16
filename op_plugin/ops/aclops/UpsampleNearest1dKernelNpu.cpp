@@ -25,10 +25,9 @@ namespace {
 c10::SmallVector<int64_t, SIZE> upsample_nearest1d_infer_size(const at::Tensor &input, at::IntArrayRef output_size)
 {
     TORCH_CHECK(input.dim() == 3 && (input.size(1) != 0 && input.size(2) != 0),
-                "Non-empty 3D data tensor expected but got a tensor with sizes ", input.sizes(),
-                OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(output_size.size() == 1, "The length of output_size should be equal to 1, but got ",
-                output_size.size(), OPS_ERROR(ErrCode::PARAM));
+        "Non-empty 3D data tensor expected but got a tensor with sizes ", input.sizes(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() == 1, "The length of output_size should be equal to 1, but got ", output_size.size(),
+        OPS_ERROR(ErrCode::PARAM));
 
     c10::SmallVector<int64_t, SIZE> output_sizes;
     int64_t N = input.size(0);
@@ -38,8 +37,8 @@ c10::SmallVector<int64_t, SIZE> upsample_nearest1d_infer_size(const at::Tensor &
     return output_sizes;
 }
 
-at::Tensor &upsample_nearest1d_out_nocheck(at::Tensor &out, const at::Tensor &self, at::IntArrayRef output_size,
-                                           c10::optional<double> scales)
+at::Tensor &upsample_nearest1d_out_nocheck(
+    at::Tensor &out, const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales)
 {
     at::Tensor self_cp = self.unsqueeze(2);
     at_npu::native::OpCommand cmd;
@@ -69,8 +68,8 @@ at::Tensor &upsample_nearest1d_out_nocheck(at::Tensor &out, const at::Tensor &se
 }
 } // namespace
 
-at::Tensor &upsample_nearest1d_out(const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales,
-                                   at::Tensor &out)
+at::Tensor &upsample_nearest1d_out(
+    const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales, at::Tensor &out)
 {
     c10::SmallVector<int64_t, SIZE> op_infer_output_size = upsample_nearest1d_infer_size(self, output_size);
 

@@ -21,61 +21,37 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& embedding_renorm_gather2d_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& indices)
+at::Tensor &embedding_renorm_gather2d_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &indices)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("GatherV2D")
-        .Input(self)
-        .Input(indices)
-        .Output(result)
-        .Attr("axis", static_cast<int64_t>(0))
-        .Run();
+    cmd.Name("GatherV2D").Input(self).Input(indices).Output(result).Attr("axis", static_cast<int64_t>(0)).Run();
     return result;
 }
 
-at::Tensor& embedding_renorm_execute_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    double max_norm,
-    double norm_type)
+at::Tensor &embedding_renorm_execute_nocheck(
+    at::Tensor &result, const at::Tensor &self, double max_norm, double norm_type)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("Renorm")
         .Input(self)
         .Output(result)
-        .Attr("p",  static_cast<float>(norm_type))
+        .Attr("p", static_cast<float>(norm_type))
         .Attr("dim", static_cast<int64_t>(0))
         .Attr("maxnorm", static_cast<float>(max_norm))
         .Run();
     return result;
 }
 
-at::Tensor& embedding_renorm_scatter_update_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& indices,
-    const at::Tensor& update)
+at::Tensor &embedding_renorm_scatter_update_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &indices, const at::Tensor &update)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("ScatterUpdate")
-        .Input(self)
-        .Input(indices)
-        .Input(update)
-        .Output(result)
-        .Attr("use_locking", false)
-        .Run();
+    cmd.Name("ScatterUpdate").Input(self).Input(indices).Input(update).Output(result).Attr("use_locking", false).Run();
     return result;
 }
 
-at::Tensor& embedding_renorm_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& indices,
-    double max_norm,
-    double norm_type)
+at::Tensor &embedding_renorm_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &indices, double max_norm, double norm_type)
 {
     at::SmallVector<int64_t, SIZE> mid_size = {indices.size(0), self.size(1)};
     at::Tensor mid_input = npu_preparation::apply_tensor(self, mid_size);
@@ -90,7 +66,8 @@ at::Tensor& embedding_renorm_out_npu_nocheck(
     if (num_indices - 1 == 0) {
         input_indices = at_npu::native::custom_ops::_npu_dtype_cast(at::zeros({1}, self.options()), at::kLong);
     } else {
-        input_indices = at_npu::native::custom_ops::_npu_dtype_cast(at::range(0, num_indices - 1, self.options()), at::kLong);
+        input_indices =
+            at_npu::native::custom_ops::_npu_dtype_cast(at::range(0, num_indices - 1, self.options()), at::kLong);
     }
 
     auto num_mid_output = mid_output.numel();
@@ -104,11 +81,7 @@ at::Tensor& embedding_renorm_out_npu_nocheck(
 }
 } // namespace
 
-at::Tensor& embedding_renorm_(
-    at::Tensor& self,
-    const at::Tensor& indices,
-    double max_norm,
-    double norm_type)
+at::Tensor &embedding_renorm_(at::Tensor &self, const at::Tensor &indices, double max_norm, double norm_type)
 {
     auto self_arg = at::TensorArg(self, "self", 1);
     auto indices_arg = at::TensorArg(indices, "indices", 2);
@@ -117,7 +90,7 @@ at::Tensor& embedding_renorm_(
 
     auto num_indices = indices.numel();
     TORCH_CHECK(num_indices >= 1, "indices.numel() must be greater than or equal to 1, but got ", num_indices,
-                OPS_ERROR(ErrCode::PARAM));
+        OPS_ERROR(ErrCode::PARAM));
     at::native::resize_(indices, num_indices);
 
     npu_preparation::CheckMemory({self, indices}, {self});

@@ -45,21 +45,22 @@ at::Tensor fft_rfft(const at::Tensor &self, c10::optional<int64_t> n, int64_t di
     if (dim < 0) {
         dim += self.dim();
     }
-    
-    TORCH_CHECK((dim >= 0 && dim < self.dim()), "Dimension out of range (expected to be in range of [-dims, dims - 1])", OPS_ERROR(ErrCode::PARAM));
+
+    TORCH_CHECK((dim >= 0 && dim < self.dim()), "Dimension out of range (expected to be in range of [-dims, dims - 1])",
+        OPS_ERROR(ErrCode::PARAM));
     int64_t N = self.size(dim);
     int64_t length = n.value_or(N);
     int64_t normalize = get_norm_RFFT(norm1);
-    
+
     TORCH_CHECK(length > 0, "Invalid n value (n should be > 0)", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(normalize != 4, "Invalid normalization mode", OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor kernel_result;
     at::Tensor resFloat;
     at::Tensor result;
-    
+
     at::SmallVector<int64_t, op_infer::SIZE> output_shape;
-    
+
     for (int64_t i = 0; i < dim; i++) {
         output_shape.emplace_back(self.size(i));
     }
@@ -70,9 +71,9 @@ at::Tensor fft_rfft(const at::Tensor &self, c10::optional<int64_t> n, int64_t di
     output_shape.emplace_back(2);
     kernel_result = npu_preparation::apply_tensor(self, output_shape);
     result = npu_preparation::apply_tensor(self, output_shape);
-        
+
     EXEC_NPU_CMD(aclRfft1D, self, length, dim, normalize, kernel_result);
-    
+
     resFloat = kernel_result.to(at::ScalarType::Float);
     result = at::native::view_as_complex(resFloat);
     return result;

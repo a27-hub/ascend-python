@@ -32,8 +32,8 @@ c10::SmallVector<int64_t, N> giou_output_size(const at::Tensor &self, const at::
     return output_size;
 }
 
-at::Tensor &giou_inner_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &gtboxes,
-                                       bool trans, bool is_cross, int64_t mode)
+at::Tensor &giou_inner_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &gtboxes, bool trans, bool is_cross, int64_t mode)
 {
     auto output_size = giou_output_size(self, gtboxes, is_cross);
     string mode_str = mode == 1 ? "iof" : "iou";
@@ -51,10 +51,8 @@ at::Tensor &giou_inner_out_npu_nocheck(at::Tensor &result, const at::Tensor &sel
 }
 
 std::tuple<at::Tensor &, at::Tensor &> giou_backward_inner_out_npu_nocheck(at::Tensor &dbboxes, at::Tensor &dgtboxes,
-                                                                           const at::Tensor &grad,
-                                                                           const at::Tensor &bboxes,
-                                                                           const at::Tensor &gtboxes, bool trans,
-                                                                           bool is_cross, int64_t mode)
+    const at::Tensor &grad, const at::Tensor &bboxes, const at::Tensor &gtboxes, bool trans, bool is_cross,
+    int64_t mode)
 {
     string mode_str = mode == 1 ? "iof" : "iou";
     at_npu::native::OpCommand cmd;
@@ -73,7 +71,7 @@ std::tuple<at::Tensor &, at::Tensor &> giou_backward_inner_out_npu_nocheck(at::T
 } // namespace
 
 std::tuple<at::Tensor, at::Tensor> npu_giou_backward(const at::Tensor &grad, const at::Tensor &bboxes,
-                                                     const at::Tensor &gtboxes, bool trans, bool is_cross, int64_t mode)
+    const at::Tensor &gtboxes, bool trans, bool is_cross, int64_t mode)
 {
     TORCH_CHECK(trans && !is_cross && mode == 0, "giou backward only support trans==True, ", "is_cross==False, ",
         "mode==0('iou') current version ", "if you need to back propagation, ",
@@ -108,14 +106,13 @@ at::Tensor npu_giou(const at::Tensor &self, const at::Tensor &gtboxes, bool tran
     TORCH_CHECK(trans && !is_cross && mode == 0, "giou backward only support trans==True, ", "is_cross==False, ",
         "mode==0('iou') current version ", "if you need to back propagation, ",
         "please ensure your parameter is correct!" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.dim() >= 2 && gtboxes.dim() >= 2, "giou input dim must be >= 2"
-        + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(self.dim() >= 2 && gtboxes.dim() >= 2, "giou input dim must be >= 2" + OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor self_cp =
         (self.scalar_type() == at::kHalf) ? at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat) : self;
-    at::Tensor gtboxes_cp = (gtboxes.scalar_type() == at::kHalf) ?
-                                at_npu::native::custom_ops::_npu_dtype_cast(gtboxes, at::kFloat) :
-                                gtboxes;
+    at::Tensor gtboxes_cp = (gtboxes.scalar_type() == at::kHalf)
+        ? at_npu::native::custom_ops::_npu_dtype_cast(gtboxes, at::kFloat)
+        : gtboxes;
 
     auto output_size = giou_output_size(self_cp, gtboxes_cp, is_cross);
     at::Tensor result = npu_preparation::apply_tensor(self_cp, output_size);
