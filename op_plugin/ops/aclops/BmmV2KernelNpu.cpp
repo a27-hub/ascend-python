@@ -33,10 +33,9 @@ bool is_transpose_last_two_dims_v2(const at::Tensor &Tensors)
     int64_t dim1 = Tensors.dim() - 1;
     int64_t dim2 = Tensors.dim() - TENSORS_DIMS_LOWER_LIMIT;
     TORCH_CHECK(Tensors.element_size() > 0,
-                "expected Tensors valid, "
-                "but input Tensors has element_size ",
-                Tensors.element_size(),
-                OPS_ERROR(ErrCode::PARAM));
+        "expected Tensors valid, "
+        "but input Tensors has element_size ",
+        Tensors.element_size(), OPS_ERROR(ErrCode::PARAM));
     int64_t tensor_size = static_cast<int64_t>(Tensors.storage().nbytes()) / Tensors.element_size();
     auto tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(Tensors)->get_npu_desc();
     if (tensor_desc.base_sizes_.size() == static_cast<uint64_t>(Tensors.dim()) && Tensors.stride(dim2) == 1 &&
@@ -72,7 +71,7 @@ c10::SmallVector<int64_t, SIZE> bmm_v2_output_size(const at::Tensor &mat1, const
             output_size.emplace_back(batch_a[i]);
         } else if (batch_a[i] != batch_b[i]) {
             AT_ERROR("mat1 and mat2 cannot broadcast, but they are mat1 ", mat1.sizes().data(), " mat2 ",
-                     mat2.sizes().data());
+                mat2.sizes().data());
         } else {
             output_size.emplace_back(batch_a[i]);
         }
@@ -83,16 +82,15 @@ c10::SmallVector<int64_t, SIZE> bmm_v2_output_size(const at::Tensor &mat1, const
     return output_size;
 }
 
-at::Tensor pure_bmm_v2(const at::Tensor &self, const at::Tensor &mat2,
-                       const c10::SmallVector<int64_t, SIZE> &output_size)
+at::Tensor pure_bmm_v2(
+    const at::Tensor &self, const at::Tensor &mat2, const c10::SmallVector<int64_t, SIZE> &output_size)
 {
     auto tensor1 = self.dim() == 1 ? self.view({1, self.size(0)}) : self;
     auto tensor2 = mat2.dim() == 1 ? mat2.view({mat2.size(0), 1}) : mat2;
-    
-    at::Tensor result =
-        (tensor1.scalar_type() == at::ScalarType::Half) ?
-            npu_preparation::apply_tensor_with_format(output_size, tensor1.options(), ACL_FORMAT_FRACTAL_NZ, true) :
-            npu_preparation::apply_tensor_with_format(output_size, tensor1.options(), ACL_FORMAT_ND);
+
+    at::Tensor result = (tensor1.scalar_type() == at::ScalarType::Half)
+        ? npu_preparation::apply_tensor_with_format(output_size, tensor1.options(), ACL_FORMAT_FRACTAL_NZ, true)
+        : npu_preparation::apply_tensor_with_format(output_size, tensor1.options(), ACL_FORMAT_ND);
 
     at::Tensor contiguous_self = tensor1;
     at::Tensor contiguous_mat2 = tensor2;
@@ -186,8 +184,8 @@ at::Tensor reshape_tensor_mat2(const at::Tensor &mat2, c10::SmallVector<int64_t,
     return tmp_mat2;
 }
 
-c10::SmallVector<int64_t, SIZE> align_small_vector(c10::SmallVector<int64_t, SIZE> svec,
-                                                   c10::SmallVector<int64_t, SIZE> golden_svec)
+c10::SmallVector<int64_t, SIZE> align_small_vector(
+    c10::SmallVector<int64_t, SIZE> svec, c10::SmallVector<int64_t, SIZE> golden_svec)
 {
     // svec, golden: [6,7,65], [5,6,7,65]
     // expect: [6,7,65] -> [1,6,7,65]
@@ -299,8 +297,8 @@ at::Tensor npu_bmmV2_impl(const at::Tensor &self, const at::Tensor &mat2, at::In
 }
 } // namespace
 
-at::Tensor npu_bmm_v2_mat1_backward_symint(const at::Tensor &grad, const at::Tensor &mat1, const at::Tensor &mat2,
-                                           c10::SymIntArrayRef sizes_symint)
+at::Tensor npu_bmm_v2_mat1_backward_symint(
+    const at::Tensor &grad, const at::Tensor &mat1, const at::Tensor &mat2, c10::SymIntArrayRef sizes_symint)
 {
     at::IntArrayRef sizes = c10::asIntArrayRefUnchecked(sizes_symint);
     // da = grad * b^T
@@ -317,15 +315,15 @@ at::Tensor npu_bmm_v2_mat1_backward_symint(const at::Tensor &grad, const at::Ten
     if (mat2.dim() == 1) {
         mat2_cp = mat2.view({1, mat2.size(0)});
     } else {
-        TORCH_CHECK(mat2.dim() >= 2, "mat2.dim must be greater than or equal to 1, but got ",
-            mat2.dim(), OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(mat2.dim() >= 2, "mat2.dim must be greater than or equal to 1, but got ", mat2.dim(),
+            OPS_ERROR(ErrCode::PARAM));
         mat2_cp = mat2.transpose(-2, -1);
     }
     return acl_op::npu_bmmV2(grad.view(axis_reshape), mat2_cp, sizes);
 }
 
-at::Tensor npu_bmm_v2_mat2_backward_symint(const at::Tensor &grad, const at::Tensor &mat1, const at::Tensor &mat2,
-                                           c10::SymIntArrayRef sizes_symint)
+at::Tensor npu_bmm_v2_mat2_backward_symint(
+    const at::Tensor &grad, const at::Tensor &mat1, const at::Tensor &mat2, c10::SymIntArrayRef sizes_symint)
 {
     at::IntArrayRef sizes = c10::asIntArrayRefUnchecked(sizes_symint);
     // db = a^T * grad
@@ -347,7 +345,7 @@ at::Tensor npu_bmm_v2_mat2_backward_symint(const at::Tensor &grad, const at::Ten
 at::Tensor npu_bmmV2(const at::Tensor &self, const at::Tensor &mat2, at::IntArrayRef output_sizes)
 {
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
-                "bmm is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE));
+        "bmm is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE));
     return npu_bmmV2_impl(self, mat2, output_sizes);
 }
 } // namespace acl_op

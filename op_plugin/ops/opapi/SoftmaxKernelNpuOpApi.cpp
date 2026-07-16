@@ -20,7 +20,7 @@
 
 namespace op_api {
 
-at::Tensor softmax(const at::Tensor& self, int64_t dim, c10::optional<at::ScalarType> dtype)
+at::Tensor softmax(const at::Tensor &self, int64_t dim, c10::optional<at::ScalarType> dtype)
 {
     DO_COMPATIBILITY(aclnnSoftmax, acl_op::softmax(self, dim, dtype));
     auto result = [&]() {
@@ -36,7 +36,7 @@ at::Tensor softmax(const at::Tensor& self, int64_t dim, c10::optional<at::Scalar
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor softmax(const at::Tensor& self, at::Dimname dim, c10::optional<at::ScalarType> dtype)
+at::Tensor softmax(const at::Tensor &self, at::Dimname dim, c10::optional<at::ScalarType> dtype)
 {
     return op_api::softmax(self, dimname_to_position(self, dim), dtype);
 }

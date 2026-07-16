@@ -20,11 +20,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_kl_div(
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    bool log_target)
+at::Tensor npu_kl_div(const at::Tensor &self, const at::Tensor &target, int64_t reduction, bool log_target)
 {
     std::string reduction_str = "none";
     if (reduction == at::Reduction::Mean) {
@@ -32,8 +28,8 @@ at::Tensor npu_kl_div(
     } else if (reduction == at::Reduction::Sum) {
         reduction_str = "sum";
     }
-    at::Tensor result = reduction_str == "none" ?
-        npu_preparation::apply_tensor(self) : npu_preparation::apply_tensor({}, self.options(), self);
+    at::Tensor result = reduction_str == "none" ? npu_preparation::apply_tensor(self)
+                                                : npu_preparation::apply_tensor({}, self.options(), self);
     at_npu::native::OpCommand cmd;
     cmd.Name("KLDiv")
         .Input(self)
@@ -50,11 +46,7 @@ at::Tensor npu_kl_div(
     return result;
 }
 
-at::Tensor kl_div(
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    bool log_target)
+at::Tensor kl_div(const at::Tensor &self, const at::Tensor &target, int64_t reduction, bool log_target)
 {
     return npu_kl_div(self, target, reduction, log_target);
 }

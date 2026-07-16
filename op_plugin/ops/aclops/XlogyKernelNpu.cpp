@@ -49,7 +49,7 @@ at::Tensor &xlogy_out(const at::Tensor &self, const at::Tensor &other, at::Tenso
     at::Tensor format_cast_of_other = npu_preparation::CastBackToOriFormat(other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     npu_preparation::CheckOut({self, other}, out, npu_preparation::get_tensor_npu_format(format_cast_of_self),
-                              out.scalar_type(), output_size);
+        out.scalar_type(), output_size);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
         xlogy_out_npu_nocheck(contiguous_result, format_cast_of_self, format_cast_of_other);
@@ -75,8 +75,8 @@ at::Tensor &xlogy_out(const at::Tensor &self, const at::Scalar &other, at::Tenso
 
 at::Tensor &xlogy_out(const at::Scalar &self, const at::Tensor &other, at::Tensor &out)
 {
-    npu_preparation::CheckOut({other}, out, npu_preparation::get_tensor_npu_format(other), other.scalar_type(),
-                              other.sizes());
+    npu_preparation::CheckOut(
+        {other}, out, npu_preparation::get_tensor_npu_format(other), other.scalar_type(), other.sizes());
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
         xlogy_out_npu_nocheck(contiguous_result, self, other);

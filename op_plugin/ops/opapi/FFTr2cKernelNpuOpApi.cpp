@@ -24,35 +24,27 @@ using npu_preparation = at_npu::native::OpPreparation;
 constexpr int64_t N_FLOATS_IN_COMPLEX = 2;
 
 at::Tensor fft_r2c_backward(
-    const at::Tensor& grad,
-    at::IntArrayRef dim,
-    int64_t normalization,
-    bool onesided,
-    int64_t last_dim_size)
+    const at::Tensor &grad, at::IntArrayRef dim, int64_t normalization, bool onesided, int64_t last_dim_size)
 {
     if (!onesided) {
         return at::real(at::_fft_c2c(grad, dim, normalization, false));
     }
     auto half_sizes = grad.sym_sizes();
     std::vector<c10::SymInt> new_grad_shape(half_sizes.begin(), half_sizes.end());
-    const auto last_dim =
-        at::maybe_wrap_dim(dim.back(), static_cast<int64_t>(half_sizes.size()));
+    const auto last_dim = at::maybe_wrap_dim(dim.back(), static_cast<int64_t>(half_sizes.size()));
     new_grad_shape[last_dim] = last_dim_size;
 
     const auto zero_length = last_dim_size - grad.sym_size(dim.back());
 
     auto gradAsReal = at::view_as_real(grad);
     new_grad_shape.push_back(N_FLOATS_IN_COMPLEX);
-    auto complex_full_grad =
-        zero_length > 0 ? gradAsReal.new_zeros_symint(new_grad_shape) : gradAsReal;
+    auto complex_full_grad = zero_length > 0 ? gradAsReal.new_zeros_symint(new_grad_shape) : gradAsReal;
     if (zero_length > 0) {
-      complex_full_grad.slice_symint(last_dim, 0, half_sizes[last_dim])
-          .copy_(gradAsReal);
+        complex_full_grad.slice_symint(last_dim, 0, half_sizes[last_dim]).copy_(gradAsReal);
     }
-    return at::real(
-        at::_fft_c2c(at::view_as_complex(complex_full_grad), dim, normalization, false));
+    return at::real(at::_fft_c2c(at::view_as_complex(complex_full_grad), dim, normalization, false));
 }
 
 #endif
 
-}  // namespace op_api
+} // namespace op_api

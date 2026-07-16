@@ -68,4 +68,4 @@ at::Tensor _upsample_nearest_exact3d(const at::Tensor &self, at::IntArrayRef out
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

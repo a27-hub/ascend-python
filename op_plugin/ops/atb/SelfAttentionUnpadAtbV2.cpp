@@ -16,14 +16,15 @@
 using namespace std;
 namespace atb {
 using SelfAttentionParam = atb::infer::SelfAttentionParam;
-void _npu_flash_attention_unpad_v2(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value, const at::Tensor &seq_len, const double scale_value, const int64_t num_heads, const int64_t num_kv_heads, const c10::optional<int64_t> kernel_type, at::Tensor &out)
+void _npu_flash_attention_unpad_v2(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const at::Tensor &seq_len, const double scale_value, const int64_t num_heads, const int64_t num_kv_heads,
+    const c10::optional<int64_t> kernel_type, at::Tensor &out)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
     int64_t ktype = kernel_type.has_value() ? kernel_type.value() : 0;
-    TORCH_CHECK(ktype == SelfAttentionParam::KERNELTYPE_DEFAULT ||
-                ktype == SelfAttentionParam::KERNELTYPE_EXP_M8V2,
-                "kernel_type only supports KERNELTYPE_DEFAULT(0) and KERNELTYPE_EXP_M8V2(2), but got: ", ktype);
-    OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
+    TORCH_CHECK(ktype == SelfAttentionParam::KERNELTYPE_DEFAULT || ktype == SelfAttentionParam::KERNELTYPE_EXP_M8V2,
+        "kernel_type only supports KERNELTYPE_DEFAULT(0) and KERNELTYPE_EXP_M8V2(2), but got: ", ktype);
+    OpParamCache<SelfAttentionParam> &selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
     SelfAttentionParam selfattentionparam;
 
     selfattentionparam.calcType = SelfAttentionParam::PA_ENCODER;
@@ -47,11 +48,7 @@ void _npu_flash_attention_unpad_v2(const at::Tensor &query, const at::Tensor &ke
     selfattentionparam.mlaVHeadSize = 0;
     selfattentionparam.windowSize = 0;
     ParamSetter parametter;
-    parametter.Input(query, true)
-        .Input(key, true)
-        .Input(value, true)
-        .Input(seq_len, true)
-        .Output(out);
+    parametter.Input(query, true).Input(key, true).Input(value, true).Input(seq_len, true).Output(out);
 
     auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
     RunAtbCmd(opSelfattention, parametter, "SelfAttentionOperation");
@@ -62,7 +59,8 @@ void _npu_flash_attention_unpad_v2(const at::Tensor &query, const at::Tensor &ke
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_flash_attention_unpad_v2(Tensor query, Tensor key, Tensor value, Tensor seq_len, float scale_value, int num_heads, int num_kv_heads, *, int ? kernel_type = 0, Tensor(a!) out) -> ()");
+    m.def("_npu_flash_attention_unpad_v2(Tensor query, Tensor key, Tensor value, Tensor seq_len, float scale_value, "
+          "int num_heads, int num_kv_heads, *, int ? kernel_type = 0, Tensor(a!) out) -> ()");
 }
 }
 

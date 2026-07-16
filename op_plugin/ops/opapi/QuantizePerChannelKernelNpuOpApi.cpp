@@ -23,9 +23,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-c10::SmallVector<int64_t, SIZE> quantize_reshape_size(
-    const at::Tensor& self,
-    int64_t axis)
+c10::SmallVector<int64_t, SIZE> quantize_reshape_size(const at::Tensor &self, int64_t axis)
 {
     c10::SmallVector<int64_t, SIZE> out_size;
     for (int64_t i = 0; i < self.dim(); i++) {
@@ -39,13 +37,8 @@ c10::SmallVector<int64_t, SIZE> quantize_reshape_size(
 }
 } // namespace
 
-at::Tensor& _quantize_per_channel_impl_out(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis,
-    at::ScalarType dtype,
-    at::Tensor& result)
+at::Tensor &_quantize_per_channel_impl_out(const at::Tensor &self, const at::Tensor &scales,
+    const at::Tensor &zero_points, int64_t axis, at::ScalarType dtype, at::Tensor &result)
 {
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
@@ -60,20 +53,16 @@ at::Tensor& _quantize_per_channel_impl_out(
 }
 
 at::Tensor quantize_per_channel(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis,
-    at::ScalarType dtype)
+    const at::Tensor &self, const at::Tensor &scales, const at::Tensor &zero_points, int64_t axis, at::ScalarType dtype)
 {
     axis = op_plugin::utils::make_warp_dim(axis, self.dim());
     TORCH_CHECK(scales.dim() == 1, "Scales' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(zero_points.dim() == 1, "Zero points' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == zero_points.sizes()[0],
-                "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
+        "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(axis <= self.sizes().size() - 1, "Unexpected value of axis." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == self.sizes()[axis],
-                "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
+        "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
         output_dtype = at::kChar;
@@ -99,9 +88,7 @@ at::Tensor quantize_per_channel(
 namespace op_api {
 
 namespace {
-c10::SmallVector<int64_t, SIZE> quantize_reshape_size(
-    const at::Tensor& self,
-    int64_t axis)
+c10::SmallVector<int64_t, SIZE> quantize_reshape_size(const at::Tensor &self, int64_t axis)
 {
     c10::SmallVector<int64_t, SIZE> out_size;
     for (int64_t i = 0; i < self.dim(); i++) {
@@ -115,13 +102,8 @@ c10::SmallVector<int64_t, SIZE> quantize_reshape_size(
 }
 } // namespace
 
-at::Tensor& _quantize_per_channel_impl_out(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis,
-    at::ScalarType dtype,
-    at::Tensor& result)
+at::Tensor &_quantize_per_channel_impl_out(const at::Tensor &self, const at::Tensor &scales,
+    const at::Tensor &zero_points, int64_t axis, at::ScalarType dtype, at::Tensor &result)
 {
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
@@ -136,11 +118,7 @@ at::Tensor& _quantize_per_channel_impl_out(
 }
 
 at::Tensor quantize_per_channel(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis,
-    at::ScalarType dtype)
+    const at::Tensor &self, const at::Tensor &scales, const at::Tensor &zero_points, int64_t axis, at::ScalarType dtype)
 {
     auto zero_points_cpu = zero_points.to(at::Device(at::kCPU), at::kLong).contiguous();
     return at::native::quantize_per_channel(self, scales, zero_points_cpu, axis, dtype);
@@ -151,12 +129,8 @@ namespace at {
 namespace native {
 using npu_preparation = at_npu::native::OpPreparation;
 
-void quantize_tensor_per_channel_affine_npu(
-    const at::Tensor& rtensor,
-    at::Tensor& qtensor,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points_cpu,
-    int64_t axis)
+void quantize_tensor_per_channel_affine_npu(const at::Tensor &rtensor, at::Tensor &qtensor, const at::Tensor &scales,
+    const at::Tensor &zero_points_cpu, int64_t axis)
 {
     auto zero_points = zero_points_cpu.to(at::Device(at::kPrivateUse1), at::ScalarType::Int).contiguous();
     at::ScalarType dtype = qtensor.options().dtype().toScalarType();
@@ -164,10 +138,10 @@ void quantize_tensor_per_channel_affine_npu(
     TORCH_CHECK(scales.dim() == 1, "Scales' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(zero_points.dim() == 1, "Zero points' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == zero_points.sizes()[0],
-                "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
+        "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(axis <= rtensor.sizes().size() - 1, "Unexpected value of axis." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == rtensor.sizes()[axis],
-                "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
+        "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
         output_dtype = at::kChar;
@@ -176,28 +150,24 @@ void quantize_tensor_per_channel_affine_npu(
     } else if (dtype == at::ScalarType::QInt32) {
         output_dtype = at::kInt;
     }
-    at::Tensor result = npu_preparation::apply_tensor_without_format(rtensor.sizes(), rtensor.options().dtype(output_dtype));
-    at_npu::native::custom_ops::_quantize_per_channel_impl_out(rtensor, scales,
-        zero_points, axis, dtype, result);
+    at::Tensor result =
+        npu_preparation::apply_tensor_without_format(rtensor.sizes(), rtensor.options().dtype(output_dtype));
+    at_npu::native::custom_ops::_quantize_per_channel_impl_out(rtensor, scales, zero_points, axis, dtype, result);
     at_npu::native::NPUNativeFunctions::set_(qtensor, result);
 }
 
-void dequantize_tensor_per_channel_affine_npu(
-    const at::Tensor& qtensor,
-    at::Tensor& rtensor,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points_cpu,
-    int64_t axis)
+void dequantize_tensor_per_channel_affine_npu(const at::Tensor &qtensor, at::Tensor &rtensor, const at::Tensor &scales,
+    const at::Tensor &zero_points_cpu, int64_t axis)
 {
     auto zero_points = zero_points_cpu.to(at::Device(at::kPrivateUse1), at::ScalarType::Int).contiguous();
     axis = op_plugin::utils::make_warp_dim(axis, qtensor.dim());
     TORCH_CHECK(scales.dim() == 1, "Scales' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(zero_points.dim() == 1, "Zero points' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == zero_points.sizes()[0],
-                "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
+        "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(axis <= qtensor.sizes().size() - 1, "Unexpected value of axis." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == qtensor.sizes()[axis],
-                "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
+        "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
 
     auto dtype = qtensor.scalar_type();
     auto output_dtype = at::kInt;
@@ -207,8 +177,7 @@ void dequantize_tensor_per_channel_affine_npu(
         output_dtype = at::kByte;
     }
     at::Tensor result = at::empty(
-        qtensor.sizes(),
-        qtensor.options().dtype(output_dtype).memory_format(qtensor.suggest_memory_format()));
+        qtensor.sizes(), qtensor.options().dtype(output_dtype).memory_format(qtensor.suggest_memory_format()));
 
     at_npu::native::NPUNativeFunctions::set_(result, qtensor);
     rtensor = at_npu::native::custom_ops::_npu_dtype_cast(result, at::ScalarType::Float);
@@ -236,9 +205,7 @@ REGISTER_PRIVATEUSE1_DISPATCH(dequantize_tensor_per_channel_affine_stub, &dequan
 namespace op_api {
 
 namespace {
-c10::SmallVector<int64_t, SIZE> quantize_reshape_size(
-    const at::Tensor& self,
-    int64_t axis)
+c10::SmallVector<int64_t, SIZE> quantize_reshape_size(const at::Tensor &self, int64_t axis)
 {
     c10::SmallVector<int64_t, SIZE> out_size;
     for (int64_t i = 0; i < self.dim(); i++) {
@@ -252,13 +219,8 @@ c10::SmallVector<int64_t, SIZE> quantize_reshape_size(
 }
 } // namespace
 
-at::Tensor& _quantize_per_channel_impl_out(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis,
-    at::ScalarType dtype,
-    at::Tensor& result)
+at::Tensor &_quantize_per_channel_impl_out(const at::Tensor &self, const at::Tensor &scales,
+    const at::Tensor &zero_points, int64_t axis, at::ScalarType dtype, at::Tensor &result)
 {
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
@@ -273,11 +235,7 @@ at::Tensor& _quantize_per_channel_impl_out(
 }
 
 at::Tensor quantize_per_channel(
-    const at::Tensor& self,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis,
-    at::ScalarType dtype)
+    const at::Tensor &self, const at::Tensor &scales, const at::Tensor &zero_points, int64_t axis, at::ScalarType dtype)
 {
     return at::native::quantize_per_channel(self, scales, zero_points, axis, dtype);
 }
@@ -287,22 +245,18 @@ namespace at {
 namespace native {
 using npu_preparation = at_npu::native::OpPreparation;
 
-void quantize_tensor_per_channel_affine_npu(
-    const at::Tensor& rtensor,
-    at::Tensor& qtensor,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis)
+void quantize_tensor_per_channel_affine_npu(const at::Tensor &rtensor, at::Tensor &qtensor, const at::Tensor &scales,
+    const at::Tensor &zero_points, int64_t axis)
 {
     at::ScalarType dtype = qtensor.options().dtype().toScalarType();
     axis = op_plugin::utils::make_warp_dim(axis, rtensor.dim());
     TORCH_CHECK(scales.dim() == 1, "Scales' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(zero_points.dim() == 1, "Zero points' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == zero_points.sizes()[0],
-                "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
+        "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(axis <= rtensor.sizes().size() - 1, "Unexpected value of axis." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == rtensor.sizes()[axis],
-                "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
+        "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
     auto output_dtype = at::kInt;
     if (dtype == at::ScalarType::QInt8) {
         output_dtype = at::kChar;
@@ -311,28 +265,24 @@ void quantize_tensor_per_channel_affine_npu(
     } else if (dtype == at::ScalarType::QInt32) {
         output_dtype = at::kInt;
     }
-    at::Tensor result = npu_preparation::apply_tensor_without_format(rtensor.sizes(), rtensor.options().dtype(output_dtype));
+    at::Tensor result =
+        npu_preparation::apply_tensor_without_format(rtensor.sizes(), rtensor.options().dtype(output_dtype));
     at::Tensor zero_points_cp = zero_points.to(at::ScalarType::Int).contiguous();
-    at_npu::native::custom_ops::_quantize_per_channel_impl_out(rtensor, scales,
-        zero_points_cp, axis, dtype, result);
+    at_npu::native::custom_ops::_quantize_per_channel_impl_out(rtensor, scales, zero_points_cp, axis, dtype, result);
     at_npu::native::NPUNativeFunctions::set_(qtensor, result);
 }
 
-void dequantize_tensor_per_channel_affine_npu(
-    const at::Tensor& qtensor,
-    at::Tensor& rtensor,
-    const at::Tensor& scales,
-    const at::Tensor& zero_points,
-    int64_t axis)
+void dequantize_tensor_per_channel_affine_npu(const at::Tensor &qtensor, at::Tensor &rtensor, const at::Tensor &scales,
+    const at::Tensor &zero_points, int64_t axis)
 {
     axis = op_plugin::utils::make_warp_dim(axis, qtensor.dim());
     TORCH_CHECK(scales.dim() == 1, "Scales' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(zero_points.dim() == 1, "Zero points' dim should be equal to 1." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == zero_points.sizes()[0],
-                "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
+        "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(axis <= qtensor.sizes().size() - 1, "Unexpected value of axis." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scales.sizes()[0] == qtensor.sizes()[axis],
-                "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
+        "length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
 
     auto dtype = qtensor.scalar_type();
     auto output_dtype = at::kInt;
@@ -342,8 +292,7 @@ void dequantize_tensor_per_channel_affine_npu(
         output_dtype = at::kByte;
     }
     at::Tensor result = at::empty(
-        qtensor.sizes(),
-        qtensor.options().dtype(output_dtype).memory_format(qtensor.suggest_memory_format()));
+        qtensor.sizes(), qtensor.options().dtype(output_dtype).memory_format(qtensor.suggest_memory_format()));
 
     at_npu::native::NPUNativeFunctions::set_(result, qtensor);
     rtensor = at_npu::native::custom_ops::_npu_dtype_cast(result, at::ScalarType::Float);

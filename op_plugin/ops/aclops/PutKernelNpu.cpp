@@ -21,13 +21,10 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
-at::Tensor& put_(
-    at::Tensor& self,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    bool accumulate) {
-    TORCH_CHECK(index.numel() == source.numel(), "source should have the same number of elements as index"
-        + OPS_ERROR(ErrCode::PARAM));
+at::Tensor &put_(at::Tensor &self, const at::Tensor &index, const at::Tensor &source, bool accumulate)
+{
+    TORCH_CHECK(index.numel() == source.numel(),
+        "source should have the same number of elements as index" + OPS_ERROR(ErrCode::PARAM));
     if (source.numel() == 0) {
         return self;
     }
@@ -49,4 +46,4 @@ at::Tensor& put_(
     self.copy_(selfFlatten);
     return self;
 }
-}  // namespace acl_op
+} // namespace acl_op

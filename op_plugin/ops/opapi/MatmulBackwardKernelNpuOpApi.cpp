@@ -25,9 +25,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 const int8_t ALLOW_FP32_DOWN_PRECISION = 1;
 const int8_t KEEP_DTYPE = 0;
 
-static inline void matmul_implement_npu(at::Tensor &out,
-                                        const at::Tensor &self,
-                                        const at::Tensor &mat2)
+static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self, const at::Tensor &mat2)
 {
     // allow dicrease precision
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
@@ -36,15 +34,14 @@ static inline void matmul_implement_npu(at::Tensor &out,
     return;
 }
 
-static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tensor &tensor1,
-                                                                 const at::Tensor &tensor2)
+static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2)
 {
     c10::SmallVector<int64_t, op_infer::SIZE> output_size;
     auto dim_tensor1 = tensor1.dim();
     auto dim_tensor2 = tensor2.dim();
 
-    TORCH_CHECK(dim_tensor1 > 0 && dim_tensor2 > 0,
-                "matmul got error dimentions: ", "(", dim_tensor1, ", ", dim_tensor2, ")", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(dim_tensor1 > 0 && dim_tensor2 > 0, "matmul got error dimentions: ", "(", dim_tensor1, ", ",
+        dim_tensor2, ")", OPS_ERROR(ErrCode::PARAM));
 
     if (dim_tensor1 == 1 && dim_tensor2 == 1) {
         output_size = {};
@@ -83,15 +80,14 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tenso
         output_expand_size.insert(output_expand_size.end(), {n, p});
         output_size = output_expand_size;
     } else {
-        TORCH_CHECK(false, "matmul got error sizes: ", "(", dim_tensor1, ", ", dim_tensor2, ")", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            false, "matmul got error sizes: ", "(", dim_tensor1, ", ", dim_tensor2, ")", OPS_ERROR(ErrCode::PARAM));
     }
 
     return output_size;
 }
 
-at::Tensor matmul_mat1_backward(const at::Tensor self,
-                                const at::Tensor other,
-                                const at::Tensor grad_output)
+at::Tensor matmul_mat1_backward(const at::Tensor self, const at::Tensor other, const at::Tensor grad_output)
 {
     at::Tensor mat1 = self;
     at::Tensor mat2 = other;
@@ -136,9 +132,7 @@ at::Tensor matmul_mat1_backward(const at::Tensor self,
     return output;
 }
 
-at::Tensor matmul_mat2_backward(const at::Tensor self,
-                                const at::Tensor other,
-                                const at::Tensor grad_output)
+at::Tensor matmul_mat2_backward(const at::Tensor self, const at::Tensor other, const at::Tensor grad_output)
 {
     at::Tensor mat1 = self;
     at::Tensor mat2 = other;
@@ -173,10 +167,8 @@ at::Tensor matmul_mat2_backward(const at::Tensor self,
     return output;
 }
 
-std::tuple<at::Tensor, at::Tensor> matmul_backward(const at::Tensor &grad,
-                                                   const at::Tensor &self,
-                                                   const at::Tensor &other,
-                                                   std::array<bool, 2> grad_input_mask)
+std::tuple<at::Tensor, at::Tensor> matmul_backward(
+    const at::Tensor &grad, const at::Tensor &self, const at::Tensor &other, std::array<bool, 2> grad_input_mask)
 {
     if (!grad.defined()) {
         return std::make_tuple(at::Tensor(), at::Tensor());
@@ -200,4 +192,3 @@ std::tuple<at::Tensor, at::Tensor> matmul_backward(const at::Tensor &grad,
 }
 
 } // namespace op_api
-

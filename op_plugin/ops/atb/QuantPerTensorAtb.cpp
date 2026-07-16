@@ -21,7 +21,7 @@ using ElewiseParam = atb::infer::ElewiseParam;
 void _npu_quantize_per_tensor(const at::Tensor &x, const at::Tensor &scale, const at::Tensor &zero_point, at::Tensor &y)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(x));
-    OpParamCache<ElewiseParam>& elewiseParamCache = OpParamCache<ElewiseParam>::getInstance();
+    OpParamCache<ElewiseParam> &elewiseParamCache = OpParamCache<ElewiseParam>::getInstance();
     ElewiseParam elewiseparam;
 
     elewiseparam.elewiseType = ElewiseParam::ELEWISE_QUANT_PER_CHANNEL;
@@ -31,10 +31,7 @@ void _npu_quantize_per_tensor(const at::Tensor &x, const at::Tensor &scale, cons
     elewiseparam.mulsParam.varAttr = 0.0;
     elewiseparam.outTensorType = ACL_DT_UNDEFINED;
     ParamSetter parametter;
-    parametter.Input(x, true)
-                .Input(scale, true)
-                .Input(zero_point, true)
-                .Output(y);
+    parametter.Input(x, true).Input(scale, true).Input(zero_point, true).Output(y);
     auto opReshape = elewiseParamCache.getOperation(elewiseparam, "ElewiseCacheOperation");
     RunAtbCmd(opReshape, parametter, "ElewiseCacheOperation");
     return;
@@ -48,10 +45,7 @@ TORCH_LIBRARY_FRAGMENT(atb, m)
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
-    m.impl("_npu_quantize_per_tensor", TORCH_FN(atb::_npu_quantize_per_tensor));
-}
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) { m.impl("_npu_quantize_per_tensor", TORCH_FN(atb::_npu_quantize_per_tensor)); }
 }
 
 } // namespace

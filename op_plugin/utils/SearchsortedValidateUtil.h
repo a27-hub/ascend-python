@@ -25,7 +25,8 @@
 
 namespace op_plugin {
 
-inline bool searchsorted_dims_matched_before_last_dim(const at::Tensor &boundaries, const at::Tensor &input) {
+inline bool searchsorted_dims_matched_before_last_dim(const at::Tensor &boundaries, const at::Tensor &input)
+{
     if (boundaries.dim() != input.dim()) {
         return false;
     }
@@ -42,7 +43,8 @@ inline bool searchsorted_dims_matched_before_last_dim(const at::Tensor &boundari
 /// Full searchsorted pre_check for Tensor values; `output` may be null to skip out-dtype checks (scalar path).
 inline void searchsorted_pre_check_npu(const at::Tensor &boundaries, const at::Tensor &input, const at::Tensor *output,
     bool out_int32, bool right, const c10::optional<c10::string_view> &side_opt,
-    const c10::optional<at::Tensor> &sorter_opt) {
+    const c10::optional<at::Tensor> &sorter_opt)
+{
     if (side_opt.has_value()) {
         c10::string_view side = *side_opt;
         TORCH_CHECK(side == "left" || side == "right",
@@ -125,7 +127,8 @@ inline void searchsorted_pre_check_npu(const at::Tensor &boundaries, const at::T
 /// except output dtype here (matches CPU before aclnn). Tensor_out uses searchsorted_validate_tensor_out_op.
 inline int searchsorted_validate_core_no_output(const at::Tensor &sorted_sequence, const at::Tensor &self,
     bool out_int32, bool right, const c10::optional<c10::string_view> &side_opt,
-    const c10::optional<at::Tensor> &sorter_opt) {
+    const c10::optional<at::Tensor> &sorter_opt)
+{
     searchsorted_pre_check_npu(sorted_sequence, self, nullptr, out_int32, right, side_opt, sorter_opt);
     return 0;
 }
@@ -133,14 +136,16 @@ inline int searchsorted_validate_core_no_output(const at::Tensor &sorted_sequenc
 /// Tensor_out / same shapes as aclnnSearchSorted. Returns 0 for use in yaml new_params.
 inline int searchsorted_validate_tensor_out_op(const at::Tensor &sorted_sequence, const at::Tensor &self,
     const at::Tensor &out, bool out_int32, bool right, const c10::optional<c10::string_view> &side_opt,
-    const c10::optional<at::Tensor> &sorter_opt) {
+    const c10::optional<at::Tensor> &sorter_opt)
+{
     searchsorted_pre_check_npu(sorted_sequence, self, &out, out_int32, right, side_opt, sorter_opt);
     return 0;
 }
 
 /// Scalar value: materialize wrapped-number tensor like aten (no output-dtype check; out is created by kernel).
 inline int searchsorted_validate_scalar_op(const at::Tensor &sorted_sequence, const c10::Scalar &self, bool out_int32,
-    bool right, const c10::optional<c10::string_view> &side_opt, const c10::optional<at::Tensor> &sorter_opt) {
+    bool right, const c10::optional<c10::string_view> &side_opt, const c10::optional<at::Tensor> &sorter_opt)
+{
     at::Tensor input_t = at::empty({}, sorted_sequence.options());
     input_t.fill_(self);
     input_t.unsafeGetTensorImpl()->set_wrapped_number(true);

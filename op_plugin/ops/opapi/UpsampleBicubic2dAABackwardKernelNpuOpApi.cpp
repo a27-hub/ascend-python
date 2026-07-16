@@ -43,11 +43,9 @@ bool checkBicubicBackwardUseFast(
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                               c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    double realScale_h =
-        op_plugin::utils::compute_scale(grad_input.size(H_INDEX), grad_output.size(H_INDEX), scales_h);
-    double realScale_w =
-        op_plugin::utils::compute_scale(grad_input.size(W_INDEX), grad_output.size(W_INDEX), scales_w);
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+    double realScale_h = op_plugin::utils::compute_scale(grad_input.size(H_INDEX), grad_output.size(H_INDEX), scales_h);
+    double realScale_w = op_plugin::utils::compute_scale(grad_input.size(W_INDEX), grad_output.size(W_INDEX), scales_w);
     if (!is_support_nd_out || !checkBicubicBackwardScales(realScale_h, realScale_w) ||
         !checkBicubicBackwardShapes(grad_output.size(H_INDEX), grad_output.size(W_INDEX))) {
         return false;
@@ -96,14 +94,8 @@ at::Tensor &_upsample_bicubic2d_aa_backward_out(const at::Tensor &grad_output, a
         return upsample_bicubic2d_aa_backward_out_slow(
             grad_output, output_size, input_size, align_corners, scales_h, scales_w, grad_input);
     }
-    EXEC_NPU_CMD(aclnnUpsampleBicubic2dAAGrad,
-        grad_output,
-        output_size,
-        input_size,
-        align_corners,
-        scales_h_attr,
-        scales_w_attr,
-        grad_input);
+    EXEC_NPU_CMD(aclnnUpsampleBicubic2dAAGrad, grad_output, output_size, input_size, align_corners, scales_h_attr,
+        scales_w_attr, grad_input);
     return grad_input;
 }
 
@@ -120,15 +112,9 @@ at::Tensor _upsample_bicubic2d_aa_backward(const at::Tensor &grad_output, at::In
         return upsample_bicubic2d_aa_backward_slow(
             grad_output, output_size, input_size, align_corners, scales_h, scales_w);
     }
-    EXEC_NPU_CMD(aclnnUpsampleBicubic2dAAGrad,
-        grad_output,
-        output_size,
-        input_size,
-        align_corners,
-        scales_h_attr,
-        scales_w_attr,
-        grad_input);
+    EXEC_NPU_CMD(aclnnUpsampleBicubic2dAAGrad, grad_output, output_size, input_size, align_corners, scales_h_attr,
+        scales_w_attr, grad_input);
     return grad_input;
 }
 
-}  // namespace op_api
+} // namespace op_api

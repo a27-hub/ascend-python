@@ -16,12 +16,8 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-at::Tensor& softplus_backward_out_common_nocheck(
-    at::Tensor& grad_input,
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    at::Scalar beta,
-    at::Scalar threshold)
+at::Tensor &softplus_backward_out_common_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
+    const at::Tensor &self, at::Scalar beta, at::Scalar threshold)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("SoftplusV2Grad")

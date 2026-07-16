@@ -28,8 +28,8 @@ at::Tensor linalg_cross_dest_output(const at::Tensor &self, const at::Tensor &ot
     return is_self_wrapped ? other : self;
 }
 
-at::Tensor &linalg_cross_out_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &other,
-                                     c10::optional<int64_t> dim)
+at::Tensor &linalg_cross_out_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &other, c10::optional<int64_t> dim)
 {
     int64_t real_dim = dim.has_value() ? dim.value() : -65530;
     at_npu::native::OpCommand cmd;
@@ -42,8 +42,8 @@ at::Tensor &linalg_cross_out(const at::Tensor &self, const at::Tensor &other, co
 {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor output_tensor = linalg_cross_dest_output(self, other);
-    npu_preparation::CheckOut({self}, out, npu_preparation::get_tensor_npu_format(output_tensor), self.scalar_type(),
-                              output_size);
+    npu_preparation::CheckOut(
+        {self}, out, npu_preparation::get_tensor_npu_format(output_tensor), self.scalar_type(), output_size);
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);

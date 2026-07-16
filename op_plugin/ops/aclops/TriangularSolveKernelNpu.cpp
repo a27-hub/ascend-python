@@ -21,8 +21,7 @@
 
 namespace acl_op {
 std::tuple<at::Tensor &, at::Tensor &> triangular_solve_out(const at::Tensor &self, const at::Tensor &A, bool upper,
-                                                            bool transpose, bool unitriangular, at::Tensor &X,
-                                                            at::Tensor &M)
+    bool transpose, bool unitriangular, at::Tensor &X, at::Tensor &M)
 {
     at::Tensor result_tmp;
     at::Tensor clone_a_tmp;

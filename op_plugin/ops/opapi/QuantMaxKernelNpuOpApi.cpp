@@ -24,9 +24,9 @@ namespace {
 constexpr int64_t AMAX_SHAPE_SIZE = 1;
 }; // namespace
 
-std::tuple<at::Tensor, at::Tensor> npu_quant_max(
-    const at::Tensor &x, const at::Tensor &scale, c10::string_view round_mode, int64_t dst_dtype, const c10::optional<at::Tensor> &group_list) {
-
+std::tuple<at::Tensor, at::Tensor> npu_quant_max(const at::Tensor &x, const at::Tensor &scale,
+    c10::string_view round_mode, int64_t dst_dtype, const c10::optional<at::Tensor> &group_list)
+{
     // 1. 推导 aclDataType（将 torch_npu DType 枚举值 -256 得到 ACL 枚举值）
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_dtype);
     int64_t acl_dst_type = static_cast<int64_t>(y_acltype);
@@ -65,7 +65,8 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
         out_amax = npu_preparation::apply_tensor_without_format({group_amax_shape_size}, x.options());
 
         // 5. 调用 aclnn
-        EXEC_NPU_CMD(aclnnGroupedQuantMax, x, scale, group_list.value(), round_mode_ptr, acl_dst_type, y_wrapper, out_amax);
+        EXEC_NPU_CMD(
+            aclnnGroupedQuantMax, x, scale, group_list.value(), round_mode_ptr, acl_dst_type, y_wrapper, out_amax);
     }
 
     return std::make_tuple(y, out_amax);

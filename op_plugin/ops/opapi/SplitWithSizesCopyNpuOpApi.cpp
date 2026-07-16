@@ -24,7 +24,7 @@ const static int64_t DIM_MIN_16 = 16;
 const static int64_t DIM_MIN_8 = 8;
 const static int64_t DIM_MAX = 65536;
 
-bool is_fused_op_optim(const at::Tensor& self, at::IntArrayRef split_sizes)
+bool is_fused_op_optim(const at::Tensor &self, at::IntArrayRef split_sizes)
 {
     if (!op_plugin::utils::is_gte_cann_version_830rc1()) {
         return false;
@@ -53,8 +53,7 @@ bool is_fused_op_optim(const at::Tensor& self, at::IntArrayRef split_sizes)
     }
 }
 
-
-void split_with_sizes_copy_out(const at::Tensor & self, at::IntArrayRef split_sizes, int64_t dim, at::TensorList out)
+void split_with_sizes_copy_out(const at::Tensor &self, at::IntArrayRef split_sizes, int64_t dim, at::TensorList out)
 {
     if (is_fused_op_optim(self, split_sizes)) {
         EXEC_NPU_CMD(aclnnSplitWithSize, self, split_sizes, dim, out);
@@ -63,4 +62,4 @@ void split_with_sizes_copy_out(const at::Tensor & self, at::IntArrayRef split_si
     }
 }
 
-}  // namespace op_api
+} // namespace op_api

@@ -12,19 +12,20 @@ inline bool _unfold_backward_fallback_condition()
 {
     static const bool is_aclnn_kernel_available = check_aclnn_kernel_available("aclnnUnfoldGrad");
     static const bool is_support_soc = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                       c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                       (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_9391);
+                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_9391);
     static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_830rc1();
     if (!is_aclnn_kernel_available || !is_support_soc || !is_cann_ready) {
         TORCH_NPU_WARN_ONCE("CAUTION: The operator aten::unfold_backward is currently "
-            "not supported on the NPU backend. Now this operator will fallback to run on the CPU "
-            "and may have performance implications.");
+                            "not supported on the NPU backend. Now this operator will fallback to run on the CPU "
+                            "and may have performance implications.");
         return true;
     }
     return false;
 }
 
-at::Tensor unfold_backward(const at::Tensor & grad_in, at::IntArrayRef input_sizes, int64_t dim, int64_t size, int64_t step)
+at::Tensor unfold_backward(
+    const at::Tensor &grad_in, at::IntArrayRef input_sizes, int64_t dim, int64_t size, int64_t step)
 {
     if (_unfold_backward_fallback_condition()) {
         at::Tensor grad_in_cpu = grad_in.cpu();
@@ -39,4 +40,4 @@ at::Tensor unfold_backward(const at::Tensor & grad_in, at::IntArrayRef input_siz
     return out;
 }
 
-}  // namespace op_api
+} // namespace op_api

@@ -17,25 +17,22 @@
 
 namespace op_api {
 
-static void check_resize_output(const at::Tensor& output, at::IntArrayRef shape)
+static void check_resize_output(const at::Tensor &output, at::IntArrayRef shape)
 {
     if (output.sizes().equals(shape)) {
         return;
     }
     if (output.numel() != 0) {
-        TORCH_WARN(
-            "An output with one or more elements was resized since it had ",
-            "shape ", output.sizes(), ", which does not match the required ",
-            "output shape ", shape, ". ",
+        TORCH_WARN("An output with one or more elements was resized since it had ", "shape ", output.sizes(),
+            ", which does not match the required ", "output shape ", shape, ". ",
             "This behavior is deprecated, and in a future PyTorch release outputs ",
             "will not be resized unless they have zero elements. You can explicitly ",
-            "reuse an out tensor t by resizing it, inplace, to zero elements with ",
-            "t.resize_(0).");
+            "reuse an out tensor t by resizing it, inplace, to zero elements with ", "t.resize_(0).");
     }
 }
 
-at::Tensor& nansum_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
-                       c10::optional<c10::ScalarType> dtype, at::Tensor& out)
+at::Tensor &nansum_out(const at::Tensor &self, at::OptionalIntArrayRef dim, bool keepdim,
+    c10::optional<c10::ScalarType> dtype, at::Tensor &out)
 {
     at::IntArrayRef dimArray;
     c10::SmallVector<int64_t, N> dimlist;
@@ -63,8 +60,8 @@ at::Tensor& nansum_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool
     return out;
 }
 
-at::Tensor nansum(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
-                  c10::optional<c10::ScalarType> dtype)
+at::Tensor nansum(
+    const at::Tensor &self, at::OptionalIntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype)
 {
     // create result tensor with int64 if dtype has no value and self is integral
     c10::ScalarType promoteInteSelf = isIntegralType(self.scalar_type(), true) ? at::kLong : self.scalar_type();

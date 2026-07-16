@@ -28,9 +28,8 @@ inline bool all_positive(at::IntArrayRef &arr)
 }
 
 at::Tensor &slow_conv_dilated2d_backward_input_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
-                                                           const at::Tensor &self, const at::Tensor &weight,
-                                                           at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                                           at::IntArrayRef padding, at::IntArrayRef dilation)
+    const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation)
 {
     c10::SmallVector<int64_t, N> strides_size = {1, 1, stride[0], stride[1]};
     c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[1], padding[1]};
@@ -55,9 +54,8 @@ at::Tensor &slow_conv_dilated2d_backward_input_out_nocheck(at::Tensor &grad_inpu
 }
 
 at::Tensor &slow_conv_dilated2d_backward_weight_out_nocheck(at::Tensor &grad_weight, const at::Tensor &grad_output,
-                                                            const at::Tensor &self, const at::Tensor &weight,
-                                                            at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                                            at::IntArrayRef padding, at::IntArrayRef dilation)
+    const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation)
 {
     c10::SmallVector<int64_t, N> strides_size = {1, 1, stride[0], stride[1]};
     c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[1], padding[1]};
@@ -83,9 +81,8 @@ at::Tensor &slow_conv_dilated2d_backward_weight_out_nocheck(at::Tensor &grad_wei
 }
 
 at::Tensor &slow_conv_dilated2d_backward_bias_out_check(at::Tensor &grad_bias, const at::Tensor &grad_output,
-                                                        const at::Tensor &self, const at::Tensor &weight,
-                                                        at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                                        at::IntArrayRef padding, at::IntArrayRef dilation)
+    const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation)
 {
     string data_formats = "NCHW";
     at_npu::native::OpCommand cmd;
@@ -94,46 +91,44 @@ at::Tensor &slow_conv_dilated2d_backward_bias_out_check(at::Tensor &grad_bias, c
     return grad_bias;
 }
 
-std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> slow_conv_dilated2d_backward_out_nocheck(
-    at::Tensor &grad_input, at::Tensor &grad_weight, at::Tensor &grad_bias, const at::Tensor &grad_output,
-    const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride,
-    at::IntArrayRef padding, at::IntArrayRef dilation, std::array<bool, 3> output_mask)
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> slow_conv_dilated2d_backward_out_nocheck(at::Tensor &grad_input,
+    at::Tensor &grad_weight, at::Tensor &grad_bias, const at::Tensor &grad_output, const at::Tensor &self,
+    const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef dilation, std::array<bool, 3> output_mask)
 {
     TORCH_CHECK(kernel_size.size() == 2, "kernel sizes length should be 2, but got ", kernel_size.size(),
         OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(stride.size() == 2, "strides length should be 2, but got ", stride.size(),
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(dilation.size() == 2, "dilations length should be 2, but got ", dilation.size(),
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(padding.size() == 2, "pads length should be 2, but got ", padding.size(),
-        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(stride.size() == 2, "strides length should be 2, but got ", stride.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        dilation.size() == 2, "dilations length should be 2, but got ", dilation.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(padding.size() == 2, "pads length should be 2, but got ", padding.size(), OPS_ERROR(ErrCode::PARAM));
 
     TORCH_CHECK(all_positive(kernel_size), "kernel size should be greater than zero, but got ", kernel_size,
         OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(all_positive(stride), "stride should be greater than zero, but got ", stride,
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(all_positive(dilation), "dilation should be greater than zero, but got ", dilation,
-        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        all_positive(stride), "stride should be greater than zero, but got ", stride, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        all_positive(dilation), "dilation should be greater than zero, but got ", dilation, OPS_ERROR(ErrCode::PARAM));
     if (output_mask[0]) {
-        slow_conv_dilated2d_backward_input_out_nocheck(grad_input, grad_output, self, weight, kernel_size, stride,
-                                                       padding, dilation);
+        slow_conv_dilated2d_backward_input_out_nocheck(
+            grad_input, grad_output, self, weight, kernel_size, stride, padding, dilation);
     }
     if (output_mask[1]) {
-        slow_conv_dilated2d_backward_weight_out_nocheck(grad_weight, grad_output, self, weight, kernel_size, stride,
-                                                        padding, dilation);
+        slow_conv_dilated2d_backward_weight_out_nocheck(
+            grad_weight, grad_output, self, weight, kernel_size, stride, padding, dilation);
     }
     if (output_mask[2]) {
-        slow_conv_dilated2d_backward_bias_out_check(grad_bias, grad_output, self, weight, kernel_size, stride, padding,
-                                                    dilation);
+        slow_conv_dilated2d_backward_bias_out_check(
+            grad_bias, grad_output, self, weight, kernel_size, stride, padding, dilation);
     }
 
     return std::tuple<at::Tensor &, at::Tensor &, at::Tensor &>(grad_input, grad_weight, grad_bias);
 }
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> slow_conv_dilated2d_backward(
-    const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size,
-    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, std::array<bool, 3> output_mask)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> slow_conv_dilated2d_backward(const at::Tensor &grad_output,
+    const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, std::array<bool, 3> output_mask)
 {
     at::Tensor undefined;
     at::Tensor grad_input = (output_mask[0] ? npu_preparation::apply_tensor(grad_output, self.sizes()) : undefined);
@@ -141,7 +136,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> slow_conv_dilated2d_backward(
     at::Tensor grad_bias = (output_mask[2] ? npu_preparation::apply_tensor(grad_output, weight.size(0)) : undefined);
 
     slow_conv_dilated2d_backward_out_nocheck(grad_input, grad_weight, grad_bias, grad_output, self, weight, kernel_size,
-                                             stride, padding, dilation, output_mask);
+        stride, padding, dilation, output_mask);
 
     return std::tie(grad_input, grad_weight, grad_bias);
 }

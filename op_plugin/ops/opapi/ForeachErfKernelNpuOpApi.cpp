@@ -47,17 +47,15 @@ void _foreach_erf_(const at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachErf, at::native::foreach_tensor_erf_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_erf_slow_(self);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(
-        self[0].scalar_type(),
-        op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-        op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_erf_slow_(self);
     }
 
@@ -73,17 +71,15 @@ std::vector<at::Tensor> _foreach_erf(const at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachErf, at::native::foreach_tensor_erf_slow(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_erf_slow(self);
     }
-    
+
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(
-        self[0].scalar_type(),
-        op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-        op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_erf_slow(self);
     }
 
@@ -99,9 +95,7 @@ std::vector<at::Tensor> _foreach_erf(const at::TensorList self)
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
         result.push_back(
-            npu_preparation::apply_tensor_without_format(
-                output_size,
-                tensor.options().dtype(scalar_type)));
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_erf(self, result_, false);

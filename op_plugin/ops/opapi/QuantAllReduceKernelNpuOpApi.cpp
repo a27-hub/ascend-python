@@ -32,24 +32,17 @@ static const int H_UPPER_LIMIT = 8192;
 // world_size
 const std::set<int> SUPPORT_WORLD_SIZE_LIST{2, 4, 8};
 // x valid dtype
-const std::set<int64_t> SUPPORT_X_DTYPE_LIST{
-    static_cast<int64_t>(c10_npu::DType::INT8),
-    static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-    static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2),
-    static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN),
-    static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2),
-    static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
-};
+const std::set<int64_t> SUPPORT_X_DTYPE_LIST{static_cast<int64_t>(c10_npu::DType::INT8),
+    static_cast<int64_t>(c10_npu::DType::HIFLOAT8), static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2),
+    static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN), static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2),
+    static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)};
 // scales valid dtype
 const std::set<int64_t> SUPPORT_SCALES_DTYPE_LIST{
-    static_cast<int64_t>(c10_npu::DType::FLOAT),
-    static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)
-};
+    static_cast<int64_t>(c10_npu::DType::FLOAT), static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)};
 
 at::Tensor npu_quant_all_reduce(const at::Tensor &x, const at::Tensor &scales, c10::string_view hcom,
-                                int64_t world_size, c10::optional<c10::string_view> reduce_op,
-                                c10::optional<int64_t> output_dtype, c10::optional<int64_t> x_dtype,
-                                c10::optional<int64_t> scales_dtype)
+    int64_t world_size, c10::optional<c10::string_view> reduce_op, c10::optional<int64_t> output_dtype,
+    c10::optional<int64_t> x_dtype, c10::optional<int64_t> scales_dtype)
 {
     // 校验空tensor
     TORCH_CHECK(x.defined(), "The input tensor x can not be None.", OPS_ERROR(ErrCode::PARAM));
@@ -57,62 +50,64 @@ at::Tensor npu_quant_all_reduce(const at::Tensor &x, const at::Tensor &scales, c
 
     // 校验x的shape, 2维(bs, h)或3维(b, s, h)
     TORCH_CHECK(x.dim() == DIM_TWO || x.dim() == DIM_THREE,
-                "The input x tensor shape is required to be 2 or 3 dim, but the actual input shape is ",
-                x.dim(), OPS_ERROR(ErrCode::PARAM));
+        "The input x tensor shape is required to be 2 or 3 dim, but the actual input shape is ", x.dim(),
+        OPS_ERROR(ErrCode::PARAM));
     // x不能为空tensor
     if (x.dim() == DIM_TWO) {
-        TORCH_CHECK(x.size(0) != 0 && x.size(1) != 0, "The input 2 dim tensor x can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(x.size(0) != 0 && x.size(1) != 0, "The input 2 dim tensor x can not be empty tensor",
+            OPS_ERROR(ErrCode::PARAM));
     } else if (x.dim() == DIM_THREE) {
-        TORCH_CHECK(x.size(0) != 0 && x.size(1) != 0 && x.size(DIM_TWO) != 0, "The input 3 dim tensor x can not be empty tensor",
-                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(x.size(0) != 0 && x.size(1) != 0 && x.size(DIM_TWO) != 0,
+            "The input 3 dim tensor x can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
     }
 
     // 校验x的dtype
     if (x_dtype.has_value()) {
         TORCH_CHECK(SUPPORT_X_DTYPE_LIST.find(x_dtype.value()) != SUPPORT_X_DTYPE_LIST.end(),
-                    "The optional parameter x_dtype only supports int8/hifloat8/float8_e4m3fn/float8_e5m2, but now is ",
-                    op_plugin::utils::DTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+            "The optional parameter x_dtype only supports int8/hifloat8/float8_e4m3fn/float8_e5m2, but now is ",
+            op_plugin::utils::DTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     TORCH_CHECK(SUPPORT_WORLD_SIZE_LIST.find(world_size) != SUPPORT_WORLD_SIZE_LIST.end(),
-                "The world_size should be in ", c10::Join(", ", SUPPORT_WORLD_SIZE_LIST),
-                ", but the actual value is ", world_size, OPS_ERROR(ErrCode::VALUE));
+        "The world_size should be in ", c10::Join(", ", SUPPORT_WORLD_SIZE_LIST), ", but the actual value is ",
+        world_size, OPS_ERROR(ErrCode::VALUE));
 
     // x.shape是(bs, h)或者(b, s, h)，所以第0维可能是bs，也可能是b
     int64_t axis_bs = x.size(0);
     if (x.dim() == DIM_THREE) {
         axis_bs = axis_bs * x.size(1);
     }
-    TORCH_CHECK(axis_bs % world_size == 0, "The x BS-axis should be divisible by world_size",
-                OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        axis_bs % world_size == 0, "The x BS-axis should be divisible by world_size", OPS_ERROR(ErrCode::PARAM));
 
     // (bs, h)或者(b, s, h), h范围在[1024, 8192]内，且h满足128对齐
     uint32_t axis_h = (x.dim() == DIM_THREE ? 2 : 1);
     TORCH_CHECK(x.size(axis_h) >= H_LOWER_LIMIT && x.size(axis_h) <= H_UPPER_LIMIT && x.size(axis_h) % NUM_128 == 0,
-                "The x H-axis should be in [1024, 8192] and divisible by 128", OPS_ERROR(ErrCode::PARAM));
+        "The x H-axis should be in [1024, 8192] and divisible by 128", OPS_ERROR(ErrCode::PARAM));
 
     // 校验scales的shape
     TORCH_CHECK(scales.dim() == DIM_TWO || scales.dim() == DIM_THREE || scales.dim() == DIM_FOUR,
-                "The input scales tensor shape is required to be equal to x in TG QuantMode, "
-                "or be equal to x plus 1 in MX QuantMode, but the actual input scales shape is ",
-                scales.dim(), OPS_ERROR(ErrCode::PARAM));
+        "The input scales tensor shape is required to be equal to x in TG QuantMode, "
+        "or be equal to x plus 1 in MX QuantMode, but the actual input scales shape is ",
+        scales.dim(), OPS_ERROR(ErrCode::PARAM));
     // 校验scales是否为空tensor
     if (scales.dim() == DIM_TWO) {
         TORCH_CHECK(scales.size(0) != 0 && scales.size(1) != 0, "The input 2 dim tensor scales can not be empty tensor",
-                    OPS_ERROR(ErrCode::PARAM));
+            OPS_ERROR(ErrCode::PARAM));
     } else if (scales.dim() == DIM_THREE) {
         TORCH_CHECK(scales.size(0) != 0 && scales.size(1) != 0 && scales.size(DIM_TWO) != 0,
-                    "The input 3 dim tensor scales can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
+            "The input 3 dim tensor scales can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
     } else if (scales.dim() == DIM_FOUR) {
-        TORCH_CHECK(scales.size(0) != 0 && scales.size(1) != 0 && scales.size(DIM_TWO) != 0 && scales.size(DIM_THREE) != 0,
-                    "The input 4 dim tensor scales can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            scales.size(0) != 0 && scales.size(1) != 0 && scales.size(DIM_TWO) != 0 && scales.size(DIM_THREE) != 0,
+            "The input 4 dim tensor scales can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
     }
 
     // 校验scales的dtype
     if (scales_dtype.has_value()) {
         TORCH_CHECK(SUPPORT_SCALES_DTYPE_LIST.find(scales_dtype.value()) != SUPPORT_SCALES_DTYPE_LIST.end(),
-                    "The optional parameter scales_dtype only supports float/float_e8m0, but now is ",
-                    op_plugin::utils::DTypeToString(scales_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+            "The optional parameter scales_dtype only supports float/float_e8m0, but now is ",
+            op_plugin::utils::DTypeToString(scales_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     // pta主要是为了推导output的shape和dtype，如果这里的output_dtype没有传入，则默认是bf16
@@ -124,8 +119,8 @@ at::Tensor npu_quant_all_reduce(const at::Tensor &x, const at::Tensor &scales, c
     aclDataType output_acl_type = c10_npu::GetAclDataType(output_default_dtype);
     at::ScalarType output_scalar_type = npu_preparation::convert_to_scalar_type(output_acl_type);
     // 推导output_tensor：output_tensor按照实际的shape和dtype去创建，output的shape和传入的x的shape完全一致
-    at::Tensor output_tensor = npu_preparation::apply_tensor_without_format(op_infer::array_to_small_vector(x.sizes()),
-                                                                            c10::dtype(output_scalar_type));
+    at::Tensor output_tensor = npu_preparation::apply_tensor_without_format(
+        op_infer::array_to_small_vector(x.sizes()), c10::dtype(output_scalar_type));
 
     // attr
     char *group_ptr = const_cast<char *>(hcom.data());

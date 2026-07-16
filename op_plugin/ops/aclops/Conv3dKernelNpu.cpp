@@ -22,9 +22,7 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, const at::Tensor &weight,
-                                                       const at::Tensor &bias, at::IntArrayRef stride,
-                                                       at::IntArrayRef padding, at::IntArrayRef dilation,
-                                                       int64_t groups)
+    const at::Tensor &bias, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups)
 {
     TORCH_CHECK(input.dim() >= 5, "input has to be more than 5D, but got Tensor of dimension ", input.dim(),
         OPS_ERROR(ErrCode::PARAM));
@@ -48,20 +46,16 @@ c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, 
     int64_t Ho = (H + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1;
     int64_t Wo = (W + 2 * padding[2] - dilation[2] * (kernel_size[2] - 1) - 1) / stride[2] + 1;
 
-    TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do,
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho,
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo,
-        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo, OPS_ERROR(ErrCode::VALUE));
 
     c10::SmallVector<int64_t, SIZE> output_size = {N, Co, Do, Ho, Wo};
     return output_size;
 }
 
 at::Tensor &conv3d_out_nocheck(at::Tensor &result, const at::Tensor &input, const at::Tensor &weight,
-                               const at::Tensor &bias, at::IntArrayRef stride, at::IntArrayRef padding,
-                               at::IntArrayRef dilation, int64_t groups)
+    const at::Tensor &bias, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups)
 {
     TORCH_CHECK(stride.size() >= 3, "stride has to contain more than 3 elements, but got ", stride.size(),
         OPS_ERROR(ErrCode::PARAM));
@@ -115,23 +109,19 @@ std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> slo
     int64_t Ho = (H + 2 * padding[1] - (kernel_size[1])) / stride[1] + 1;
     int64_t Wo = (W + 2 * padding[2] - (kernel_size[2])) / stride[2] + 1;
 
-    TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do,
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho,
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo,
-        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo, OPS_ERROR(ErrCode::VALUE));
 
     c10::SmallVector<int64_t, SIZE> output_size = {N, Co, Do, Ho, Wo};
-    c10::SmallVector<int64_t, SIZE> finput_size = {N, C * kernel_size[0] * kernel_size[1] * kernel_size[2],
-                                                   Do * Ho * Wo};
+    c10::SmallVector<int64_t, SIZE> finput_size = {
+        N, C * kernel_size[0] * kernel_size[1] * kernel_size[2], Do * Ho * Wo};
 
     return std::tie(output_size, finput_size);
 }
 
 at::Tensor &slow_conv3d_forward_npu_nocheck(at::Tensor &result, const at::Tensor &input, const at::Tensor &weight,
-                                            at::IntArrayRef kernel_size, const at::Tensor &bias, at::IntArrayRef stride,
-                                            at::IntArrayRef padding)
+    at::IntArrayRef kernel_size, const at::Tensor &bias, at::IntArrayRef stride, at::IntArrayRef padding)
 {
     TORCH_CHECK(stride.size() >= 3, "stride has to contain more than 3 elements, but got ", stride.size(),
         OPS_ERROR(ErrCode::PARAM));
@@ -160,8 +150,7 @@ at::Tensor &slow_conv3d_forward_npu_nocheck(at::Tensor &result, const at::Tensor
 } // namespace
 
 at::Tensor &npu_conv3d_out(const at::Tensor &input, const at::Tensor &weight, const c10::optional<at::Tensor> &bias_opt,
-                           at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups,
-                           at::Tensor &result)
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups, at::Tensor &result)
 {
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     auto output_size = conv3d_npu_output_size(input, weight, bias, stride, padding, dilation, groups);
@@ -177,7 +166,7 @@ at::Tensor &npu_conv3d_out(const at::Tensor &input, const at::Tensor &weight, co
 }
 
 at::Tensor npu_conv3d(const at::Tensor &input, const at::Tensor &weight, const c10::optional<at::Tensor> &bias_opt,
-                      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups)
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups)
 {
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     auto output_size = conv3d_npu_output_size(input, weight, bias, stride, padding, dilation, groups);
@@ -187,8 +176,7 @@ at::Tensor npu_conv3d(const at::Tensor &input, const at::Tensor &weight, const c
 }
 
 at::Tensor &slow_conv3d_forward_out(const at::Tensor &input, const at::Tensor &weight, at::IntArrayRef kernel_size,
-                                    const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
-                                    at::IntArrayRef padding, at::Tensor &result)
+    const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride, at::IntArrayRef padding, at::Tensor &result)
 {
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     auto output_size = slow_conv3d_npu_output_size(input, weight, bias, stride, padding);
@@ -204,8 +192,7 @@ at::Tensor &slow_conv3d_forward_out(const at::Tensor &input, const at::Tensor &w
 }
 
 at::Tensor slow_conv3d_forward(const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size,
-                               const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
-                               at::IntArrayRef padding)
+    const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride, at::IntArrayRef padding)
 {
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     auto output_size = slow_conv3d_npu_output_size(self, weight, bias, stride, padding);
@@ -216,8 +203,7 @@ at::Tensor slow_conv3d_forward(const at::Tensor &self, const at::Tensor &weight,
 }
 
 at::Tensor &slow_conv3d_out(const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size,
-                            const c10::optional<at::Tensor> &bias, at::IntArrayRef stride, at::IntArrayRef padding,
-                            at::Tensor &result)
+    const c10::optional<at::Tensor> &bias, at::IntArrayRef stride, at::IntArrayRef padding, at::Tensor &result)
 {
     return acl_op::slow_conv3d_forward_out(self, weight, kernel_size, bias, stride, padding, result);
 }

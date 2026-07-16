@@ -49,15 +49,15 @@ void _foreach_acos_(at::TensorList self)
 {
     DO_COMPATIBILITY(aclnnForeachAcos, at::native::foreach_tensor_acos_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_acos_slow_(self);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(), op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-                                               op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_acos_slow_(self);
     }
 
@@ -77,15 +77,15 @@ std::vector<at::Tensor> _foreach_acos(at::TensorList tensors)
 {
     DO_COMPATIBILITY(aclnnForeachAcos, at::native::foreach_tensor_acos_slow(tensors));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_acos_slow(tensors);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(tensors[0].scalar_type(), op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-                                               op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(tensors[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_acos_slow(tensors);
     }
 
@@ -100,7 +100,8 @@ std::vector<at::Tensor> _foreach_acos(at::TensorList tensors)
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 

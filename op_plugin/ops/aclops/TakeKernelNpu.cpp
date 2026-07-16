@@ -21,7 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& take_out_nocheck(at::Tensor& result, const at::Tensor& self, const at::Tensor& index)
+at::Tensor &take_out_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &index)
 {
     at::Tensor input_tensor = self.reshape(-1);
     at::Tensor contiguous_self = npu_utils::format_contiguous(input_tensor);
@@ -38,15 +38,11 @@ at::Tensor& take_out_nocheck(at::Tensor& result, const at::Tensor& self, const a
 }
 } // namespace
 
-at::Tensor& take_out(const at::Tensor& self, const at::Tensor& index, at::Tensor& out)
+at::Tensor &take_out(const at::Tensor &self, const at::Tensor &index, at::Tensor &out)
 {
     auto output_size = op_infer::input_same_output_size(index);
 
-    npu_preparation::CheckOut(
-        {self, index},
-        out,
-        self,
-        output_size);
+    npu_preparation::CheckOut({self, index}, out, self, output_size);
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -58,7 +54,7 @@ at::Tensor& take_out(const at::Tensor& self, const at::Tensor& index, at::Tensor
     return out;
 }
 
-at::Tensor take(const at::Tensor& self, const at::Tensor& index)
+at::Tensor take(const at::Tensor &self, const at::Tensor &index)
 {
     at::Tensor result = npu_preparation::apply_tensor(self, index.sizes());
     take_out_nocheck(result, self, index);

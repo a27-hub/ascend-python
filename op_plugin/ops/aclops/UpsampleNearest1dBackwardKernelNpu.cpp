@@ -24,10 +24,8 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 c10::SmallVector<int64_t, SIZE> upsample_nearest1d_backward_infer_size(at::IntArrayRef input_size)
 {
-    TORCH_CHECK(
-        input_size.size() == 3,
-        "It is expected input_size equals to 3, but got size ",
-        input_size.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(input_size.size() == 3, "It is expected input_size equals to 3, but got size ", input_size.size(),
+        OPS_ERROR(ErrCode::PARAM));
 
     c10::SmallVector<int64_t, SIZE> output_size;
     int64_t N = input_size[0];
@@ -37,12 +35,8 @@ c10::SmallVector<int64_t, SIZE> upsample_nearest1d_backward_infer_size(at::IntAr
     return output_size;
 }
 
-at::Tensor& upsample_nearest1d_backward_out_nocheck(
-    at::Tensor& grad_input,
-    const at::Tensor& grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<double> scales)
+at::Tensor &upsample_nearest1d_backward_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
+    at::IntArrayRef output_size, at::IntArrayRef input_size, c10::optional<double> scales)
 {
     at::Tensor grad_cp = grad_output.unsqueeze(2);
     at_npu::native::OpCommand cmd;
@@ -67,12 +61,12 @@ at::Tensor& upsample_nearest1d_backward_out_nocheck(
             .Input(origin_size, at::kLong)
             .Output(grad_input)
             // Default value of Resize
-            .Attr("coordinate_transformation_mode", (string)"pytorch_half_pixel")
+            .Attr("coordinate_transformation_mode", (string) "pytorch_half_pixel")
             .Attr("cubic_coeff_a", (float)-0.75)
             .Attr("exclude_outside", (int64_t)0)
             .Attr("extrapolation_value", (float)0.0)
-            .Attr("mode", (string)"nearest")
-            .Attr("nearest_mode", (string)"floor")
+            .Attr("mode", (string) "nearest")
+            .Attr("nearest_mode", (string) "floor")
             .Run();
     }
     grad_input = grad_input.squeeze(2);
@@ -80,19 +74,11 @@ at::Tensor& upsample_nearest1d_backward_out_nocheck(
 }
 } // namespace
 
-at::Tensor& upsample_nearest1d_backward_out(
-    const at::Tensor& grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<double> scales,
-    at::Tensor& grad_input)
+at::Tensor &upsample_nearest1d_backward_out(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, c10::optional<double> scales, at::Tensor &grad_input)
 {
     c10::SmallVector<int64_t, SIZE> op_infer_output_size = upsample_nearest1d_backward_infer_size(input_size);
-    npu_preparation::CheckOut(
-        {grad_output},
-        grad_input,
-        grad_output,
-        op_infer_output_size);
+    npu_preparation::CheckOut({grad_output}, grad_input, grad_output, op_infer_output_size);
 
     if (!npu_utils::check_match(&grad_input)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(grad_input);
@@ -105,17 +91,13 @@ at::Tensor& upsample_nearest1d_backward_out(
     return grad_input;
 }
 
-at::Tensor upsample_nearest1d_backward(
-    const at::Tensor& grad_output,
-    at::IntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<double> scales)
+at::Tensor upsample_nearest1d_backward(const at::Tensor &grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, c10::optional<double> scales)
 {
     c10::SmallVector<int64_t, SIZE> op_infer_output_size = upsample_nearest1d_backward_infer_size(input_size);
     at::Tensor grad_input = npu_preparation::apply_tensor(grad_output, op_infer_output_size);
 
-    upsample_nearest1d_backward_out_nocheck(
-        grad_input, grad_output, output_size, input_size, scales);
+    upsample_nearest1d_backward_out_nocheck(grad_input, grad_output, output_size, input_size, scales);
     return grad_input;
 }
 } // namespace acl_op

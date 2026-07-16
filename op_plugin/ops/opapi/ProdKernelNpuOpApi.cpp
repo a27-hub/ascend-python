@@ -19,8 +19,8 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-at::Tensor& prod_out(const at::Tensor& self, int64_t dim, bool keepdim,
-                     c10::optional<at::ScalarType> dtype, at::Tensor& result)
+at::Tensor &prod_out(
+    const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype, at::Tensor &result)
 {
     DO_COMPATIBILITY(aclnnProdDim, acl_op::prod_out(self, dim, keepdim, dtype, result));
 
@@ -34,8 +34,7 @@ at::Tensor& prod_out(const at::Tensor& self, int64_t dim, bool keepdim,
     return result;
 }
 
-at::Tensor prod(const at::Tensor& self, int64_t dim,
-                bool keepdim, c10::optional<at::ScalarType> dtype)
+at::Tensor prod(const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype)
 {
     DO_COMPATIBILITY(aclnnProdDim, acl_op::prod(self, dim, keepdim, dtype));
 
@@ -48,16 +47,15 @@ at::Tensor prod(const at::Tensor& self, int64_t dim,
     // calculate the output size
     auto output_size = op_infer::prod_npu_output_size(self, dim, keepdim);
     // construct the output tensor of the NPU
-    at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(
-        output_size,
-        self.options().dtype(dst_type));
+    at::Tensor result =
+        at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options().dtype(dst_type));
     // calculate the output result of the NPU
     EXEC_NPU_CMD(aclnnProdDim, self, dim, keepdim, dst_type, result);
 
     return result;
 }
 
-at::Tensor prod(const at::Tensor& self, c10::optional<at::ScalarType> dtype)
+at::Tensor prod(const at::Tensor &self, c10::optional<at::ScalarType> dtype)
 {
     DO_COMPATIBILITY(aclnnProd, acl_op::prod(self, dtype));
 
@@ -70,9 +68,8 @@ at::Tensor prod(const at::Tensor& self, c10::optional<at::ScalarType> dtype)
     // calculate the output size
     auto output_size = op_infer::prod_npu_output_size(self, false);
     // construct the output tensor of the NPU
-    at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(
-        output_size,
-        self.options().dtype(dst_type));
+    at::Tensor result =
+        at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options().dtype(dst_type));
     // calculate the output result of the NPU
     EXEC_NPU_CMD(aclnnProd, self, dst_type, result);
 

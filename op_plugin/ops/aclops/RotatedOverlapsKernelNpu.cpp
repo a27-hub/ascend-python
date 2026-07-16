@@ -20,31 +20,19 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor& rotated_overlaps_npu_nocheck(
-    at::Tensor& overlaps,
-    const at::Tensor& self,
-    const at::Tensor& query_boxes,
-    bool trans)
+at::Tensor &rotated_overlaps_npu_nocheck(
+    at::Tensor &overlaps, const at::Tensor &self, const at::Tensor &query_boxes, bool trans)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("RotatedOverlaps")
-        .Input(self)
-        .Input(query_boxes)
-        .Output(overlaps)
-        .Attr("trans", trans)
-        .Run();
+    cmd.Name("RotatedOverlaps").Input(self).Input(query_boxes).Output(overlaps).Attr("trans", trans).Run();
     return overlaps;
 }
 } // namespace
 
-at::Tensor npu_rotated_overlaps(
-    const at::Tensor& self,
-    const at::Tensor& query_boxes,
-    bool trans)
+at::Tensor npu_rotated_overlaps(const at::Tensor &self, const at::Tensor &query_boxes, bool trans)
 {
     TORCH_CHECK(self.ndimension() == 3 && query_boxes.ndimension() == 3,
-                "boxes' dim should be equal to query_boxes' ndimension() ",
-                "and equal to 3!" + OPS_ERROR(ErrCode::PARAM));
+        "boxes' dim should be equal to query_boxes' ndimension() ", "and equal to 3!" + OPS_ERROR(ErrCode::PARAM));
     auto origin_dtype = self.scalar_type();
     // the Op only support fp32 currently!
     at::Tensor self_cp = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat).permute({0, 2, 1});

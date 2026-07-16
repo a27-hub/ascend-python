@@ -20,13 +20,9 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
-at::Tensor& addmv_out(
-    const at::Tensor& self,
-    const at::Tensor& mat,
-    const at::Tensor& vec,
-    const at::Scalar& beta,
-    const at::Scalar& alpha,
-    at::Tensor& result) {
+at::Tensor &addmv_out(const at::Tensor &self, const at::Tensor &mat, const at::Tensor &vec, const at::Scalar &beta,
+    const at::Scalar &alpha, at::Tensor &result)
+{
     npu_utils::check_1d(vec, "vec", "addmv");
 
     at::Tensor mat1 = vec.unsqueeze(1);
@@ -43,24 +39,18 @@ at::Tensor& addmv_out(
     return result;
 }
 
-at::Tensor addmv(
-    const at::Tensor& self,
-    const at::Tensor& mat,
-    const at::Tensor& vec,
-    const at::Scalar& beta,
-    const at::Scalar& alpha) {
+at::Tensor addmv(const at::Tensor &self, const at::Tensor &mat, const at::Tensor &vec, const at::Scalar &beta,
+    const at::Scalar &alpha)
+{
     auto output_size = op_infer::addmv_npu_output_size(self, mat);
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
     addmv_out(self, mat, vec, beta, alpha, result);
     return result;
 }
 
-at::Tensor& addmv_(
-    at::Tensor& self,
-    const at::Tensor& mat,
-    const at::Tensor& vec,
-    const at::Scalar& beta,
-    const at::Scalar& alpha) {
+at::Tensor &addmv_(
+    at::Tensor &self, const at::Tensor &mat, const at::Tensor &vec, const at::Scalar &beta, const at::Scalar &alpha)
+{
     npu_preparation::CheckMemory({self, mat, vec}, {self});
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);

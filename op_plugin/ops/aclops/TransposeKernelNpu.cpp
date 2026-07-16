@@ -24,8 +24,8 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::Tensor &npu_transpose_out_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef perm,
-                                      bool require_contiguous)
+at::Tensor &npu_transpose_out_nocheck(
+    at::Tensor &result, const at::Tensor &self, at::IntArrayRef perm, bool require_contiguous)
 {
     at_npu::native::OpCommand cmd;
     if (require_contiguous) {
@@ -60,8 +60,8 @@ at::Tensor &npu_transpose_out(const at::Tensor &self, at::IntArrayRef perm, bool
     return result;
 }
 
-at::Tensor &npu_transpose_trans_contiguous_out(const at::Tensor &self, at::IntArrayRef perm, bool require_contiguous,
-                                               at::Tensor &result)
+at::Tensor &npu_transpose_trans_contiguous_out(
+    const at::Tensor &self, at::IntArrayRef perm, bool require_contiguous, at::Tensor &result)
 {
     npu_transpose_out_nocheck(result, self, perm, require_contiguous);
     return result;

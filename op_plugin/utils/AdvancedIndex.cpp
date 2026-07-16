@@ -76,11 +76,11 @@ at::Tensor npu_nonzero_aclnn(const at::Tensor &self)
         TORCH_CHECK(ret != nullptr);
         return ret;
     }();
-    using aclGetViewShapeFuncLocal = int (*)(const aclTensor* tensor, int64_t** view_dims, uint64_t* view_dims_num);
+    using aclGetViewShapeFuncLocal = int (*)(const aclTensor *tensor, int64_t **view_dims, uint64_t *view_dims_num);
     auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFuncLocal>(aclGetViewShapeAddr);
     OP_EXEC_LOG(aclnnNonzeroV2, "EXEC_NPU_CMD_SYNC", self, out);
     auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnNonzeroV2, self, out);
-    int64_t* view_dims = nullptr;
+    int64_t *view_dims = nullptr;
     uint64_t view_dim_num = 0;
     auto ret = aclGetViewShape(npuAclParams.Get<1>(), &view_dims, &view_dim_num);
     TORCH_CHECK(ret == 0, "aclGetViewShape failed.");
@@ -161,16 +161,16 @@ at::Tensor AdvanceIndex::reshape_indexer(const at::Tensor &index, int64_t dims_b
     }
 }
 
-at::Tensor AdvanceIndex::restride_src(const at::Tensor &src, int64_t before_dims, int64_t dims_indexed,
-                                      at::IntArrayRef replacement_shape)
+at::Tensor AdvanceIndex::restride_src(
+    const at::Tensor &src, int64_t before_dims, int64_t dims_indexed, at::IntArrayRef replacement_shape)
 {
     auto shape = at::DimVector(src.sizes());
     auto strides = at::DimVector(src.strides());
     int64_t end = before_dims + dims_indexed;
     TORCH_CHECK(shape.size() >= end, "end", end, "is overrange shape.size() ", shape.size(), OPS_ERROR(ErrCode::VALUE));
     shape.erase(shape.begin() + before_dims, shape.begin() + end);
-    TORCH_CHECK(strides.size() >= end, "end", end, "is overrange strides.size() ", strides.size(),
-        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(
+        strides.size() >= end, "end", end, "is overrange strides.size() ", strides.size(), OPS_ERROR(ErrCode::VALUE));
     strides.erase(strides.begin() + before_dims, strides.begin() + end);
     shape.insert(shape.begin() + before_dims, replacement_shape.begin(), replacement_shape.end());
     strides.insert(strides.begin() + before_dims, replacement_shape.size(), 0);
@@ -200,8 +200,8 @@ bool AdvanceIndex::checkIndexTensorTypes(const torch::List<c10::optional<at::Ten
     for (c10::optional<at::Tensor> tensor : indices) {
         if (tensor.has_value() && tensor->defined()) {
             auto scalarType = tensor->scalar_type();
-            if (scalarType != at::kLong && scalarType != at::kByte &&
-                scalarType != at::kBool && scalarType != at::kInt) {
+            if (scalarType != at::kLong && scalarType != at::kByte && scalarType != at::kBool &&
+                scalarType != at::kInt) {
                 TORCH_CHECK_INDEX(false, "tensors used as indices must be long, int, byte, or bool tensors",
                     OPS_ERROR(ErrCode::TYPE));
             }
@@ -225,10 +225,9 @@ AdvancedIndex AdvanceIndex::make_info(at::Tensor self, const torch::List<c10::op
         indices = npu_expand_outplace(indices);
     } catch (std::exception &e) {
         TORCH_CHECK_INDEX(false,
-                          "shape mismatch: indexing tensors could not be broadcast"
-                          " together with shapes ",
-                          shapes_as_str(indices),
-                          OPS_ERROR(ErrCode::VALUE));
+            "shape mismatch: indexing tensors could not be broadcast"
+            " together with shapes ",
+            shapes_as_str(indices), OPS_ERROR(ErrCode::VALUE));
     }
     // add missing null Tensors so that it matches self.dim().
     while (indices.size() < static_cast<size_t>(self.dim())) {
@@ -248,10 +247,8 @@ AdvancedIndex AdvanceIndex::make_info(at::Tensor self, const torch::List<c10::op
     return AdvancedIndex(self, indices);
 }
 
-std::vector<at::Tensor> AdvanceIndex::npu_expand_tensors(const at::Tensor &self,
-                                                         const torch::List<c10::optional<at::Tensor>> &indices,
-                                                         bool needCast,
-                                                         bool flag_aclnn)
+std::vector<at::Tensor> AdvanceIndex::npu_expand_tensors(
+    const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &indices, bool needCast, bool flag_aclnn)
 {
     // If indices come in as ByteTensor or BoolTensor (masks), expand them into the equivalent indexing by LongTensors
     std::vector<at::Tensor> result;
@@ -273,8 +270,8 @@ std::vector<at::Tensor> AdvanceIndex::npu_expand_tensors(const at::Tensor &self,
                 for (uint64_t j = 0; j < static_cast<uint64_t>(index.dim()); j++) {
                     uint64_t srcIdx = result.size() + j;
                     TORCH_CHECK_INDEX(index.size(j) == self.size(srcIdx), "The shape of the mask ", index.sizes(),
-                                      " at index ", j, " does not match the shape of the indexed tensor ", self.sizes(),
-                                      " at index ", srcIdx, OPS_ERROR(ErrCode::VALUE));
+                        " at index ", j, " does not match the shape of the indexed tensor ", self.sizes(), " at index ",
+                        srcIdx, OPS_ERROR(ErrCode::VALUE));
                 }
                 at::Tensor nonzero;
                 // Replace with nonzeros

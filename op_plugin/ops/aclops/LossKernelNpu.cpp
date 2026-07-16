@@ -20,20 +20,14 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& multilabel_margin_loss_out(
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    at::Tensor& out)
+at::Tensor &multilabel_margin_loss_out(
+    const at::Tensor &self, const at::Tensor &target, int64_t reduction, at::Tensor &out)
 {
     at::Tensor is_target = npu_preparation::apply_tensor(target);
     return std::get<0>(at::multilabel_margin_loss_forward_out(out, is_target, self, target, reduction));
 }
 
-at::Tensor multilabel_margin_loss(
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction)
+at::Tensor multilabel_margin_loss(const at::Tensor &self, const at::Tensor &target, int64_t reduction)
 {
     return std::get<0>(at::multilabel_margin_loss_forward(self, target, reduction));
 }

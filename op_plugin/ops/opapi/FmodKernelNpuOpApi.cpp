@@ -22,15 +22,16 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 inline bool wrapped_to_scalar(const at::Tensor &tensor)
 {
-    return tensor.dim() == 0 && (tensor.scalar_type() == at::ScalarType::Double ||
-        tensor.scalar_type() == at::ScalarType::Long) && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+    return tensor.dim() == 0 &&
+        (tensor.scalar_type() == at::ScalarType::Double || tensor.scalar_type() == at::ScalarType::Long) &&
+        c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
 }
 
-static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
-                                        const c10::Device device)
+static at::Tensor self_tensor_to_device(
+    const at::Tensor &tensor, const at::ScalarType result_type, const c10::Device device)
 {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor) ||
-       (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
+        (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
         at::Scalar scalar = tensor.item();
         return npu_preparation::copy_scalar_to_device(scalar, result_type, device);
     }

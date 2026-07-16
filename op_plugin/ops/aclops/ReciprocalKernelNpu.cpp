@@ -23,24 +23,18 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::Tensor& reciprocal_out_npu_nocheck(at::Tensor& result, const at::Tensor& self)
+at::Tensor &reciprocal_out_npu_nocheck(at::Tensor &result, const at::Tensor &self)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Reciprocal")
-        .Input(self)
-        .Output(result)
-        .Run();
+    cmd.Name("Reciprocal").Input(self).Output(result).Run();
 
     return result;
 }
 } // namespace
 
-at::Tensor& reciprocal_out(const at::Tensor& self, at::Tensor& result)
+at::Tensor &reciprocal_out(const at::Tensor &self, at::Tensor &result)
 {
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        self);
+    npu_preparation::CheckOut({self}, result, self);
     npu_preparation::CheckMemory({self}, {result});
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -52,17 +46,17 @@ at::Tensor& reciprocal_out(const at::Tensor& self, at::Tensor& result)
     return result;
 }
 
-at::Tensor reciprocal(const at::Tensor& self)
+at::Tensor reciprocal(const at::Tensor &self)
 {
-    at::Tensor self_cp = isIntegralType(self.scalar_type(), true) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat) : self;
+    at::Tensor self_cp =
+        isIntegralType(self.scalar_type(), true) ? at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat) : self;
     at::Tensor result = npu_preparation::apply_tensor(self_cp);
     reciprocal_out_npu_nocheck(result, self_cp);
 
     return result;
 }
 
-at::Tensor& reciprocal_(at::Tensor& self)
+at::Tensor &reciprocal_(at::Tensor &self)
 {
     acl_op::reciprocal_out(self, self);
     return self;

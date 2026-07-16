@@ -42,7 +42,7 @@ namespace infer {
 //!
 enum InputLayout : int {
     TYPE_BSND = 0, //!< 默认值，表示数据排布为BSND
-    TYPE_BNSD      //!< 表示数据排布为BNSD
+    TYPE_BNSD //!< 表示数据排布为BNSD
 };
 
 //!
@@ -52,11 +52,11 @@ enum InputLayout : int {
 //!
 enum QuantType : int {
     QUANT_UNDEFINED = 0, //!< 不量化
-    QUANT_INT4,          //!< 当前不支持
-    QUANT_INT8,          //!< int8量化
-    QUANT_INT16,         //!< 当前不支持
-    QUANT_FLOAT8,        //!< 当前不支持
-    QUANT_FLOAT16,       //!< 当前不支持
+    QUANT_INT4, //!< 当前不支持
+    QUANT_INT8, //!< int8量化
+    QUANT_INT16, //!< 当前不支持
+    QUANT_FLOAT8, //!< 当前不支持
+    QUANT_FLOAT16, //!< 当前不支持
 };
 
 //!
@@ -66,8 +66,8 @@ enum QuantType : int {
 //!
 enum DynamicQuantType : int {
     DYNAMIC_QUANT_UNDEFINED = 0, //!< 非动态量化
-    DYNAMIC_QUANT_SYMMETRIC,     //!< 对称动态量化
-    DYNAMIC_QUANT_ASYMMETRIC,    //!< 非对称动态量化，暂不支持
+    DYNAMIC_QUANT_SYMMETRIC, //!< 对称动态量化
+    DYNAMIC_QUANT_ASYMMETRIC, //!< 非对称动态量化，暂不支持
 };
 
 //!
@@ -80,17 +80,17 @@ enum DynamicQuantType : int {
 //! ACTIVATION_SWIGLU_BACKWARD: Swiglu正向激活函数的反向，求梯度时使用。只支持Atlas 800I A2推理产品。
 //!
 enum ActivationType : int {
-    ACTIVATION_UNDEFINED = 0,       //!< 未定义
-    ACTIVATION_RELU,                //!< RELU激活类型
-    ACTIVATION_GELU,                //!< GELU激活类型
-    ACTIVATION_FAST_GELU,           //!< FAST_GELU激活类型
-    ACTIVATION_SWISH,               //!< SWISH激活类型
-    ACTIVATION_LOG,                 //!< LOG激活类型
-    ACTIVATION_SWIGLU_FORWARD,      //!< SWIGLU_FORWARD激活类型
-    ACTIVATION_SWIGLU_BACKWARD,     //!< SWIGLU_BACKWARD激活类型
-    ACTIVATION_SIGMOID,             //!< SIGMOID激活类型
+    ACTIVATION_UNDEFINED = 0, //!< 未定义
+    ACTIVATION_RELU, //!< RELU激活类型
+    ACTIVATION_GELU, //!< GELU激活类型
+    ACTIVATION_FAST_GELU, //!< FAST_GELU激活类型
+    ACTIVATION_SWISH, //!< SWISH激活类型
+    ACTIVATION_LOG, //!< LOG激活类型
+    ACTIVATION_SWIGLU_FORWARD, //!< SWIGLU_FORWARD激活类型
+    ACTIVATION_SWIGLU_BACKWARD, //!< SWIGLU_BACKWARD激活类型
+    ACTIVATION_SIGMOID, //!< SIGMOID激活类型
     ACTIVATION_FASTER_GELU_FORWARD, //!< FASTER_GELU_FORWARD激活类型
-    ACTIVATION_MAX,                 //!< 枚举最大值, 非激活类型
+    ACTIVATION_MAX, //!< 枚举最大值, 非激活类型
 };
 
 //!
@@ -100,8 +100,8 @@ enum ActivationType : int {
 //!
 enum CommMode : int {
     COMM_UNDEFINED = -1, //!< 未定义
-    COMM_MULTI_PROCESS,  //!< 指定多进程通信
-    COMM_MULTI_THREAD,   //!< 指定多线程通信
+    COMM_MULTI_PROCESS, //!< 指定多进程通信
+    COMM_MULTI_THREAD, //!< 指定多线程通信
 };
 
 //!
@@ -118,23 +118,23 @@ struct RmsNormParam {
     //!
     enum RmsNormType : int {
         RMS_NORM_UNDEFINED = 0, //!< 默认值，未定义
-        RMS_NORM_NORM,          //!< NORM参数。
-        RMS_NORM_PRENORM,       //!< PRENORM参数。
-        RMS_NORM_POSTNORM,      //!< POSTNORM参数
+        RMS_NORM_NORM, //!< NORM参数。
+        RMS_NORM_PRENORM, //!< PRENORM参数。
+        RMS_NORM_POSTNORM, //!< POSTNORM参数
     };
     //!
     //! \brief PrecisionMode
     //!
     enum PrecisionMode : int {
         HIGH_PRECISION_MODE = 0, //!< 中间计算使用float类型
-        HIGH_PERFORMANCE_MODE,   //!< 中间计算使用float16类型
+        HIGH_PERFORMANCE_MODE, //!< 中间计算使用float16类型
     };
     //!
     //! \brief ModelType
     //!
     enum ModelType : int {
         LLAMA_MODEL = 0, //!< 默认值，使用Llama rmsnorm的公式
-        GEMMA_MODEL,     //!< 使用Gemma rmsnorm的公式
+        GEMMA_MODEL, //!< 使用Gemma rmsnorm的公式
     };
     //!
     //! \brief NormParam
@@ -316,7 +316,7 @@ struct GroupTopkParam {
     //!
     enum GroupMultiFlag : uint16_t {
         UNDEFINED = 0, //!< 默认方式，每组内取最大值。
-        SUM_MULTI_MAX  //!< 每组内取n个最大值求和，需要设置参数n
+        SUM_MULTI_MAX //!< 每组内取n个最大值求和，需要设置参数n
     };
     //!
     //! \brief 指定GroupTopk每组中取值计算的方式。
@@ -359,12 +359,12 @@ struct PagedAttentionParam {
     //! \brief The type values of MaskType.
     //!
     enum MaskType : int {
-        UNDEFINED = 0,   //!< 默认值，全0的mask
-        MASK_TYPE_NORM,  //!< 倒三角mask
+        UNDEFINED = 0, //!< 默认值，全0的mask
+        MASK_TYPE_NORM, //!< 倒三角mask
         MASK_TYPE_ALIBI, //!< alibi mask
-        MASK_TYPE_SPEC,  //!< 并行解码mask
+        MASK_TYPE_SPEC, //!< 并行解码mask
         MASK_TYPE_MASK_FREE, //! mask_free 只支持fp16
- 	    MASK_TYPE_NORM_COMPRESS  //!< 倒三角压缩mask
+        MASK_TYPE_NORM_COMPRESS //!< 倒三角压缩mask
     };
     //! mask类型
     MaskType maskType = UNDEFINED;
@@ -377,9 +377,9 @@ struct PagedAttentionParam {
     //!
     enum QuantType : int {
         TYPE_QUANT_UNDEFINED = 0, //!< 默认值，不与量化融合，此
-        TYPE_DEQUANT_FUSION,      //!< 与反量化融合, 只支持Atlas 800I A2推理产品
-        TYPE_QUANT_QKV_OFFLINE,   //!< 离线INT8量化, 只支持Atlas 800I A2推理产品
-        TYPE_QUANT_QKV_ONLINE     //!< 在线INT8量化, 只支持Atlas 800I A2推理产品
+        TYPE_DEQUANT_FUSION, //!< 与反量化融合, 只支持Atlas 800I A2推理产品
+        TYPE_QUANT_QKV_OFFLINE, //!< 离线INT8量化, 只支持Atlas 800I A2推理产品
+        TYPE_QUANT_QKV_ONLINE //!< 在线INT8量化, 只支持Atlas 800I A2推理产品
     };
     //!
     //! 量化类型：
@@ -418,7 +418,7 @@ struct PagedAttentionParam {
     //!
     enum CalcType : int {
         CALC_TYPE_UNDEFINED = 0, //!< 默认值，不开启并行解码
-        CALC_TYPE_SPEC           //!< 并行解码功能，此时只支持quantType = 0
+        CALC_TYPE_SPEC //!< 并行解码功能，此时只支持quantType = 0
     };
     //! 计算类型
     CalcType calcType = CALC_TYPE_UNDEFINED;
@@ -430,8 +430,8 @@ struct PagedAttentionParam {
     //!
     enum ScaleType : int {
         SCALE_TYPE_TOR = 0, //!< 默认值，不开启LogN缩放
-        SCALE_TYPE_LOGN,    //!< 注意力使用LogN缩放
-        SCALE_TYPE_MAX      //!< 边界值，仅用于判断是否出界
+        SCALE_TYPE_LOGN, //!< 注意力使用LogN缩放
+        SCALE_TYPE_MAX //!< 边界值，仅用于判断是否出界
     };
     //! scale类型
     //! 为SCALE_TYPE_LOGN时，不支持quanttype为2和3。
@@ -464,8 +464,8 @@ struct ReshapeAndCacheParam {
     //!
     enum CompressType : int {
         COMPRESS_TYPE_UNDEFINED = 0, //!< 默认值，不压缩
-        COMPRESS_TYPE_KVHEAD,        //!< alibi场景下压缩key_cache, value_cahe的kvHead维度
-        COMPRESS_TYPE_KVHEAD_ROPE    //!< rope场景下压缩key_cache, value_cahe的kvHead维度
+        COMPRESS_TYPE_KVHEAD, //!< alibi场景下压缩key_cache, value_cahe的kvHead维度
+        COMPRESS_TYPE_KVHEAD_ROPE //!< rope场景下压缩key_cache, value_cahe的kvHead维度
     };
     //!
     //! \enum KvCacheCfg
@@ -478,8 +478,8 @@ struct ReshapeAndCacheParam {
     //!
     enum KvCacheCfg : int {
         K_CACHE_V_CACHE = 0, //!< 默认值,传入key_cache和value_cache
-        K_CACHE_V_BYPASS,    //!< 只传入key_cache
-        K_CACHE_V_CACHE_NZ   //!< 传入key_cache和value_cache,且为NZ格式
+        K_CACHE_V_BYPASS, //!< 只传入key_cache
+        K_CACHE_V_CACHE_NZ //!< 传入key_cache和value_cache,且为NZ格式
     };
 
     //! 压缩方式
@@ -529,9 +529,9 @@ struct SelfAttentionParam {
     //!
     enum CalcType : int {
         UNDEFINED = 0, //!< decoder&encoder for flashAttention
-        ENCODER,       //!< encoder for flashAttention
-        DECODER,       //!< decoder for flashAttention
-        PA_ENCODER,     //!< encoder for pagedAttention
+        ENCODER, //!< encoder for flashAttention
+        DECODER, //!< decoder for flashAttention
+        PA_ENCODER, //!< encoder for pagedAttention
         PREFIX_ENCODER, //!< prefix encoder for flashAttention
     };
     //!
@@ -540,9 +540,9 @@ struct SelfAttentionParam {
     //! \brief 算子内核精度类型
     //!
     enum KernelType : int {
-        KERNELTYPE_DEFAULT = 0,   //!< i:float16, bmm:float16, o:float16
+        KERNELTYPE_DEFAULT = 0, //!< i:float16, bmm:float16, o:float16
         KERNELTYPE_HIGH_PRECISION, //!< i:float16, bmm:float, o:float16
-        KERNELTYPE_EXP_M8V2,       //!< i:float16, bmm:float16, exp:m8v2, softmax:default
+        KERNELTYPE_EXP_M8V2, //!< i:float16, bmm:float16, exp:m8v2, softmax:default
     };
     //!
     //! \enum ClampType
@@ -551,7 +551,7 @@ struct SelfAttentionParam {
     //!
     enum ClampType : int {
         CLAMP_TYPE_UNDEFINED = 0, //!< 不做clamp
-        CLAMP_TYPE_MIN_MAX        //!< 做clamp，同时指定最大最小值
+        CLAMP_TYPE_MIN_MAX //!< 做clamp，同时指定最大最小值
     };
     //!
     //! \enum MaskType
@@ -559,15 +559,15 @@ struct SelfAttentionParam {
     //! \brief mask类型
     //!
     enum MaskType : int {
-        MASK_TYPE_UNDEFINED = 0,             //!< 默认值，全0mask
-        MASK_TYPE_NORM,                      //!< 倒三角mask
-        MASK_TYPE_ALIBI,                     //!< alibi mask
-        MASK_TYPE_NORM_COMPRESS,             //!< 倒三角压缩mask
-        MASK_TYPE_ALIBI_COMPRESS,            //!< alibi压缩mask
-        MASK_TYPE_ALIBI_COMPRESS_SQRT,       //!< alibi压缩开平方mask
+        MASK_TYPE_UNDEFINED = 0, //!< 默认值，全0mask
+        MASK_TYPE_NORM, //!< 倒三角mask
+        MASK_TYPE_ALIBI, //!< alibi mask
+        MASK_TYPE_NORM_COMPRESS, //!< 倒三角压缩mask
+        MASK_TYPE_ALIBI_COMPRESS, //!< alibi压缩mask
+        MASK_TYPE_ALIBI_COMPRESS_SQRT, //!< alibi压缩开平方mask
         MASK_TYPE_ALIBI_COMPRESS_LEFT_ALIGN, //!< alibi压缩mask左对齐,只支持Atlas 800I A2推理产品
-        MASK_TYPE_SLIDING_WINDOW_NORM,       //!< sliding window attention mask
-        MASK_TYPE_SLIDING_WINDOW_COMPRESS    //!< sliding window attention压缩mask
+        MASK_TYPE_SLIDING_WINDOW_NORM, //!< sliding window attention mask
+        MASK_TYPE_SLIDING_WINDOW_COMPRESS //!< sliding window attention压缩mask
     };
     //!
     //! \enum KvCacheCfg
@@ -576,7 +576,7 @@ struct SelfAttentionParam {
     //!
     enum KvCacheCfg : int {
         K_CACHE_V_CACHE = 0, //!< 默认值,进行kvcache处理
-        K_BYPASS_V_BYPASS,   //!< 直接传入kvcache
+        K_BYPASS_V_BYPASS, //!< 直接传入kvcache
     };
     //!
     //! \enum ScaleType
@@ -585,8 +585,8 @@ struct SelfAttentionParam {
     //!
     enum ScaleType : int {
         SCALE_TYPE_TOR = 0, //!< 默认值，不开启LogN缩放
-        SCALE_TYPE_LOGN,    //!< 注意力使用LogN缩放，quantType只能是0
-        SCALE_TYPE_MAX      //!< 边界值，仅用于判断是否出界
+        SCALE_TYPE_LOGN, //!< 注意力使用LogN缩放，quantType只能是0
+        SCALE_TYPE_MAX //!< 边界值，仅用于判断是否出界
     };
 
     //! \enum QuantType
@@ -594,11 +594,11 @@ struct SelfAttentionParam {
     //! \brief quant类型
     //!
     enum QuantType : int {
-        TYPE_QUANT_UNDEFINED = 0,    //!< 默认值，不与量化融合，此时q，k，v为bf16/float16
-        TYPE_QUANT_UNQUANT = 0,      //!< 默认值，不与量化融合，此时q，k，v为bf16/float16
-        TYPE_DEQUANT_FUSION = 1,     //!< 与反量化融合, 预留类型，当前不能够取此值。
-        TYPE_QUANT_QKV_OFFLINE = 2,  //!< 离线INT8量化, 只支持Atlas 800I A2推理产品
-        TYPE_QUANT_QKV_ONLINE = 3    //!< 在线INT8量化, 只支持Atlas 800I A2推理产品
+        TYPE_QUANT_UNDEFINED = 0, //!< 默认值，不与量化融合，此时q，k，v为bf16/float16
+        TYPE_QUANT_UNQUANT = 0, //!< 默认值，不与量化融合，此时q，k，v为bf16/float16
+        TYPE_DEQUANT_FUSION = 1, //!< 与反量化融合, 预留类型，当前不能够取此值。
+        TYPE_QUANT_QKV_OFFLINE = 2, //!< 离线INT8量化, 只支持Atlas 800I A2推理产品
+        TYPE_QUANT_QKV_ONLINE = 3 //!< 在线INT8量化, 只支持Atlas 800I A2推理产品
     };
     //!
     //! \enum CacheType
@@ -608,7 +608,7 @@ struct SelfAttentionParam {
     //!
     enum CacheType : int8_t {
         CACHE_TYPE_NORM = 0, //!< 正常cache
-        CACHE_TYPE_SWA = 1   //!< 固定长度cache
+        CACHE_TYPE_SWA = 1 //!< 固定长度cache
     };
     //!
     //! 量化类型(只支持PA_ENCODER)：
@@ -684,28 +684,28 @@ struct ElewiseParam {
     //! \brief 计算类型
     //!
     enum ElewiseType : int {
-        ELEWISE_UNDEFINED = 0,       //!< 默认值，未定义
-        ELEWISE_CAST,                //!< 数据类型转换
-        ELEWISE_MULS,                //!< 向量逐元素乘值
-        ELEWISE_COS,                 //!< 逐元素计算余弦值
-        ELEWISE_SIN,                 //!< 逐元素计算正弦值
-        ELEWISE_NEG,                 //!< 逐元素取相反数
-        ELEWISE_QUANT,               //!< 量化, 仅在Atlas 800I A2推理产品上支持
-        ELEWISE_LOGICAL_NOT,         //!< 逐元素逻辑非
-        ELEWISE_ADD,                 //!< 逐元素相加
-        ELEWISE_MUL,                 //!< 向量与向量逐元素相乘
-        ELEWISE_REALDIV,             //!< 向量与向量逐元素相除
-        ELEWISE_LOGICAL_AND,         //!< 逐元素逻辑与
-        ELEWISE_LOGICAL_OR,          //!< 逐元素逻辑或
-        ELEWISE_LESS,                //!< 逐元素判断是否小于
-        ELEWISE_GREATER,             //!< 逐元素判断是否大于
-        ELEWISE_SUB,                 //!< 逐元素相减
-        ELEWISE_EQUAL,               //!< 逐元素判断是否相等
-        ELEWISE_QUANT_PER_CHANNEL,   //!< 每个通道量化
+        ELEWISE_UNDEFINED = 0, //!< 默认值，未定义
+        ELEWISE_CAST, //!< 数据类型转换
+        ELEWISE_MULS, //!< 向量逐元素乘值
+        ELEWISE_COS, //!< 逐元素计算余弦值
+        ELEWISE_SIN, //!< 逐元素计算正弦值
+        ELEWISE_NEG, //!< 逐元素取相反数
+        ELEWISE_QUANT, //!< 量化, 仅在Atlas 800I A2推理产品上支持
+        ELEWISE_LOGICAL_NOT, //!< 逐元素逻辑非
+        ELEWISE_ADD, //!< 逐元素相加
+        ELEWISE_MUL, //!< 向量与向量逐元素相乘
+        ELEWISE_REALDIV, //!< 向量与向量逐元素相除
+        ELEWISE_LOGICAL_AND, //!< 逐元素逻辑与
+        ELEWISE_LOGICAL_OR, //!< 逐元素逻辑或
+        ELEWISE_LESS, //!< 逐元素判断是否小于
+        ELEWISE_GREATER, //!< 逐元素判断是否大于
+        ELEWISE_SUB, //!< 逐元素相减
+        ELEWISE_EQUAL, //!< 逐元素判断是否相等
+        ELEWISE_QUANT_PER_CHANNEL, //!< 每个通道量化
         ELEWISE_DEQUANT_PER_CHANNEL, //!< 每个通道反量化
-        ELEWISE_DYNAMIC_QUANT,       //!< 逐行动态量化
-        ELEWISE_TANH,                //!< 逐元素计算双曲正切值
-        ELEWISE_TYPE_MAX             //!< 边界值，仅用于判断是否出界，所有情况不能取该值
+        ELEWISE_DYNAMIC_QUANT, //!< 逐行动态量化
+        ELEWISE_TANH, //!< 逐元素计算双曲正切值
+        ELEWISE_TYPE_MAX //!< 边界值，仅用于判断是否出界，所有情况不能取该值
     };
 
     //! 量化（非每通道）所需参数

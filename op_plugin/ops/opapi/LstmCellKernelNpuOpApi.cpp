@@ -20,12 +20,12 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_impl(
-    const std::optional<at::Tensor>& grad_hy_opt, const std::optional<at::Tensor>& grad_cy_opt,
-    const at::Tensor& cx, const at::Tensor& cy, const at::Tensor& workspace, bool has_bias)
+    const std::optional<at::Tensor> &grad_hy_opt, const std::optional<at::Tensor> &grad_cy_opt, const at::Tensor &cx,
+    const at::Tensor &cy, const at::Tensor &workspace, bool has_bias)
 {
     // check input tensor
     const unsigned int dim2D = 2;
-    TORCH_CHECK(cx.dim() == dim2D && cy.dim() == dim2D && workspace.dim() == dim2D, \
+    TORCH_CHECK(cx.dim() == dim2D && cy.dim() == dim2D && workspace.dim() == dim2D,
         "cx, cy and workspace must be a 2D Tensor", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(cx.sizes() == cy.sizes(), "cx and cy must be the same size", OPS_ERROR(ErrCode::PARAM));
 
@@ -41,13 +41,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_im
     at::Tensor grad_cx = npu_preparation::apply_tensor(cx);
     at::Tensor grad_bias = npu_preparation::apply_tensor_without_format(grad_bias_size, c10::dtype(cx.scalar_type()));
 
-    EXEC_NPU_CMD(aclnnThnnFusedLstmCellBackward, grad_hy_opt, grad_cy, cx, cy, workspace, has_bias, grad_gates,
-        grad_cx, grad_bias);
+    EXEC_NPU_CMD(aclnnThnnFusedLstmCellBackward, grad_hy_opt, grad_cy, cx, cy, workspace, has_bias, grad_gates, grad_cx,
+        grad_bias);
     return std::tie(grad_gates, grad_cx, grad_bias);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const at::Tensor& i_gates,
-    const at::Tensor& h_gates, const at::Tensor& c, const c10::optional<at::Tensor> &input_bias_opt,
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const at::Tensor &i_gates,
+    const at::Tensor &h_gates, const at::Tensor &c, const c10::optional<at::Tensor> &input_bias_opt,
     const c10::optional<at::Tensor> &hidden_bias_opt)
 {
     auto dtype = i_gates.dtype();

@@ -24,11 +24,7 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::Tensor& range_out_nocheck(
-    at::Tensor& result,
-    at::Scalar start,
-    at::Scalar end,
-    at::Scalar step)
+at::Tensor &range_out_nocheck(at::Tensor &result, at::Scalar start, at::Scalar end, at::Scalar step)
 {
     // generate x assistant tensor
     int value = result.size(0);
@@ -50,22 +46,17 @@ at::Tensor& range_out_nocheck(
 }
 } // namespace
 
-at::Tensor range(
-    const at::Scalar& start,
-    const at::Scalar& end,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory)
+at::Tensor range(const at::Scalar &start, const at::Scalar &end, c10::optional<at::ScalarType> dtype,
+    c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory)
 {
     c10::TensorOptions option =
         c10::TensorOptions().dtype(dtype).device(device).layout(layout).pinned_memory(pin_memory);
     return at::range(start, end, 1, option);
 }
 
-at::Tensor range(const at::Scalar& start, const at::Scalar& end, const at::Scalar& step,
-                 c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
-                 c10::optional<at::Device> device, c10::optional<bool> pin_memory)
+at::Tensor range(const at::Scalar &start, const at::Scalar &end, const at::Scalar &step,
+    c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout, c10::optional<at::Device> device,
+    c10::optional<bool> pin_memory)
 {
     c10::TensorOptions option =
         c10::TensorOptions().dtype(dtype).device(device).layout(layout).pinned_memory(pin_memory);
@@ -79,9 +70,9 @@ at::Tensor range(const at::Scalar& start, const at::Scalar& end, const at::Scala
             auto step_value = step.to<accscalar_type>();
 
             TORCH_CHECK(step_value > 0 || step_value < 0, "step must be nonzero", OPS_ERROR(ErrCode::VALUE));
-            TORCH_CHECK(((step_value > 0) && (end_value >= start_value)) ||
-                            ((step_value < 0) && (end_value <= start_value)),
-                        "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                ((step_value > 0) && (end_value >= start_value)) || ((step_value < 0) && (end_value <= start_value)),
+                "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
             output_size = static_cast<int64_t>((end_value - start_value) / step_value + 1);
         });
 
@@ -89,7 +80,7 @@ at::Tensor range(const at::Scalar& start, const at::Scalar& end, const at::Scala
     return range_out_nocheck(result, start, end, step);
 }
 
-at::Tensor& range_out(const at::Scalar& start, const at::Scalar& end, const at::Scalar& step, at::Tensor& out)
+at::Tensor &range_out(const at::Scalar &start, const at::Scalar &end, const at::Scalar &step, at::Tensor &out)
 {
     int64_t output_size = 0;
     AT_DISPATCH_ALL_TYPES_AND2(at::kHalf, at::kBFloat16, out.scalar_type(), "range_out_npu_ops", [&]() {
@@ -99,9 +90,9 @@ at::Tensor& range_out(const at::Scalar& start, const at::Scalar& end, const at::
         auto step_value = step.to<accscalar_type>();
 
         TORCH_CHECK(step_value > 0 || step_value < 0, "step must be nonzero" + OPS_ERROR(ErrCode::VALUE));
-        TORCH_CHECK(((step_value > 0) && (end_value >= start_value)) ||
-                    ((step_value < 0) && (end_value <= start_value)),
-                    "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(
+            ((step_value > 0) && (end_value >= start_value)) || ((step_value < 0) && (end_value <= start_value)),
+            "upper bound and larger bound inconsistent with step sign" + OPS_ERROR(ErrCode::VALUE));
         npu_preparation::CheckOut({}, out, ACL_FORMAT_NCHW, out.scalar_type(), out.sizes());
 
         output_size = static_cast<int64_t>((end_value - start_value) / step_value + 1);
@@ -109,7 +100,7 @@ at::Tensor& range_out(const at::Scalar& start, const at::Scalar& end, const at::
 
     if (out.numel() != output_size) {
         TORCH_NPU_WARN("The out tensor size does not match the computed size, it will resize to computed size (",
-                       output_size, ",).");
+            output_size, ",).");
         out.resize_({output_size});
     }
 

@@ -20,7 +20,7 @@ namespace op_api {
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
 using npu_preparation = at_npu::native::OpPreparation;
 
-static at::DimVector default_alldims(const at::Tensor& self, at::OptionalIntArrayRef dim_opt)
+static at::DimVector default_alldims(const at::Tensor &self, at::OptionalIntArrayRef dim_opt)
 {
     at::DimVector dim;
     if (dim_opt.has_value()) {
@@ -36,7 +36,7 @@ static at::DimVector default_alldims(const at::Tensor& self, at::OptionalIntArra
     return dim;
 }
 
-at::Tensor fft_fftshift(const at::Tensor& self, at::OptionalIntArrayRef dim)
+at::Tensor fft_fftshift(const at::Tensor &self, at::OptionalIntArrayRef dim)
 {
     auto dim_ = default_alldims(self, dim);
 
@@ -59,7 +59,7 @@ at::Tensor fft_fftshift(const at::Tensor& self, at::OptionalIntArrayRef dim)
     return at::roll_symint(self, shift, dim_);
 }
 
-at::Tensor fft_ifftshift(const at::Tensor& self, at::OptionalIntArrayRef dim)
+at::Tensor fft_ifftshift(const at::Tensor &self, at::OptionalIntArrayRef dim)
 {
     auto dim_ = default_alldims(self, dim);
 
@@ -84,4 +84,4 @@ at::Tensor fft_ifftshift(const at::Tensor& self, at::OptionalIntArrayRef dim)
 
 #endif
 
-}  // namespace op_api
+} // namespace op_api

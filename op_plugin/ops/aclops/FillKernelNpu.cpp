@@ -21,7 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& fill_out_nocheck(at::Tensor& result, at::Tensor& self, const at::Tensor& value)
+at::Tensor &fill_out_nocheck(at::Tensor &result, at::Tensor &self, const at::Tensor &value)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("Fill");
@@ -31,13 +31,11 @@ at::Tensor& fill_out_nocheck(at::Tensor& result, at::Tensor& self, const at::Ten
     } else {
         cmd.Input(self.sizes(), at::kLong);
     }
-    cmd.Input(value)
-        .Output(result)
-        .Run();
+    cmd.Input(value).Output(result).Run();
     return result;
 }
 
-at::Tensor& fill_out_nocheck(at::Tensor& result, at::Tensor& self, at::Scalar value)
+at::Tensor &fill_out_nocheck(at::Tensor &result, at::Tensor &self, at::Scalar value)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("Fill");
@@ -53,7 +51,7 @@ at::Tensor& fill_out_nocheck(at::Tensor& result, at::Tensor& self, at::Scalar va
     return result;
 }
 
-at::Tensor& fill_out_nocheck(at::Tensor& self, const at::Tensor& value)
+at::Tensor &fill_out_nocheck(at::Tensor &self, const at::Tensor &value)
 {
     if (npu_preparation::IsCPUScalar(value)) {
         fill_out_nocheck(self, self, value.item());
@@ -64,11 +62,11 @@ at::Tensor& fill_out_nocheck(at::Tensor& self, const at::Tensor& value)
 }
 } // namespace
 
-at::Tensor& fill_(at::Tensor& self, const at::Tensor& value)
+at::Tensor &fill_(at::Tensor &self, const at::Tensor &value)
 {
     auto value_dim = value.dim();
-    TORCH_CHECK(value_dim <= 1, "fill_ only supports 0 or 1 dimension value tensor but got tensor with ",
-        value_dim, " dimension." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value_dim <= 1, "fill_ only supports 0 or 1 dimension value tensor but got tensor with ", value_dim,
+        " dimension." + OPS_ERROR(ErrCode::PARAM));
     npu_preparation::CheckMemory({self, value}, {self});
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
@@ -80,7 +78,7 @@ at::Tensor& fill_(at::Tensor& self, const at::Tensor& value)
     return self;
 }
 
-at::Tensor& fill_(at::Tensor& self, const at::Scalar& value)
+at::Tensor &fill_(at::Tensor &self, const at::Scalar &value)
 {
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
@@ -91,4 +89,4 @@ at::Tensor& fill_(at::Tensor& self, const at::Scalar& value)
     }
     return self;
 }
-}  // namespace acl_op
+} // namespace acl_op

@@ -21,22 +21,16 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor &scatter_out_npu_nocheck(at::Tensor &result, at::Tensor &self, int64_t dim, const at::Tensor &index,
-                                    const at::Tensor &src)
+at::Tensor &scatter_out_npu_nocheck(
+    at::Tensor &result, at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("ScatterElements")
-        .Input(self)
-        .Input(index)
-        .Input(src)
-        .Output(result)
-        .Attr("axis", dim)
-        .Run();
+    cmd.Name("ScatterElements").Input(self).Input(index).Input(src).Output(result).Attr("axis", dim).Run();
     return result;
 }
 
-at::Tensor &scatter_out_nocheck(at::Tensor &result, const at::Tensor &self_ex, int64_t dim, const at::Tensor &index,
-                                const at::Tensor &src_ex)
+at::Tensor &scatter_out_nocheck(
+    at::Tensor &result, const at::Tensor &self_ex, int64_t dim, const at::Tensor &index, const at::Tensor &src_ex)
 {
     at::Tensor self = self_ex;
     at::Tensor result_ex = result;
@@ -85,8 +79,8 @@ at::Tensor &scatter_inplace_nocheck(at::Tensor &self, int64_t dim, const at::Ten
 }
 } // namespace
 
-at::Tensor &scatter_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src,
-                        at::Tensor &result)
+at::Tensor &scatter_out(
+    const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src, at::Tensor &result)
 {
     npu_preparation::CheckOut({self, src, index}, result, self);
     if (!npu_utils::check_match(&result)) {
@@ -99,8 +93,8 @@ at::Tensor &scatter_out(const at::Tensor &self, int64_t dim, const at::Tensor &i
     return result;
 }
 
-at::Tensor &scatter_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Scalar &value,
-                        at::Tensor &result)
+at::Tensor &scatter_out(
+    const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Scalar &value, at::Tensor &result)
 {
     npu_preparation::CheckOut({self, index}, result, self);
     at::Tensor src_tensor = scalar_to_tensor(value).to(at::ScalarType::Float);

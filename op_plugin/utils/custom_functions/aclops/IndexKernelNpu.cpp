@@ -47,7 +47,7 @@ bool check_index_aicore(const at::TensorList &indices, const at::IntArrayRef mas
 }
 
 at::Tensor &index_out_nocheck(const at::Tensor &self, const at::IntArrayRef masks, const at::TensorList &indices,
-                              at::Tensor &result, bool is_aicore)
+    at::Tensor &result, bool is_aicore)
 {
     at::IntArrayRef indexed_strides = result.sizes();
     at_npu::native::OpCommand cmd;

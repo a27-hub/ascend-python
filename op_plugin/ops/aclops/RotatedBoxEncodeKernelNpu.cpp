@@ -19,10 +19,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_rotated_box_encode(
-    const at::Tensor& self,
-    const at::Tensor& gt_bboxes,
-    const at::Tensor& weight)
+at::Tensor npu_rotated_box_encode(const at::Tensor &self, const at::Tensor &gt_bboxes, const at::Tensor &weight)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);
     at::Tensor weight_cpu = weight.to(at::Device(at::kCPU), at::kFloat);
@@ -31,12 +28,7 @@ at::Tensor npu_rotated_box_encode(
     at::ArrayRef<float> weight_list(weight_ptr, weight_cpu.numel());
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("RotatedBoxEncode")
-        .Input(self)
-        .Input(gt_bboxes)
-        .Output(result)
-        .Attr("weight", weight_list)
-        .Run();
+    cmd.Name("RotatedBoxEncode").Input(self).Input(gt_bboxes).Output(result).Attr("weight", weight_list).Run();
     return result;
 }
 } // namespace acl_op

@@ -25,14 +25,9 @@ constexpr int64_t MIN_INPUT_DIM = 1;
 constexpr int64_t MAX_INPUT_DIM = 7;
 }; // namespace
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rms_norm_dynamic_mx_quant(
-    const at::Tensor &x,
-    const at::Tensor &gamma,
-    const c10::optional<at::Tensor> &beta,
-    double epsilon,
-    const int64_t scale_alg,
-    c10::string_view round_mode,
-    int64_t dst_type)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rms_norm_dynamic_mx_quant(const at::Tensor &x,
+    const at::Tensor &gamma, const c10::optional<at::Tensor> &beta, double epsilon, const int64_t scale_alg,
+    c10::string_view round_mode, int64_t dst_type)
 {
     // output
     at::Tensor y;
@@ -40,24 +35,26 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rms_norm_dynamic_mx_quant(
     at::Tensor rstd;
 
     // check params
-    TORCH_CHECK(x.dim() >= MIN_INPUT_DIM && x.dim() <= MAX_INPUT_DIM, "The x should be in 1~7D" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        x.dim() >= MIN_INPUT_DIM && x.dim() <= MAX_INPUT_DIM, "The x should be in 1~7D" + OPS_ERROR(ErrCode::PARAM));
 
     static const bool is_available = check_aclnn_kernel_available("aclnnRmsNormDynamicMxQuant");
     TORCH_CHECK(is_available,
-                "Current CANN version do not support this api. Please try to update the version of CANN."
-                + OPS_ERROR(ErrCode::PARAM));
+        "Current CANN version do not support this api. Please try to update the version of CANN." +
+            OPS_ERROR(ErrCode::PARAM));
 
     // y
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
     bool special_output_type = (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
-                                dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
+        dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
     ASCEND_LOGI("[npu_rms_norm_dynamic_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
     if (special_output_type) {
         int64_t last_dim_val = y_shape[x.dim() - 1];
         TORCH_CHECK(last_dim_val % FP4_IN_UINT8_NUM == 0,
-                    "The last dim x shape must be divisible by 2 if "
-                    "output dtype is torch_npu.float4_e2m1 or torch_npu.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
+            "The last dim x shape must be divisible by 2 if "
+            "output dtype is torch_npu.float4_e2m1 or torch_npu.float4_e1m2" +
+                OPS_ERROR(ErrCode::PARAM));
         y_shape[x.dim() - 1] = last_dim_val / FP4_IN_UINT8_NUM;
         y = npu_preparation::apply_tensor_without_format(y_shape, c10::ScalarType::Byte);
     } else {
@@ -88,9 +85,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rms_norm_dynamic_mx_quant(
     TensorWrapper y_wrapper = {y, y_acltype};
     TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
 
-    EXEC_NPU_CMD(aclnnRmsNormDynamicMxQuant, x, gamma, beta, epsilon, scale_alg,
-                 round_mode_ptr, y_acltype, output_rstd, y_wrapper, mxscale_wrapper, rstd);
-    
+    EXEC_NPU_CMD(aclnnRmsNormDynamicMxQuant, x, gamma, beta, epsilon, scale_alg, round_mode_ptr, y_acltype, output_rstd,
+        y_wrapper, mxscale_wrapper, rstd);
+
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(y, mxscale, rstd);
 }
 

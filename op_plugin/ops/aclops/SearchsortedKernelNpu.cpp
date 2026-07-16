@@ -26,7 +26,8 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 
 at::Tensor &searchsorted_out_nocheck(
-    at::Tensor &result, const at::Tensor &sorted_sequence, const at::Tensor &self, bool out_int32, bool right) {
+    at::Tensor &result, const at::Tensor &sorted_sequence, const at::Tensor &self, bool out_int32, bool right)
+{
     at::ScalarType scalar_type = out_int32 ? at::kInt : at::kLong;
     at_npu::native::OpCommand cmd;
     cmd.Name("SearchSorted")
@@ -41,7 +42,8 @@ at::Tensor &searchsorted_out_nocheck(
 } // namespace
 
 at::Tensor &searchsorted_out(const at::Tensor &sorted_sequence, const at::Tensor &self, bool out_int32, bool right,
-    const c10::optional<c10::string_view> side_opt, const c10::optional<at::Tensor> &sorter_opt, at::Tensor &result) {
+    const c10::optional<c10::string_view> side_opt, const c10::optional<at::Tensor> &sorter_opt, at::Tensor &result)
+{
     (void)op_plugin::searchsorted_validate_tensor_out_op(
         sorted_sequence, self, result, out_int32, right, side_opt, sorter_opt);
     (void)op_plugin::warn_if_searchsorted_inputs_noncontiguous(sorted_sequence, self, sorter_opt);
@@ -61,7 +63,8 @@ at::Tensor &searchsorted_out(const at::Tensor &sorted_sequence, const at::Tensor
 }
 
 at::Tensor searchsorted(const at::Tensor &sorted_sequence, const at::Tensor &self, bool out_int32, bool right,
-    const c10::optional<c10::string_view> side_opt, const c10::optional<at::Tensor> &sorter_opt) {
+    const c10::optional<c10::string_view> side_opt, const c10::optional<at::Tensor> &sorter_opt)
+{
     at::ScalarType scalar_type = out_int32 ? at::kInt : at::kLong;
     at::Tensor result = npu_preparation::apply_tensor(self.sizes(), self.options().dtype(scalar_type), self);
     (void)op_plugin::searchsorted_validate_tensor_out_op(
@@ -73,7 +76,8 @@ at::Tensor searchsorted(const at::Tensor &sorted_sequence, const at::Tensor &sel
 }
 
 at::Tensor searchsorted(const at::Tensor &sorted_sequence, const at::Scalar &self, bool out_int32, bool right,
-    const c10::optional<c10::string_view> side_opt, const c10::optional<at::Tensor> &sorter_opt) {
+    const c10::optional<c10::string_view> side_opt, const c10::optional<at::Tensor> &sorter_opt)
+{
     at::ScalarType scalar_type = out_int32 ? at::kInt : at::kLong;
     (void)op_plugin::searchsorted_validate_scalar_op(sorted_sequence, self, out_int32, right, side_opt, sorter_opt);
     (void)op_plugin::warn_if_searchsorted_scalar_inputs_noncontiguous(sorted_sequence, sorter_opt);

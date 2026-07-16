@@ -20,7 +20,6 @@
 #include <torch_npu/csrc/framework/OpCommand.h>
 #include "op_plugin/third_party/atb/inc/atb_infer.h"
 
-
 namespace atb {
 
 constexpr int g_hash_buf_size = 8192;
@@ -28,20 +27,17 @@ constexpr int g_hash_buf_max_size = g_hash_buf_size + 1024;
 extern thread_local char g_hash_buf[g_hash_buf_size];
 extern thread_local int g_hash_offset;
 
-#define MEMCPY_TO_BUF(data_expression, size_expression)                                                                \
-    if (g_hash_offset + (size_expression) > g_hash_buf_size) {                                                         \
-        g_hash_offset = g_hash_buf_max_size;                                                                           \
-        return;                                                                                                        \
-    }                                                                                                                  \
-    memcpy(g_hash_buf + g_hash_offset, data_expression, size_expression);                                              \
+#define MEMCPY_TO_BUF(data_expression, size_expression) \
+    if (g_hash_offset + (size_expression) > g_hash_buf_size) { \
+        g_hash_offset = g_hash_buf_max_size; \
+        return; \
+    } \
+    memcpy(g_hash_buf + g_hash_offset, data_expression, size_expression); \
     g_hash_offset += size_expression;
 
 uint64_t calc_hash_id();
 
-template <typename T> void add_param_to_buf(const T &value)
-{
-    MEMCPY_TO_BUF(&value, sizeof(T));
-}
+template <typename T> void add_param_to_buf(const T &value) { MEMCPY_TO_BUF(&value, sizeof(T)); }
 
 void add_param_to_buf(const string &s);
 void add_param_to_buf(const c10::optional<at::Tensor> &t);
@@ -60,9 +56,8 @@ template <typename T, typename... Args> void add_param_to_buf(const T &arg, Args
     add_param_to_buf(args...);
 }
 
-template <typename T>
-struct HashOpParam {
-    void operator()(const T& param) const {};
+template <typename T> struct HashOpParam {
+    void operator()(const T &param) const {};
 };
 
 // Each operator implements its own hash function calculation.
@@ -78,9 +73,8 @@ struct HashOpParam {
 //     `}`
 // `};`
 
-template <>
-struct HashOpParam<atb::infer::RmsNormParam> {
-    void operator()(const atb::infer::RmsNormParam& param) const
+template <> struct HashOpParam<atb::infer::RmsNormParam> {
+    void operator()(const atb::infer::RmsNormParam &param) const
     {
         add_param_to_buf("epsilon", param.normParam.epsilon);
         add_param_to_buf("layerType", param.layerType);
@@ -88,9 +82,8 @@ struct HashOpParam<atb::infer::RmsNormParam> {
     }
 };
 
-template <>
-struct HashOpParam<atb::infer::GroupTopkParam> {
-    void operator()(const atb::infer::GroupTopkParam& param) const
+template <> struct HashOpParam<atb::infer::GroupTopkParam> {
+    void operator()(const atb::infer::GroupTopkParam &param) const
     {
         add_param_to_buf("groupNum", param.groupNum);
         add_param_to_buf("k", param.k);
@@ -99,9 +92,8 @@ struct HashOpParam<atb::infer::GroupTopkParam> {
     }
 };
 
-template <>
-struct HashOpParam<atb::infer::PagedAttentionParam> {
-    void operator()(const atb::infer::PagedAttentionParam& param) const
+template <> struct HashOpParam<atb::infer::PagedAttentionParam> {
+    void operator()(const atb::infer::PagedAttentionParam &param) const
     {
         add_param_to_buf("num_kv_heads", param.kvHeadNum);
         add_param_to_buf("num_heads", param.headNum);
@@ -114,9 +106,8 @@ struct HashOpParam<atb::infer::PagedAttentionParam> {
     }
 };
 
-template <>
-struct HashOpParam<atb::infer::SelfAttentionParam> {
-    void operator()(const atb::infer::SelfAttentionParam& param) const
+template <> struct HashOpParam<atb::infer::SelfAttentionParam> {
+    void operator()(const atb::infer::SelfAttentionParam &param) const
     {
         add_param_to_buf("num_kv_heads", param.kvHeadNum);
         add_param_to_buf("num_heads", param.headNum);
@@ -129,25 +120,19 @@ struct HashOpParam<atb::infer::SelfAttentionParam> {
     }
 };
 
-template <>
-struct HashOpParam<atb::infer::RopeParam> {
-    void operator()(const atb::infer::RopeParam& param) const
-    {
-        add_param_to_buf("rotaryCoeff", param.rotaryCoeff);
-    }
+template <> struct HashOpParam<atb::infer::RopeParam> {
+    void operator()(const atb::infer::RopeParam &param) const { add_param_to_buf("rotaryCoeff", param.rotaryCoeff); }
 };
 
-template <>
-struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
-    void operator()(const atb::infer::ReshapeAndCacheParam& param) const
+template <> struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
+    void operator()(const atb::infer::ReshapeAndCacheParam &param) const
     {
         add_param_to_buf("compressType", param.compressType);
         add_param_to_buf("kvCacheCfg", param.kvCacheCfg);
     }
 };
 
-template <typename T>
-uint64_t computeHash(const T& obj)
+template <typename T> uint64_t computeHash(const T &obj)
 {
     g_hash_offset = 0;
     HashOpParam<T>{}(obj);
@@ -160,7 +145,6 @@ template <typename... Ts> uint64_t computeHash(const std::string &name, Ts &...a
     add_param_to_buf(name, args...);
     return calc_hash_id();
 }
-
 
 } // namespace atb
 

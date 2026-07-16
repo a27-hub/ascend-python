@@ -22,12 +22,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& hardtanh_backward_out_npu_nocheck(
-    at::Tensor& grad_input,
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    const at::Scalar& min_val,
-    const at::Scalar& max_val)
+at::Tensor &hardtanh_backward_out_npu_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
+    const at::Tensor &self, const at::Scalar &min_val, const at::Scalar &max_val)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("HardtanhGrad")
@@ -41,17 +37,10 @@ at::Tensor& hardtanh_backward_out_npu_nocheck(
 }
 } // namespace
 
-at::Tensor& hardtanh_backward_out(
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    const at::Scalar& min_val,
-    const at::Scalar& max_val,
-    at::Tensor& grad_input)
+at::Tensor &hardtanh_backward_out(const at::Tensor &grad_output, const at::Tensor &self, const at::Scalar &min_val,
+    const at::Scalar &max_val, at::Tensor &grad_input)
 {
-    npu_preparation::CheckOut(
-        {grad_output, self},
-        grad_input,
-        self);
+    npu_preparation::CheckOut({grad_output, self}, grad_input, self);
 
     if (!npu_utils::check_match(&grad_input)) {
         at::Tensor contiguous_grad_input = npu_utils::format_contiguous(grad_input);
@@ -62,13 +51,10 @@ at::Tensor& hardtanh_backward_out(
     }
 
     return grad_input;
-  }
+}
 
 at::Tensor hardtanh_backward(
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    const at::Scalar& min_val,
-    const at::Scalar& max_val)
+    const at::Tensor &grad_output, const at::Tensor &self, const at::Scalar &min_val, const at::Scalar &max_val)
 {
     at::Tensor grad_input = npu_preparation::apply_tensor(self);
     hardtanh_backward_out(grad_output, self, min_val, max_val, grad_input);

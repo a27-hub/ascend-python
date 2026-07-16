@@ -22,20 +22,20 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#define NON_FINITE_CHECK_RESULT_ESTIMATE(result, host_mem_out, device_mem_out, log_str)                                \
-    do {                                                                                                               \
-        if ((result) != ACL_ERROR_NONE) {                                                                              \
-            TORCH_NPU_WARN_ONCE(log_str);                                                                              \
-            if ((host_mem_out) != nullptr) {                                                                           \
-                aclrtFreeHost(host_mem_out);                                                                           \
-                host_mem_out = nullptr;                                                                                \
-            }                                                                                                          \
-            if ((device_mem_out) != nullptr) {                                                                         \
-                aclrtFree(device_mem_out);                                                                             \
-                device_mem_out = nullptr;                                                                              \
-            }                                                                                                          \
-            return acl_op::_amp_foreach_non_finite_check(scaled_grads);                                                \
-        }                                                                                                              \
+#define NON_FINITE_CHECK_RESULT_ESTIMATE(result, host_mem_out, device_mem_out, log_str) \
+    do { \
+        if ((result) != ACL_ERROR_NONE) { \
+            TORCH_NPU_WARN_ONCE(log_str); \
+            if ((host_mem_out) != nullptr) { \
+                aclrtFreeHost(host_mem_out); \
+                host_mem_out = nullptr; \
+            } \
+            if ((device_mem_out) != nullptr) { \
+                aclrtFree(device_mem_out); \
+                device_mem_out = nullptr; \
+            } \
+            return acl_op::_amp_foreach_non_finite_check(scaled_grads); \
+        } \
     } while (0);
 
 const int FLOAT_STATUS_OP_DIMS_SIZE = 8;
@@ -97,20 +97,17 @@ void _split_and_exec_npu_cmd_(at::TensorList &scaled_grads, at::Tensor &found_in
     }
 }
 
-void _amp_foreach_non_finite_check_and_unscale_(at::TensorList scaled_grads, at::Tensor &found_inf,
-                                                const at::Tensor &inv_scale)
+void _amp_foreach_non_finite_check_and_unscale_(
+    at::TensorList scaled_grads, at::Tensor &found_inf, const at::Tensor &inv_scale)
 {
     TORCH_NPU_WARN_ONCE("Non finite check and unscale on NPU device!");
-    TORCH_CHECK(torch_npu::utils::is_npu(inv_scale), "inv_scale must be NPU-Tensor"
-        + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(inv_scale.numel() == 1, "inv_scale must be a 1-element tensor"
-        + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(found_inf.numel() == 1, "found_inf must be a 1-element tensor"
-        + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(inv_scale.scalar_type() == at::ScalarType::Float, "inv_scale must be a float tensor"
-        + OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(found_inf.scalar_type() == at::ScalarType::Float, "found_inf must be a float tensor"
-        + OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(torch_npu::utils::is_npu(inv_scale), "inv_scale must be NPU-Tensor" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(inv_scale.numel() == 1, "inv_scale must be a 1-element tensor" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(found_inf.numel() == 1, "found_inf must be a 1-element tensor" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(inv_scale.scalar_type() == at::ScalarType::Float,
+        "inv_scale must be a float tensor" + OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(found_inf.scalar_type() == at::ScalarType::Float,
+        "found_inf must be a float tensor" + OPS_ERROR(ErrCode::TYPE));
 
     if (scaled_grads.empty()) {
         return;
@@ -133,14 +130,13 @@ void _amp_foreach_non_finite_check_and_unscale_(at::TensorList scaled_grads, at:
     auto expected_device = scaled_grads[0].device();
     auto expected_dtype = scaled_grads[0].dtype();
     for (auto &t : scaled_grads) {
-        TORCH_CHECK(torch_npu::utils::is_npu(t), "one of scaled_grads was not a NPU tensor."
-            + OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(t.device() == expected_device, "scaled_grads must be on the same device."
-            + OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(t.dtype() == expected_dtype, "scaled_grads must have the same dtype."
-            + OPS_ERROR(ErrCode::TYPE));
-        TORCH_CHECK(t.layout() == at::kStrided, "one of scaled_grads was not a strided tensor."
-            + OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            torch_npu::utils::is_npu(t), "one of scaled_grads was not a NPU tensor." + OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            t.device() == expected_device, "scaled_grads must be on the same device." + OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(t.dtype() == expected_dtype, "scaled_grads must have the same dtype." + OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK(
+            t.layout() == at::kStrided, "one of scaled_grads was not a strided tensor." + OPS_ERROR(ErrCode::PARAM));
 
         op_api::mul_out(t, inv_scale, const_cast<at::Tensor &>(t));
     }

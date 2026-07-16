@@ -38,7 +38,7 @@ bool check_tensor_repeats(const at::Tensor &self, const at::Tensor &repeats, c10
 
     if (repeats.dim() == 1) {
         if (dim.has_value()) {
-        // with dim check repeats is rank 1 with 1 element / rank 1 with (self.size(dim)) elements
+            // with dim check repeats is rank 1 with 1 element / rank 1 with (self.size(dim)) elements
             int64_t real_dim = wrap_dim(self, dim);
             if (repeats.size(0) == self.size(real_dim) || repeats.size(0) == 1) {
                 return true;
@@ -70,7 +70,8 @@ at::Tensor apply_result_tensor(const at::Tensor &self, c10::SmallVector<int64_t,
     int64_t cur_dim = wrap_dim(self, dim);
     int64_t output_size_expected = output_shape[cur_dim];
     if (output_size.has_value() && self.numel() != 0) {
-        TORCH_CHECK(output_size_expected == output_size, "Allocated size does not match required size.", OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(output_size_expected == output_size, "Allocated size does not match required size.",
+            OPS_ERROR(ErrCode::VALUE));
     }
     at::Tensor result = npu_preparation::apply_tensor_without_format(self, output_shape);
     return result;
@@ -78,18 +79,14 @@ at::Tensor apply_result_tensor(const at::Tensor &self, c10::SmallVector<int64_t,
 
 #if VERSION_BETWEEN(V2R1, V2R1)
 at::Tensor repeat_interleave_symint(
-    const at::Tensor& self,
-    c10::SymInt repeats,
-    c10::optional<int64_t> dim,
-    c10::optional<int64_t> output_size)
+    const at::Tensor &self, c10::SymInt repeats, c10::optional<int64_t> dim, c10::optional<int64_t> output_size)
 {
     int64_t repeats_int = repeats.expect_int();
     if (dim.has_value()) {
-        DO_COMPATIBILITY(aclnnRepeatInterleaveIntWithDim,
-                         acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
+        DO_COMPATIBILITY(
+            aclnnRepeatInterleaveIntWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
     } else {
-        DO_COMPATIBILITY(aclnnRepeatInterleaveInt,
-                         acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
+        DO_COMPATIBILITY(aclnnRepeatInterleaveInt, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
     }
 
     // argument repeat and dim must be valid
@@ -111,8 +108,8 @@ at::Tensor repeat_interleave_symint(
     return result;
 }
 
-at::Tensor repeat_interleave(const at::Tensor& self, const at::Tensor& repeats,
-    c10::optional<int64_t> dim, c10::optional<int64_t> output_size)
+at::Tensor repeat_interleave(
+    const at::Tensor &self, const at::Tensor &repeats, c10::optional<int64_t> dim, c10::optional<int64_t> output_size)
 {
     if (dim.has_value()) {
         DO_COMPATIBILITY(aclnnRepeatInterleaveWithDim, acl_op::repeat_interleave(self, repeats, dim, output_size));
@@ -122,7 +119,8 @@ at::Tensor repeat_interleave(const at::Tensor& self, const at::Tensor& repeats,
 
     // argument repeat and dim must be valid
     TORCH_CHECK(check_dim_valid(self, dim), "dim value is not in valid range." + OPS_ERROR(ErrCode::VALUE))
-    TORCH_CHECK(check_tensor_repeats(self, repeats, dim), "repeats must have the same size as input along dim" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(check_tensor_repeats(self, repeats, dim),
+        "repeats must have the same size as input along dim" + OPS_ERROR(ErrCode::PARAM));
 
     // check output_size value is valid
     auto output_shape = op_infer::repeat_interleave_npu_output_size_opapi(self, repeats, dim, output_size);
@@ -142,18 +140,14 @@ at::Tensor repeat_interleave(const at::Tensor& self, const at::Tensor& repeats,
 
 #if VERSION_BETWEEN(V2R2, VERSION_NEWEST)
 at::Tensor repeat_interleave_symint(
-    const at::Tensor& self,
-    c10::SymInt repeats,
-    c10::optional<int64_t> dim,
-    c10::optional<c10::SymInt> output_size)
+    const at::Tensor &self, c10::SymInt repeats, c10::optional<int64_t> dim, c10::optional<c10::SymInt> output_size)
 {
     int64_t repeats_int = repeats.expect_int();
     if (dim.has_value()) {
-        DO_COMPATIBILITY(aclnnRepeatInterleaveIntWithDim,
-                         acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
+        DO_COMPATIBILITY(
+            aclnnRepeatInterleaveIntWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
     } else {
-        DO_COMPATIBILITY(aclnnRepeatInterleaveInt,
-                         acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
+        DO_COMPATIBILITY(aclnnRepeatInterleaveInt, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
     }
 
     // argument repeat and dim must be valid
@@ -180,21 +174,20 @@ at::Tensor repeat_interleave_symint(
     return result;
 }
 
-at::Tensor repeat_interleave_symint(
-    const at::Tensor& self,
-    const at::Tensor& repeats,
-    c10::optional<int64_t> dim,
+at::Tensor repeat_interleave_symint(const at::Tensor &self, const at::Tensor &repeats, c10::optional<int64_t> dim,
     c10::optional<c10::SymInt> output_size)
 {
     if (dim.has_value()) {
-        DO_COMPATIBILITY(aclnnRepeatInterleaveWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
+        DO_COMPATIBILITY(
+            aclnnRepeatInterleaveWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
     } else {
         DO_COMPATIBILITY(aclnnRepeatInterleave, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
     }
 
     // argument repeat and dim must be valid
     TORCH_CHECK(check_dim_valid(self, dim), "dim value is not in valid range." + OPS_ERROR(ErrCode::PARAM))
-    TORCH_CHECK(check_tensor_repeats(self, repeats, dim), "repeats must have the same size as input along dim" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(check_tensor_repeats(self, repeats, dim),
+        "repeats must have the same size as input along dim" + OPS_ERROR(ErrCode::PARAM));
 
     // check output_size value is valid
     c10::optional<int64_t> _output_size = c10::nullopt;

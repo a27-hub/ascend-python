@@ -29,7 +29,7 @@ at::Tensor isposinf(const at::Tensor &self)
     return result.to(self.device());
 }
 
-at::Tensor& isposinf_out(const at::Tensor &self, at::Tensor &out)
+at::Tensor &isposinf_out(const at::Tensor &self, at::Tensor &out)
 {
     // convert args to cpu in order to use at::native kernel
     TORCH_NPU_WARN_ONCE(
@@ -40,4 +40,4 @@ at::Tensor& isposinf_out(const at::Tensor &self, at::Tensor &out)
     out.copy_(out_cpu);
     return out;
 }
-}  // acl_op
+} // acl_op

@@ -22,16 +22,13 @@ namespace acl_op {
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor matmul_opt_nocheck(c10::optional<at::Tensor> out_opt, const at::Tensor& tensor1, const at::Tensor& tensor2)
+at::Tensor matmul_opt_nocheck(c10::optional<at::Tensor> out_opt, const at::Tensor &tensor1, const at::Tensor &tensor2)
 {
     at::NoNamesGuard guard;
     auto has_out = out_opt.has_value();
     at::Tensor out = out_opt.value_or(at::Tensor());
-    if (torch_npu::utils::is_npu(tensor1) &&
-        torch_npu::utils::is_npu(tensor2) &&
-        tensor1.scalar_type() == at::kHalf &&
-        tensor2.scalar_type() == at::kHalf &&
-        at_npu::native::env::CheckBmmV2Enable()) {
+    if (torch_npu::utils::is_npu(tensor1) && torch_npu::utils::is_npu(tensor2) && tensor1.scalar_type() == at::kHalf &&
+        tensor2.scalar_type() == at::kHalf && at_npu::native::env::CheckBmmV2Enable()) {
         auto res = at_npu::native::matmul_by_bmmV2(tensor1, tensor2);
         return has_out ? out.set_(res) : res;
     }
@@ -42,8 +39,8 @@ at::Tensor matmul_opt_nocheck(c10::optional<at::Tensor> out_opt, const at::Tenso
     } else if (dim_tensor1 == 2 && dim_tensor2 == 1) {
         return has_out ? at::mv_out(out, tensor1, tensor2) : tensor1.mv(tensor2);
     } else if (dim_tensor1 == 1 && dim_tensor2 == 2) {
-        return has_out ? at::mm_out(out, tensor1.unsqueeze(0), tensor2).squeeze_(0) :
-            tensor1.unsqueeze(0).mm(tensor2).squeeze_(0);
+        return has_out ? at::mm_out(out, tensor1.unsqueeze(0), tensor2).squeeze_(0)
+                       : tensor1.unsqueeze(0).mm(tensor2).squeeze_(0);
     } else if (dim_tensor1 == 2 && dim_tensor2 == 2) {
         return has_out ? at::mm_out(out, tensor1, tensor2) : tensor1.mm(tensor2);
     } else if (dim_tensor1 >= 3 && (dim_tensor2 == 1 || dim_tensor2 == 2)) {
@@ -126,34 +123,36 @@ at::Tensor matmul_opt_nocheck(c10::optional<at::Tensor> out_opt, const at::Tenso
             output_shape.push_back(p);
         }
 
-        at::Tensor output = has_out ?
-            at::_unsafe_view(at::bmm_out(out, tensor1_expanded, tensor2_expanded), output_shape) :
-            at::_unsafe_view(tensor1_expanded.bmm(tensor2_expanded), output_shape);
+        at::Tensor output = has_out
+            ? at::_unsafe_view(at::bmm_out(out, tensor1_expanded, tensor2_expanded), output_shape)
+            : at::_unsafe_view(tensor1_expanded.bmm(tensor2_expanded), output_shape);
         return has_out ? out.set_(output) : output;
     }
     TORCH_CHECK(false, "both arguments to matmul need to be at least 1D, but they are ", dim_tensor1, "D and ",
-                dim_tensor2, "D" + OPS_ERROR(ErrCode::PARAM));
+        dim_tensor2, "D" + OPS_ERROR(ErrCode::PARAM));
 }
 } // namespace
 
-at::Tensor matmul(const at::Tensor& tensor1, const at::Tensor& tensor2) {
+at::Tensor matmul(const at::Tensor &tensor1, const at::Tensor &tensor2)
+{
     // 1.cann support matmul int8(input)->int32(out)
     // 2.onnx can support because of change y dtype to be int32.
     // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(tensor1.scalar_type() != at::ScalarType::Char && tensor2.scalar_type() != at::ScalarType::Char,
-                "matmul is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
+        "matmul is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
     auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);
     auto result = matmul_opt_nocheck(c10::nullopt, tensor1, tensor2);
     at::namedinference::propagate_names_if_nonempty(result, maybe_outnames);
     return result;
 }
 
-at::Tensor& matmul_out(const at::Tensor& tensor1, const at::Tensor& tensor2, at::Tensor& result) {
+at::Tensor &matmul_out(const at::Tensor &tensor1, const at::Tensor &tensor2, at::Tensor &result)
+{
     // 1.cann support matmul int8(input)->int32(out)
     // 2.onnx can support because of change y dtype to be int32.
     // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(tensor1.scalar_type() != at::ScalarType::Char && tensor2.scalar_type() != at::ScalarType::Char,
-                "matmul is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
+        "matmul is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
     auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);
     if (!result.is_contiguous()) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);

@@ -22,15 +22,9 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 
-std::tuple<at::Tensor&, at::Tensor&> nms_v4_npu_nocheck(
-    at::Tensor& selected_indices,
-    at::Tensor& valid_outputs,
-    const at::Tensor& self,
-    const at::Tensor& scores,
-    at::Scalar max_output_size,
-    const at::Tensor& iou_threshold,
-    const at::Tensor& scores_threshold,
-    bool pad_to_max_output_size)
+std::tuple<at::Tensor &, at::Tensor &> nms_v4_npu_nocheck(at::Tensor &selected_indices, at::Tensor &valid_outputs,
+    const at::Tensor &self, const at::Tensor &scores, at::Scalar max_output_size, const at::Tensor &iou_threshold,
+    const at::Tensor &scores_threshold, bool pad_to_max_output_size)
 {
     at::Tensor max_output_size_tensor = npu_preparation::apply_tensor({}, self.options().dtype(at::kInt), self);
     acl_op::fill_(max_output_size_tensor, max_output_size);
@@ -49,33 +43,18 @@ std::tuple<at::Tensor&, at::Tensor&> nms_v4_npu_nocheck(
 }
 }
 
-std::tuple<at::Tensor, at::Tensor> npu_nms_v4(
-    const at::Tensor& self,
-    const at::Tensor& scores,
-    const at::Scalar& max_output_size,
-    const at::Tensor& iou_threshold,
-    const at::Tensor& scores_threshold,
+std::tuple<at::Tensor, at::Tensor> npu_nms_v4(const at::Tensor &self, const at::Tensor &scores,
+    const at::Scalar &max_output_size, const at::Tensor &iou_threshold, const at::Tensor &scores_threshold,
     bool pad_to_max_output_size)
 {
     auto output_sizes = op_infer::nms_v4_npu_output_size(max_output_size);
 
-    at::Tensor selected_indices = npu_preparation::apply_tensor(
-        std::get<0>(output_sizes),
-        self.options().dtype(at::kInt),
-        self);
-    at::Tensor valid_outputs = npu_preparation::apply_tensor(
-        std::get<1>(output_sizes),
-        self.options().dtype(at::kInt),
-        self);
+    at::Tensor selected_indices =
+        npu_preparation::apply_tensor(std::get<0>(output_sizes), self.options().dtype(at::kInt), self);
+    at::Tensor valid_outputs =
+        npu_preparation::apply_tensor(std::get<1>(output_sizes), self.options().dtype(at::kInt), self);
 
-    nms_v4_npu_nocheck(
-        selected_indices,
-        valid_outputs,
-        self,
-        scores,
-        max_output_size,
-        iou_threshold,
-        scores_threshold,
+    nms_v4_npu_nocheck(selected_indices, valid_outputs, self, scores, max_output_size, iou_threshold, scores_threshold,
         pad_to_max_output_size);
 
     return std::tie(selected_indices, valid_outputs);

@@ -27,21 +27,14 @@ static inline bool mode_valid(c10::string_view mode)
     return (mode == "reduced" || mode == "complete" || mode == "r");
 }
 
-static void check_linalg_qr_input(const at::Tensor& self, c10::string_view mode)
+static void check_linalg_qr_input(const at::Tensor &self, c10::string_view mode)
 {
     constexpr int MATRIX_DIM = 2;
-    TORCH_CHECK(
-        self.dim() >= MATRIX_DIM,
-        "linalg_qr: The input tensor must have at least 2 dimensions, but got ",
-        self.dim(),
-        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(self.dim() >= MATRIX_DIM, "linalg_qr: The input tensor must have at least 2 dimensions, but got ",
+        self.dim(), OPS_ERROR(ErrCode::PARAM));
 
-    TORCH_CHECK(
-        mode_valid(mode),
-        "linalg_qr: received unrecognized mode '",
-        mode,
-        "', expected one of 'reduced'(default), 'r', or 'complete'",
-        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(mode_valid(mode), "linalg_qr: received unrecognized mode '", mode,
+        "', expected one of 'reduced'(default), 'r', or 'complete'", OPS_ERROR(ErrCode::PARAM));
 }
 
 static inline int64_t get_mode(c10::string_view mode)
@@ -79,8 +72,8 @@ static small_vector_list linalg_qr_infer_shape(const at::Tensor &self, c10::stri
     return std::tie(Qsize, Rsize);
 }
 
-std::tuple<at::Tensor &, at::Tensor &> linalg_qr_out(const at::Tensor &self, c10::string_view mode, at::Tensor &Q,
-                                                     at::Tensor &R)
+std::tuple<at::Tensor &, at::Tensor &> linalg_qr_out(
+    const at::Tensor &self, c10::string_view mode, at::Tensor &Q, at::Tensor &R)
 {
     DO_COMPATIBILITY(aclnnLinalgQr, acl_op::linalg_qr_out(self, mode, Q, R));
     // 输入至少为2维tensor

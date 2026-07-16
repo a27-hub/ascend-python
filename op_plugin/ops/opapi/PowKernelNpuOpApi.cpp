@@ -22,8 +22,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
-                                        const c10::Device device)
+static at::Tensor self_tensor_to_device(
+    const at::Tensor &tensor, const at::ScalarType result_type, const c10::Device device)
 {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor) ||
         (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
@@ -72,8 +72,8 @@ at::Tensor pow(const at::Tensor &self, const at::Tensor &exponent)
     at::ScalarType result_type = at::native::result_type(self, exponent);
     at::Tensor self_cp = self_tensor_to_device(self, result_type, output_tensor.device());
     // construct the output tensor of the NPU
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size,
-                                                                  output_tensor.options().dtype(result_type));
+    at::Tensor out =
+        npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(result_type));
     // calculate the output result of the NPU
     pow_out_npu_nocheck(self_cp, exponent, out);
     at::namedinference::propagate_names_if_nonempty(out, maybe_names);

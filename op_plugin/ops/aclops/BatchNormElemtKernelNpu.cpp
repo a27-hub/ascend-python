@@ -22,9 +22,8 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 at::Tensor &batch_norm_elemt_nocheck(at::Tensor &result, const at::Tensor &self,
-                                     const c10::optional<at::Tensor> &weight_opt,
-                                     const c10::optional<at::Tensor> &bias_opt, const at::Tensor &mean,
-                                     const at::Tensor &invstd, double eps)
+    const c10::optional<at::Tensor> &weight_opt, const c10::optional<at::Tensor> &bias_opt, const at::Tensor &mean,
+    const at::Tensor &invstd, double eps)
 {
     TORCH_CHECK(self.dim() >= 2, "self's dim must be greater than or equal to 2, but got ", self.dim(),
         OPS_ERROR(ErrCode::PARAM));
@@ -61,8 +60,8 @@ at::Tensor &batch_norm_elemt_nocheck(at::Tensor &result, const at::Tensor &self,
 } // namespace
 
 at::Tensor &batch_norm_elemt_out(const at::Tensor &input, const c10::optional<at::Tensor> &weight,
-                                 const c10::optional<at::Tensor> &bias, const at::Tensor &mean,
-                                 const at::Tensor &invstd, double eps, at::Tensor &out)
+    const c10::optional<at::Tensor> &bias, const at::Tensor &mean, const at::Tensor &invstd, double eps,
+    at::Tensor &out)
 {
     const at::Tensor &bias_value = c10::value_or_else(bias, [] { return at::Tensor(); });
     const at::Tensor &weight_value = c10::value_or_else(weight, [] { return at::Tensor(); });
@@ -81,8 +80,7 @@ at::Tensor &batch_norm_elemt_out(const at::Tensor &input, const c10::optional<at
 }
 
 at::Tensor batch_norm_elemt(const at::Tensor &input, const c10::optional<at::Tensor> &weight,
-                            const c10::optional<at::Tensor> &bias, const at::Tensor &mean, const at::Tensor &invstd,
-                            double eps)
+    const c10::optional<at::Tensor> &bias, const at::Tensor &mean, const at::Tensor &invstd, double eps)
 {
     at::Tensor result = npu_preparation::apply_tensor(input);
     batch_norm_elemt_nocheck(result, input, weight, bias, mean, invstd, eps);

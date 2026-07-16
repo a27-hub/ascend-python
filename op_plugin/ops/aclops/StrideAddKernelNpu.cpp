@@ -20,13 +20,8 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor& stride_add_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& other,
-    c10::Scalar offset1,
-    c10::Scalar offset2,
-    c10::Scalar c1_len)
+at::Tensor &stride_add_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &other,
+    c10::Scalar offset1, c10::Scalar offset2, c10::Scalar c1_len)
 {
     at_npu::native::OpCommand cmd;
     cmd.Name("StrideAdd")
@@ -41,12 +36,8 @@ at::Tensor& stride_add_out_npu_nocheck(
 }
 } // namespace
 
-at::Tensor npu_stride_add(
-    const at::Tensor& self,
-    const at::Tensor& other,
-    const c10::Scalar& offset1,
-    const c10::Scalar& offset2,
-    const c10::Scalar& c1_len)
+at::Tensor npu_stride_add(const at::Tensor &self, const at::Tensor &other, const c10::Scalar &offset1,
+    const c10::Scalar &offset2, const c10::Scalar &c1_len)
 {
     auto output_size = op_infer::infersize_stride_add(self.sizes(), other.sizes());
     output_size[1] = c1_len.toInt() * 16;
@@ -54,4 +45,4 @@ at::Tensor npu_stride_add(
     stride_add_out_npu_nocheck(result, self, other, offset1, offset2, c1_len);
     return result;
 }
-}  // namespace acl_op
+} // namespace acl_op
