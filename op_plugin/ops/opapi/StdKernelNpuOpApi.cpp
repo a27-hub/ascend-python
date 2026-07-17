@@ -21,9 +21,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& std_out(const at::Tensor& self, at::OptionalIntArrayRef dim,
-                    const c10::optional<c10::Scalar>& correction, bool keepdim, at::Tensor& out)
-{
+at::Tensor &std_out(const at::Tensor &self, at::OptionalIntArrayRef dim, const c10::optional<c10::Scalar> &correction,
+    bool keepdim, at::Tensor &out) {
     if (!correction_fits_aclnn_int64(correction)) {
         at::Tensor cpu_out = out.cpu();
         at::std_out(cpu_out, self.cpu(), dim, correction, keepdim);
@@ -43,9 +42,8 @@ at::Tensor& std_out(const at::Tensor& self, at::OptionalIntArrayRef dim,
     return out;
 }
 
-at::Tensor std(const at::Tensor& self, at::OptionalIntArrayRef dim,
-               const c10::optional<c10::Scalar>& correction, bool keepdim)
-{
+at::Tensor std(
+    const at::Tensor &self, at::OptionalIntArrayRef dim, const c10::optional<c10::Scalar> &correction, bool keepdim) {
     if (!correction_fits_aclnn_int64(correction)) {
         return at::std(self.cpu(), dim, correction, keepdim).to(self.options());
     }

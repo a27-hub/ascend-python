@@ -20,8 +20,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 const int64_t INT4_IN_INT32_NUM = 8;
 
-c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self)
-{
+c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self) {
     c10::SmallVector<int64_t, SIZE> rstd_shape;
     for (int64_t i = 0; i < self.dim() - 1; i++) {
         rstd_shape.emplace_back(self.size(i));

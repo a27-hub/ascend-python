@@ -24,31 +24,22 @@ const static int64_t ROTATE_HALF = 0;
 const static int64_t ROTATE_INTERLEAVED = 1;
 
 static bool isRotaryMulBackwardMixDtypeSupport(
-    const at::Tensor& grad,
-    const at::Tensor& self,
-    const at::Tensor& r1,
-    const at::Tensor& r2)
-{
+    const at::Tensor &grad, const at::Tensor &self, const at::Tensor &r1, const at::Tensor &r2) {
     return self.dtype() == r1.dtype() && self.dtype() == r2.dtype() && self.dtype() == grad.dtype() ? false : true;
 }
 
-static at::Tensor npu_dtype_cast_impl_op_api(const at::Tensor& self, at::ScalarType dtype)
-{
+static at::Tensor npu_dtype_cast_impl_op_api(const at::Tensor &self, at::ScalarType dtype) {
     return self.dtype() == dtype ? self : self.to(dtype);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(
-    const at::Tensor& grad,
-    const at::Tensor& self,
-    const at::Tensor& r1,
-    const at::Tensor& r2,
-    c10::string_view rotary_mode)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(const at::Tensor &grad, const at::Tensor &self,
+    const at::Tensor &r1, const at::Tensor &r2, c10::string_view rotary_mode) {
     static bool notNeedCheck = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
     TORCH_CHECK((notNeedCheck || (rotary_mode == "half" || rotary_mode == "interleave")),
         "The rotary_mode of npu_rotary_mul_backward should be half or interleave, but got ", rotary_mode,
         OPS_ERROR(ErrCode::PARAM));
-    DO_COMPATIBILITY(aclnnRotaryPositionEmbeddingGrad, acl_op::npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode));
+    DO_COMPATIBILITY(
+        aclnnRotaryPositionEmbeddingGrad, acl_op::npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode));
     int64_t mode = op_plugin::utils::get_rotary_mode(rotary_mode);
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
         return acl_op::npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode);

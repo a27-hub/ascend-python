@@ -23,14 +23,16 @@
 
 namespace op_api {
 
-using acceptance_fn = std::function<bool(c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&, c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&)>;
+using acceptance_fn = std::function<bool(c10::ScalarType, std::vector<ScalingType> &, c10::ArrayRef<at::Tensor> &,
+    c10::ScalarType, std::vector<ScalingType> &, c10::ArrayRef<at::Tensor> &)>;
 
 // Namespace for scaled_blas check functions
 namespace scaled_blas {
 
 // Check rowwise recipe
-static bool check_rowwise_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-                          c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
+static bool check_rowwise_recipe(c10::ScalarType a_type, std::vector<ScalingType> &a_recipe,
+    c10::ArrayRef<at::Tensor> &a_scale, c10::ScalarType b_type, std::vector<ScalingType> &b_recipe,
+    c10::ArrayRef<at::Tensor> &b_scale) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
     }
@@ -47,8 +49,9 @@ static bool check_rowwise_recipe(c10::ScalarType a_type, std::vector<ScalingType
 }
 
 // Check mxfp8 recipe
-static bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-                        c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
+static bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType> &a_recipe,
+    c10::ArrayRef<at::Tensor> &a_scale, c10::ScalarType b_type, std::vector<ScalingType> &b_recipe,
+    c10::ArrayRef<at::Tensor> &b_scale) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
     }
@@ -142,20 +145,12 @@ static bool is_weight_trans(const at::Tensor &tensor) {
     return tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2);
 }
 
-
-at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
-        c10::ArrayRef<at::Tensor> scale_a,
-        at::IntArrayRef scale_recipe_a,
-        at::IntArrayRef swizzle_a,
-        c10::ArrayRef<at::Tensor> scale_b,
-        at::IntArrayRef scale_recipe_b,
-        at::IntArrayRef swizzle_b,
-        const c10::optional<at::Tensor> &offs, // group_list -tensor
-        const c10::optional<at::Tensor> &bias, // torch not support
-        c10::optional<c10::ScalarType> out_dtype,
-        at::IntArrayRef contraction_dim,
-        bool use_fast_accum) {
-
+at::Tensor _scaled_grouped_mm_v2(const at::Tensor &mat_a, const at::Tensor &mat_b, c10::ArrayRef<at::Tensor> scale_a,
+    at::IntArrayRef scale_recipe_a, at::IntArrayRef swizzle_a, c10::ArrayRef<at::Tensor> scale_b,
+    at::IntArrayRef scale_recipe_b, at::IntArrayRef swizzle_b,
+    const c10::optional<at::Tensor> &offs, // group_list -tensor
+    const c10::optional<at::Tensor> &bias, // torch not support
+    c10::optional<c10::ScalarType> out_dtype, at::IntArrayRef contraction_dim, bool use_fast_accum) {
     // check A5
     TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
         "This interface is supported only on the Ascend950 platform and after.", OPS_ERROR(ErrCode::PARAM));
@@ -164,18 +159,11 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     auto scaling_b = convert_int_to_enum<ScalingType>(scale_recipe_b);
 
     ScaledGemmImplementation selected_impl = ScaledGemmImplementation::NONE;
-    for (const auto& entry : scale_grouped_kernel_dispatch) {
-        auto const& matcher = std::get<1>(entry);
-        auto const& impl_val = std::get<2>(entry);
+    for (const auto &entry : scale_grouped_kernel_dispatch) {
+        auto const &matcher = std::get<1>(entry);
+        auto const &impl_val = std::get<2>(entry);
 
-        bool valid = matcher(
-            mat_a.scalar_type(),
-            scaling_a,
-            scale_a,
-            mat_b.scalar_type(),
-            scaling_b,
-            scale_b
-        );
+        bool valid = matcher(mat_a.scalar_type(), scaling_a, scale_a, mat_b.scalar_type(), scaling_b, scale_b);
 
         if (valid) {
             selected_impl = impl_val;
@@ -184,19 +172,13 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     }
 
     TORCH_CHECK_VALUE(
-        selected_impl != ScaledGemmImplementation::NONE,
-        "failed to find valid scaled gemm implementation"
-    );
+        selected_impl != ScaledGemmImplementation::NONE, "failed to find valid scaled gemm implementation");
 
-    const bool is_allowed =
-        selected_impl == ScaledGemmImplementation::ROWWISE_ROWWISE ||
+    const bool is_allowed = selected_impl == ScaledGemmImplementation::ROWWISE_ROWWISE ||
         selected_impl == ScaledGemmImplementation::MXFP8_MXFP8;
 
-    TORCH_CHECK(
-        is_allowed,
-        "NPU _scaled_grouped_mm_v2 only supports rowwise & mxfp8 modes; ",
-        "mxfp4/nvfp4 are not yet enabled"
-    );
+    TORCH_CHECK(is_allowed, "NPU _scaled_grouped_mm_v2 only supports rowwise & mxfp8 modes; ",
+        "mxfp4/nvfp4 are not yet enabled");
 
     // 1. 基本参数校验
     auto ndim_a = mat_a.dim();
@@ -204,11 +186,8 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     auto ndim_sa = scale_a[0].dim();
     auto ndim_sb = scale_b[0].dim();
 
-    TORCH_CHECK(ndim_a == 2 || ndim_a == 3,
-      "Input tensor mat_a must be 2D or 3D, received ", ndim_a, "D");
-    TORCH_CHECK(ndim_b == 2 || ndim_b == 3,
-      "Input tensor mat_b must be 2D or 3D, received ", ndim_b, "D");
-
+    TORCH_CHECK(ndim_a == 2 || ndim_a == 3, "Input tensor mat_a must be 2D or 3D, received ", ndim_a, "D");
+    TORCH_CHECK(ndim_b == 2 || ndim_b == 3, "Input tensor mat_b must be 2D or 3D, received ", ndim_b, "D");
 
     // Check scale dimension based on scale dtype
     bool is_fp8_a = (scale_a[0].scalar_type() == at::kFloat);
@@ -218,19 +197,19 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
 
     // scale_a dimension check
     if (is_fp8_a) {
-        TORCH_CHECK(ndim_sa == 1 || ndim_sa == 2,
-            "scale_a dimension must be 1D or 2D for fp8, actual dimension: ", ndim_sa);
+        TORCH_CHECK(
+            ndim_sa == 1 || ndim_sa == 2, "scale_a dimension must be 1D or 2D for fp8, actual dimension: ", ndim_sa);
     } else if (is_mx_a) {
-        TORCH_CHECK(ndim_sa == 2 || ndim_sa == 3,
-            "scale_a dimension must be 2D or 3D for mx, actual dimension: ", ndim_sa);
+        TORCH_CHECK(
+            ndim_sa == 2 || ndim_sa == 3, "scale_a dimension must be 2D or 3D for mx, actual dimension: ", ndim_sa);
     } else {
         TORCH_CHECK(false, "scale_a must be float32 or float8_e8m0fnu, but got ", scale_a[0].dtype());
     }
 
     // scale_b dimension check
     if (is_fp8_b) {
-        TORCH_CHECK(ndim_sb == 1 || ndim_sb == 2,
-            "scale_b dimension must be 1D or 2D for fp8, actual dimension: ", ndim_sb);
+        TORCH_CHECK(
+            ndim_sb == 1 || ndim_sb == 2, "scale_b dimension must be 1D or 2D for fp8, actual dimension: ", ndim_sb);
     } else if (is_mx_b) {
         TORCH_CHECK(ndim_sb == 2 || ndim_sb == 3 || ndim_sb == 4,
             "scale_b dimension must be 2D/3D/4D for mx, actual dimension: ", ndim_sb);
@@ -250,7 +229,8 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
             }
             TORCH_CHECK(ndim_sa == 1, "scale_a must be 1D for 2D mat_a (KC mode), but got ", ndim_sa, "D");
             TORCH_CHECK(scale_a[0].is_contiguous(), "scale_a must be contiguous");
-            TORCH_CHECK(scale_a[0].size(0) == mat_a.size(0) * scale_multiplier, "scale_a size[0] must equal ", mat_a.size(0) * scale_multiplier);
+            TORCH_CHECK(scale_a[0].size(0) == mat_a.size(0) * scale_multiplier, "scale_a size[0] must equal ",
+                mat_a.size(0) * scale_multiplier);
         } else {
             // KC mode: perTokenScale shape (g, M) or GB mode: (M, ceil(K/128))
             TORCH_CHECK(ndim_sa == 2, "scale_a must be 2D for 3D mat_a, but got ", ndim_sa, "D");
@@ -270,7 +250,7 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
             TORCH_CHECK(scale_b[0].size(0) == expected_n * scale_multiplier, "scale_b size mismatch");
         } else {
             // KC mode: scale shape (g, N) or GB mode: (g, ceil(K/128), ceil(N/128))
-            TORCH_CHECK(ndim_sb == 2 , "scale_b must be 2 for 2D mat_b, but got ", ndim_sb, "D");
+            TORCH_CHECK(ndim_sb == 2, "scale_b must be 2 for 2D mat_b, but got ", ndim_sb, "D");
             if (ndim_sb == 2) {
                 // KC mode: (g, N)
                 TORCH_CHECK(scale_b[0].stride(1) == 1, "scale_b must be contiguous in last dim");
@@ -283,39 +263,31 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     const bool use_a_2d = (ndim_a == 2);
     const bool use_b_2d = (ndim_b == 2);
     if (!use_a_2d || !use_b_2d) {
-        TORCH_CHECK(
-            mat_a.size(-1) == mat_b.size(-2),
-            "contraction dimension mismatch between mat_a and mat_b"
-        );
+        TORCH_CHECK(mat_a.size(-1) == mat_b.size(-2), "contraction dimension mismatch between mat_a and mat_b");
     }
 
     // 16 对齐校验
-    TORCH_CHECK(mat_a.size(-1) % 16 == 0,
-      "mat_a trailing dimension must be multiple of 16, current shape: ", mat_a.sizes());
+    TORCH_CHECK(
+        mat_a.size(-1) % 16 == 0, "mat_a trailing dimension must be multiple of 16, current shape: ", mat_a.sizes());
     TORCH_CHECK(mat_b.size(-2) % 16 == 0 && mat_b.size(-1) % 16 == 0,
-      "mat_b dimensions must be multiple of 16, current shape: ", mat_b.sizes());
+        "mat_b dimensions must be multiple of 16, current shape: ", mat_b.sizes());
 
     // 不支持的特性
-    TORCH_CHECK(!bias.has_value(),
-      "NPU _scaled_grouped_mm_v2 does not support bias parameter");
+    TORCH_CHECK(!bias.has_value(), "NPU _scaled_grouped_mm_v2 does not support bias parameter");
 
     // 偏移量校验
     // Offsets validation
     const bool req_offsets = (use_a_2d || use_b_2d);
-    TORCH_CHECK(
-        offs.has_value() == req_offsets,
-        "offsets required when using 2D input tensor"
-    );
+    TORCH_CHECK(offs.has_value() == req_offsets, "offsets required when using 2D input tensor");
 
     if (offs.has_value()) {
-      TORCH_CHECK(offs->dim() == 1, "offsets tensor must be 1D");
-      TORCH_CHECK(offs->dtype() == at::kInt, "offsets data type must be int32");
+        TORCH_CHECK(offs->dim() == 1, "offsets tensor must be 1D");
+        TORCH_CHECK(offs->dtype() == at::kInt, "offsets data type must be int32");
     }
 
     // 输出类型限制
     auto output_type = out_dtype.value_or(at::kBFloat16);
-    TORCH_CHECK(output_type == at::kBFloat16,
-      "NPU _scaled_grouped_mm_v2 only supports BF16 output type");
+    TORCH_CHECK(output_type == at::kBFloat16, "NPU _scaled_grouped_mm_v2 only supports BF16 output type");
 
     // 3. mat_a -> x (TensorList)
     std::vector<at::Tensor> x_vec;
@@ -366,8 +338,7 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     int64_t split_item_val = IN_NOT_SPLIT_OUT_SPLIT; // 2
     c10::optional<int64_t> split_item = split_item_val;
 
-
-   // 根据入参自动推导 group_type
+    // 根据入参自动推导 group_type
     // group_type 含义（矩阵乘 C[m,n]=A[m,k]×B[k,n]）：
     //   -1 (DEFAULT_SPLIT): 不分组 - mat_a/mat_b 均为 3D 且 batch 维度一一对应
     //    0 (M_SPLIT): m 轴分组 - 单输入 mat_a(2D) 按 m 维度分割，对应多个 weight
@@ -396,7 +367,8 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     TORCH_CHECK(group_type != K_SPLIT,
         "K_SPLIT (group_type=2) is not supported yet. "
         "This occurs when mat_b is 2D or mat_b has only 1 weight shared by multiple groups. "
-        "Current mat_a size: ", mat_a.sizes(), ", mat_b size: ", mat_b.sizes());
+        "Current mat_a size: ",
+        mat_a.sizes(), ", mat_b size: ", mat_b.sizes());
 
     c10::optional<int64_t> group_list_type = 0;
     c10::optional<int64_t> act_type = 0;

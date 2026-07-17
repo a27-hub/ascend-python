@@ -21,23 +21,15 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& exp_out_npu_nocheck(at::Tensor& result, const at::Tensor& self)
-{
+at::Tensor &exp_out_npu_nocheck(at::Tensor &result, const at::Tensor &self) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Exp")
-        .Input(self)
-        .Output(result)
-        .Run();
+    cmd.Name("Exp").Input(self).Output(result).Run();
     return result;
 }
 } // namespace
 
-at::Tensor& exp_out(const at::Tensor& self, at::Tensor& result)
-{
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        self);
+at::Tensor &exp_out(const at::Tensor &self, at::Tensor &result) {
+    npu_preparation::CheckOut({self}, result, self);
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
         exp_out_npu_nocheck(contiguous_result, self);
@@ -48,13 +40,9 @@ at::Tensor& exp_out(const at::Tensor& self, at::Tensor& result)
     return result;
 }
 
-at::Tensor& exp_(at::Tensor& self)
-{
-    return acl_op::exp_out(self, self);
-}
+at::Tensor &exp_(at::Tensor &self) { return acl_op::exp_out(self, self); }
 
-at::Tensor exp(const at::Tensor& self)
-{
+at::Tensor exp(const at::Tensor &self) {
     at::Tensor result = npu_preparation::apply_tensor(self);
     exp_out_npu_nocheck(result, self);
     return result;
