@@ -14,7 +14,7 @@ on:
       pr_id_wwq:
         required: false
         type: string
-        default: ${{ atomgit.event.pull_request.number }}
+
       CP_DOCKER_IMG:
         required: true
         type: string
@@ -39,7 +39,9 @@ on:
       TSER_WORD_SIZE:
         required: false
         type: string
-
+env:
+  TEST_RANK: ${{ inputs.TEST_RANK }}
+  TSER_WORD_SIZE: ${{ inputs.TSER_WORD_SIZE }}
 
 
 jobs:
