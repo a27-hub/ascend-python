@@ -22,11 +22,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::SmallVector<int64_t, SIZE> upsample_nearest2d_infer_size(const at::Tensor &input, at::IntArrayRef output_size)
-{
+at::SmallVector<int64_t, SIZE> upsample_nearest2d_infer_size(const at::Tensor &input, at::IntArrayRef output_size) {
     TORCH_CHECK(input.dim() == 4, "The input should be 4D, but got ", input.dim(), "D" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(output_size.size() == 2, "The length of output_size should be equal to 2, but got ",
-                output_size.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() == 2, "The length of output_size should be equal to 2, but got ", output_size.size(),
+        OPS_ERROR(ErrCode::PARAM));
 
     int64_t N = input.size(0);
     int64_t C = input.size(1);
@@ -38,8 +37,7 @@ at::SmallVector<int64_t, SIZE> upsample_nearest2d_infer_size(const at::Tensor &i
 }
 
 at::Tensor &upsample_nearest2d_out_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef output_size,
-                                           c10::optional<double> scales_h, c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_h, c10::optional<double> scales_w) {
     at::SmallVector<int64_t, N> output_size_vec = op_infer::array_to_small_vector(output_size);
 
     at_npu::native::OpCommand cmd;
@@ -56,11 +54,10 @@ at::Tensor &upsample_nearest2d_out_nocheck(at::Tensor &result, const at::Tensor 
 } // namespace
 
 at::Tensor &upsample_nearest2d_out(const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales_h,
-                                   c10::optional<double> scales_w, at::Tensor &result)
-{
+    c10::optional<double> scales_w, at::Tensor &result) {
     at::SmallVector<int64_t, SIZE> op_infer_output_size = upsample_nearest2d_infer_size(self, output_size);
-    npu_preparation::CheckOut({self}, result, npu_preparation::get_tensor_npu_format(result), self.scalar_type(),
-                              op_infer_output_size);
+    npu_preparation::CheckOut(
+        {self}, result, npu_preparation::get_tensor_npu_format(result), self.scalar_type(), op_infer_output_size);
 
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -74,8 +71,7 @@ at::Tensor &upsample_nearest2d_out(const at::Tensor &self, at::IntArrayRef outpu
 }
 
 at::Tensor upsample_nearest2d(const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales_h,
-                              c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_w) {
     at::SmallVector<int64_t, SIZE> op_infer_output_size = upsample_nearest2d_infer_size(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor(self, op_infer_output_size);
     upsample_nearest2d_out_nocheck(result, self, output_size, scales_h, scales_w);

@@ -18,24 +18,12 @@ using namespace std;
 
 namespace atb {
 using SelfAttentionParam = atb::infer::SelfAttentionParam;
-at::Tensor& _npu_flash_attention_prefix_v2(
-    const at::Tensor &query,
-    const at::Tensor &key_cache,
-    const at::Tensor &value_cache,
-    const at::Tensor &block_table,
-    const at::Tensor &mask,
-    c10::SymIntArrayRef seq_len,
-    c10::SymIntArrayRef context_lens,
-    const c10::optional<at::Tensor> &slopes,
-    const int64_t kernel_type,
-    const int64_t mask_type,
-    int64_t num_kv_heads,
-    int64_t num_heads,
-    double scale_value,
-    at::Tensor &out)
-{
+at::Tensor &_npu_flash_attention_prefix_v2(const at::Tensor &query, const at::Tensor &key_cache,
+    const at::Tensor &value_cache, const at::Tensor &block_table, const at::Tensor &mask, c10::SymIntArrayRef seq_len,
+    c10::SymIntArrayRef context_lens, const c10::optional<at::Tensor> &slopes, const int64_t kernel_type,
+    const int64_t mask_type, int64_t num_kv_heads, int64_t num_heads, double scale_value, at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
+    OpParamCache<SelfAttentionParam> &selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
     SelfAttentionParam selfattentionparam;
     selfattentionparam.calcType = SelfAttentionParam::PREFIX_ENCODER;
     auto kerneltype = static_cast<SelfAttentionParam::KernelType>(kernel_type);
@@ -73,7 +61,7 @@ at::Tensor& _npu_flash_attention_prefix_v2(
             .Input(context_lens_tensor)
             .Output(out);
     } else if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS ||
-              selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS_SQRT) {
+        selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS_SQRT) {
         parametter.Input(query)
             .Input(key_cache)
             .Input(value_cache)
@@ -91,15 +79,15 @@ at::Tensor& _npu_flash_attention_prefix_v2(
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
-    m.def("_npu_flash_attention_prefix_v2.out(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, Tensor mask, SymInt[] seq_len, SymInt[] context_lens, *, Tensor? slopes=None, int kernel_type=1, int mask_type=3, int num_kv_heads=0, int num_heads=0, float scale_value=1, Tensor(a!) out) -> Tensor(a!)");
+TORCH_LIBRARY_FRAGMENT(atb, m) {
+    m.def("_npu_flash_attention_prefix_v2.out(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, "
+          "Tensor mask, SymInt[] seq_len, SymInt[] context_lens, *, Tensor? slopes=None, int kernel_type=1, int "
+          "mask_type=3, int num_kv_heads=0, int num_heads=0, float scale_value=1, Tensor(a!) out) -> Tensor(a!)");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_flash_attention_prefix_v2.out", TORCH_FN(atb::_npu_flash_attention_prefix_v2));
 }
 }

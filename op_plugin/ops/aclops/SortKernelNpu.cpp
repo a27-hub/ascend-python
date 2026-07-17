@@ -21,32 +21,16 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-std::tuple<at::Tensor&, at::Tensor&> sort_out_npu_nocheck(
-    at::Tensor& values,
-    at::Tensor& indices,
-    const at::Tensor& self,
-    int64_t dim,
-    bool descending)
-{
+std::tuple<at::Tensor &, at::Tensor &> sort_out_npu_nocheck(
+    at::Tensor &values, at::Tensor &indices, const at::Tensor &self, int64_t dim, bool descending) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Sort")
-        .Input(self)
-        .Output(values)
-        .Output(indices)
-        .Attr("axis", dim)
-        .Attr("descending", descending)
-        .Run();
+    cmd.Name("Sort").Input(self).Output(values).Output(indices).Attr("axis", dim).Attr("descending", descending).Run();
 
     return std::tie(values, indices);
 }
 
-std::tuple<at::Tensor&, at::Tensor&> sort_out_npu_transpose(
-    at::Tensor& values,
-    at::Tensor& indices,
-    const at::Tensor& self,
-    int64_t dim,
-    bool descending)
-{
+std::tuple<at::Tensor &, at::Tensor &> sort_out_npu_transpose(
+    at::Tensor &values, at::Tensor &indices, const at::Tensor &self, int64_t dim, bool descending) {
     dim = op_plugin::utils::make_warp_dim(dim, self.dim());
     int64_t last_dim = op_plugin::utils::make_warp_dim(-1, self.dim());
     if (dim != last_dim) {
@@ -72,24 +56,11 @@ std::tuple<at::Tensor&, at::Tensor&> sort_out_npu_transpose(
 }
 } // namespace
 
-std::tuple<at::Tensor&, at::Tensor&> sort_out(
-    const at::Tensor& self,
-    int64_t dim,
-    bool descending,
-    at::Tensor& values,
-    at::Tensor& indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> sort_out(
+    const at::Tensor &self, int64_t dim, bool descending, at::Tensor &values, at::Tensor &indices) {
     auto output_size = op_infer::input_same_output_size(self);
-    npu_preparation::CheckOut(
-        {self},
-        values,
-        self);
-    npu_preparation::CheckOut(
-        {self},
-        indices,
-        ACL_FORMAT_NCHW,
-        at::ScalarType::Long,
-        output_size);
+    npu_preparation::CheckOut({self}, values, self);
+    npu_preparation::CheckOut({self}, indices, ACL_FORMAT_NCHW, at::ScalarType::Long, output_size);
 
     at::Tensor indices_cp = at_npu::native::custom_ops::_npu_dtype_cast(indices, at::kInt);
     bool values_match = npu_utils::check_match(&values);
@@ -115,27 +86,18 @@ std::tuple<at::Tensor&, at::Tensor&> sort_out(
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor&, at::Tensor&> sort_out(
-    const at::Tensor& self,
-    at::Dimname dim,
-    bool descending,
-    at::Tensor& values,
-    at::Tensor& indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> sort_out(
+    const at::Tensor &self, at::Dimname dim, bool descending, at::Tensor &values, at::Tensor &indices) {
     return acl_op::sort_out(self, dimname_to_position(self, dim), descending, values, indices);
 }
 #endif
 
-std::tuple<at::Tensor, at::Tensor> sort(
-    const at::Tensor& self,
-    int64_t dim,
-    bool descending)
-{
+std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor &self, int64_t dim, bool descending) {
     auto output_size = op_infer::input_same_output_size(self);
 
     at::Tensor values = npu_preparation::apply_tensor(self);
-    at::Tensor indices = npu_preparation::apply_tensor_with_format(
-        output_size, self.options().dtype(at::kInt), ACL_FORMAT_NCHW);
+    at::Tensor indices =
+        npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kInt), ACL_FORMAT_NCHW);
 
     sort_out_npu_transpose(values, indices, self, dim, descending);
     // indices dtype transform Int64
@@ -144,11 +106,7 @@ std::tuple<at::Tensor, at::Tensor> sort(
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor, at::Tensor> sort(
-    const at::Tensor& self,
-    at::Dimname dim,
-    bool descending)
-{
+std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor &self, at::Dimname dim, bool descending) {
     return acl_op::sort(self, dimname_to_position(self, dim), descending);
 }
 #endif

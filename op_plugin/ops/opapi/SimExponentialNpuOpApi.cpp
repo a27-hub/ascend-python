@@ -20,10 +20,9 @@
 
 namespace op_api {
 
-at::Tensor& npu_sim_exponential_(at::Tensor& self, double lambd, c10::optional<at::Generator> generator)
-{
-    TORCH_CHECK(lambd > 0.0, "npu_sim_exponential_ expects lambd > 0.0, but found lambd=",
-        lambd, OPS_ERROR(ErrCode::PARAM));
+at::Tensor &npu_sim_exponential_(at::Tensor &self, double lambd, c10::optional<at::Generator> generator) {
+    TORCH_CHECK(
+        lambd > 0.0, "npu_sim_exponential_ expects lambd > 0.0, but found lambd=", lambd, OPS_ERROR(ErrCode::PARAM));
     if (std::isinf(lambd)) {
         self.zero_();
         return self;

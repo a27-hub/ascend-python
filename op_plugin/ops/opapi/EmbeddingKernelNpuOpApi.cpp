@@ -21,18 +21,15 @@ namespace op_api {
 
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor embedding_symint(
-    const at::Tensor& weight,
-    const at::Tensor& indices,
-    c10::SymInt padding_idx,
-    bool scale_grad_by_freq,
-    bool sparse)
-{
-    DO_COMPATIBILITY(aclnnEmbedding, acl_op::embedding_symint(weight, indices, padding_idx,
-                                                              scale_grad_by_freq, sparse));
+at::Tensor embedding_symint(const at::Tensor &weight, const at::Tensor &indices, c10::SymInt padding_idx,
+    bool scale_grad_by_freq, bool sparse) {
+    DO_COMPATIBILITY(
+        aclnnEmbedding, acl_op::embedding_symint(weight, indices, padding_idx, scale_grad_by_freq, sparse));
     TORCH_CHECK(weight.device() == indices.device(),
         "Expected all tensors to be on the same device, but "
-        "found at least two devices, ", weight.device(), " and ", indices.device(), "! "
+        "found at least two devices, ",
+        weight.device(), " and ", indices.device(),
+        "! "
         "(when checking argument for argument indices in method opapi::embedding_symint)",
         OPS_ERROR(ErrCode::PARAM));
     // calculate the output size

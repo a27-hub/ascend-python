@@ -77,7 +77,8 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
         // alloced from the pool of the secondary stream.
         if (is_capture == c10_npu::CaptureStatus::None) {
             c10_npu::SecondaryStreamGuard guard(secondary_stream);
-            mask = at_npu::native::OpPreparation::apply_tensor_without_format({length}, self.options().dtype(at::kByte));
+            mask =
+                at_npu::native::OpPreparation::apply_tensor_without_format({length}, self.options().dtype(at::kByte));
             at::IntArrayRef shapeArray(self.sizes());
             auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(
                 op_plugin::utils::LEGACY_RAND_COUNTER_OFFSET);
@@ -98,14 +99,17 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
                 c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
                 capture_event_begin.record(original_stream);
                 capture_event_begin.block(secondary_stream);
-                ASCEND_LOGI("Event: record and block in dropout op capture begin is successfully executed, event=%p", capture_event_begin.event());
+                ASCEND_LOGI("Event: record and block in dropout op capture begin is successfully executed, event=%p",
+                    capture_event_begin.event());
             }
             NPUStatus ret = c10_npu::emptyAllNPUStream();
             c10_npu::SecondaryStreamGuard guard(secondary_stream);
-            mask = at_npu::native::OpPreparation::apply_tensor_without_format({length}, self.options().dtype(at::kByte));
+            mask =
+                at_npu::native::OpPreparation::apply_tensor_without_format({length}, self.options().dtype(at::kByte));
             at::IntArrayRef shapeArray(self.sizes());
             aclDataType dataType = at_npu::native::OpPreparation::convert_to_acl_data_type(self.scalar_type());
-            EXEC_NPU_CMD(aclnnDropoutGenMaskV2Tensor, shapeArray, p, *seed_ptr, *offset_ptr, offset_intragraph, dataType, mask);
+            EXEC_NPU_CMD(
+                aclnnDropoutGenMaskV2Tensor, shapeArray, p, *seed_ptr, *offset_ptr, offset_intragraph, dataType, mask);
             if (!gen_state_.secondary_stream_capture_state_) {
                 ASCEND_LOGI("Event: record and block in dropout op capture end is successfully executed");
                 at::check_generator<at_npu::NPUGeneratorImpl>(gen)->set_secondary_stream_capture_state(true);
@@ -121,8 +125,7 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
     return std::tie(result, mask);
 }
 
-at::Tensor npu_dropout_backward(const at::Tensor& grad_output, const at::Tensor& mask, double scale)
-{
+at::Tensor npu_dropout_backward(const at::Tensor &grad_output, const at::Tensor &mask, double scale) {
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::npu_dropout_backward(grad_output, mask, scale));
     at::Tensor result;
     if (mask.numel() == 0) {
@@ -133,8 +136,7 @@ at::Tensor npu_dropout_backward(const at::Tensor& grad_output, const at::Tensor&
     return result;
 }
 
-std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor& input, double p, c10::optional<bool> train)
-{
+std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor &input, double p, c10::optional<bool> train) {
     DO_COMPATIBILITY(aclnnDropoutGenMaskV2, acl_op::native_dropout(input, p, train));
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::native_dropout(input, p, train));
 
@@ -152,11 +154,11 @@ std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor& input, doubl
     return op_api::_npu_dropout(input, p);
 }
 
-at::Tensor native_dropout_backward(const at::Tensor& grad_output, const at::Tensor& mask, double scale)
-{
+at::Tensor native_dropout_backward(const at::Tensor &grad_output, const at::Tensor &mask, double scale) {
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::native_dropout_backward(grad_output, mask, scale));
-    TORCH_CHECK(scale == NUMBER_ZERO || scale >= NUMBER_ONE, "native_dropout_backward scale has to be 0 or greater than or equal to 1, but got ", scale,
-                OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(scale == NUMBER_ZERO || scale >= NUMBER_ONE,
+        "native_dropout_backward scale has to be 0 or greater than or equal to 1, but got ", scale,
+        OPS_ERROR(ErrCode::VALUE));
 
     double p = (scale == 0.0) ? 1 : (1 - 1 / scale);
     if (p == 0) {

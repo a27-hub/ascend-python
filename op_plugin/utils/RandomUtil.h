@@ -99,7 +99,7 @@ inline int64_t calc_counter_offset(int64_t nelem, int unroll) {
     return ((nelem - 1) / (BLOCK_SIZE * grid_x * unroll) + 1) * RAND_OFFSET_PER_CALL;
 }
 
-inline int64_t calc_split_counter_offset(const TensorIterInfo& iter) {
+inline int64_t calc_split_counter_offset(const TensorIterInfo &iter) {
     if (iter.can_use_32bit_indexing()) {
         return calc_counter_offset(iter.numel, iter.unroll);
     }

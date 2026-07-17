@@ -20,8 +20,7 @@
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
 
 namespace op_api {
-at::Tensor& silu_backward_out(const at::Tensor& grad_output, const at::Tensor& self, at::Tensor& result)
-{
+at::Tensor &silu_backward_out(const at::Tensor &grad_output, const at::Tensor &self, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnSiluBackward, acl_op::silu_backward_out(grad_output, self, result));
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
         at_npu::native::OpPreparation::check_tensor({grad_output, self}, result, grad_output);
@@ -30,8 +29,7 @@ at::Tensor& silu_backward_out(const at::Tensor& grad_output, const at::Tensor& s
     return result;
 }
 
-at::Tensor silu_backward(const at::Tensor& grad_output, const at::Tensor& self)
-{
+at::Tensor silu_backward(const at::Tensor &grad_output, const at::Tensor &self) {
     DO_COMPATIBILITY(aclnnSiluBackward, acl_op::silu_backward(grad_output, self));
     at::Tensor grad_input;
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
@@ -42,7 +40,8 @@ at::Tensor silu_backward(const at::Tensor& grad_output, const at::Tensor& self)
             output_dtype = at::kFloat;
         }
         auto output_size = op_infer::broadcast_ops_npu_output_size(grad_output, self);
-        grad_input = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options().dtype(output_dtype));
+        grad_input =
+            at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options().dtype(output_dtype));
     }
     EXEC_NPU_CMD(aclnnSiluBackward, grad_output, self, grad_input);
     return grad_input;

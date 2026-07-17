@@ -16,11 +16,11 @@
 
 namespace atb {
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
-void _npu_paged_attention(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, int64_t num_kv_heads, int64_t num_heads, double scale_value,
-                          const at::Tensor &block_table, const at::Tensor &context_lens, at::Tensor &out,  const c10::optional<at::Tensor> &workspace)
-{
+void _npu_paged_attention(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache,
+    int64_t num_kv_heads, int64_t num_heads, double scale_value, const at::Tensor &block_table,
+    const at::Tensor &context_lens, at::Tensor &out, const c10::optional<at::Tensor> &workspace) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
+    OpParamCache<PagedAttentionParam> &pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
     pagedparam.headNum = num_heads;
     pagedparam.qkScale = scale_value;
@@ -52,11 +52,11 @@ void _npu_paged_attention(const at::Tensor &query, const at::Tensor &key_cache, 
     return;
 }
 
-at::Tensor _npu_paged_attention_get_workspace(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, int64_t num_kv_heads, int64_t num_heads, double scale_value,
-                                              const at::Tensor &block_table, const at::Tensor &context_lens, at::Tensor &out)
-{
+at::Tensor _npu_paged_attention_get_workspace(const at::Tensor &query, const at::Tensor &key_cache,
+    const at::Tensor &value_cache, int64_t num_kv_heads, int64_t num_heads, double scale_value,
+    const at::Tensor &block_table, const at::Tensor &context_lens, at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
+    OpParamCache<PagedAttentionParam> &pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
     pagedparam.headNum = num_heads;
     pagedparam.qkScale = scale_value;
@@ -81,21 +81,22 @@ at::Tensor _npu_paged_attention_get_workspace(const at::Tensor &query, const at:
         .Output(out);
     auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
     uint64_t workspace_size = GetAtbWorkspaceSizeCmd(opPaged, paramsetter, "PagedAttentionOperation");
-    at::Tensor workspace_tensor =  at::empty({workspace_size}, query.options().dtype(at::kByte));
+    at::Tensor workspace_tensor = at::empty({workspace_size}, query.options().dtype(at::kByte));
     return workspace_tensor;
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
-    m.def("_npu_paged_attention(Tensor query, Tensor key_cache, Tensor value_cache, int num_kv_heads, int num_heads, float scale_value, Tensor block_table, Tensor context_lens, Tensor(a!) out, *,Tensor? workspace=None) -> ()");
-    m.def("_npu_paged_attention_get_workspace(Tensor query, Tensor key_cache, Tensor value_cache, int num_kv_heads, int num_heads, float scale_value, Tensor block_table, Tensor context_lens, Tensor(a!) out) -> Tensor");
+TORCH_LIBRARY_FRAGMENT(atb, m) {
+    m.def(
+        "_npu_paged_attention(Tensor query, Tensor key_cache, Tensor value_cache, int num_kv_heads, int num_heads, "
+        "float scale_value, Tensor block_table, Tensor context_lens, Tensor(a!) out, *,Tensor? workspace=None) -> ()");
+    m.def("_npu_paged_attention_get_workspace(Tensor query, Tensor key_cache, Tensor value_cache, int num_kv_heads, "
+          "int num_heads, float scale_value, Tensor block_table, Tensor context_lens, Tensor(a!) out) -> Tensor");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_paged_attention", TORCH_FN(atb::_npu_paged_attention));
     m.impl("_npu_paged_attention_get_workspace", TORCH_FN(atb::_npu_paged_attention_get_workspace));
 }

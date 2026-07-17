@@ -22,19 +22,17 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
-                                        const c10::Device device)
-{
+static at::Tensor self_tensor_to_device(
+    const at::Tensor &tensor, const at::ScalarType result_type, const c10::Device device) {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor) ||
-       (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
+        (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
         at::Scalar scalar = tensor.item();
         return npu_preparation::copy_scalar_to_device(scalar, result_type, device);
     }
     return tensor;
 }
 
-at::Tensor &inplace_mul_out_npu_no_check(at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor &inplace_mul_out_npu_no_check(at::Tensor &self, const at::Tensor &other) {
     // check if other scalar tensor
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         c10::Scalar other_scalar = other.item();
@@ -45,8 +43,7 @@ at::Tensor &inplace_mul_out_npu_no_check(at::Tensor &self, const at::Tensor &oth
     return self;
 }
 
-at::Tensor &mul_out_npu_no_check(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &mul_out_npu_no_check(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     // check if other scalar tensor
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         c10::Scalar other_scalar = other.item();
@@ -57,14 +54,12 @@ at::Tensor &mul_out_npu_no_check(const at::Tensor &self, const at::Tensor &other
     return result;
 }
 
-static at::Tensor mul_dest_output(const at::Tensor &self, const at::Tensor &other)
-{
+static at::Tensor mul_dest_output(const at::Tensor &self, const at::Tensor &other) {
     bool isSelfWrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
     return isSelfWrapped ? other : self;
 }
 
-at::Tensor &mul_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &mul_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnMul, acl_op::mul_out(self, other, result));
     DO_COMPATIBILITY(aclnnMuls, acl_op::mul_out(self, other, result));
     // calculate the output size
@@ -78,8 +73,7 @@ at::Tensor &mul_out(const at::Tensor &self, const at::Tensor &other, at::Tensor 
     return result;
 }
 
-at::Tensor mul(const at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor mul(const at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnMul, acl_op::mul(self, other));
     DO_COMPATIBILITY(aclnnMuls, acl_op::mul(self, other));
     // calculate the output size
@@ -98,8 +92,7 @@ at::Tensor mul(const at::Tensor &self, const at::Tensor &other)
     return result;
 }
 
-at::Tensor mul(const at::Tensor &self, const at::Scalar &other)
-{
+at::Tensor mul(const at::Tensor &self, const at::Scalar &other) {
     DO_COMPATIBILITY(aclnnMuls, acl_op::mul(self, other));
     auto output_size = op_infer::input_same_output_size(self);
     at::ScalarType result_type = at::native::result_type(self, other);
@@ -110,8 +103,7 @@ at::Tensor mul(const at::Tensor &self, const at::Scalar &other)
     return result;
 }
 
-at::Tensor &mul_(at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor &mul_(at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnInplaceMul, acl_op::mul_(self, other));
     DO_COMPATIBILITY(aclnnInplaceMuls, acl_op::mul_(self, other));
     TORCH_CHECK(torch_npu::utils::is_npu(self), "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
@@ -120,8 +112,7 @@ at::Tensor &mul_(at::Tensor &self, const at::Tensor &other)
     return self;
 }
 
-at::Tensor &mul_(at::Tensor &self, const at::Scalar &other)
-{
+at::Tensor &mul_(at::Tensor &self, const at::Scalar &other) {
     DO_COMPATIBILITY(aclnnInplaceMuls, acl_op::mul_(self, other));
     TORCH_CHECK(torch_npu::utils::is_npu(self), "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
     EXEC_NPU_CMD(aclnnInplaceMuls, self, other);

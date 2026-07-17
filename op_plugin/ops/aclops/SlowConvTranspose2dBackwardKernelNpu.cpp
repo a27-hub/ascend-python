@@ -22,11 +22,9 @@ using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 
 namespace {
-at::Tensor &slow_conv_transpose2d_backward_grad_output_out_nocheck(
-    at::Tensor &grad_input, const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &weight,
-    at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef output_padding,
-    at::IntArrayRef dilation)
-{
+at::Tensor &slow_conv_transpose2d_backward_grad_output_out_nocheck(at::Tensor &grad_input,
+    const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size,
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation) {
     TORCH_CHECK(stride.size() >= 2, "stride size must bigger than 2." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(padding.size() >= 2, "padding size must bigger than 2." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(dilation.size() >= 2, "dilation size must bigger than 2." + OPS_ERROR(ErrCode::PARAM));
@@ -51,11 +49,8 @@ at::Tensor &slow_conv_transpose2d_backward_grad_output_out_nocheck(
 }
 
 at::Tensor &slow_conv_transpose2d_backward_weight_out_nocheck(at::Tensor &grad_weight, const at::Tensor &grad_output,
-                                                              const at::Tensor &self, const at::Tensor &weight,
-                                                              at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                                              at::IntArrayRef padding, at::IntArrayRef output_padding,
-                                                              at::IntArrayRef dilation)
-{
+    const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation) {
     c10::SmallVector<int64_t, N> strides_size = {1, 1, stride[0], stride[1]};
     c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[1], padding[1]};
     c10::SmallVector<int64_t, N> dilations = {1, 1, dilation[0], dilation[1]};
@@ -79,11 +74,8 @@ at::Tensor &slow_conv_transpose2d_backward_weight_out_nocheck(at::Tensor &grad_w
 }
 
 at::Tensor &slow_conv_transpose2d_backward_bias_out_nocheck(at::Tensor &grad_bias, const at::Tensor &grad_output,
-                                                            const at::Tensor &self, const at::Tensor &weight,
-                                                            at::IntArrayRef kernel_size, at::IntArrayRef stride,
-                                                            at::IntArrayRef padding, at::IntArrayRef output_padding,
-                                                            at::IntArrayRef dilation)
-{
+    const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation) {
     at::Tensor grad_view = grad_output.contiguous().view({grad_output.size(0), grad_output.size(1), -1});
     acl_op::sum_out(grad_view, c10::SmallVector<int64_t, N>{0, 2}, false, grad_view.scalar_type(), grad_bias);
 
@@ -93,8 +85,7 @@ at::Tensor &slow_conv_transpose2d_backward_bias_out_nocheck(at::Tensor &grad_bia
 std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> slow_conv_transpose2d_backward_out_nocheck(
     const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size,
     at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation,
-    at::Tensor &grad_input, at::Tensor &grad_weight, at::Tensor &grad_bias)
-{
+    at::Tensor &grad_input, at::Tensor &grad_weight, at::Tensor &grad_bias) {
     TORCH_CHECK(dilation.size() >= 2,
         "slow_conv_transpose2d_backward expected dilation greater than or equal to 2D,"
         " but input dilation has sizes ",
@@ -107,26 +98,22 @@ std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> slow_conv_transpose2d_backw
         "slow_conv_transpose2d_backward expected dilation greater than or equal to 2D,"
         " but input stride has sizes ",
         stride.size(), OPS_ERROR(ErrCode::PARAM));
-    slow_conv_transpose2d_backward_grad_output_out_nocheck(grad_input, grad_output, self, weight, kernel_size, stride,
-                                                           padding, output_padding, dilation);
-    slow_conv_transpose2d_backward_weight_out_nocheck(grad_weight, grad_output, self, weight, kernel_size, stride,
-                                                      padding, output_padding, dilation);
-    slow_conv_transpose2d_backward_bias_out_nocheck(grad_bias, grad_output, self, weight, kernel_size, stride, padding,
-                                                    output_padding, dilation);
+    slow_conv_transpose2d_backward_grad_output_out_nocheck(
+        grad_input, grad_output, self, weight, kernel_size, stride, padding, output_padding, dilation);
+    slow_conv_transpose2d_backward_weight_out_nocheck(
+        grad_weight, grad_output, self, weight, kernel_size, stride, padding, output_padding, dilation);
+    slow_conv_transpose2d_backward_bias_out_nocheck(
+        grad_bias, grad_output, self, weight, kernel_size, stride, padding, output_padding, dilation);
 
     return std::tuple<at::Tensor &, at::Tensor &, at::Tensor &>(grad_input, grad_weight, grad_bias);
 }
 } // namespace
 
 tensor_list slow_conv_transpose2d_backward(const at::Tensor &grad_output, const at::Tensor &self,
-                                           const at::Tensor &weight, at::IntArrayRef kernel_size,
-                                           at::IntArrayRef stride, at::IntArrayRef padding,
-                                           at::IntArrayRef output_padding, at::IntArrayRef dilation,
-                                           std::array<bool, 3> output_mask)
-{
+    const at::Tensor &weight, at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef output_padding, at::IntArrayRef dilation, std::array<bool, 3> output_mask) {
     auto flag = 2;
-    auto output_sizes = op_infer::slow_conv_transpose2d_backward_npu_output_size(
-        grad_output, self, weight);
+    auto output_sizes = op_infer::slow_conv_transpose2d_backward_npu_output_size(grad_output, self, weight);
     at::Tensor grad_input;
     at::Tensor grad_weight;
     at::Tensor grad_bias;
@@ -136,15 +123,14 @@ tensor_list slow_conv_transpose2d_backward(const at::Tensor &grad_output, const 
         grad_input = npu_preparation::apply_tensor_with_format(self, std::get<0>(output_sizes), grad_format);
     }
     if (output_mask[1]) {
-        grad_weight =
-            npu_preparation::apply_tensor_with_format(std::get<1>(output_sizes), weight.options().dtype(at::kFloat),
-                                                      npu_preparation::get_tensor_npu_format(weight));
+        grad_weight = npu_preparation::apply_tensor_with_format(std::get<1>(output_sizes),
+            weight.options().dtype(at::kFloat), npu_preparation::get_tensor_npu_format(weight));
     }
     if (output_mask[flag]) {
         grad_bias = npu_preparation::apply_tensor_with_format(grad_output, {grad_output.size(1)}, ACL_FORMAT_NCHW);
     }
 
     return slow_conv_transpose2d_backward_out_nocheck(grad_output, self, weight, kernel_size, stride, padding,
-                                                      output_padding, dilation, grad_input, grad_weight, grad_bias);
+        output_padding, dilation, grad_input, grad_weight, grad_bias);
 }
 } // namespace acl_op

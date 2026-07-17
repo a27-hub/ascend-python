@@ -22,8 +22,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &out)
-{
+at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnMv, acl_op::mv_out(self, vec, out));
     auto names = at::namedinference::propagate_names_for_addmv(self, vec, out);
     npu_preparation::check_tensor({self, vec}, out, out.scalar_type(), {self.size(0)});
@@ -33,8 +32,7 @@ at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &ou
     return out;
 }
 
-at::Tensor mv(const at::Tensor &self, const at::Tensor &vec)
-{
+at::Tensor mv(const at::Tensor &self, const at::Tensor &vec) {
     DO_COMPATIBILITY(aclnnMv, acl_op::mv(self, vec));
     at::Tensor result;
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
@@ -53,4 +51,4 @@ at::Tensor mv(const at::Tensor &self, const at::Tensor &vec)
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

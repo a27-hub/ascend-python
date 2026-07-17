@@ -24,11 +24,10 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_compile_type = at_npu::native::CompileType;
 
-at::Tensor one_hot(const at::Tensor& self, int64_t num_classes) {
+at::Tensor one_hot(const at::Tensor &self, int64_t num_classes) {
     auto ks = self.key_set();
     bool is_fake_or_meta = ks.has_all(c10::DispatchKeySet(c10::BackendComponent::MetaBit)) ||
-        ks.has_all(c10::DispatchKeySet(c10::DispatchKey::Python)) ||
-        self.is_meta();
+        ks.has_all(c10::DispatchKeySet(c10::DispatchKey::Python)) || self.is_meta();
     if (is_fake_or_meta) {
         TORCH_CHECK(num_classes != -1, "FakeTensorMode does not support num_classes == -1.");
 
@@ -47,8 +46,8 @@ at::Tensor one_hot(const at::Tensor& self, int64_t num_classes) {
     auto self_temp = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
 
     if (self.numel() == 0) {
-        TORCH_CHECK(num_classes > 0, "Can not infer total number of classes from empty tensor."
-            + OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            num_classes > 0, "Can not infer total number of classes from empty tensor." + OPS_ERROR(ErrCode::PARAM));
         depth = num_classes;
     }
 

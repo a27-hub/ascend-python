@@ -21,9 +21,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 at::Tensor &conv3d_backward_input_nocheck(at::Tensor &grad_input, const at::Tensor &input, const at::Tensor &grad,
-                                          const at::Tensor &weight, at::IntArrayRef stride, at::IntArrayRef padding,
-                                          at::IntArrayRef dilation, int64_t groups)
-{
+    const at::Tensor &weight, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    int64_t groups) {
     TORCH_CHECK(stride.size() >= 3, "stride has to contain more than 3 elements, but got ", stride.size(),
         OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(padding.size() >= 3, "padding has to contain more than 3 elements, but got ", padding.size(),
@@ -53,9 +52,8 @@ at::Tensor &conv3d_backward_input_nocheck(at::Tensor &grad_input, const at::Tens
 }
 
 at::Tensor &conv3d_backward_weight_nocheck(at::Tensor &grad_weight, const at::Tensor &input, const at::Tensor &grad,
-                                           const at::Tensor &weight, at::IntArrayRef stride, at::IntArrayRef padding,
-                                           at::IntArrayRef dilation, int64_t groups)
-{
+    const at::Tensor &weight, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    int64_t groups) {
     TORCH_CHECK(stride.size() >= 3, "stride has to contain more than 3 elements, but got ", stride.size(),
         OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(padding.size() >= 3, "padding has to contain more than 3 elements, but got ", padding.size(),
@@ -83,9 +81,8 @@ at::Tensor &conv3d_backward_weight_nocheck(at::Tensor &grad_weight, const at::Te
 }
 
 at::Tensor &conv3d_backward_bias_nocheck(at::Tensor &grad_bias, const at::Tensor &input, const at::Tensor &grad,
-                                         const at::Tensor &weight, at::IntArrayRef stride, at::IntArrayRef padding,
-                                         at::IntArrayRef dilation, int64_t groups)
-{
+    const at::Tensor &weight, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    int64_t groups) {
     TORCH_CHECK(input.dim() >= 3, "input has to be more than 3D, but got Tensor of dimension ", input.dim(),
         OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(grad.dim() >= 3, "grad has to be more than 3D, but got Tensor of dimension ", grad.dim(),
@@ -103,10 +100,8 @@ at::Tensor &conv3d_backward_bias_nocheck(at::Tensor &grad_bias, const at::Tensor
 } // namespace
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv3d_backward(const at::Tensor &input, const at::Tensor &grad,
-                                                                   const at::Tensor &weight, at::IntArrayRef stride,
-                                                                   at::IntArrayRef padding, at::IntArrayRef dilation,
-                                                                   int64_t groups, std::array<bool, 3> grad_input_mask)
-{
+    const at::Tensor &weight, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups,
+    std::array<bool, 3> grad_input_mask) {
     at::Tensor grad_input;
     at::Tensor grad_weight;
     at::Tensor grad_bias;
@@ -119,8 +114,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv3d_backward(const at::Ten
 
     if (grad_input_mask[1]) {
         // format should be FRACTAL_Z_3D
-        grad_weight = npu_preparation::apply_tensor_with_format(weight.sizes(), weight.options().dtype(at::kFloat),
-                                                                npu_preparation::get_tensor_npu_format(weight));
+        grad_weight = npu_preparation::apply_tensor_with_format(
+            weight.sizes(), weight.options().dtype(at::kFloat), npu_preparation::get_tensor_npu_format(weight));
         conv3d_backward_weight_nocheck(grad_weight, input, grad, weight, stride, padding, dilation, groups);
     }
 
