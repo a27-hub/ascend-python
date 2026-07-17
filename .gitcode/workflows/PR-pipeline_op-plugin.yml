@@ -53,7 +53,7 @@ stages:
       PREHEAT_master_x86:
         name: PREHEAT_master_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         steps:
           - name: preheat_master_x86
             uses: dedicate-preheat-plugin
@@ -67,7 +67,7 @@ stages:
       PREHEAT_2_7_1_x86:
         name: PREHEAT_2_7_1_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         steps:
           - name: preheat_2_7_1_x86
             uses: dedicate-preheat-plugin
@@ -81,7 +81,7 @@ stages:
       PREHEAT_2_9_0_x86:
         name: PREHEAT_2_9_0_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         steps:
           - name: preheat_2_9_0_x86
             uses: dedicate-preheat-plugin
@@ -95,7 +95,7 @@ stages:
       PREHEAT_2_10_0_x86:
         name: PREHEAT_2_10_0_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         steps:
           - name: preheat_2_10_0_x86
             uses: dedicate-preheat-plugin
@@ -109,7 +109,7 @@ stages:
       PREHEAT_2_11_0_x86:
         name: PREHEAT_2_11_0_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         steps:
           - name: preheat_2_11_0_x86
             uses: dedicate-preheat-plugin
@@ -123,7 +123,7 @@ stages:
       PREHEAT_2_12_0_x86:
         name: PREHEAT_2_12_0_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         steps:
           - name: preheat_2_12_0_x86
             uses: dedicate-preheat-plugin
@@ -137,7 +137,7 @@ stages:
       PREHEAT_master_arm:
         name: PREHEAT_master_arm
         select: selected_by_default
-        runs-on: [ dedicate-hosted, arm64, large ]
+        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
         steps:
           - name: preheat_master_arm
             uses: dedicate-preheat-plugin
@@ -151,7 +151,7 @@ stages:
       PREHEAT_2_7_1_arm:
         name: PREHEAT_2_7_1_arm
         select: selected_by_default
-        runs-on: [ dedicate-hosted, arm64, large ]
+        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
         steps:
           - name: preheat_2_7_1_arm
             uses: dedicate-preheat-plugin
@@ -165,7 +165,7 @@ stages:
       PREHEAT_2_9_0_arm:
         name: PREHEAT_2_9_0_arm
         select: selected_by_default
-        runs-on: [ dedicate-hosted, arm64, large ]
+        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
         steps:
           - name: preheat_2_9_0_arm
             uses: dedicate-preheat-plugin
@@ -179,7 +179,7 @@ stages:
       PREHEAT_2_10_0_arm:
         name: PREHEAT_2_10_0_arm
         select: selected_by_default
-        runs-on: [ dedicate-hosted, arm64, large ]
+        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
         steps:
           - name: preheat_2_10_0_arm
             uses: dedicate-preheat-plugin
@@ -193,7 +193,7 @@ stages:
       PREHEAT_2_11_0_arm:
         name: PREHEAT_2_11_0_arm
         select: selected_by_default
-        runs-on: [ dedicate-hosted, arm64, large ]
+        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
         steps:
           - name: preheat_2_11_0_arm
             uses: dedicate-preheat-plugin
@@ -207,7 +207,7 @@ stages:
       PREHEAT_2_12_0_arm:
         name: PREHEAT_2_12_0_arm
         select: selected_by_default
-        runs-on: [ dedicate-hosted, arm64, large ]
+        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
         steps:
           - name: preheat_2_12_0_arm
             uses: dedicate-preheat-plugin
@@ -321,7 +321,7 @@ stages:
         name: Only_doc_commit
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -359,7 +359,7 @@ stages:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
           runs_on_arch: "x64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
@@ -372,7 +372,7 @@ stages:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: "pytorch_2.7.1_a1_x86_64_builder:20260518"
           runs_on_arch: "x64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
 
       Build_v2_9_0_x86:
@@ -386,7 +386,7 @@ stages:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: "pytorch_2.9.0_a1_x86_64_builder:20260518"
           runs_on_arch: "x64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
 
       Build_v2_10_0_x86:
@@ -400,7 +400,7 @@ stages:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: "pytorch_2.10.0_a1_x86_64_builder:20260418"
           runs_on_arch: "x64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
 
       Build_v2_11_0_x86:
@@ -414,7 +414,7 @@ stages:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: "pytorch_2.11.0_a1_x86_64_builder:20260418"
           runs_on_arch: "x64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
 
       Build_v2_12_0_x86:
@@ -428,7 +428,7 @@ stages:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: "pytorch_2.12.0_a1_x86_64_builder:20260518"
           runs_on_arch: "x64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_master_ARM:
         name: Build_master_ARM
@@ -441,7 +441,7 @@ stages:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_7_1_ARM:
         name: Build_v2_7_1_ARM
@@ -454,7 +454,7 @@ stages:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: "pytorch_2.7.1_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_9_0_ARM:
         name: Build_v2_9_0_ARM
@@ -467,7 +467,7 @@ stages:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: "pytorch_2.9.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_10_0_ARM:
         name: Build_v2_10_0_ARM
@@ -480,7 +480,7 @@ stages:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: "pytorch_2.10.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_11_0_ARM:
         name: Build_v2_11_0_ARM
@@ -493,7 +493,7 @@ stages:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: "pytorch_2.11.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_12_0_ARM:
         name: Build_v2_12_0_ARM
@@ -506,7 +506,7 @@ stages:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
 
   stage_3:
@@ -520,7 +520,7 @@ stages:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_master_ARM_02:
         name: UT_master_ARM_02
@@ -530,7 +530,7 @@ stages:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_7_1_ARM:
         name: UT_v2_7_1_ARM
@@ -540,7 +540,7 @@ stages:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: "pytorch_2.7.1_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_9_0_ARM:
         name: UT_v2_9_0_ARM
@@ -550,7 +550,7 @@ stages:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: "pytorch_2.9.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_10_0_ARM:
         name: UT_v2_10_0_ARM
@@ -560,7 +560,7 @@ stages:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: "pytorch_2.10.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_11_0_ARM:
         name: UT_v2_11_0_ARM
@@ -570,7 +570,7 @@ stages:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: "pytorch_2.11.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_12_0_ARM:
         name: UT_v2_12_0_ARM
@@ -580,4 +580,4 @@ stages:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
