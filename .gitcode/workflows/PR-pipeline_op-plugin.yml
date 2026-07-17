@@ -234,7 +234,8 @@ stages:
       # CodeCheck:
       #   name: CodeCheck
       #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   runs-on: [ dedicate-hosted, x64, 2xlarge ]
       #   container:
       #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
       #     options: --user root
@@ -256,7 +257,8 @@ stages:
       SCA:
         name: SCA
         # runs-on: [ self-hosted, arch=x64, os=euler ]
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -278,7 +280,8 @@ stages:
       Antipoison:
         name: Antipoison
         # runs-on: [ self-hosted, arch=x64, os=euler ]
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -298,8 +301,9 @@ stages:
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
-        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -329,7 +333,7 @@ stages:
         name: Only_doc_commit
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
