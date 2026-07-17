@@ -21,6 +21,18 @@ on:
       pytorch_branch:
         required: true
         type: string
+      runs_on_arch:
+        required: false
+        type: string
+        default: "x64"
+      runs_on_os:
+        required: false
+        type: string
+        default: "euler"
+      runs_on_spec:
+        required: false
+        type: string
+        default: "large"
       TEST_RANK:
         required: false
         type: string
@@ -34,7 +46,8 @@ jobs:
   JOB_UT:
     name: JOB_UT
     select: selected_by_default
-    runs-on: [ self-hosted, arch=arm64, os=euler ]
+    # runs-on: [ self-hosted, arch=arm64, os=euler ]
+    runs-on: [ dedicate-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
