@@ -3,7 +3,7 @@ name: PR-pipeline_op-plugin
 concurrency:
   max: 5
   exceed-action: QUEUE
-  enable: false
+  enable: true
   preemption:
     enable: true
     events: [mr_id]
