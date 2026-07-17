@@ -227,10 +227,10 @@ stages:
   #             timeout: '3600'
 
 
-  stage_1:
-    name: stage_1
-    select: selected_by_default
-    jobs:
+  # stage_1:
+  #   name: stage_1
+  #   select: selected_by_default
+  #   jobs:
       # CodeCheck:
       #   name: CodeCheck
       #   # runs-on: [ self-hosted, arch=x64, os=euler ]
@@ -325,34 +325,34 @@ stages:
       #       with:
       #         gc_token: ${{ secrets.ATOMGIT_TOKEN }}
 
-      Only_doc_commit:
-        name: Only_doc_commit
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, large ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        outputs:
-          build_skip: ${{ steps.set-skip.outputs.build_skip }}
-        steps:
-          - name: checkout
-            uses: checkout
-            with:
-              ref: refs/merge-requests/${{ env.pr_id_wwq }}/merge
-          - name: Only Doc Commit Check
-            id: only-doc-check
-            uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@main
-            with:
-              pr_id_wwq: ${{ env.pr_id_wwq }}
-              target_branch: ${{ atomgit.event.pull_request.base.ref }}
-              remote_url: ${{ env.REMOTE_URL }}
-          - name: set build skip flag
-            id: set-skip
-            run: |
-              BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
-              echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
-              echo "Only Doc Commit Check result: ${BUILD_SKIP}"
+      # Only_doc_commit:
+      #   name: Only_doc_commit
+      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
+      #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   runs-on: [ dedicate-hosted, x64, large ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #     options: --user root
+      #   outputs:
+      #     build_skip: ${{ steps.set-skip.outputs.build_skip }}
+      #   steps:
+      #     - name: checkout
+      #       uses: checkout
+      #       with:
+      #         ref: refs/merge-requests/${{ env.pr_id_wwq }}/merge
+      #     - name: Only Doc Commit Check
+      #       id: only-doc-check
+      #       uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@main
+      #       with:
+      #         pr_id_wwq: ${{ env.pr_id_wwq }}
+      #         target_branch: ${{ atomgit.event.pull_request.base.ref }}
+      #         remote_url: ${{ env.REMOTE_URL }}
+      #     - name: set build skip flag
+      #       id: set-skip
+      #       run: |
+      #         BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
+      #         echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
+      #         echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
   # stage_2:
@@ -526,7 +526,7 @@ stages:
     jobs:
       UT_master_ARM_01:
         name: UT_master_ARM_01
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
+        # if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "master"
