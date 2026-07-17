@@ -17,6 +17,8 @@
 #include <sys/stat.h>
 #include "op_api_common_base.h"
 #include "op_api_common.h"
+#include "torch_npu/csrc/framework/OpParamMaker.h"
+#include "torch_npu/csrc/core/npu/NPUFunctions.h"
 
 thread_local char g_hash_buf[g_hash_buf_size];
 thread_local int g_hash_offset = 0;
@@ -1607,11 +1609,6 @@ void MemcpyToBufImpl(const void* data, size_t size)
     g_hash_offset += size;
 }
 
-bool CacheParams::GetDeterministicStatus() const
-{
-    return deterministic_status_;
-}
-
 uint32_t CacheParams::GetAicNum() const
 {
     return aic_num_;
@@ -1625,8 +1622,6 @@ uint32_t CacheParams::GetAivNum() const
 CacheParams GetCacheParams()
 {
     CacheParams params;
-
-    params.deterministic_status_ = at::globalContext().deterministicAlgorithms();
 
     if (c10_npu::is_core_control_enabled()) {
         params.aic_num_ = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);
@@ -1701,16 +1696,6 @@ aclrtStream GetAclStream()
         c10_npu::UseStreamResInCurrentThread(acl_stream);
     }
     return acl_stream;
-}
-
-void SetExecConfig()
-{
-    at_npu::native::SetDeterministic();
-}
-
-void SetExecConfigV2(const CacheParams& cache_params)
-{
-    at_npu::native::SetDeterministicOps(cache_params.GetDeterministicStatus());
 }
 
 void* GetWorkSpaceAddr(
@@ -1825,11 +1810,9 @@ bool CheckAndInitFuncV2(const char* aclnn_api)
 
 void AddCacheConfigParams(aclrtStream acl_stream, const CacheParams& cache_params)
 {
-    bool deterministic_status = cache_params.GetDeterministicStatus();
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
 
-    add_param_to_buf(deterministic_status);
     if (aic_num != UINT32_MAX && aiv_num != UINT32_MAX) {
         add_param_to_buf(aic_num);
         add_param_to_buf(aiv_num);
@@ -1841,11 +1824,9 @@ void AddCacheConfigParams(aclrtStream acl_stream, const CacheParams& cache_param
 
 void AddCacheConfigParamsV2(aclrtStream acl_stream, const CacheParams& cache_params, const char* aclnn_api)
 {
-    bool deterministic_status = cache_params.GetDeterministicStatus();
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
 
-    add_param_to_buf_v2(deterministic_status);
     if (aic_num != UINT32_MAX && aiv_num != UINT32_MAX) {
         add_param_to_buf_v2(aic_num);
         add_param_to_buf_v2(aiv_num);
@@ -1886,7 +1867,7 @@ aclOpExecutor* GetCacheExecutor(uint64_t* workspace_size)
     return ptaGetExecCacheFunc(hashId, workspace_size);
 }
 
-bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase2)
+bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, const DeterministicSnapshot& snapshot)
 {
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = GetCacheExecutor(&workspace_size);
@@ -1901,7 +1882,9 @@ bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase
         workspace_addr = const_cast<void*>(workspace_tensor.storage().data());
     }
 
-    auto acl_call = [workspace_addr, workspace_size, acl_stream, executor, phrase2]()->int {
+    auto acl_call = [workspace_addr, workspace_size, acl_stream, executor, phrase2, snapshot]()->int {
+        std::lock_guard<std::mutex> lock(deterministic_launch_mutex);
+        ApplyDeterministicSnapshot(snapshot, true);
         OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(phrase2);
         auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
         NPU_CHECK_ERROR(api_ret, "call failed");
@@ -1913,7 +1896,7 @@ bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase
     return true;
 }
 
-bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, int* api_ret)
+bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, int* api_ret, const DeterministicSnapshot& snapshot)
 {
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = GetCacheExecutorV2(&workspace_size);
@@ -1927,7 +1910,8 @@ bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phra
         workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size, acl_stream);
         workspace_addr = const_cast<void *>(workspace_tensor.storage().data());
     }
-
+    std::lock_guard<std::mutex> lock(deterministic_launch_mutex);
+    ApplyDeterministicSnapshot(snapshot, true);
     OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(phrase2);
     *api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
     NPU_CHECK_ERROR(*api_ret, "call failed");
