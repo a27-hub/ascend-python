@@ -25,7 +25,7 @@ inputs:
   org_name:
     type: string
     description: "组织名称"
-    default: "wangwq129"
+    default: "ComputingActionTest"
   pr_id:
     type: string
     description: "PR ID"
@@ -253,77 +253,77 @@ stages:
       #         task_name: wwq-op-plugin-test
       #         branch: ${{ atomgit.event.pull_request.base.ref }}
 
-      # SCA:
-      #   name: SCA
-      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   container:
-      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-      #     options: --user root
-      #   steps:
-      #     - name: checkout
-      #       uses: checkout
-      #       with:
-      #         ref: refs/merge-requests/${{ env.pr_id }}/merge
-      #     - name: Run SCA PR Scan
-      #       id: sca-pr-scan
-      #       uses: sca-pr-scan
-      #       with:
-      #         scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
-      #         scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
-      #         pr-id: ${{ atomgit.event.pull_request.number }}
-      #         repository-name: ${{ atomgit.repository }}
-      #         project-name: FrameworkPTAdapter
+      SCA:
+        name: SCA
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+          - name: Run SCA PR Scan
+            id: sca-pr-scan
+            uses: sca-pr-scan
+            with:
+              scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
+              scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
+              pr-id: ${{ atomgit.event.pull_request.number }}
+              repository-name: ${{ atomgit.repository }}
+              project-name: FrameworkPTAdapter
 
-      # Antipoison:
-      #   name: Antipoison
-      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   container:
-      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-      #     options: --user root
-      #   steps:
-      #     - name: checkout
-      #       uses: checkout
-      #       with:
-      #         ref: refs/merge-requests/${{ env.pr_id }}/merge
-      #     - name: Antipoison
-      #       run: |
-      #         git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-      #         pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
-      #         wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
-      #         unzip -q ApiGateway-python-sdk-2.0.7.zip
-      #         cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-      #         python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+      Antipoison:
+        name: Antipoison
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+          - name: Antipoison
+            run: |
+              git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+              pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
+              wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
+              unzip -q ApiGateway-python-sdk-2.0.7.zip
+              cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
+              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
-      # CodeCheck_pre_commit:
-      #   name: CodeCheck_pre_commit
-      #   runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   container:
-      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-      #     options: --user root
-      #   steps:
-      #     - name: checkout
-      #       uses: checkout
-      #       with:
-      #         ref: refs/merge-requests/${{ env.pr_id }}/merge
-      #     - name: setup-python
-      #       uses: setup-python
-      #     - name: setup-python310
-      #       run: |
-      #         ln -sf /usr/local/bin/python3.10 /usr/bin/python
-      #         python --version
-      #     - name: install gitleaks
-      #       run: |
-      #         cd ${ATOMGIT_WORKSPACE}
-      #         wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
-      #         chmod +x gitleaks
-      #         cd -
-      #     - name: pre-commit
-      #       uses: openlibing-pre-commit-action
-      #       with:
-      #         gc_token: ${{ secrets.ATOMGIT_TOKEN }}
+      CodeCheck_pre_commit:
+        name: CodeCheck_pre_commit
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+          - name: setup-python
+            uses: setup-python
+          - name: setup-python310
+            run: |
+              ln -sf /usr/local/bin/python3.10 /usr/bin/python
+              python --version
+          - name: install gitleaks
+            run: |
+              cd ${ATOMGIT_WORKSPACE}
+              wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
+              chmod +x gitleaks
+              cd -
+          - name: pre-commit
+            uses: openlibing-pre-commit-action
+            with:
+              gc_token: ${{ secrets.ATOMGIT_TOKEN }}
 
       Only_doc_commit:
         name: Only_doc_commit
