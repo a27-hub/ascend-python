@@ -19,15 +19,13 @@
 
 namespace acl_op {
 
-at::Tensor embedding_symint(
-    const at::Tensor& weight,
-    const at::Tensor& indices,
-    c10::SymInt padding_idx,
-    bool scale_grad_by_freq,
-    bool sparse) {
+at::Tensor embedding_symint(const at::Tensor &weight, const at::Tensor &indices, c10::SymInt padding_idx,
+    bool scale_grad_by_freq, bool sparse) {
     TORCH_CHECK(weight.device() == indices.device(),
         "Expected all tensors to be on the same device, but "
-        "found at least two devices, ", weight.device(), " and ", indices.device(), "! "
+        "found at least two devices, ",
+        weight.device(), " and ", indices.device(),
+        "! "
         "(when checking argument for argument indices in method acl_op::embedding_symint)",
         OPS_ERROR(ErrCode::PARAM));
     return embedding_common_nocheck(weight, indices);

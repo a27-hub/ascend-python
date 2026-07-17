@@ -21,9 +21,8 @@
 namespace op_api {
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
-void _split_and_exec_npu_cmd_lerp_scalar(at::TensorList &tensors1, at::TensorList &tensors2,
-    const at::Scalar &weight, at::TensorList &result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_lerp_scalar(at::TensorList &tensors1, at::TensorList &tensors2, const at::Scalar &weight,
+    at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 24 : 16;
     size_t loop_time = tensor_count / max_tensor_count;
@@ -50,14 +49,12 @@ void _split_and_exec_npu_cmd_lerp_scalar(at::TensorList &tensors1, at::TensorLis
     }
 }
 
-void exec_npu_cmd_(at::TensorList tensors1, at::TensorList tensors2, const at::Scalar& weight)
-{
+void exec_npu_cmd_(at::TensorList tensors1, at::TensorList tensors2, const at::Scalar &weight) {
     // dispatch hostAPI
     _split_and_exec_npu_cmd_lerp_scalar(tensors1, tensors2, weight, tensors1, true);
 }
 
-std::vector<at::Tensor> exec_npu_cmd(at::TensorList tensors1, at::TensorList tensors2, const at::Scalar& weight)
-{
+std::vector<at::Tensor> exec_npu_cmd(at::TensorList tensors1, at::TensorList tensors2, const at::Scalar &weight) {
     auto scalarType = tensors1[0].scalar_type();
     // construct the output tensorlist of the NPU
     std::vector<at::Tensor> result;
@@ -75,13 +72,12 @@ std::vector<at::Tensor> exec_npu_cmd(at::TensorList tensors1, at::TensorList ten
     return result;
 }
 
-void _foreach_lerp_(const at::TensorList tensors1, const at::TensorList tensors2, const at::Scalar& weight)
-{
-    DO_COMPATIBILITY(aclnnForeachLerpScalar,
-                     at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight));
+void _foreach_lerp_(const at::TensorList tensors1, const at::TensorList tensors2, const at::Scalar &weight) {
+    DO_COMPATIBILITY(
+        aclnnForeachLerpScalar, at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight);
     }
@@ -93,19 +89,17 @@ void _foreach_lerp_(const at::TensorList tensors1, const at::TensorList tensors2
     exec_npu_cmd_(tensors1, tensors2, weight);
 }
 
-std::vector<at::Tensor> _foreach_lerp(const at::TensorList tensors1,
-                                      const at::TensorList tensors2,
-                                      const at::Scalar& weight)
-{
-    DO_COMPATIBILITY(aclnnForeachLerpScalar,
-                     at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight));
+std::vector<at::Tensor> _foreach_lerp(
+    const at::TensorList tensors1, const at::TensorList tensors2, const at::Scalar &weight) {
+    DO_COMPATIBILITY(
+        aclnnForeachLerpScalar, at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight);
     }
-    
+
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
     if (!at::native::can_use_fast_route({tensors1, tensors2}, weight)) {
         return at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight);

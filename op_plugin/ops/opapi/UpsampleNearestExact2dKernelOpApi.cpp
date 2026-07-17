@@ -20,16 +20,14 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor &upsample_nearest_exact2d_out_slow(const at::Tensor &self, at::IntArrayRef output_size,
-    c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result)
-{
+    c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result) {
     at::Tensor result_slow = at::_upsample_nearest_exact2d(self.cpu(), output_size, scales_h, scales_w);
     result.copy_(result_slow);
     return result;
 }
 
 at::Tensor upsample_nearest_exact2d_slow(const at::Tensor &self, at::IntArrayRef output_size,
-    c10::optional<double> scales_h, c10::optional<double> scales_w)
-{
+    c10::optional<double> scales_h, c10::optional<double> scales_w) {
     auto outputSize = op_infer::upsample_nearest_exact2d_output_size_npu(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options());
 
@@ -39,10 +37,9 @@ at::Tensor upsample_nearest_exact2d_slow(const at::Tensor &self, at::IntArrayRef
 }
 
 at::Tensor &_upsample_nearest_exact2d_out(const at::Tensor &self, at::IntArrayRef output_size,
-    c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result)
-{
-    DO_COMPATIBILITY(aclnnUpsampleNearestExact2d,
-        upsample_nearest_exact2d_out_slow(self, output_size, scales_h, scales_w, result));
+    c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result) {
+    DO_COMPATIBILITY(
+        aclnnUpsampleNearestExact2d, upsample_nearest_exact2d_out_slow(self, output_size, scales_h, scales_w, result));
 
     auto outputSize = op_infer::upsample_nearest_exact2d_output_size_npu(self, output_size);
     npu_preparation::check_tensor({self}, result, self, outputSize);
@@ -53,8 +50,8 @@ at::Tensor &_upsample_nearest_exact2d_out(const at::Tensor &self, at::IntArrayRe
     return result;
 }
 
-at::Tensor _upsample_nearest_exact2d(const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales_h, c10::optional<double> scales_w)
-{
+at::Tensor _upsample_nearest_exact2d(const at::Tensor &self, at::IntArrayRef output_size,
+    c10::optional<double> scales_h, c10::optional<double> scales_w) {
     DO_COMPATIBILITY(aclnnUpsampleNearestExact2d, upsample_nearest_exact2d_slow(self, output_size, scales_h, scales_w));
 
     double scalesH = scales_h.value_or(0);
@@ -62,8 +59,8 @@ at::Tensor _upsample_nearest_exact2d(const at::Tensor &self, at::IntArrayRef out
     auto outputSize = op_infer::upsample_nearest_exact2d_output_size_npu(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options());
 
-    EXEC_NPU_CMD(aclnnUpsampleNearestExact2d, self, output_size, scalesH, scalesW,  result);
+    EXEC_NPU_CMD(aclnnUpsampleNearestExact2d, self, output_size, scalesH, scalesW, result);
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

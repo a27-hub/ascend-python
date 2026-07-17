@@ -18,14 +18,13 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
 
-
 namespace op_api {
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
 using npu_preparation = at_npu::native::OpPreparation;
 constexpr size_t MAX_TENSOR_COUNT = 256;
 
-void _split_and_exec_npu_cmd_pow(at::TensorList& tensors1, at::TensorList& tensors2, at::TensorList& result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_pow(
+    at::TensorList &tensors1, at::TensorList &tensors2, at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 24 : 16;
 
@@ -50,9 +49,8 @@ void _split_and_exec_npu_cmd_pow(at::TensorList& tensors1, at::TensorList& tenso
     }
 }
 
-void _split_and_exec_npu_cmd_pow_scalarlist(at::TensorList &tensors1, at::ArrayRef<at::Scalar> scalars,
-                                            at::TensorList &result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_pow_scalarlist(
+    at::TensorList &tensors1, at::ArrayRef<at::Scalar> scalars, at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 24 : 16;
     size_t loop_time = tensor_count / max_tensor_count;
@@ -76,12 +74,11 @@ void _split_and_exec_npu_cmd_pow_scalarlist(at::TensorList &tensors1, at::ArrayR
     }
 }
 
-std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::TensorList exponent)
-{
+std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::TensorList exponent) {
     DO_COMPATIBILITY(aclnnForeachPowList, at::native::foreach_tensor_pow_list_kernel_slow(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_pow_list_kernel_slow(self, exponent);
     }
@@ -96,8 +93,8 @@ std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::TensorList exponen
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size,
-                                                                      tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 
@@ -106,12 +103,11 @@ std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::TensorList exponen
     return result;
 }
 
-void _foreach_pow_(at::TensorList self, at::TensorList exponent)
-{
+void _foreach_pow_(at::TensorList self, at::TensorList exponent) {
     DO_COMPATIBILITY(aclnnForeachPowList, at::native::foreach_tensor_pow_list_kernel_slow_(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_pow_list_kernel_slow_(self, exponent);
     }
@@ -125,12 +121,11 @@ void _foreach_pow_(at::TensorList self, at::TensorList exponent)
     return;
 }
 
-std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::ArrayRef<at::Scalar> exponent)
-{
+std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::ArrayRef<at::Scalar> exponent) {
     DO_COMPATIBILITY(aclnnForeachPowScalarList, at::native::foreach_tensor_pow_scalarlist_kernel_slow(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_pow_scalarlist_kernel_slow(self, exponent);
     }
@@ -144,20 +139,19 @@ std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::ArrayRef<at::Scala
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size,
-                                                                      tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_pow_scalarlist(self, exponent, result_, false);
     return result;
 }
 
-void _foreach_pow_(at::TensorList self, at::ArrayRef<at::Scalar> exponent)
-{
+void _foreach_pow_(at::TensorList self, at::ArrayRef<at::Scalar> exponent) {
     DO_COMPATIBILITY(aclnnForeachPowScalarList, at::native::foreach_tensor_pow_scalarlist_kernel_slow_(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_pow_scalarlist_kernel_slow_(self, exponent);
     }
@@ -172,4 +166,4 @@ void _foreach_pow_(at::TensorList self, at::ArrayRef<at::Scalar> exponent)
 }
 #endif
 
-}  // namespace op_api
+} // namespace op_api

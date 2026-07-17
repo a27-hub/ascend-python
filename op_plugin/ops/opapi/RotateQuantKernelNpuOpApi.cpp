@@ -53,11 +53,9 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
         "Param (axis) is out of input dimension range" + OPS_ERROR(ErrCode::PARAM));
 
     bool is_int4_packed = (dst_dtype_val == DTYPE_NUM_FOR_QUINT4X2);
-    aclDataType dst_acl_dtype = is_int4_packed ? aclDataType::ACL_DT_UNDEFINED
-                                               : c10_npu::GetAclDataType(dst_dtype_val);
+    aclDataType dst_acl_dtype = is_int4_packed ? aclDataType::ACL_DT_UNDEFINED : c10_npu::GetAclDataType(dst_dtype_val);
     bool is_fp4 = (dst_acl_dtype == aclDataType::ACL_FLOAT4_E2M1);
-    bool is_mx_type = (dst_acl_dtype == aclDataType::ACL_FLOAT4_E2M1 ||
-        dst_acl_dtype == aclDataType::ACL_FLOAT8_E5M2 ||
+    bool is_mx_type = (dst_acl_dtype == aclDataType::ACL_FLOAT4_E2M1 || dst_acl_dtype == aclDataType::ACL_FLOAT8_E5M2 ||
         dst_acl_dtype == aclDataType::ACL_FLOAT8_E4M3FN);
 
     ASCEND_LOGI("[npu_rotate_quant]: Getting aclTensor y dtype by Parameter(dst_dtype): %ld", dst_dtype_val);

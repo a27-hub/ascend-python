@@ -19,13 +19,8 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor zeros_common_nocheck(
-    at::IntArrayRef size,
-    c10::optional<at::ScalarType> dtype_opt,
-    c10::optional<at::Layout> layout_opt,
-    c10::optional<at::Device> device_opt,
-    c10::optional<bool> pin_memory_opt)
-{
+at::Tensor zeros_common_nocheck(at::IntArrayRef size, c10::optional<at::ScalarType> dtype_opt,
+    c10::optional<at::Layout> layout_opt, c10::optional<at::Device> device_opt, c10::optional<bool> pin_memory_opt) {
     at::TensorOptions option =
         option.dtype(dtype_opt).layout(layout_opt).device(device_opt).pinned_memory(pin_memory_opt);
     at::Tensor result = npu_preparation::apply_tensor_with_format(size, option, ACL_FORMAT_ND);

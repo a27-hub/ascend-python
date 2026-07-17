@@ -20,15 +20,13 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& fill_(at::Tensor& self, const at::Scalar& value)
-{
+at::Tensor &fill_(at::Tensor &self, const at::Scalar &value) {
     DO_COMPATIBILITY(aclnnInplaceFillScalar, acl_op::fill_(self, value));
     EXEC_NPU_CMD(aclnnInplaceFillScalar, self, value);
     return self;
 }
 
-at::Tensor& fill_(at::Tensor& self, const at::Tensor& other)
-{
+at::Tensor &fill_(at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnInplaceFillScalar, acl_op::fill_(self, other));
     DO_COMPATIBILITY(aclnnInplaceFillTensor, acl_op::fill_(self, other));
 

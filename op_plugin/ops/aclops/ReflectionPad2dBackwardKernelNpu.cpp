@@ -22,8 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-bool check_padding(at::IntArrayRef padding)
-{
+bool check_padding(at::IntArrayRef padding) {
     for (uint64_t i = 0; i < padding.size(); i++) {
         if (padding[i] != 0) {
             return false;
@@ -32,9 +31,8 @@ bool check_padding(at::IntArrayRef padding)
     return true;
 }
 
-at::Tensor &reflection_pad2d_backward_out_npu_nocheck(const at::Tensor &grad_output, const at::Tensor &input,
-                                                      at::IntArrayRef padding, at::Tensor &grad_input)
-{
+at::Tensor &reflection_pad2d_backward_out_npu_nocheck(
+    const at::Tensor &grad_output, const at::Tensor &input, at::IntArrayRef padding, at::Tensor &grad_input) {
     c10::SmallVector<int64_t, N> vector_int;
     c10::SmallVector<int64_t, N> paddings_vector = op_infer::array_to_small_vector(padding);
     at::Tensor input_cp = input;
@@ -66,9 +64,8 @@ at::Tensor &reflection_pad2d_backward_out_npu_nocheck(const at::Tensor &grad_out
 }
 } // namespace
 
-at::Tensor &reflection_pad2d_backward_out(const at::Tensor &grad_output, const at::Tensor &self,
-                                          at::IntArrayRef padding, at::Tensor &grad_input)
-{
+at::Tensor &reflection_pad2d_backward_out(
+    const at::Tensor &grad_output, const at::Tensor &self, at::IntArrayRef padding, at::Tensor &grad_input) {
     if (check_padding(padding)) {
         grad_input.copy_(grad_output);
         return grad_input;
@@ -85,8 +82,7 @@ at::Tensor &reflection_pad2d_backward_out(const at::Tensor &grad_output, const a
     return grad_input;
 }
 
-at::Tensor reflection_pad2d_backward(const at::Tensor &grad_output, const at::Tensor &self, at::IntArrayRef padding)
-{
+at::Tensor reflection_pad2d_backward(const at::Tensor &grad_output, const at::Tensor &self, at::IntArrayRef padding) {
     at::Tensor grad_input = npu_preparation::apply_tensor(self);
     if (check_padding(padding)) {
         grad_input.copy_(grad_output);

@@ -22,20 +22,19 @@
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
 // Helper functions for ceil_div and round_up
-template <typename T>
-inline T ceil_div(T a, T b) {
-    if (b == 0) return T{};
+template <typename T> inline T ceil_div(T a, T b) {
+    if (b == 0) {
+        return T{};
+    }
     return (a + b - 1) / b;
 }
 
-template <typename T>
-inline T round_up(T value, T alignment) {
+template <typename T> inline T round_up(T value, T alignment) {
     if (alignment == 0) {
         return value;
     }
     return (value + alignment - 1) / alignment * alignment;
 }
-
 
 namespace op_api {
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
@@ -46,8 +45,7 @@ static const size_t A8W4_GROUP_DIM = 3;
 static const size_t A8W4_INPUT_DIM = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 
-bool static is_transpose_last_two_dims(const at::Tensor &tensor)
-{
+bool static is_transpose_last_two_dims(const at::Tensor &tensor) {
     if (tensor.dim() < 2 || tensor.dim() > 6) {
         return false;
     }
@@ -69,20 +67,18 @@ bool static is_transpose_last_two_dims(const at::Tensor &tensor)
     return false;
 }
 
-static bool is_transpose_certain_two_dims(const at::Tensor &tensor, int64_t dim)
-{
+static bool is_transpose_certain_two_dims(const at::Tensor &tensor, int64_t dim) {
     return tensor.stride(dim + 1) == tensor.stride(dim) * tensor.size(dim);
 }
 
-static bool is_x_scale_same_transpose(const at::Tensor &x, const at::Tensor &scale, int64_t dim_x, int64_t dim_scale)
-{
+static bool is_x_scale_same_transpose(const at::Tensor &x, const at::Tensor &scale, int64_t dim_x, int64_t dim_scale) {
     if (x.dim() < dim_x + 2 || scale.dim() < dim_scale + 2) { // make sure dims after the start dim are no less than 2
         return true;
     }
-    if (x.size(dim_x) == 1 && x.size(dim_x + 1)== 1) {
+    if (x.size(dim_x) == 1 && x.size(dim_x + 1) == 1) {
         return true;
     }
-    if (scale.size(dim_scale) == 1 && scale.size(dim_scale + 1)== 1) {
+    if (scale.size(dim_scale) == 1 && scale.size(dim_scale + 1) == 1) {
         return true;
     }
     bool x_trans = is_transpose_certain_two_dims(x, dim_x);
@@ -92,17 +88,13 @@ static bool is_x_scale_same_transpose(const at::Tensor &x, const at::Tensor &sca
     }
     return false;
 }
-static bool is_nz_format(const at::Tensor& x2)
-{
-    const torch_npu::NPUStorageDesc &tensor_desc =
-        torch_npu::NPUBridge::GetNpuStorageImpl(x2)->npu_desc_;
-    return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ ||
-        tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_4 ||
+static bool is_nz_format(const at::Tensor &x2) {
+    const torch_npu::NPUStorageDesc &tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(x2)->npu_desc_;
+    return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ || tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_4 ||
         tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_16;
 }
 
-static uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2, std::vector<uint64_t> &batch_record)
-{
+static uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2, std::vector<uint64_t> &batch_record) {
     TORCH_CHECK(at_npu::native::FormatHelper::IsBaseFormatType(x2) || is_nz_format(x2),
         "x2 should be in the original image format or nz format, but it is ",
         npu_preparation::get_tensor_npu_format(x2), OPS_ERROR(ErrCode::PARAM));
@@ -117,8 +109,8 @@ static uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2
         auto short_dim = i < vaild_offset ? 1 : shape_short.size(i - vaild_offset);
         auto long_dim = shape_long.size(i);
         TORCH_CHECK(!(short_dim > 1 && long_dim > 1 && short_dim != long_dim),
-            "the x1 shape and x2 shape not supported for broadcast, the short_dim is ",
-            short_dim, " and  the long_dim is ", long_dim, OPS_ERROR(ErrCode::PARAM));
+            "the x1 shape and x2 shape not supported for broadcast, the short_dim is ", short_dim,
+            " and  the long_dim is ", long_dim, OPS_ERROR(ErrCode::PARAM));
         uint64_t cur_batch_value = static_cast<uint64_t>(std::max(short_dim, long_dim));
         batch_val = batch_val * cur_batch_value;
         batch_record.push_back(cur_batch_value);
@@ -126,21 +118,19 @@ static uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2
     return batch_val;
 }
 
-static int64_t check_and_get_groups(at::IntArrayRef group_size_list)
-{
+static int64_t check_and_get_groups(at::IntArrayRef group_size_list) {
     int64_t groups = 0;
     if (group_size_list.empty()) {
         return groups;
     }
     size_t group_dim = group_size_list.size();
-    TORCH_CHECK(group_dim == A8W4_GROUP_DIM, "group_sizes only support input with three elements, but got ",
-        group_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(group_dim == A8W4_GROUP_DIM, "group_sizes only support input with three elements, but got ", group_dim,
+        OPS_ERROR(ErrCode::PARAM));
     int64_t group_m = static_cast<int64_t>(group_size_list[0]);
     int64_t group_n = static_cast<int64_t>(group_size_list[1]);
     int64_t group_k = static_cast<int64_t>(group_size_list[2]);
-    bool invalid_group_param = ((group_m <= GROUP_MAX && group_m >= 0)
-        && (group_n <= GROUP_MAX && group_n >= 0)
-        && (group_k <= GROUP_MAX && group_k >= 0));
+    bool invalid_group_param = ((group_m <= GROUP_MAX && group_m >= 0) && (group_n <= GROUP_MAX && group_n >= 0) &&
+        (group_k <= GROUP_MAX && group_k >= 0));
     TORCH_CHECK(invalid_group_param, "group param value must conform to range [0, 65535]", OPS_ERROR(ErrCode::VALUE));
     groups = static_cast<int64_t>((static_cast<uint64_t>(group_m) << 32) + (static_cast<uint64_t>(group_n) << 16) +
         (static_cast<uint64_t>(group_k)));
@@ -148,15 +138,15 @@ static int64_t check_and_get_groups(at::IntArrayRef group_size_list)
 }
 
 static const std::map<c10::ScalarType, int64_t> SCALAR_TO_INT_TYPE_MAP = {
-    {c10::ScalarType::Char, static_cast<int64_t>(at::kChar)},                    /**< int8 */
-    {c10::ScalarType::Int, static_cast<int64_t>(at::kInt)},                      /**< int32 */
-    {c10::ScalarType::BFloat16, static_cast<int64_t>(at::kBFloat16)},            /**< bfp16 */
-    {c10::ScalarType::Half, static_cast<int64_t>(at::kHalf)},                    /**< fp16 */
-    {c10::ScalarType::Float, static_cast<int64_t>(at::kFloat)},                  /**< fp32 */
+    {c10::ScalarType::Char, static_cast<int64_t>(at::kChar)}, /**< int8 */
+    {c10::ScalarType::Int, static_cast<int64_t>(at::kInt)}, /**< int32 */
+    {c10::ScalarType::BFloat16, static_cast<int64_t>(at::kBFloat16)}, /**< bfp16 */
+    {c10::ScalarType::Half, static_cast<int64_t>(at::kHalf)}, /**< fp16 */
+    {c10::ScalarType::Float, static_cast<int64_t>(at::kFloat)}, /**< fp32 */
 
-    {c10::ScalarType::Float8_e4m3fn, static_cast<int64_t>(at::kFloat8_e4m3fn)},  /**< fp8e4m3 */
-    {c10::ScalarType::Float8_e5m2, static_cast<int64_t>(at::kFloat8_e5m2)},      /**< fp8e5m2 */
-    {c10::ScalarType::Byte, static_cast<int64_t>(c10_npu::DType::HIFLOAT8)}      /**< hif8 */
+    {c10::ScalarType::Float8_e4m3fn, static_cast<int64_t>(at::kFloat8_e4m3fn)}, /**< fp8e4m3 */
+    {c10::ScalarType::Float8_e5m2, static_cast<int64_t>(at::kFloat8_e5m2)}, /**< fp8e5m2 */
+    {c10::ScalarType::Byte, static_cast<int64_t>(c10_npu::DType::HIFLOAT8)} /**< hif8 */
 };
 
 static c10::optional<int64_t> ToIntType(const std::optional<c10::ScalarType> &torchType) {
@@ -170,15 +160,16 @@ static c10::optional<int64_t> ToIntType(const std::optional<c10::ScalarType> &to
     return int_type;
 }
 
-using acceptance_fn = std::function<bool(c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&, c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&)>;
+using acceptance_fn = std::function<bool(c10::ScalarType, std::vector<ScalingType> &, c10::ArrayRef<at::Tensor> &,
+    c10::ScalarType, std::vector<ScalingType> &, c10::ArrayRef<at::Tensor> &)>;
 
 // Namespace for scaled_blas check functions
 namespace scaled_blas {
 
 // Check deepseek recipe (BlockWise 1x128 and 128x128 scaling)
-bool check_deepseek_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-    c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale,
-    ScalingType expected_a_type, ScalingType expected_b_type) {
+bool check_deepseek_recipe(c10::ScalarType a_type, std::vector<ScalingType> &a_recipe,
+    c10::ArrayRef<at::Tensor> &a_scale, c10::ScalarType b_type, std::vector<ScalingType> &b_recipe,
+    c10::ArrayRef<at::Tensor> &b_scale, ScalingType expected_a_type, ScalingType expected_b_type) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
     }
@@ -195,8 +186,9 @@ bool check_deepseek_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_r
 }
 
 // Check mxfp8 recipe
-static bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-    c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
+static bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType> &a_recipe,
+    c10::ArrayRef<at::Tensor> &a_scale, c10::ScalarType b_type, std::vector<ScalingType> &b_recipe,
+    c10::ArrayRef<at::Tensor> &b_scale) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
     }
@@ -213,98 +205,93 @@ static bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>&
 }
 
 // Check tensorwise recipe
-bool check_tensorwise_recipe(
-    c10::ScalarType type_a,
-    std::vector<ScalingType>& recipe_a,
-    c10::ArrayRef<at::Tensor>& scales_a,
-    c10::ScalarType type_b,
-    std::vector<ScalingType>& recipe_b,
-    c10::ArrayRef<at::Tensor>& scales_b) {
-  // both types must be fp8
-  if (type_a != c10::ScalarType::Float8_e4m3fn && type_a != c10::ScalarType::Float8_e5m2) {
-    return false;
-  }
-  if (type_b != c10::ScalarType::Float8_e4m3fn && type_b != c10::ScalarType::Float8_e5m2) {
-    return false;
-  }
+bool check_tensorwise_recipe(c10::ScalarType type_a, std::vector<ScalingType> &recipe_a,
+    c10::ArrayRef<at::Tensor> &scales_a, c10::ScalarType type_b, std::vector<ScalingType> &recipe_b,
+    c10::ArrayRef<at::Tensor> &scales_b) {
+    // both types must be fp8
+    if (type_a != c10::ScalarType::Float8_e4m3fn && type_a != c10::ScalarType::Float8_e5m2) {
+        return false;
+    }
+    if (type_b != c10::ScalarType::Float8_e4m3fn && type_b != c10::ScalarType::Float8_e5m2) {
+        return false;
+    }
 
-  // 1 scale each, {Tensorwise, float}
-  if (scales_a.size() != 1 || recipe_a.size() != 1 || scales_b.size() != 1 || recipe_b.size() != 1) {
-    return false;
-  }
-  // Need {Tensorwise, e8m0} for A & B
-  if (recipe_a[0] != ScalingType::TensorWise) return false;
-  if (scales_a[0].scalar_type() != c10::ScalarType::Float) return false;
-  if (recipe_b[0] != ScalingType::TensorWise) return false;
-  if (scales_b[0].scalar_type() != c10::ScalarType::Float) return false;
+    // 1 scale each, {Tensorwise, float}
+    if (scales_a.size() != 1 || recipe_a.size() != 1 || scales_b.size() != 1 || recipe_b.size() != 1) {
+        return false;
+    }
+    // Need {Tensorwise, e8m0} for A & B
+    if (recipe_a[0] != ScalingType::TensorWise) {
+        return false;
+    }
+    if (scales_a[0].scalar_type() != c10::ScalarType::Float) {
+        return false;
+    }
+    if (recipe_b[0] != ScalingType::TensorWise) {
+        return false;
+    }
+    if (scales_b[0].scalar_type() != c10::ScalarType::Float) {
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
 // Check rowwise recipe
-static bool check_rowwise_recipe(
-    c10::ScalarType type_a,
-    std::vector<ScalingType>& recipe_a,
-    c10::ArrayRef<at::Tensor>& scales_a,
-    c10::ScalarType type_b,
-    std::vector<ScalingType>& recipe_b,
-    c10::ArrayRef<at::Tensor>& scales_b) {
-  // both types must be fp8
-  if (type_a != c10::ScalarType::Float8_e4m3fn && type_a != c10::ScalarType::Float8_e5m2) {
-    return false;
-  }
-  if (type_b != c10::ScalarType::Float8_e4m3fn && type_b != c10::ScalarType::Float8_e5m2) {
-    return false;
-  }
+static bool check_rowwise_recipe(c10::ScalarType type_a, std::vector<ScalingType> &recipe_a,
+    c10::ArrayRef<at::Tensor> &scales_a, c10::ScalarType type_b, std::vector<ScalingType> &recipe_b,
+    c10::ArrayRef<at::Tensor> &scales_b) {
+    // both types must be fp8
+    if (type_a != c10::ScalarType::Float8_e4m3fn && type_a != c10::ScalarType::Float8_e5m2) {
+        return false;
+    }
+    if (type_b != c10::ScalarType::Float8_e4m3fn && type_b != c10::ScalarType::Float8_e5m2) {
+        return false;
+    }
 
-  // 1 scale each, {RowWise, float}
-  if (scales_a.size() != 1 || recipe_a.size() != 1 || scales_b.size() != 1 || recipe_b.size() != 1) {
-    return false;
-  }
+    // 1 scale each, {RowWise, float}
+    if (scales_a.size() != 1 || recipe_a.size() != 1 || scales_b.size() != 1 || recipe_b.size() != 1) {
+        return false;
+    }
 
-  // Need {RowWise, fp32} for A & B
-  if (recipe_a[0] != ScalingType::RowWise) return false;
-  if (scales_a[0].scalar_type() != c10::ScalarType::Float) return false;
-  if (recipe_b[0] != ScalingType::RowWise) return false;
-  if (scales_b[0].scalar_type() != c10::ScalarType::Float) return false;
+    // Need {RowWise, fp32} for A & B
+    if (recipe_a[0] != ScalingType::RowWise) {
+        return false;
+    }
+    if (scales_a[0].scalar_type() != c10::ScalarType::Float) {
+        return false;
+    }
+    if (recipe_b[0] != ScalingType::RowWise) {
+        return false;
+    }
+    if (scales_b[0].scalar_type() != c10::ScalarType::Float) {
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
 } // namespace scaled_blas
 
 // Wrapper for check_deepseek_recipe that captures expected ScalingTypes
-std::function<bool(c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&, c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&)>
+std::function<bool(c10::ScalarType, std::vector<ScalingType> &, c10::ArrayRef<at::Tensor> &, c10::ScalarType,
+    std::vector<ScalingType> &, c10::ArrayRef<at::Tensor> &)>
 make_deepseek_checker(ScalingType expected_a, ScalingType expected_b) {
-    return [expected_a, expected_b](c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-               c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
-        return scaled_blas::check_deepseek_recipe(a_type, a_recipe, a_scale, b_type, b_recipe, b_scale, expected_a, expected_b);
+    return [expected_a, expected_b](c10::ScalarType a_type, std::vector<ScalingType> &a_recipe,
+               c10::ArrayRef<at::Tensor> &a_scale, c10::ScalarType b_type, std::vector<ScalingType> &b_recipe,
+               c10::ArrayRef<at::Tensor> &b_scale) {
+        return scaled_blas::check_deepseek_recipe(
+            a_type, a_recipe, a_scale, b_type, b_recipe, b_scale, expected_a, expected_b);
     };
 }
 
 using KernelDispatchItem = std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>;
-const std::array<KernelDispatchItem, 4> scale_kernel_dispatch_table = {{
-    {
-        "tensorwise_tensorwise",
-        scaled_blas::check_tensorwise_recipe,
-        ScaledGemmImplementation::TENSORWISE_TENSORWISE
-    },
-    {
-        "rowwise_rowwise",
-        scaled_blas::check_rowwise_recipe,
-        ScaledGemmImplementation::ROWWISE_ROWWISE
-    },
-    {
-        "deepseek_block_1x128_1x128",
-        make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise1x128),
-        ScaledGemmImplementation::BLOCK_1x128_1x128
-    },
-    {
-        "mxfp8_double_channel",
-        scaled_blas::check_mxfp8_recipe,
-        ScaledGemmImplementation::MXFP8_MXFP8
-    }
-}};
+const std::array<KernelDispatchItem, 4> scale_kernel_dispatch_table = {
+    {{"tensorwise_tensorwise", scaled_blas::check_tensorwise_recipe, ScaledGemmImplementation::TENSORWISE_TENSORWISE},
+        {"rowwise_rowwise", scaled_blas::check_rowwise_recipe, ScaledGemmImplementation::ROWWISE_ROWWISE},
+        {"deepseek_block_1x128_1x128", make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise1x128),
+            ScaledGemmImplementation::BLOCK_1x128_1x128},
+        {"mxfp8_double_channel", scaled_blas::check_mxfp8_recipe, ScaledGemmImplementation::MXFP8_MXFP8}}};
 
 // Signature note: scale_a / scale_b use at::ITensorListRef so this impl matches
 // the wrapper generated by torch_npu's codegen on PyTorch >= 2.14, where
@@ -313,18 +300,11 @@ const std::array<KernelDispatchItem, 4> scale_kernel_dispatch_table = {{
 // const at::ITensorListRef&. IListRef is implicitly constructible from
 // ArrayRef, so on 2.13 the wrapper still passes at::TensorList and it converts
 // transparently -- no version gating needed. See docs/issue_scaled_mm_v2_structured.md.
-at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
-    const at::ITensorListRef& scale_a_ilist,
-    at::IntArrayRef scale_recipe_a,
-    at::IntArrayRef swizzle_a,
-    const at::ITensorListRef& scale_b_ilist,
-    at::IntArrayRef scale_recipe_b,
-    at::IntArrayRef swizzle_b,
-    const std::optional<at::Tensor>& bias,
+at::Tensor _scaled_mm_v2(const at::Tensor &mat_a, const at::Tensor &mat_b, const at::ITensorListRef &scale_a_ilist,
+    at::IntArrayRef scale_recipe_a, at::IntArrayRef swizzle_a, const at::ITensorListRef &scale_b_ilist,
+    at::IntArrayRef scale_recipe_b, at::IntArrayRef swizzle_b, const std::optional<at::Tensor> &bias,
     const std::optional<c10::ScalarType> out_dtype, // 当前cpp中不支持float8
-    at::IntArrayRef contraction_dim,
-    bool use_fast_accum)
-{
+    at::IntArrayRef contraction_dim, bool use_fast_accum) {
     // Materialize the ilist inputs into local TensorList (ArrayRef<Tensor>)
     // views so the rest of the function body -- which does .empty() / .size()
     // and scale_a[i] indexing -- needs no further change. Cost: shallow
@@ -342,25 +322,24 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
         "_scaled_mm is supported only on the Ascend950 platform and after.", OPS_ERROR(ErrCode::PARAM));
 
     // Check data types: mat_a and mat_b must be float8 type
-    TORCH_CHECK(mat_a.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
-            mat_a.scalar_type() == c10::ScalarType::Float8_e5m2,
+    TORCH_CHECK(
+        mat_a.scalar_type() == c10::ScalarType::Float8_e4m3fn || mat_a.scalar_type() == c10::ScalarType::Float8_e5m2,
         "mat_a must be float8 type (Float8_e4m3fn or Float8_e5m2), but got ", mat_a.scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(mat_b.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
-            mat_b.scalar_type() == c10::ScalarType::Float8_e5m2,
+    TORCH_CHECK(
+        mat_b.scalar_type() == c10::ScalarType::Float8_e4m3fn || mat_b.scalar_type() == c10::ScalarType::Float8_e5m2,
         "mat_b must be float8 type (Float8_e4m3fn or Float8_e5m2), but got ", mat_b.scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
 
     // Check multiplication of two Float8_e5m2 is not supported (reference: _scaled_mm_out_cuda)
-    TORCH_CHECK(mat_a.scalar_type() != c10::ScalarType::Float8_e5m2 ||
-            mat_b.scalar_type() != c10::ScalarType::Float8_e5m2,
-        "Multiplication of two Float8_e5m2 matrices is not supported",
-        OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(
+        mat_a.scalar_type() != c10::ScalarType::Float8_e5m2 || mat_b.scalar_type() != c10::ScalarType::Float8_e5m2,
+        "Multiplication of two Float8_e5m2 matrices is not supported", OPS_ERROR(ErrCode::TYPE));
 
     // Check sizes
-    TORCH_CHECK(mat_a.dim() == 2, "mat_a must be a matrix, please check mat_a dim num." ,OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(mat_b.dim() == 2, "mat_b must be a matrix, please check mat_b dim num." ,OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(mat_a.sizes()[1] == mat_b.sizes()[0], "mat_a and mat_b shapes cannot be multiplied (",mat_a.sizes()[0],
+    TORCH_CHECK(mat_a.dim() == 2, "mat_a must be a matrix, please check mat_a dim num.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(mat_b.dim() == 2, "mat_b must be a matrix, please check mat_b dim num.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(mat_a.sizes()[1] == mat_b.sizes()[0], "mat_a and mat_b shapes cannot be multiplied (", mat_a.sizes()[0],
         "x", mat_b.sizes()[1], " and ", mat_b.sizes()[0], "x", mat_b.sizes()[1], ")", OPS_ERROR(ErrCode::PARAM));
 
     // Check data types: scale_a and scale_b must be float32 or float8_e8m0 type
@@ -369,13 +348,13 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     TORCH_CHECK(!scale_b.empty(), "scale_b must not be empty", OPS_ERROR(ErrCode::PARAM));
 
     TORCH_CHECK(scale_a[0].scalar_type() == c10::ScalarType::Float ||
-            scale_a[0].scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
-        "scale_a must be float32 or float8_e8m0 type, but got ", scale_a[0].scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
+            scale_a[0].scalar_type() ==
+                npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
+        "scale_a must be float32 or float8_e8m0 type, but got ", scale_a[0].scalar_type(), OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(scale_b[0].scalar_type() == c10::ScalarType::Float ||
-            scale_b[0].scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
-        "scale_b must be float32 or float8_e8m0 type, but got ", scale_b[0].scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
+            scale_b[0].scalar_type() ==
+                npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
+        "scale_b must be float32 or float8_e8m0 type, but got ", scale_b[0].scalar_type(), OPS_ERROR(ErrCode::TYPE));
 
     // Cast integer type IDs to corresponding enumeration values
     auto scaling_type_a = convert_int_to_enum<ScalingType>(scale_recipe_a);
@@ -385,19 +364,13 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     ScaledGemmImplementation selected_kernel = ScaledGemmImplementation::NONE;
 
     // Iterate registered kernel implementations to find matching one
-    for (const auto& entry : scale_kernel_dispatch_table) {
-        auto const& kernel_id = std::get<0>(entry);
-        auto const& matcher_fn = std::get<1>(entry);
-        auto const& kernel_impl = std::get<2>(entry);
+    for (const auto &entry : scale_kernel_dispatch_table) {
+        auto const &kernel_id = std::get<0>(entry);
+        auto const &matcher_fn = std::get<1>(entry);
+        auto const &kernel_impl = std::get<2>(entry);
 
-        bool config_ok = matcher_fn(
-            mat_a.scalar_type(),
-            scaling_type_a,
-            scale_a,
-            mat_b.scalar_type(),
-            scaling_type_b,
-            scale_b
-        );
+        bool config_ok =
+            matcher_fn(mat_a.scalar_type(), scaling_type_a, scale_a, mat_b.scalar_type(), scaling_type_b, scale_b);
 
         if (config_ok) {
             selected_kernel = kernel_impl;
@@ -406,53 +379,51 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
         }
     }
 
-    TORCH_CHECK(
-    matched_valid_impl,
-    "Unsupported scaling configuration.\n"
-    "- TensorWise: mat_a/mat_b must be float8; scales float32; scale_a and scale_b are singletons (scalar).\n"
-    "- RowWise: mat_a/mat_b float8; scales float32; scale_a shape (", mat_a.size(0), ", 1); scale_b shape (1, ", mat_b.size(1), "); both contiguous.\n"
-    "- BlockWise 1x128: mat_a/mat_b must be float8; scales float32; scale_a shape (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "); outer-dim-major.\n"
-    "- Blockwise 1x32: mat_a/mat_b float8; scales float8_e8m0fnu; scale_a elements=", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), "; scale_b elements=", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), "; contiguous only.\n"
-    "Current inputs: mat_a.dtype=", mat_a.scalar_type(), ", scale_a.dtype=", scale_a[0].scalar_type(), ", scale_a.shape=", scale_a[0].sizes(),
-    ", mat_b.dtype=", mat_b.scalar_type(), ", scale_b.dtype=", scale_b[0].scalar_type(), ", scale_b.shape=", scale_b[0].sizes()
-    );
+    TORCH_CHECK(matched_valid_impl,
+        "Unsupported scaling configuration.\n"
+        "- TensorWise: mat_a/mat_b must be float8; scales float32; scale_a and scale_b are singletons (scalar).\n"
+        "- RowWise: mat_a/mat_b float8; scales float32; scale_a shape (",
+        mat_a.size(0), ", 1); scale_b shape (1, ", mat_b.size(1),
+        "); both contiguous.\n"
+        "- BlockWise 1x128: mat_a/mat_b must be float8; scales float32; scale_a shape (",
+        mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (",
+        ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1),
+        "); outer-dim-major.\n"
+        "- Blockwise 1x32: mat_a/mat_b float8; scales float8_e8m0fnu; scale_a elements=",
+        round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4),
+        "; scale_b elements=",
+        round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4),
+        "; contiguous only.\n"
+        "Current inputs: mat_a.dtype=",
+        mat_a.scalar_type(), ", scale_a.dtype=", scale_a[0].scalar_type(), ", scale_a.shape=", scale_a[0].sizes(),
+        ", mat_b.dtype=", mat_b.scalar_type(), ", scale_b.dtype=", scale_b[0].scalar_type(),
+        ", scale_b.shape=", scale_b[0].sizes());
 
     // Check bias (reference: _scaled_mm_out_cuda)
     if (bias.has_value()) {
-        TORCH_CHECK(bias->numel() == mat_b.sizes()[1],
-            "Bias must be size ", mat_b.sizes()[1], " but got ", bias->numel(),
-            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(bias->numel() == mat_b.sizes()[1], "Bias must be size ", mat_b.sizes()[1], " but got ",
+            bias->numel(), OPS_ERROR(ErrCode::PARAM));
         // Check out_dtype vs bias compatibility
         auto out_dtype_value = out_dtype.value_or(c10::ScalarType::BFloat16);
-        TORCH_CHECK(out_dtype_value != c10::ScalarType::Float,
-            "Bias is not supported when out_dtype is set to Float32",
+        TORCH_CHECK(out_dtype_value != c10::ScalarType::Float, "Bias is not supported when out_dtype is set to Float32",
             OPS_ERROR(ErrCode::TYPE));
-        TORCH_CHECK(bias->scalar_type() == c10::ScalarType::BFloat16 ||
-                bias->scalar_type() == c10::ScalarType::Half,
-            "Bias must be BFloat16 or Half, but got ", bias->scalar_type(),
-            OPS_ERROR(ErrCode::TYPE));
-        TORCH_CHECK((out_dtype_value != c10::ScalarType::Float &&
-                        out_dtype_value != c10::ScalarType::BFloat16) ||
+        TORCH_CHECK(bias->scalar_type() == c10::ScalarType::BFloat16 || bias->scalar_type() == c10::ScalarType::Half,
+            "Bias must be BFloat16 or Half, but got ", bias->scalar_type(), OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK((out_dtype_value != c10::ScalarType::Float && out_dtype_value != c10::ScalarType::BFloat16) ||
                 bias->scalar_type() == c10::ScalarType::BFloat16,
-            "Bias must be BFloat16 to compute ", out_dtype_value,
-            " output, but got ", bias->scalar_type(),
+            "Bias must be BFloat16 to compute ", out_dtype_value, " output, but got ", bias->scalar_type(),
             OPS_ERROR(ErrCode::TYPE));
-        TORCH_CHECK(out_dtype_value != c10::ScalarType::Half ||
-                bias->scalar_type() == c10::ScalarType::Half,
-            "Bias must be Float16 to compute ", out_dtype_value,
-            " output, but got ", bias->scalar_type(),
+        TORCH_CHECK(out_dtype_value != c10::ScalarType::Half || bias->scalar_type() == c10::ScalarType::Half,
+            "Bias must be Float16 to compute ", out_dtype_value, " output, but got ", bias->scalar_type(),
             OPS_ERROR(ErrCode::TYPE));
     }
 
     // Check out_dtype: currently only supports Float32, BFloat16, and Float16
     if (out_dtype.has_value()) {
-        TORCH_CHECK(out_dtype.value() == c10::ScalarType::Float ||
-                out_dtype.value() == c10::ScalarType::BFloat16 ||
+        TORCH_CHECK(out_dtype.value() == c10::ScalarType::Float || out_dtype.value() == c10::ScalarType::BFloat16 ||
                 out_dtype.value() == c10::ScalarType::Half,
-            "out_dtype must be Float32, BFloat16, or Float16, but got ", out_dtype.value(),
-            OPS_ERROR(ErrCode::TYPE));
+            "out_dtype must be Float32, BFloat16, or Float16, but got ", out_dtype.value(), OPS_ERROR(ErrCode::TYPE));
     }
-
 
     bool has_contraction = !contraction_dim.empty();
     if (has_contraction) {
@@ -464,36 +435,25 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
         int64_t a_dim_size = mat_a.size(a_contract_idx);
         int64_t b_dim_size = mat_b.size(b_contract_idx);
 
-        TORCH_CHECK(
-            a_dim_size == b_dim_size,
-            "dimension mismatch for matrix multiplication (",
-            "A shape=", mat_a.size(0), "x", mat_a.size(1),
-            ", B shape=", mat_b.size(0), "x", mat_b.size(1), ")",
-            " contraction axis A: ", a_contract_idx,
-            ", contraction axis B: ", b_contract_idx,
+        TORCH_CHECK(a_dim_size == b_dim_size, "dimension mismatch for matrix multiplication (",
+            "A shape=", mat_a.size(0), "x", mat_a.size(1), ", B shape=", mat_b.size(0), "x", mat_b.size(1), ")",
+            " contraction axis A: ", a_contract_idx, ", contraction axis B: ", b_contract_idx,
             OPS_ERROR(ErrCode::PARAM));
     } else {
         int64_t a_col = mat_a.size(1);
         int64_t b_row = mat_b.size(0);
-        TORCH_CHECK(
-            a_col == b_row,
-            "matrix multiplication dimension mismatch (",
-            "A: ", mat_a.size(0), "x", mat_a.size(1),
-            ", B: ", mat_b.size(0), "x", mat_b.size(1), ")",
-            OPS_ERROR(ErrCode::PARAM)
-        );
+        TORCH_CHECK(a_col == b_row, "matrix multiplication dimension mismatch (", "A: ", mat_a.size(0), "x",
+            mat_a.size(1), ", B: ", mat_b.size(0), "x", mat_b.size(1), ")", OPS_ERROR(ErrCode::PARAM));
     }
-
-
 
     //////////////rowwise transfer//////////////
     at::Tensor processed_scale_a = scale_a[0];
     at::Tensor processed_scale_b = scale_b[0];
-    if (mat_a.scalar_type() == c10::ScalarType::Float8_e4m3fn
-        && mat_b.scalar_type() == c10::ScalarType::Float8_e4m3fn
-        && scale_a[0].scalar_type() == c10::ScalarType::Float
-        && scale_b[0].scalar_type() == c10::ScalarType::Float) {
-        if (scale_a[0].dim() == 2 && scale_a[0].sizes()[1] == 1 && scale_b[0].dim() == 2 && scale_b[0].sizes()[0] == 1) {
+    if (mat_a.scalar_type() == c10::ScalarType::Float8_e4m3fn &&
+        mat_b.scalar_type() == c10::ScalarType::Float8_e4m3fn && scale_a[0].scalar_type() == c10::ScalarType::Float &&
+        scale_b[0].scalar_type() == c10::ScalarType::Float) {
+        if (scale_a[0].dim() == 2 && scale_a[0].sizes()[1] == 1 && scale_b[0].dim() == 2 &&
+            scale_b[0].sizes()[0] == 1) {
             TORCH_CHECK(mat_a.stride(1) == 1, "mat_a must be contiguous in last dim");
             TORCH_CHECK(mat_b.stride(0) == 1, "mat_b must be contiguous in first dim");
             processed_scale_a = scale_a[0].squeeze(-1).contiguous();
@@ -504,9 +464,10 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     //////////////parameters transfer//////////////
     at::Tensor x1 = mat_a;
     at::Tensor x2 = mat_b;
-    c10::optional<at::Tensor> pertoken_scale = scale_a.size() > 0 ? c10::make_optional(processed_scale_a) : c10::nullopt;
+    c10::optional<at::Tensor> pertoken_scale =
+        scale_a.size() > 0 ? c10::make_optional(processed_scale_a) : c10::nullopt;
     at::Tensor scale = scale_b.size() > 0 ? processed_scale_b : at::Tensor();
-    c10::optional<int64_t> scale_dtype = c10::nullopt;   // scale_b.scalar_type()
+    c10::optional<int64_t> scale_dtype = c10::nullopt; // scale_b.scalar_type()
 
     c10::optional<int64_t> output_dtype = ToIntType(out_dtype);
     c10::optional<at::Tensor> offset = c10::nullopt;
@@ -516,10 +477,10 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     c10::OptionalIntArrayRef group_sizes = c10::nullopt;
     c10::optional<at::Tensor> y_scale = c10::nullopt;
 
-
     ///////////////////////////////////////////npu_quant_matmul//////////////////////////////////////
     if (is_nz_format(x2)) {
-        static const bool is_quant_matmul_weight_nz_available = check_aclnn_kernel_available("aclnnQuantMatmulWeightNz");
+        static const bool is_quant_matmul_weight_nz_available =
+            check_aclnn_kernel_available("aclnnQuantMatmulWeightNz");
         TORCH_CHECK(is_quant_matmul_weight_nz_available,
             "Get aclnnQuantMatmulWeightNz or aclnnQuantMatmulWeightNzGetWorkspaceSize failed, only "
             "aclnnQuantMatmulWeightNz support X2's format is nz, please upgrade CANN.",
@@ -620,25 +581,24 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     at::Tensor x1_offset = at::empty({0}, options);
     at::Tensor x2_offset = at::Tensor();
     at::Tensor y_offset = at::empty({0}, options);
-    if (is_a8W4_int) {  // Only A8W4 int needs y_offset
+    if (is_a8W4_int) { // Only A8W4 int needs y_offset
         y_offset = offset_real;
     } else {
         x2_offset = offset_real;
     }
 
-    bool use_aclnn_v5 = x1_dtype.has_value() || (x1.dtype() != at::kInt && x1.dtype() != at::kChar) ||
-        is_a8W4_float || is_a8W4_int;
+    bool use_aclnn_v5 =
+        x1_dtype.has_value() || (x1.dtype() != at::kInt && x1.dtype() != at::kChar) || is_a8W4_float || is_a8W4_int;
 
     aclDataType pertoken_scale_dtype_real = pertoken_scale_dtype.has_value()
         ? c10_npu::GetAclDataType(pertoken_scale_dtype.value())
-        : (pertoken_scale.has_value()
-                  ? c10_npu::GetAclDataType(static_cast<int64_t>(pertoken_scale_real.scalar_type()))
-                  : aclDataType::ACL_INT8);
-    bool need_check_trans = pertoken_scale.has_value()
-        && (((pertoken_scale_real.dim() == x1.dim() && scale.dim() == x2.dim())
-                || pertoken_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0)
-               && (pertoken_scale_real.dim() >= 2 && scale.dim() >= 2))
-        && !(is_a8W4_float || is_a8W4_int);
+        : (pertoken_scale.has_value() ? c10_npu::GetAclDataType(static_cast<int64_t>(pertoken_scale_real.scalar_type()))
+                                      : aclDataType::ACL_INT8);
+    bool need_check_trans = pertoken_scale.has_value() &&
+        (((pertoken_scale_real.dim() == x1.dim() && scale.dim() == x2.dim()) ||
+             pertoken_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0) &&
+            (pertoken_scale_real.dim() >= 2 && scale.dim() >= 2)) &&
+        !(is_a8W4_float || is_a8W4_int);
     if (need_check_trans) {
         int64_t dim_x1 = x1.dim() - 2; //  check the last 2 dim
         int64_t dim_x2 = x2.dim() - 2; //  check the last 2 dim
