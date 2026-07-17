@@ -39,6 +39,20 @@ torch_npu.npu.use_compatible_impl(is_enable)
 
 对于`torch.nn.functional.scaled_dot_product_attention`，开启该功能后，支持按SDPA后端选择上下文指定MATH后端。
 
+可通过环境变量`TORCH_NPU_LEGACY_IMPL_LIST`指定部分compatible key使用legacy实现。该环境变量用于API级别覆盖compatible impl策略，优先级高于全局compatible impl开关。若某个key命中该列表，则该key使用legacy实现；未命中的key仍按`TORCH_NPU_USE_COMPATIBLE_IMPL`或`torch_npu.npu.use_compatible_impl()`的配置判断。
+
+当前支持的配置项如下：
+
+| 配置项 | 说明 |
+| ------ | ---- |
+| `randomness` | 随机数相关API使用legacy随机数实现。 |
+
+`randomness`用于控制随机数相关API的实现，例如`torch.randn`、`torch.nn.init.normal_`等。
+
+配置示例：`export TORCH_NPU_LEGACY_IMPL_LIST=randomness`。多个配置项使用英文逗号分隔。配置未知key会报错，并提示当前支持的key。
+
+建议在启动Python进程前配置该环境变量。进程运行过程中修改该环境变量不保证生效。
+
 ## 调用示例
 
 ```python
