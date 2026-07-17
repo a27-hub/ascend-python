@@ -24,9 +24,7 @@ using tensor_list3 = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 
 namespace {
 tensor_list layer_norm_backward_nocheck(at::Tensor &d_x, at::Tensor &dgamma, at::Tensor &dbeta, const at::Tensor &d_y,
-                                        const at::Tensor &X, const at::Tensor &mean, const at::Tensor &variance,
-                                        const at::Tensor &gamma)
-{
+    const at::Tensor &X, const at::Tensor &mean, const at::Tensor &variance, const at::Tensor &gamma) {
     at::SmallVector<int64_t, SIZE> tmp_size = op_infer::array_to_small_vector(X.sizes());
     for (int i = X.dim() - gamma.dim(); i < X.dim(); i++) {
         tmp_size[i] = 1;
@@ -50,9 +48,8 @@ tensor_list layer_norm_backward_nocheck(at::Tensor &d_x, at::Tensor &dgamma, at:
 }
 
 tensor_list3 layer_norm_backward_npu_support(const at::Tensor &d_y, const at::Tensor &X, const at::Tensor &mean,
-                                             const at::Tensor &variance, const c10::optional<at::Tensor> &gamma_ex,
-                                             int64_t nums_before_axis, int64_t nums_after_axis)
-{
+    const at::Tensor &variance, const c10::optional<at::Tensor> &gamma_ex, int64_t nums_before_axis,
+    int64_t nums_after_axis) {
     const at::Tensor &gamma = c10::value_or_else(gamma_ex, [] { return at::Tensor(); });
     at::Tensor d_x;
     at::Tensor dgamma;
@@ -79,13 +76,11 @@ tensor_list3 layer_norm_backward_npu_support(const at::Tensor &d_y, const at::Te
 
     if (nums_before_axis <= 0) {
         d_x = at::native::empty_like(X, c10::nullopt /* dtype */, c10::nullopt /* layout */, c10::nullopt /* device */,
-                                     c10::nullopt /* pin_memory */, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+            c10::nullopt /* pin_memory */, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
         dgamma = at::native::zeros_like(gamma_temp, c10::nullopt /* dtype */, c10::nullopt /* layout */,
-                                        c10::nullopt /* device */, c10::nullopt /* pin_memory */,
-                                        LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+            c10::nullopt /* device */, c10::nullopt /* pin_memory */, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
         dbeta = at::native::zeros_like(gamma_temp, c10::nullopt /* dtype */, c10::nullopt /* layout */,
-                                       c10::nullopt /* device */, c10::nullopt /* pin_memory */,
-                                       LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+            c10::nullopt /* device */, c10::nullopt /* pin_memory */, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
         return std::make_tuple(std::move(d_x), std::move(dgamma), std::move(dbeta));
     }
 
@@ -97,11 +92,9 @@ tensor_list3 layer_norm_backward_npu_support(const at::Tensor &d_y, const at::Te
 }
 } // namespace
 
-tensor_list3 native_layer_norm_backward(const at::Tensor &grad_out, const at::Tensor &input, at::IntArrayRef normalized_shape,
-                                        const at::Tensor &mean, const at::Tensor &rstd,
-                                        const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias,
-                                        std::array<bool, 3> output_mask)
-{
+tensor_list3 native_layer_norm_backward(const at::Tensor &grad_out, const at::Tensor &input,
+    at::IntArrayRef normalized_shape, const at::Tensor &mean, const at::Tensor &rstd,
+    const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias, std::array<bool, 3> output_mask) {
     const int normalized_ndim = static_cast<int>(normalized_shape.size());
     const auto input_shape = input.sizes();
     const auto input_ndim = input.dim();
@@ -115,14 +108,14 @@ tensor_list3 native_layer_norm_backward(const at::Tensor &grad_out, const at::Te
     const int axis = input_ndim - normalized_ndim;
     const int64_t nums_before_axis =
         std::accumulate(input_shape.cbegin(), input_shape.cbegin() + axis, 1LL, std::multiplies<int64_t>());
-    const int64_t nums_after_axis = std::accumulate(input_shape.cbegin() + axis, input_shape.cend(), 1LL, std::multiplies<int64_t>());
+    const int64_t nums_after_axis =
+        std::accumulate(input_shape.cbegin() + axis, input_shape.cend(), 1LL, std::multiplies<int64_t>());
     return layer_norm_backward_npu_support(grad_out, input, mean, rstd, weight, nums_before_axis, nums_after_axis);
 }
 
 tensor_list3 npu_layernorm_grad(const at::Tensor &grad_out, const at::Tensor &input, at::IntArrayRef normalized_shape,
-                                const at::Tensor &mean, const at::Tensor &rstd,
-                                const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias)
-{
+    const at::Tensor &mean, const at::Tensor &rstd, const c10::optional<at::Tensor> &weight,
+    const c10::optional<at::Tensor> &bias) {
     std::array<bool, 3> output_mask = {true, true, true};
     return acl_op::native_layer_norm_backward(grad_out, input, normalized_shape, mean, rstd, weight, bias, output_mask);
 }

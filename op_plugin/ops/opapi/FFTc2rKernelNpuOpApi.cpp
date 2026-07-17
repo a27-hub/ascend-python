@@ -21,11 +21,7 @@ namespace op_api {
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor fft_c2r_backward(
-    const at::Tensor& grad,
-    at::IntArrayRef dim,
-    int64_t normalization)
-{
+at::Tensor fft_c2r_backward(const at::Tensor &grad, at::IntArrayRef dim, int64_t normalization) {
     TORCH_CHECK(!dim.empty(), "dim must not be empty", OPS_ERROR(ErrCode::PARAM));
     auto gI = at::_fft_r2c(grad, dim, normalization, true);
     auto double_length = grad.sym_size(dim.back()) - gI.sym_size(dim.back());
@@ -39,4 +35,4 @@ at::Tensor fft_c2r_backward(
 
 #endif
 
-}  // namespace op_api
+} // namespace op_api

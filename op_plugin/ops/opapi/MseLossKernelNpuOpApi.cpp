@@ -18,11 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-at::Tensor& mse_loss_out(
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    at::Tensor& result) {
+at::Tensor &mse_loss_out(const at::Tensor &self, const at::Tensor &target, int64_t reduction, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnMseLoss, acl_op::mse_loss_out(self, target, reduction, result));
     at::IntArrayRef output_size;
     if (reduction == at::Reduction::None) {
@@ -33,10 +29,7 @@ at::Tensor& mse_loss_out(
     return result;
 }
 
-at::Tensor mse_loss(
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction) {
+at::Tensor mse_loss(const at::Tensor &self, const at::Tensor &target, int64_t reduction) {
     DO_COMPATIBILITY(aclnnMseLoss, acl_op::mse_loss(self, target, reduction));
     c10::SmallVector<int64_t, op_infer::SIZE> output_size;
     if (reduction == at::Reduction::None) {

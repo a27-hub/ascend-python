@@ -32,7 +32,7 @@ namespace atb {
 //! 该接口类定义了一系列的公共接口
 //!
 class Utils {
-public:
+  public:
     //!
     //! \brief 获取加速库版本信息。
     //!

@@ -20,8 +20,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_gather_sparse_index_backward_symint(const at::Tensor& grad, c10::SymIntArrayRef self_sizes, const at::Tensor& index)
-{
+at::Tensor npu_gather_sparse_index_backward_symint(
+    const at::Tensor &grad, c10::SymIntArrayRef self_sizes, const at::Tensor &index) {
     at::Tensor output = grad.new_zeros_symint(self_sizes, grad.options());
     if (at::isTensorSubclassLike(index)) {
         return at_npu::native::custom_ops::_npu_index_add(output, index, grad);

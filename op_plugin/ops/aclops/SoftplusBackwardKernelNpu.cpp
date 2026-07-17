@@ -21,17 +21,9 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
-at::Tensor& softplus_backward_out(
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    const at::Scalar& beta,
-    const at::Scalar& threshold,
-    at::Tensor& grad_input)
-{
-    npu_preparation::CheckOut(
-        {grad_output, self},
-        grad_input,
-        self);
+at::Tensor &softplus_backward_out(const at::Tensor &grad_output, const at::Tensor &self, const at::Scalar &beta,
+    const at::Scalar &threshold, at::Tensor &grad_input) {
+    npu_preparation::CheckOut({grad_output, self}, grad_input, self);
     if (!npu_utils::check_match(&grad_input)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(grad_input);
         softplus_backward_out_common_nocheck(contiguous_result, grad_output, self, beta, threshold);

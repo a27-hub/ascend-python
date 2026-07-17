@@ -18,8 +18,7 @@
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
-at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Tensor>>& orig)
-{
+at::Tensor index(const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &orig) {
     return index_common(self, orig);
 }
 } // namespace acl_op

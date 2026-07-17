@@ -20,8 +20,7 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
-at::Tensor npu_rotated_box_decode(const at::Tensor &self, const at::Tensor &deltas, const at::Tensor &weight)
-{
+at::Tensor npu_rotated_box_decode(const at::Tensor &self, const at::Tensor &deltas, const at::Tensor &weight) {
     at::Tensor result = npu_preparation::apply_tensor(self);
     at::Tensor weight_cpu = weight.to(at::Device(at::kCPU), at::kFloat);
     auto weight_ptr = weight_cpu.data_ptr<float>();

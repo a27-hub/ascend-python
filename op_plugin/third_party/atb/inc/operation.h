@@ -36,7 +36,7 @@ namespace atb {
 //! 该接口类定义了算子准备与执行的需要的一系列的接口，通过创建Operation可以执行算子
 //!
 class Operation {
-public:
+  public:
     //! \brief 默认构造函数.
     Operation() = default;
 
@@ -98,8 +98,8 @@ public:
     //!
     //! \return 状态值，如果成功，返回NO_ERROR
     //!
-    virtual Status Execute(const VariantPack &variantPack, uint8_t *workspace, uint64_t workspaceSize,
-                           Context *context) = 0;
+    virtual Status Execute(
+        const VariantPack &variantPack, uint8_t *workspace, uint64_t workspaceSize, Context *context) = 0;
 };
 
 //!
