@@ -185,74 +185,74 @@ stages:
           runs_on_arch: "x64"
           runs_on_spec: "large"
 
-      # Build_v2_7_1_x86:
-      #   name: Build_v2_7_1_x86
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.7.1"
-      #     CP_DOCKER_IMG: "pytorch_2.7.1_a1_x86_64_builder:20260518"
-      #     runs_on_arch: "x64"
-      #     runs_on_spec: "large"
+      Build_v2_7_1_x86:
+        name: Build_v2_7_1_x86
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.7.1"
+          CP_DOCKER_IMG: "pytorch_2.7.1_a1_x86_64_builder:20260518"
+          runs_on_arch: "x64"
+          runs_on_spec: "large"
 
 
-      # Build_v2_9_0_x86:
-      #   name: Build_v2_9_0_x86
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.9.0"
-      #     CP_DOCKER_IMG: "pytorch_2.9.0_a1_x86_64_builder:20260518"
-      #     runs_on_arch: "x64"
-      #     runs_on_spec: "large"
+      Build_v2_9_0_x86:
+        name: Build_v2_9_0_x86
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.9.0"
+          CP_DOCKER_IMG: "pytorch_2.9.0_a1_x86_64_builder:20260518"
+          runs_on_arch: "x64"
+          runs_on_spec: "large"
 
 
-      # Build_v2_10_0_x86:
-      #   name: Build_v2_10_0_x86
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.10.0"
-      #     CP_DOCKER_IMG: "pytorch_2.10.0_a1_x86_64_builder:20260418"
-      #     runs_on_arch: "x64"
-      #     runs_on_spec: "large"
+      Build_v2_10_0_x86:
+        name: Build_v2_10_0_x86
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.10.0"
+          CP_DOCKER_IMG: "pytorch_2.10.0_a1_x86_64_builder:20260418"
+          runs_on_arch: "x64"
+          runs_on_spec: "large"
 
 
-      # Build_v2_11_0_x86:
-      #   name: Build_v2_11_0_x86
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.11.0"
-      #     CP_DOCKER_IMG: "pytorch_2.11.0_a1_x86_64_builder:20260418"
-      #     runs_on_arch: "x64"
-      #     runs_on_spec: "large"
+      Build_v2_11_0_x86:
+        name: Build_v2_11_0_x86
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.11.0"
+          CP_DOCKER_IMG: "pytorch_2.11.0_a1_x86_64_builder:20260418"
+          runs_on_arch: "x64"
+          runs_on_spec: "large"
 
 
-      # Build_v2_12_0_x86:
-      #   name: Build_v2_12_0_x86
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.12.0"
-      #     CP_DOCKER_IMG: "pytorch_2.12.0_a1_x86_64_builder:20260518"
-      #     runs_on_arch: "x64"
-      #     runs_on_spec: "large"
+      Build_v2_12_0_x86:
+        name: Build_v2_12_0_x86
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.12.0"
+          CP_DOCKER_IMG: "pytorch_2.12.0_a1_x86_64_builder:20260518"
+          runs_on_arch: "x64"
+          runs_on_spec: "large"
 
       Build_master_ARM:
         name: Build_master_ARM
@@ -267,70 +267,70 @@ stages:
           runs_on_arch: "arm64"
           runs_on_spec: "large"
 
-      # Build_v2_7_1_ARM:
-      #   name: Build_v2_7_1_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.7.1"
-      #     CP_DOCKER_IMG: "pytorch_2.7.1_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      Build_v2_7_1_ARM:
+        name: Build_v2_7_1_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.7.1"
+          CP_DOCKER_IMG: "pytorch_2.7.1_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # Build_v2_9_0_ARM:
-      #   name: Build_v2_9_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.9.0"
-      #     CP_DOCKER_IMG: "pytorch_2.9.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      Build_v2_9_0_ARM:
+        name: Build_v2_9_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.9.0"
+          CP_DOCKER_IMG: "pytorch_2.9.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # Build_v2_10_0_ARM:
-      #   name: Build_v2_10_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.10.0"
-      #     CP_DOCKER_IMG: "pytorch_2.10.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      Build_v2_10_0_ARM:
+        name: Build_v2_10_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.10.0"
+          CP_DOCKER_IMG: "pytorch_2.10.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # Build_v2_11_0_ARM:
-      #   name: Build_v2_11_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.11.0"
-      #     CP_DOCKER_IMG: "pytorch_2.11.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      Build_v2_11_0_ARM:
+        name: Build_v2_11_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.11.0"
+          CP_DOCKER_IMG: "pytorch_2.11.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # Build_v2_12_0_ARM:
-      #   name: Build_v2_12_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: "v2.12.0"
-      #     CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      Build_v2_12_0_ARM:
+        name: Build_v2_12_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.12.0"
+          CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
 
   stage_3:
@@ -346,62 +346,62 @@ stages:
           runs_on_arch: "arm64"
           runs_on_spec: "large"
 
-      # UT_master_ARM_02:
-      #   name: UT_master_ARM_02
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/ut_job.yml
-      #   with:
-      #     pytorch_branch: "master"
-      #     CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      UT_master_ARM_02:
+        name: UT_master_ARM_02
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/ut_job.yml
+        with:
+          pytorch_branch: "master"
+          CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # UT_v2_7_1_ARM:
-      #   name: UT_v2_7_1_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/ut_job.yml
-      #   with:
-      #     pytorch_branch: "v2.7.1"
-      #     CP_DOCKER_IMG: "pytorch_2.7.1_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      UT_v2_7_1_ARM:
+        name: UT_v2_7_1_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/ut_job.yml
+        with:
+          pytorch_branch: "v2.7.1"
+          CP_DOCKER_IMG: "pytorch_2.7.1_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # UT_v2_9_0_ARM:
-      #   name: UT_v2_9_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/ut_job.yml
-      #   with:
-      #     pytorch_branch: "v2.9.0"
-      #     CP_DOCKER_IMG: "pytorch_2.9.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      UT_v2_9_0_ARM:
+        name: UT_v2_9_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/ut_job.yml
+        with:
+          pytorch_branch: "v2.9.0"
+          CP_DOCKER_IMG: "pytorch_2.9.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # UT_v2_10_0_ARM:
-      #   name: UT_v2_10_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/ut_job.yml
-      #   with:
-      #     pytorch_branch: "v2.10.0"
-      #     CP_DOCKER_IMG: "pytorch_2.10.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      UT_v2_10_0_ARM:
+        name: UT_v2_10_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/ut_job.yml
+        with:
+          pytorch_branch: "v2.10.0"
+          CP_DOCKER_IMG: "pytorch_2.10.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # UT_v2_11_0_ARM:
-      #   name: UT_v2_11_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/ut_job.yml
-      #   with:
-      #     pytorch_branch: "v2.11.0"
-      #     CP_DOCKER_IMG: "pytorch_2.11.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      UT_v2_11_0_ARM:
+        name: UT_v2_11_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/ut_job.yml
+        with:
+          pytorch_branch: "v2.11.0"
+          CP_DOCKER_IMG: "pytorch_2.11.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
 
-      # UT_v2_12_0_ARM:
-      #   name: UT_v2_12_0_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/ut_job.yml
-      #   with:
-      #     pytorch_branch: "v2.12.0"
-      #     CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260518"
-      #     runs_on_arch: "arm64"
-      #     runs_on_spec: "large"
+      UT_v2_12_0_ARM:
+        name: UT_v2_12_0_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/ut_job.yml
+        with:
+          pytorch_branch: "v2.12.0"
+          CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260518"
+          runs_on_arch: "arm64"
+          runs_on_spec: "large"
