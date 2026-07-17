@@ -22,17 +22,11 @@ on:
         required: true
         type: string
       runs_on_arch:
-        required: false
+        required: true
         type: string
-        default: "x64"
       runs_on_os:
-        required: false
+        required: true
         type: string
-        default: "euler"
-      runs_on_spec:
-        required: false
-        type: string
-        default: "large"
     secrets:
       OBS_AK:
         required: true
@@ -44,8 +38,8 @@ jobs:
     name: JOB_compile
     select: selected_by_default
     # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-    # runs-on:  [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]
-    runs-on: [ dedicate-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
+    runs-on:  [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]
+    # runs-on:  [ self-hosted, arch=x64, os=euler ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root

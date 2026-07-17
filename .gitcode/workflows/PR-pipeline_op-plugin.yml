@@ -333,6 +333,8 @@ stages:
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
+        outputs:
+          build_skip: ${{ steps.set-skip.outputs.build_skip }}
         steps:
           - name: checkout
             uses: checkout
@@ -346,9 +348,11 @@ stages:
               target_branch: ${{ atomgit.event.pull_request.base.ref }}
               remote_url: ${{ env.REMOTE_URL }}
           - name: set build skip flag
+            id: set-skip
             run: |
-              export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
-              echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
+              BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
+              echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
+              echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
   stage_2:
@@ -358,7 +362,7 @@ stages:
 
       Build_master_x86:
         name: Build_master_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -371,7 +375,7 @@ stages:
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -385,7 +389,7 @@ stages:
 
       Build_v2_9_0_x86:
         name: Build_v2_9_0_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -399,7 +403,7 @@ stages:
 
       Build_v2_10_0_x86:
         name: Build_v2_10_0_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -413,7 +417,7 @@ stages:
 
       Build_v2_11_0_x86:
         name: Build_v2_11_0_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -427,7 +431,7 @@ stages:
 
       Build_v2_12_0_x86:
         name: Build_v2_12_0_x86
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -440,7 +444,7 @@ stages:
 
       Build_master_ARM:
         name: Build_master_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -453,7 +457,7 @@ stages:
 
       Build_v2_7_1_ARM:
         name: Build_v2_7_1_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -466,7 +470,7 @@ stages:
 
       Build_v2_9_0_ARM:
         name: Build_v2_9_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -479,7 +483,7 @@ stages:
 
       Build_v2_10_0_ARM:
         name: Build_v2_10_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -492,7 +496,7 @@ stages:
 
       Build_v2_11_0_ARM:
         name: Build_v2_11_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -505,7 +509,7 @@ stages:
 
       Build_v2_12_0_ARM:
         name: Build_v2_12_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -522,27 +526,31 @@ stages:
     jobs:
       UT_master_ARM_01:
         name: UT_master_ARM_01
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
           runs_on_spec: "large"
+          TEST_RANK: "1"
+          TSER_WORD_SIZE: "2"
 
       UT_master_ARM_02:
         name: UT_master_ARM_02
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
           runs_on_arch: "arm64"
           runs_on_spec: "large"
+          TEST_RANK: "2"
+          TSER_WORD_SIZE: "2"
 
       UT_v2_7_1_ARM:
         name: UT_v2_7_1_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.7.1"
@@ -552,7 +560,7 @@ stages:
 
       UT_v2_9_0_ARM:
         name: UT_v2_9_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.9.0"
@@ -562,7 +570,7 @@ stages:
 
       UT_v2_10_0_ARM:
         name: UT_v2_10_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.10.0"
@@ -572,7 +580,7 @@ stages:
 
       UT_v2_11_0_ARM:
         name: UT_v2_11_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.11.0"
@@ -582,7 +590,7 @@ stages:
 
       UT_v2_12_0_ARM:
         name: UT_v2_12_0_ARM
-        if : ${{ env.BUILD_SKIP == 'no' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.12.0"

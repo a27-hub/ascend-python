@@ -21,29 +21,27 @@ on:
       pytorch_branch:
         required: true
         type: string
-      runs_on_arch:
+      TEST_RANK:
         required: false
         type: string
-        default: "x64"
-      runs_on_os:
+      TSER_WORD_SIZE:
         required: false
         type: string
-        default: "euler"
-      runs_on_spec:
-        required: false
-        type: string
-        default: "large"
+
+
 
 jobs:
   JOB_UT:
     name: JOB_UT
     select: selected_by_default
-    # runs-on: [ self-hosted, arch=arm64, os=euler ]
-    runs-on: [ dedicate-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
+    runs-on: [ self-hosted, arch=arm64, os=euler ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
     steps:
+      - name: print env
+        run: |
+          env
       - name: UT
         run: |
           rm -rf *
