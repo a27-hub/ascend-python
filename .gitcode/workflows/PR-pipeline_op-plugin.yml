@@ -1,7 +1,12 @@
 name: PR-pipeline_op-plugin
 
 concurrency:
+  max: 5
+  exceed-action: QUEUE
   enable: false
+  preemption:
+    enable: true
+    events: [mr_id]
 
 on:
   pull_request_comment:
