@@ -100,7 +100,7 @@ torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_sca
 ## 约束说明
 
 - 该接口支持训练、推理场景下使用。
-- **通信引擎约束**：支持CCU和AI\_CPU通信，通过`comm_mode`参数配置。当`comm_mode`为None或空字符串时，world\_size≤8卡走CCU通信，world\_size>8卡走AI\_CPU通信。AI\_CPU模式仅支持基础场景，CCU模式支持基础场景和量化场景。
+- **通信引擎约束**：支持CCU和AI\_CPU通信，通过`comm_mode`参数配置。当`comm_mode`为None时，走AI\_CPU通信。
 - 该接口支持单算子模式调用和T-T量化场景的图模式调用。
 - 参数说明中Shape涉及的变量说明：
     - BS表示batch sequence size。
