@@ -373,7 +373,7 @@ stages:
           OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
+          CP_DOCKER_IMG: ${{ env.img_master_x86 }}
           runs_on_arch: "x64"
           runs_on_spec: "2xlarge"
 
