@@ -534,7 +534,7 @@ stages:
           runs_on_arch: "arm64"
           runs_on_spec: "large"
           TEST_RANK: "1"
-          TSER_WORD_SIZE: "2"
+          TSET_WORD_SIZE: "2"
 
       UT_master_ARM_02:
         name: UT_master_ARM_02
@@ -546,7 +546,7 @@ stages:
           runs_on_arch: "arm64"
           runs_on_spec: "large"
           TEST_RANK: "2"
-          TSER_WORD_SIZE: "2"
+          TSET_WORD_SIZE: "2"
 
       UT_v2_7_1_ARM:
         name: UT_v2_7_1_ARM
