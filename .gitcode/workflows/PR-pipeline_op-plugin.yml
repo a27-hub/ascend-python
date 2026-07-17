@@ -1,5 +1,8 @@
 name: PR-pipeline_op-plugin
 
+concurrency:
+  enable: false
+
 on:
   pull_request_comment:
     types: [created]
@@ -43,6 +46,179 @@ env:
   img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260518"
 
 stages:
+  stage_0:
+    name: stage_0
+    select: selected_by_default
+    jobs:
+      PREHEAT_master_x86:
+        name: PREHEAT_master_x86
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, x64, large ]
+        steps:
+          - name: preheat_master_x86
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-x64
+              arch: x64
+              image_name: ${{ env.img_master_x86 }}
+              timeout: '3600'
+
+      PREHEAT_2_7_1_x86:
+        name: PREHEAT_2_7_1_x86
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, x64, large ]
+        steps:
+          - name: preheat_2_7_1_x86
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-x64
+              arch: x64
+              image_name: ${{ env.img_2_7_1_x86 }}
+              timeout: '3600'
+
+      PREHEAT_2_9_0_x86:
+        name: PREHEAT_2_9_0_x86
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, x64, large ]
+        steps:
+          - name: preheat_2_9_0_x86
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-x64
+              arch: x64
+              image_name: ${{ env.img_2_9_0_x86 }}
+              timeout: '3600'
+
+      PREHEAT_2_10_0_x86:
+        name: PREHEAT_2_10_0_x86
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, x64, large ]
+        steps:
+          - name: preheat_2_10_0_x86
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-x64
+              arch: x64
+              image_name: ${{ env.img_2_10_0_x86 }}
+              timeout: '3600'
+
+      PREHEAT_2_11_0_x86:
+        name: PREHEAT_2_11_0_x86
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, x64, large ]
+        steps:
+          - name: preheat_2_11_0_x86
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-x64
+              arch: x64
+              image_name: ${{ env.img_2_11_0_x86 }}
+              timeout: '3600'
+
+      PREHEAT_2_12_0_x86:
+        name: PREHEAT_2_12_0_x86
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, x64, large ]
+        steps:
+          - name: preheat_2_12_0_x86
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-x64
+              arch: x64
+              image_name: ${{ env.img_2_12_0_x86 }}
+              timeout: '3600'
+
+      PREHEAT_master_arm:
+        name: PREHEAT_master_arm
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, arm64, large ]
+        steps:
+          - name: preheat_master_arm
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-arm64
+              arch: aarch64
+              image_name: ${{ env.img_master_arm }}
+              timeout: '3600'
+
+      PREHEAT_2_7_1_arm:
+        name: PREHEAT_2_7_1_arm
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, arm64, large ]
+        steps:
+          - name: preheat_2_7_1_arm
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-arm64
+              arch: aarch64
+              image_name: ${{ env.img_2_7_1_arm }}
+              timeout: '3600'
+
+      PREHEAT_2_9_0_arm:
+        name: PREHEAT_2_9_0_arm
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, arm64, large ]
+        steps:
+          - name: preheat_2_9_0_arm
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-arm64
+              arch: aarch64
+              image_name: ${{ env.img_2_9_0_arm }}
+              timeout: '3600'
+
+      PREHEAT_2_10_0_arm:
+        name: PREHEAT_2_10_0_arm
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, arm64, large ]
+        steps:
+          - name: preheat_2_10_0_arm
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-arm64
+              arch: aarch64
+              image_name: ${{ env.img_2_10_0_arm }}
+              timeout: '3600'
+
+      PREHEAT_2_11_0_arm:
+        name: PREHEAT_2_11_0_arm
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, arm64, large ]
+        steps:
+          - name: preheat_2_11_0_arm
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-arm64
+              arch: aarch64
+              image_name: ${{ env.img_2_11_0_arm }}
+              timeout: '3600'
+
+      PREHEAT_2_12_0_arm:
+        name: PREHEAT_2_12_0_arm
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, arm64, large ]
+        steps:
+          - name: preheat_2_12_0_arm
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-arm64
+              arch: aarch64
+              image_name: ${{ env.img_2_12_0_arm }}
+              timeout: '3600'
+
+
   stage_1:
     name: stage_1
     select: selected_by_default
