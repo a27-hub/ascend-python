@@ -19,17 +19,12 @@
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
-
 namespace acl_op {
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& index_copy_npu_impl(
-    const int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    at::Tensor& result)
-{
+at::Tensor &index_copy_npu_impl(
+    const int64_t dim, const at::Tensor &index, const at::Tensor &source, at::Tensor &result) {
     index_copy_npu_par_check(dim, index, source, result);
     int64_t num_indices = index.numel();
     int64_t i;
@@ -60,8 +55,7 @@ at::Tensor& index_copy_npu_impl(
 }
 } // namespace
 
-at::Tensor index_copy(const at::Tensor& self, const int64_t dim, const at::Tensor& index, const at::Tensor& source)
-{
+at::Tensor index_copy(const at::Tensor &self, const int64_t dim, const at::Tensor &index, const at::Tensor &source) {
     at::Tensor contiguous_self(self.clone());
     if (!npu_utils::check_match(&self)) {
         contiguous_self = npu_utils::format_contiguous(contiguous_self);
@@ -69,8 +63,7 @@ at::Tensor index_copy(const at::Tensor& self, const int64_t dim, const at::Tenso
     return index_copy_npu_impl(dim, index, source, contiguous_self);
 }
 
-at::Tensor& index_copy_(at::Tensor& self, const int64_t dim, const at::Tensor& index, const at::Tensor& source)
-{
+at::Tensor &index_copy_(at::Tensor &self, const int64_t dim, const at::Tensor &index, const at::Tensor &source) {
     at::Tensor contiguous_self(self);
     if (!npu_utils::check_match(&self)) {
         contiguous_self = npu_utils::format_contiguous(self);

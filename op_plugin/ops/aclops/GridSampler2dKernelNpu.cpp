@@ -20,17 +20,12 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor grid_sampler_2d(
-    const at::Tensor& self,
-    const at::Tensor& grid,
-    int64_t interpolation_mode,
-    int64_t padding_mode,
-    bool align_corners)
-{
-    TORCH_CHECK((0 <= interpolation_mode && interpolation_mode <= 2), "interpolation_mode must be in range [0~2]."
-        + OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK((0 <= padding_mode && padding_mode <= 2), "padding_mode must be in range [0~2]."
-        + OPS_ERROR(ErrCode::VALUE));
+at::Tensor grid_sampler_2d(const at::Tensor &self, const at::Tensor &grid, int64_t interpolation_mode,
+    int64_t padding_mode, bool align_corners) {
+    TORCH_CHECK((0 <= interpolation_mode && interpolation_mode <= 2),
+        "interpolation_mode must be in range [0~2]." + OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(
+        (0 <= padding_mode && padding_mode <= 2), "padding_mode must be in range [0~2]." + OPS_ERROR(ErrCode::VALUE));
 
     at::Tensor dtype_cast_of_self = self;
     at::Tensor dtype_cast_of_grid = grid;
@@ -42,10 +37,7 @@ at::Tensor grid_sampler_2d(
     }
 
     c10::SmallVector<int64_t, SIZE> output_size = {
-        dtype_cast_of_self.size(0),
-        dtype_cast_of_self.size(1),
-        dtype_cast_of_grid.size(1),
-        dtype_cast_of_grid.size(2)};
+        dtype_cast_of_self.size(0), dtype_cast_of_self.size(1), dtype_cast_of_grid.size(1), dtype_cast_of_grid.size(2)};
 
     at::Tensor result = npu_preparation::apply_tensor_with_format(dtype_cast_of_self, output_size, ACL_FORMAT_ND);
     std::string inter_mode[] = {"bilinear", "nearest", "bicubic"};
@@ -66,4 +58,4 @@ at::Tensor grid_sampler_2d(
     }
     return result;
 }
-}  // op_plugin
+} // op_plugin

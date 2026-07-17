@@ -21,18 +21,13 @@ constexpr int X_LAST_DIM_INDEX = 2;
 constexpr int Y_DIM_NUM = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 
-static bool is_nz_format(const at::Tensor &w)
-{
+static bool is_nz_format(const at::Tensor &w) {
     const torch_npu::NPUStorageDesc &tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(w)->npu_desc_;
     return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ;
 }
 
-at::Tensor npu_quant_matmul_reduce_sum(
-    const at::Tensor &x1,
-    const at::Tensor &x2,
-    const c10::optional<at::Tensor> &x1_scale_optional,
-    const c10::optional<at::Tensor> &x2_scale_optional)
-{
+at::Tensor npu_quant_matmul_reduce_sum(const at::Tensor &x1, const at::Tensor &x2,
+    const c10::optional<at::Tensor> &x1_scale_optional, const c10::optional<at::Tensor> &x2_scale_optional) {
     bool is_x2_nz = is_nz_format(x2);
     TORCH_CHECK(is_x2_nz, "only support x2's format is nz.", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(x1.dim() == X1_DIM_NUM, "x1 dim should be ", X1_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
@@ -51,8 +46,7 @@ at::Tensor npu_quant_matmul_reduce_sum(
     TORCH_CHECK(
         x1.size(X_LAST_DIM_INDEX) == x2.size(1), "the K dim of x1 and x2 must be same", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(x2_scale.size(0) == n_dim, "the shape of x2_scale must be (N,)", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(x1_scale.size(1) == m_dim && x1_scale.size(0) == b_dim,
-        "the shape of x1_scale must be (B, M)",
+    TORCH_CHECK(x1_scale.size(1) == m_dim && x1_scale.size(0) == b_dim, "the shape of x1_scale must be (B, M)",
         OPS_ERROR(ErrCode::PARAM));
 
     c10::SmallVector<int64_t, Y_DIM_NUM> output_size;
@@ -71,10 +65,9 @@ at::Tensor npu_quant_matmul_reduce_sum(
     int64_t group_size = -1;
     c10::IntArrayRef dims = {0};
     bool keep_dims = false;
-    EXEC_NPU_CMD(aclnnQuantMatmulReduceSumWeightNz,
-                 x1, x2, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, bias,
-                 transpose_x1, transpose_x2, group_size, dims, keep_dims, result);
+    EXEC_NPU_CMD(aclnnQuantMatmulReduceSumWeightNz, x1, x2, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset,
+        bias, transpose_x1, transpose_x2, group_size, dims, keep_dims, result);
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

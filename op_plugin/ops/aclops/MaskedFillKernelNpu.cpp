@@ -22,8 +22,8 @@ using npu_utils = at_npu::native::NpuUtils;
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, const at::Tensor& mask, const at::Tensor& value)
-{
+at::Tensor &masked_fill_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &mask, const at::Tensor &value) {
     at::Tensor mask_bool = mask;
     int64_t dim_of_self = self.dim();
     /* Avoid the problem that the TBE operator does not support 0-dimensional tensor input */
@@ -40,12 +40,7 @@ at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& se
     }
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("MaskedFill")
-        .Input(self)
-        .Input(mask_bool)
-        .Input(value_tensor)
-        .Output(result)
-        .Run();
+    cmd.Name("MaskedFill").Input(self).Input(mask_bool).Input(value_tensor).Output(result).Run();
 
     if (dim_of_self == 0) {
         result.squeeze_(0);
@@ -53,8 +48,8 @@ at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& se
     return result;
 }
 
-at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, const at::Tensor& mask, at::Scalar value)
-{
+at::Tensor &masked_fill_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Tensor &mask, at::Scalar value) {
     at::Tensor mask_bool = mask;
     int64_t dim_of_self = self.dim();
     /* Avoid the problem that the TBE operator does not support 0-dimensional tensor input */
@@ -67,12 +62,7 @@ at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& se
     }
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("MaskedFill")
-        .Input(self)
-        .Input(mask_bool)
-        .Input(value, self.scalar_type())
-        .Output(result)
-        .Run();
+    cmd.Name("MaskedFill").Input(self).Input(mask_bool).Input(value, self.scalar_type()).Output(result).Run();
 
     if (dim_of_self == 0) {
         result.squeeze_(0);
@@ -81,8 +71,7 @@ at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& se
 }
 } // namespace
 
-at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask, const at::Tensor& value)
-{
+at::Tensor &masked_fill_(at::Tensor &self, const at::Tensor &mask, const at::Tensor &value) {
     if (npu_preparation::IsCPUScalar(value)) {
         return acl_op::masked_fill_(self, mask, value.item());
     }
@@ -97,8 +86,7 @@ at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask, const at::Ten
     return self;
 }
 
-at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask, const at::Scalar& value)
-{
+at::Tensor &masked_fill_(at::Tensor &self, const at::Tensor &mask, const at::Scalar &value) {
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
         masked_fill_out_npu_nocheck(contiguous_self, contiguous_self, mask, value);

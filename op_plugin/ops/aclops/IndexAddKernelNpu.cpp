@@ -21,14 +21,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& index_add_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    const at::Scalar& alpha)
-{
+at::Tensor &index_add_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, int64_t dim, const at::Tensor &index,
+    const at::Tensor &source, const at::Scalar &alpha) {
     at::Tensor indices = index;
     if (index.scalar_type() != at::ScalarType::Int) {
         indices = at_npu::native::custom_ops::_npu_dtype_cast(index, at::kInt);
@@ -53,19 +47,9 @@ at::Tensor& index_add_out_npu_nocheck(
 }
 } // namespace
 
-
-at::Tensor& index_add_out(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    const at::Scalar& alpha,
-    at::Tensor& out)
-{
-    npu_preparation::CheckOut(
-        {self, index, source},
-        out,
-        self);
+at::Tensor &index_add_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &source,
+    const at::Scalar &alpha, at::Tensor &out) {
+    npu_preparation::CheckOut({self, index, source}, out, self);
     out.copy_(self);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -78,25 +62,15 @@ at::Tensor& index_add_out(
 }
 
 at::Tensor index_add(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    const at::Scalar& alpha)
-{
+    const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &source, const at::Scalar &alpha) {
     at::Tensor result(self.clone());
     index_add_out_npu_nocheck(result, result, dim, index, source, alpha);
     return result;
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor index_add(
-    const at::Tensor& self,
-    at::Dimname dim,
-    const at::Tensor& index,
-    const at::Tensor& source,
-    const at::Scalar& alpha)
-{
+at::Tensor index_add(const at::Tensor &self, at::Dimname dim, const at::Tensor &index, const at::Tensor &source,
+    const at::Scalar &alpha) {
     return acl_op::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 #endif

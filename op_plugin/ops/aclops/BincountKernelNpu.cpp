@@ -19,8 +19,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor bincount(const at::Tensor &self, const c10::optional<at::Tensor> &weight_opt, int64_t minlength)
-{
+at::Tensor bincount(const at::Tensor &self, const c10::optional<at::Tensor> &weight_opt, int64_t minlength) {
     const at::Tensor &weights = c10::value_or_else(weight_opt, [] { return at::Tensor(); });
     TORCH_CHECK(self.numel() > 0, "The input tensor is an empty tensor." + OPS_ERROR(ErrCode::PARAM));
     if (self.sizes()[0] == 0) {

@@ -21,25 +21,20 @@
 namespace op_api {
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tensor &input,
-                                                                 at::IntArrayRef normalized_shape,
-                                                                 const c10::optional<at::Tensor> &weight,
-                                                                 const c10::optional<at::Tensor> &bias, double eps)
-{
+    at::IntArrayRef normalized_shape, const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias,
+    double eps) {
     DO_COMPATIBILITY(aclnnLayerNorm, acl_op::native_layer_norm(input, normalized_shape, weight, bias, eps));
     const at::Tensor &weight_op = c10::value_or_else(weight, [] { return at::Tensor(); });
     const at::Tensor &bias_op = c10::value_or_else(bias, [] { return at::Tensor(); });
     const int normalized_ndim = static_cast<int>(normalized_shape.size());
     TORCH_CHECK(normalized_ndim >= 1, "Expected normalized_shape to be at least 1-dimensional, i.e., ",
-        "containing at least one element, but got normalized_shape = ", normalized_shape,
-        OPS_ERROR(ErrCode::PARAM));
+        "containing at least one element, but got normalized_shape = ", normalized_shape, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!weight_op.defined() || weight_op.sizes().equals(normalized_shape),
         "Expected weight to be of same shape as normalized_shape, but got ", "weight of shape ", weight_op.sizes(),
-        " and normalized_shape = ", normalized_shape,
-        OPS_ERROR(ErrCode::PARAM));
+        " and normalized_shape = ", normalized_shape, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!bias_op.defined() || bias_op.sizes().equals(normalized_shape),
         "Expected bias to be of same shape as normalized_shape, but got ", "bias of shape ", bias_op.sizes(),
-        " and normalized_shape = ", normalized_shape,
-        OPS_ERROR(ErrCode::PARAM));
+        " and normalized_shape = ", normalized_shape, OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor input_weight;
     if (weight_op.defined()) {
@@ -67,8 +62,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
             ss << ", " << size;
         }
         ss << "], but got input of size" << input_shape;
-        TORCH_CHECK(false, ss.str(),
-            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(false, ss.str(), OPS_ERROR(ErrCode::PARAM));
     }
 
     const int64_t M =
@@ -95,9 +89,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
     // call HostAPI function
     static auto layer_sc = at_npu::native::env::CheckCompatibleImpl();
     if (!layer_sc || c10_npu::IsAclnnOnly()) {
-        EXEC_NPU_CMD(aclnnLayerNorm, input, normalized_shape, input_weight, input_bias, eps, output, mean_out, rstd_out);
+        EXEC_NPU_CMD(
+            aclnnLayerNorm, input, normalized_shape, input_weight, input_bias, eps, output, mean_out, rstd_out);
     } else {
-        EXEC_NPU_CMD(aclnnFastLayerNorm, input, normalized_shape, input_weight, input_bias, eps, output, mean_out, rstd_out);
+        EXEC_NPU_CMD(
+            aclnnFastLayerNorm, input, normalized_shape, input_weight, input_bias, eps, output, mean_out, rstd_out);
     }
     return std::tie(output, mean_out, rstd_out);
 }

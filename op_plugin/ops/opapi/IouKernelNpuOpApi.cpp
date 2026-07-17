@@ -5,11 +5,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_iou(
-    const at::Tensor& bboxes,
-    const at::Tensor& gtboxes,
-    int64_t mode)
-{
+at::Tensor npu_iou(const at::Tensor &bboxes, const at::Tensor &gtboxes, int64_t mode) {
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
         return acl_op::npu_iou(bboxes, gtboxes, mode);
     }
@@ -21,6 +17,6 @@ at::Tensor npu_iou(
     bool aligned = false;
     EXEC_NPU_CMD(aclnnIou, bboxes, gtboxes, mode_str, eps, aligned, overlap);
 
-    return overlap.transpose(0,1).contiguous();
+    return overlap.transpose(0, 1).contiguous();
 }
 } // namespace op_api
