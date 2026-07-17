@@ -361,7 +361,7 @@ stages:
     jobs:
 
       Build_x86:
-        name: "Build_${{ matrix.pytorch_branch }}_x86"
+        name: Build_x86
         if : ${{ jobs.Only_doc_commit.outputs.build_skip == 'no' }}
         strategy:
           matrix:
