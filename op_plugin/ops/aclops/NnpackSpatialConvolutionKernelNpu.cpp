@@ -21,14 +21,8 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor _nnpack_spatial_convolution_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& input,
-    const at::Tensor& weight,
-    const at::Tensor& bias,
-    at::IntArrayRef padding,
-    at::IntArrayRef stride)
-{
+at::Tensor _nnpack_spatial_convolution_npu_nocheck(at::Tensor &result, const at::Tensor &input,
+    const at::Tensor &weight, const at::Tensor &bias, at::IntArrayRef padding, at::IntArrayRef stride) {
     c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[0], padding[0]};
     c10::SmallVector<int64_t, N> strides_size = {1, 1, stride[0], stride[0]};
     if (padding.size() != 1) {
@@ -58,14 +52,11 @@ at::Tensor _nnpack_spatial_convolution_npu_nocheck(
 }
 } // namespace
 
-at::Tensor _nnpack_spatial_convolution(
-    const at::Tensor& input,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias_opt,
-    at::IntArrayRef padding,
-    at::IntArrayRef stride)
-{
-    const at::Tensor& bias = c10::value_or_else(bias_opt, [] {return at::Tensor();});
+at::Tensor _nnpack_spatial_convolution(const at::Tensor &input, const at::Tensor &weight,
+    const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef padding, at::IntArrayRef stride) {
+    const at::Tensor &bias = c10::value_or_else(bias_opt, [] {
+        return at::Tensor();
+    });
     auto output_size = op_infer::nnpack_spatial_convolution_npu_output_size(input, weight, padding, stride);
     int64_t result_format = input.dtype() == at::kHalf ? ACL_FORMAT_NC1HWC0 : ACL_FORMAT_ND;
     at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, input.options(), result_format);

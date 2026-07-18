@@ -22,26 +22,34 @@ namespace atb {
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
 
 // 将 PagedAttentionParam::MaskType 枚举值转为可读字符串，用于错误提示
-static std::string MaskTypeToString(int64_t mtype)
-{
+static std::string MaskTypeToString(int64_t mtype) {
     switch (static_cast<PagedAttentionParam::MaskType>(mtype)) {
-        case PagedAttentionParam::UNDEFINED:              return "UNDEFINED(0)";
-        case PagedAttentionParam::MASK_TYPE_NORM:         return "MASK_TYPE_NORM(1)";
-        case PagedAttentionParam::MASK_TYPE_ALIBI:        return "MASK_TYPE_ALIBI(2)";
-        case PagedAttentionParam::MASK_TYPE_SPEC:         return "MASK_TYPE_SPEC(3)";
-        case PagedAttentionParam::MASK_TYPE_MASK_FREE:    return "MASK_TYPE_MASK_FREE(4)";
-        case PagedAttentionParam::MASK_TYPE_NORM_COMPRESS:return "MASK_TYPE_NORM_COMPRESS(5)";
-        default:                                          return "UNKNOWN(" + std::to_string(mtype) + ")";
+    case PagedAttentionParam::UNDEFINED:
+        return "UNDEFINED(0)";
+    case PagedAttentionParam::MASK_TYPE_NORM:
+        return "MASK_TYPE_NORM(1)";
+    case PagedAttentionParam::MASK_TYPE_ALIBI:
+        return "MASK_TYPE_ALIBI(2)";
+    case PagedAttentionParam::MASK_TYPE_SPEC:
+        return "MASK_TYPE_SPEC(3)";
+    case PagedAttentionParam::MASK_TYPE_MASK_FREE:
+        return "MASK_TYPE_MASK_FREE(4)";
+    case PagedAttentionParam::MASK_TYPE_NORM_COMPRESS:
+        return "MASK_TYPE_NORM_COMPRESS(5)";
+    default:
+        return "UNKNOWN(" + std::to_string(mtype) + ")";
     }
 }
 
-void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, const at::Tensor &block_table, const at::Tensor &context_lens, const at::Tensor &mask, const at::Tensor &seq_len, int64_t num_kv_heads, int64_t num_heads, double scale_value, const c10::optional<int64_t> mask_type, at::Tensor &out)
-{
+void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor &key_cache,
+    const at::Tensor &value_cache, const at::Tensor &block_table, const at::Tensor &context_lens,
+    const at::Tensor &mask, const at::Tensor &seq_len, int64_t num_kv_heads, int64_t num_heads, double scale_value,
+    const c10::optional<int64_t> mask_type, at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
     int64_t mtype = mask_type.has_value() ? mask_type.value() : PagedAttentionParam::MASK_TYPE_NORM_COMPRESS;
     TORCH_CHECK(mtype == PagedAttentionParam::MASK_TYPE_NORM_COMPRESS,
-                "mask_type only supports MASK_TYPE_NORM_COMPRESS(5), but got: ", MaskTypeToString(mtype));
-    OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
+        "mask_type only supports MASK_TYPE_NORM_COMPRESS(5), but got: ", MaskTypeToString(mtype));
+    OpParamCache<PagedAttentionParam> &pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
     pagedparam.headNum = num_heads;
     pagedparam.qkScale = scale_value;
@@ -73,15 +81,15 @@ void _npu_paged_attention_splitfuse_v2(const at::Tensor &query, const at::Tensor
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
-    m.def("_npu_paged_attention_splitfuse_v2(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, Tensor context_lens, Tensor mask, Tensor seq_len, int num_kv_heads, int num_heads, float scale_value, *, int ? mask_type = 5, Tensor(a!) out) -> ()");
+TORCH_LIBRARY_FRAGMENT(atb, m) {
+    m.def("_npu_paged_attention_splitfuse_v2(Tensor query, Tensor key_cache, Tensor value_cache, Tensor block_table, "
+          "Tensor context_lens, Tensor mask, Tensor seq_len, int num_kv_heads, int num_heads, float scale_value, *, "
+          "int ? mask_type = 5, Tensor(a!) out) -> ()");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_paged_attention_splitfuse_v2", TORCH_FN(atb::_npu_paged_attention_splitfuse_v2));
 }
 }

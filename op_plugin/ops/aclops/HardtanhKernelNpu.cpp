@@ -22,49 +22,39 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& hardtanh_out_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Scalar& min,
-    const at::Scalar& max) {
-  at_npu::native::OpCommand cmd;
-  cmd.Name("ClipByValue")
-      .Input(self)
-      .Input(min, self.scalar_type())
-      .Input(max, self.scalar_type())
-      .Output(result)
-      .Run();
-  return result;
+at::Tensor &hardtanh_out_npu_nocheck(
+    at::Tensor &result, const at::Tensor &self, const at::Scalar &min, const at::Scalar &max) {
+    at_npu::native::OpCommand cmd;
+    cmd.Name("ClipByValue")
+        .Input(self)
+        .Input(min, self.scalar_type())
+        .Input(max, self.scalar_type())
+        .Output(result)
+        .Run();
+    return result;
 }
 } // namespace
 
-at::Tensor& hardtanh_out(
-    const at::Tensor& self,
-    const at::Scalar& min,
-    const at::Scalar& max,
-    at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+at::Tensor &hardtanh_out(const at::Tensor &self, const at::Scalar &min, const at::Scalar &max, at::Tensor &result) {
+    npu_preparation::CheckOut({self}, result, self);
 
-  if (!npu_utils::check_match(&result)) {
-    at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-    hardtanh_out_npu_nocheck(contiguous_result, self, min, max);
-    npu_utils::format_fresh_view(result, contiguous_result);
-  } else {
-    hardtanh_out_npu_nocheck(result, self, min, max);
-  }
+    if (!npu_utils::check_match(&result)) {
+        at::Tensor contiguous_result = npu_utils::format_contiguous(result);
+        hardtanh_out_npu_nocheck(contiguous_result, self, min, max);
+        npu_utils::format_fresh_view(result, contiguous_result);
+    } else {
+        hardtanh_out_npu_nocheck(result, self, min, max);
+    }
     return result;
 }
 
-at::Tensor hardtanh(const at::Tensor& self, const at::Scalar& min, const at::Scalar& max) {
-  at::Tensor result = npu_preparation::apply_tensor(self);
-  hardtanh_out(self, min, max, result);
-  return result;
+at::Tensor hardtanh(const at::Tensor &self, const at::Scalar &min, const at::Scalar &max) {
+    at::Tensor result = npu_preparation::apply_tensor(self);
+    hardtanh_out(self, min, max, result);
+    return result;
 }
 
-at::Tensor& hardtanh_(at::Tensor& self, const at::Scalar& min, const at::Scalar& max) {
-  return acl_op::hardtanh_out(self, min, max, self);
+at::Tensor &hardtanh_(at::Tensor &self, const at::Scalar &min, const at::Scalar &max) {
+    return acl_op::hardtanh_out(self, min, max, self);
 }
 } // namespace acl_op

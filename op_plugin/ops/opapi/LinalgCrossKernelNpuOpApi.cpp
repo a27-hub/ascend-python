@@ -25,34 +25,29 @@ using namespace op_infer;
 namespace {
 constexpr int64_t kCrossVectorSize = 3;
 
-inline void linalg_cross_check(const at::Tensor& self, const at::Tensor& other, int64_t dim)
-{
+inline void linalg_cross_check(const at::Tensor &self, const at::Tensor &other, int64_t dim) {
     auto x_d = self.dim();
     auto y_d = other.dim();
-    TORCH_CHECK(x_d == y_d, "linalg.cross: inputs must have the same number of dimensions.",
-                OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(x_d == y_d, "linalg.cross: inputs must have the same number of dimensions.", OPS_ERROR(ErrCode::PARAM));
     auto wrap_dim = at::maybe_wrap_dim(dim, x_d);
     TORCH_CHECK(self.size(wrap_dim) == kCrossVectorSize && other.size(wrap_dim) == kCrossVectorSize,
-                "linalg.cross: inputs dimension ", wrap_dim, " must have length ", kCrossVectorSize, ". Got ", self.size(wrap_dim),
-                " and ", other.size(wrap_dim), OPS_ERROR(ErrCode::PARAM));
+        "linalg.cross: inputs dimension ", wrap_dim, " must have length ", kCrossVectorSize, ". Got ",
+        self.size(wrap_dim), " and ", other.size(wrap_dim), OPS_ERROR(ErrCode::PARAM));
 }
 } // namespace
 
-at::Tensor linalg_cross(const at::Tensor& self, const at::Tensor& other, int64_t dim)
-{
+at::Tensor linalg_cross(const at::Tensor &self, const at::Tensor &other, int64_t dim) {
     DO_COMPATIBILITY(aclnnLinalgCross, acl_op::linalg_cross(self, other, dim));
     linalg_cross_check(self, other, dim);
     auto wrap_dim = at::maybe_wrap_dim(dim, self.dim());
     auto output_size_0 = broadcast_ops_npu_output_size(self, other);
     auto output_dtype_0 = self.scalar_type();
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size_0,
-                                                                  self.options().dtype(output_dtype_0));
+    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size_0, self.options().dtype(output_dtype_0));
     EXEC_NPU_CMD(aclnnLinalgCross, self, other, wrap_dim, out);
     return out;
 }
 
-at::Tensor& linalg_cross_out(const at::Tensor& self, const at::Tensor& other, int64_t dim, at::Tensor& out)
-{
+at::Tensor &linalg_cross_out(const at::Tensor &self, const at::Tensor &other, int64_t dim, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnLinalgCross, acl_op::linalg_cross_out(self, other, dim, out));
     linalg_cross_check(self, other, dim);
     auto wrap_dim = at::maybe_wrap_dim(dim, self.dim());

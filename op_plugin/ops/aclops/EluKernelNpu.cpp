@@ -22,13 +22,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& elu_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::Scalar alpha,
-    at::Scalar scale,
-    at::Scalar input_scale)
-{
+at::Tensor &elu_out_nocheck(
+    at::Tensor &result, const at::Tensor &self, at::Scalar alpha, at::Scalar scale, at::Scalar input_scale) {
     float alpha_value = op_plugin::utils::get_scalar_float_value(alpha);
     float scale_value = op_plugin::utils::get_scalar_float_value(scale);
     float input_scale_value = op_plugin::utils::get_scalar_float_value(input_scale);
@@ -43,29 +38,16 @@ at::Tensor& elu_out_nocheck(
     return result;
 }
 
-at::Tensor elu_out_nocheck(
-    const at::Tensor& self,
-    at::Scalar alpha,
-    at::Scalar scale,
-    at::Scalar input_scale)
-{
+at::Tensor elu_out_nocheck(const at::Tensor &self, at::Scalar alpha, at::Scalar scale, at::Scalar input_scale) {
     at::Tensor result = npu_preparation::apply_tensor(self);
     elu_out_nocheck(result, self, alpha, scale, input_scale);
     return result;
 }
 } // namespace
 
-at::Tensor& elu_out(
-    const at::Tensor& self,
-    const at::Scalar& alpha,
-    const at::Scalar& scale,
-    const at::Scalar& input_scale,
-    at::Tensor& out)
-{
-    npu_preparation::CheckOut(
-        {self},
-        out,
-        self);
+at::Tensor &elu_out(const at::Tensor &self, const at::Scalar &alpha, const at::Scalar &scale,
+    const at::Scalar &input_scale, at::Tensor &out) {
+    npu_preparation::CheckOut({self}, out, self);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
         elu_out_nocheck(contiguous_result, self, alpha, scale, input_scale);
@@ -76,13 +58,12 @@ at::Tensor& elu_out(
     return out;
 }
 
-at::Tensor elu(const at::Tensor& self, const at::Scalar& alpha, const at::Scalar& scale, const at::Scalar& input_scale)
-{
+at::Tensor elu(
+    const at::Tensor &self, const at::Scalar &alpha, const at::Scalar &scale, const at::Scalar &input_scale) {
     return elu_out_nocheck(self, alpha, scale, input_scale);
 }
 
-at::Tensor& elu_(at::Tensor& self, const at::Scalar& alpha, const at::Scalar& scale, const at::Scalar& input_scale)
-{
+at::Tensor &elu_(at::Tensor &self, const at::Scalar &alpha, const at::Scalar &scale, const at::Scalar &input_scale) {
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
         at::Tensor result = elu_out_nocheck(contiguous_self, alpha, scale, input_scale);

@@ -21,8 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-static inline int64_t calculate_prod_output_format(const at::Tensor &self, at::IntArrayRef size)
-{
+static inline int64_t calculate_prod_output_format(const at::Tensor &self, at::IntArrayRef size) {
     int64_t npu_format = npu_preparation::get_tensor_npu_format(self);
     // scalar scene no support nz
     if (size.empty()) {
@@ -32,16 +31,13 @@ static inline int64_t calculate_prod_output_format(const at::Tensor &self, at::I
 }
 
 at::Tensor &prod_out_npu_nocheck(at::Tensor &result, const at::Tensor &self,
-                                 c10::SmallVector<int64_t, at_npu::native::N> dim_list, bool keepdim,
-                                 c10::optional<at::ScalarType> dtype)
-{
+    c10::SmallVector<int64_t, at_npu::native::N> dim_list, bool keepdim, c10::optional<at::ScalarType> dtype) {
     at_npu::native::OpCommand cmd;
     cmd.Name("ReduceProd").Input(self).Input(dim_list).Output(result).Attr("keep_dims", keepdim).Run();
     return result;
 }
 
-at::ScalarType get_cal_type(const at::Tensor &self, const c10::optional<at::ScalarType> &dtype)
-{
+at::ScalarType get_cal_type(const at::Tensor &self, const c10::optional<at::ScalarType> &dtype) {
     at::ScalarType cal_type = dtype.has_value() ? dtype.value() : self.scalar_type();
     if (cal_type == at::ScalarType::Half) {
         cal_type = at::ScalarType::Float;
@@ -51,8 +47,7 @@ at::ScalarType get_cal_type(const at::Tensor &self, const c10::optional<at::Scal
     return cal_type;
 }
 
-at::ScalarType get_dst_type(const at::Tensor &self, const c10::optional<at::ScalarType> &dtype)
-{
+at::ScalarType get_dst_type(const at::Tensor &self, const c10::optional<at::ScalarType> &dtype) {
     if (dtype.has_value()) {
         return dtype.value();
     }
@@ -64,9 +59,8 @@ at::ScalarType get_dst_type(const at::Tensor &self, const c10::optional<at::Scal
 }
 } // namespace
 
-at::Tensor &prod_out(const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype,
-                     at::Tensor &result)
-{
+at::Tensor &prod_out(
+    const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype, at::Tensor &result) {
     auto output_size = op_infer::prod_npu_output_size(self, dim, keepdim);
     at::ScalarType dst_type = dtype.has_value() ? dtype.value() : result.scalar_type();
 
@@ -98,8 +92,7 @@ at::Tensor &prod_out(const at::Tensor &self, int64_t dim, bool keepdim, c10::opt
     return result;
 }
 
-at::Tensor prod(const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype)
-{
+at::Tensor prod(const at::Tensor &self, int64_t dim, bool keepdim, c10::optional<at::ScalarType> dtype) {
     at::ScalarType cal_type = get_cal_type(self, dtype);
     at::Tensor self_tmp =
         self.scalar_type() != cal_type ? at_npu::native::custom_ops::_npu_dtype_cast(self, cal_type) : self;
@@ -121,8 +114,7 @@ at::Tensor prod(const at::Tensor &self, int64_t dim, bool keepdim, c10::optional
     return result;
 }
 
-at::Tensor prod(const at::Tensor &self, c10::optional<at::ScalarType> dtype)
-{
+at::Tensor prod(const at::Tensor &self, c10::optional<at::ScalarType> dtype) {
     at::ScalarType cal_type = get_cal_type(self, dtype);
     at::Tensor self_tmp =
         self.scalar_type() != cal_type ? at_npu::native::custom_ops::_npu_dtype_cast(self, cal_type) : self;

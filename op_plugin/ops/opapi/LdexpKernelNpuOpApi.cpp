@@ -23,8 +23,7 @@
 namespace at {
 namespace native {
 namespace {
-at::Tensor _pow2(const at::Tensor& self, const at::Tensor& exponent)
-{
+at::Tensor _pow2(const at::Tensor &self, const at::Tensor &exponent) {
     const auto self_dtype = self.scalar_type();
     if (at::isIntegralType(self_dtype, true) || self_dtype == at::kFloat) {
         return at::pow(2.0, exponent);
@@ -33,10 +32,9 @@ at::Tensor _pow2(const at::Tensor& self, const at::Tensor& exponent)
 }
 } // namespace
 
-void ldexp_kernel_npu(at::TensorIteratorBase& iter)
-{
-    const auto& self = iter.input(0);
-    const auto& exponent = iter.input(1);
+void ldexp_kernel_npu(at::TensorIteratorBase &iter) {
+    const auto &self = iter.input(0);
+    const auto &exponent = iter.input(1);
     auto out = iter.output();
     at::mul_out(out, self, _pow2(self, exponent));
 }
