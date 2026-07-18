@@ -21,16 +21,16 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_consecutive(const at::Tensor &self, bool return_inverse,
-                                                                  bool return_counts, c10::optional<int64_t> dim)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_consecutive(
+    const at::Tensor &self, bool return_inverse, bool return_counts, c10::optional<int64_t> dim) {
     DO_COMPATIBILITY(aclnnUniqueConsecutive, acl_op::unique_consecutive(self, return_inverse, return_counts, dim));
     bool has_dim = dim.has_value();
     if (has_dim) {
-        TORCH_CHECK(dim.value() < self.dim(), "Dim's value must be smaller than self's dim.", OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(
+            dim.value() < self.dim(), "Dim's value must be smaller than self's dim.", OPS_ERROR(ErrCode::VALUE));
     }
-    at::Tensor y = has_dim ? npu_preparation::apply_tensor_without_format(self) :
-                             npu_preparation::apply_tensor_without_format(self, self.numel());
+    at::Tensor y = has_dim ? npu_preparation::apply_tensor_without_format(self)
+                           : npu_preparation::apply_tensor_without_format(self, self.numel());
     auto apply_no_format = [self](auto shape) {
         return npu_preparation::apply_tensor_without_format(shape, self.options().dtype(at::kLong));
     };
@@ -50,10 +50,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_consecutive(const at::Tens
     auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
     constexpr int64_t NoneN = 1000;
     int64_t dim_value = has_dim ? dim.value() : NoneN;
-    OP_EXEC_LOG(aclnnUniqueConsecutive, "EXEC_NPU_CMD_SYNC",
-                self, return_inverse, return_counts, dim_value, y, y_inverse, y_counts);
-    auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnUniqueConsecutive, self, return_inverse, return_counts, dim_value, y,
-                                          y_inverse, y_counts);
+    OP_EXEC_LOG(aclnnUniqueConsecutive, "EXEC_NPU_CMD_SYNC", self, return_inverse, return_counts, dim_value, y,
+        y_inverse, y_counts);
+    auto npuAclParams = EXEC_NPU_CMD_SYNC(
+        aclnnUniqueConsecutive, self, return_inverse, return_counts, dim_value, y, y_inverse, y_counts);
     int64_t *view_dims = nullptr;
     uint64_t view_dim_num = 0;
     constexpr int64_t Y_IDX = 4;

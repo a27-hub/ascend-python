@@ -25,11 +25,8 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 std::tuple<at::Tensor &, at::Tensor &> max_pool3d_with_indices_out_nocheck(at::Tensor &result, const at::Tensor &self,
-                                                                           at::IntArrayRef kernel_size,
-                                                                           at::IntArrayRef stride, at::IntArrayRef pads,
-                                                                           at::IntArrayRef dilation, bool ceil_mode,
-                                                                           at::Tensor &indice)
-{
+    at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef pads, at::IntArrayRef dilation, bool ceil_mode,
+    at::Tensor &indice) {
     int64_t stride_T = 1;
     int64_t stride_H = 1;
     int64_t stride_W = 1;
@@ -75,30 +72,23 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool3d_with_indices_out_nocheck(at::T
 }
 
 void max_pool3d_with_indices_parameter_check(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                             at::IntArrayRef stride, at::IntArrayRef pads, at::IntArrayRef dilation)
-{
+    at::IntArrayRef stride, at::IntArrayRef pads, at::IntArrayRef dilation) {
     TORCH_CHECK(kernel_size.size() == 1 || kernel_size.size() == 3,
-        "max_pool3d: kernel_size must either be a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: kernel_size must either be a single int, or a tuple of three ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(stride.size() == 0 || stride.size() == 1 || stride.size() == 3,
-        "max_pool3d: stride must either be omitted, a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: stride must either be omitted, a single int, or a tuple of three ints" +
+            OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(pads.size() == 1 || pads.size() == 3,
-        "max_pool3d: padding must be either be a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: padding must be either be a single int, or a tuple of three ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(dilation.size() == 1 || dilation.size() == 3,
-        "max_pool3d: dilation must be either a single int, or a tuple of three ints"
-        + OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: dilation must be either a single int, or a tuple of three ints" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((self.ndimension() == 5 || self.ndimension() == 4),
         "maxpool3d expected input to be non-empty 5D(batch mode) or 4D tensor",
-        "but input has dim: ", self.ndimension(),
-        OPS_ERROR(ErrCode::PARAM));
+        "but input has dim: ", self.ndimension(), OPS_ERROR(ErrCode::PARAM));
 }
 
 c10::SmallVector<int64_t, SIZE> max_pool3d_with_indices_output_size(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                                                    at::IntArrayRef stride, at::IntArrayRef pads,
-                                                                    at::IntArrayRef dilation, bool ceil_mode)
-{
+    at::IntArrayRef stride, at::IntArrayRef pads, at::IntArrayRef dilation, bool ceil_mode) {
     const int k_T = at::native::safe_downcast<int, int64_t>(kernel_size[0]);
     const int k_H = kernel_size.size() == 1 ? k_T : at::native::safe_downcast<int, int64_t>(kernel_size[1]);
     const int k_W = kernel_size.size() == 1 ? k_T : at::native::safe_downcast<int, int64_t>(kernel_size[2]);
@@ -106,12 +96,12 @@ c10::SmallVector<int64_t, SIZE> max_pool3d_with_indices_output_size(const at::Te
     at::IntArrayRef kernel_sizess = at::IntArrayRef(kernel_sizes);
 
     const int d_T = stride.empty() ? k_T : at::native::safe_downcast<int, int64_t>(stride[0]);
-    const int d_H = stride.empty()     ? k_H :
-                    stride.size() == 1 ? d_T :
-                                         at::native::safe_downcast<int, int64_t>(stride[1]);
-    const int d_W = stride.empty()     ? k_W :
-                    stride.size() == 1 ? d_T :
-                                         at::native::safe_downcast<int, int64_t>(stride[2]);
+    const int d_H = stride.empty() ? k_H
+        : stride.size() == 1       ? d_T
+                                   : at::native::safe_downcast<int, int64_t>(stride[1]);
+    const int d_W = stride.empty() ? k_W
+        : stride.size() == 1       ? d_T
+                                   : at::native::safe_downcast<int, int64_t>(stride[2]);
     c10::SmallVector<int64_t, SIZE> strides = {d_T, d_H, d_W};
     at::IntArrayRef stridess = at::IntArrayRef(strides);
 
@@ -137,8 +127,7 @@ c10::SmallVector<int64_t, SIZE> max_pool3d_with_indices_output_size(const at::Te
     const int64_t owidth = at::native::pooling_output_shape<int64_t>(iwidth, k_W, p_W, d_W, dilation_W, ceil_mode);
 
     at::native::pool3d_shape_check(self, nslices, k_T, k_H, k_W, d_T, d_H, d_W, p_T, p_H, p_W, dilation_T, dilation_H,
-                                   dilation_W, itime, iheight, iwidth, otime, oheight, owidth,
-                                   "max_pool3d_with_indices()");
+        dilation_W, itime, iheight, iwidth, otime, oheight, owidth, "max_pool3d_with_indices()");
     at::Tensor self_cp = self.ndimension() == 4 ? self.unsqueeze(0) : self;
     c10::SmallVector<int64_t, SIZE> output_size = {self_cp.size(0), self_cp.size(1), otime, oheight, owidth};
     return output_size;
@@ -146,10 +135,8 @@ c10::SmallVector<int64_t, SIZE> max_pool3d_with_indices_output_size(const at::Te
 } // namespace
 
 std::tuple<at::Tensor &, at::Tensor &> max_pool3d_with_indices_out(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                                                   at::IntArrayRef stride, at::IntArrayRef pads,
-                                                                   at::IntArrayRef dilation, bool ceil_mode,
-                                                                   at::Tensor &result, at::Tensor &indice)
-{
+    at::IntArrayRef stride, at::IntArrayRef pads, at::IntArrayRef dilation, bool ceil_mode, at::Tensor &result,
+    at::Tensor &indice) {
     max_pool3d_with_indices_parameter_check(self, kernel_size, stride, pads, dilation);
 
     c10::SmallVector<int64_t, SIZE> output_size =
@@ -157,8 +144,8 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool3d_with_indices_out(const at::Ten
     npu_preparation::CheckOut({self}, result, ACL_FORMAT_NDC1HWC0, self.scalar_type(), output_size);
     if (!npu_utils::check_match(&result)) {
         at::Tensor contig_result = npu_utils::format_contiguous(result);
-        max_pool3d_with_indices_out_nocheck(contig_result, self, kernel_size, stride, pads, dilation, ceil_mode,
-                                            indice);
+        max_pool3d_with_indices_out_nocheck(
+            contig_result, self, kernel_size, stride, pads, dilation, ceil_mode, indice);
         npu_utils::format_fresh_view(result, contig_result);
     } else {
         max_pool3d_with_indices_out_nocheck(result, self, kernel_size, stride, pads, dilation, ceil_mode, indice);
@@ -167,9 +154,7 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool3d_with_indices_out(const at::Ten
 }
 
 std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                                           at::IntArrayRef stride, at::IntArrayRef pads,
-                                                           at::IntArrayRef dilation, bool ceil_mode)
-{
+    at::IntArrayRef stride, at::IntArrayRef pads, at::IntArrayRef dilation, bool ceil_mode) {
     max_pool3d_with_indices_parameter_check(self, kernel_size, stride, pads, dilation);
     at::Tensor self_cp = self.ndimension() == 4 ? self.unsqueeze(0) : self;
     c10::SmallVector<int64_t, SIZE> output_size =

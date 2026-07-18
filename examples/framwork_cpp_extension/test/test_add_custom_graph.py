@@ -28,7 +28,7 @@ class TestTorchCompileCustomAdd(TestCase):
         from torchair.configs.compiler_config import CompilerConfig
         config = CompilerConfig()
         npu_backend = torchair.get_npu_backend(compiler_config=config)
-        
+
         class Module(torch.nn.Module):
             def __init__(self):
                 super().__init__()
