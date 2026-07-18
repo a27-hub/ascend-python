@@ -17,21 +17,10 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-std::tuple<at::Tensor, at::Tensor> prelu_backward_commom_nocheck(
-    at::Tensor& grad_input,
-    at::Tensor& grad_weight,
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    const at::Tensor& weight)
-{
+std::tuple<at::Tensor, at::Tensor> prelu_backward_commom_nocheck(at::Tensor &grad_input, at::Tensor &grad_weight,
+    const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &weight) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("PReluGrad")
-        .Input(grad_output)
-        .Input(self)
-        .Input(weight)
-        .Output(grad_input)
-        .Output(grad_weight)
-        .Run();
+    cmd.Name("PReluGrad").Input(grad_output).Input(self).Input(weight).Output(grad_input).Output(grad_weight).Run();
 
     return std::tuple<at::Tensor, at::Tensor>(grad_input, grad_weight);
 }

@@ -22,9 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> npu_swiglu_group_quant_backward(const at::Tensor &grad_y, const at::Tensor &x,
     const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &y_origin,
-    const c10::optional<at::Tensor> &group_index, double clamp_limit)
-{
-
+    const c10::optional<at::Tensor> &group_index, double clamp_limit) {
     // check x last dim
     int64_t x_last_dim = x.size(x.dim() - 1);
     TORCH_CHECK(x_last_dim % 2 == 0, "x last dim size should be even", OPS_ERROR(ErrCode::PARAM));
@@ -34,9 +32,9 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_group_quant_backward(const at::Ten
     at::Tensor grad_weight;
 
     if (weight.has_value() && weight->defined()) {
-        grad_weight  = npu_preparation::apply_tensor_without_format(weight.value().sizes(), weight.value().options());
+        grad_weight = npu_preparation::apply_tensor_without_format(weight.value().sizes(), weight.value().options());
     } else {
-        grad_weight  = at::empty({0}, x.options().dtype(at::kFloat));
+        grad_weight = at::empty({0}, x.options().dtype(at::kFloat));
     }
 
     EXEC_NPU_CMD(aclnnSwigluGroupQuantGrad, grad_y, x, weight, y_origin, group_index, clamp_limit, grad_x, grad_weight);

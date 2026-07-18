@@ -57,31 +57,37 @@ struct NoNamesGuard {};
 // matmul / addmm / bmm / cat / reduction / broadcast paths) and must exist as
 // no-ops on v2.13+ to let those files compile.
 namespace namedinference {
-template <class... Args>
-inline void propagate_names(Args &&...) {}
-template <class... Args>
-inline void propagate_names_if_nonempty(Args &&...) {}
-template <class... Args>
-inline void propagate_names_for_reduction(Args &&...) {}
-template <class... Args>
-inline ::std::vector<at::Dimname> propagate_names_for_addmv(Args &&...) { return {}; }
-template <class... Args>
-inline ::std::vector<at::Dimname> propagate_names_for_addmm(Args &&...) { return {}; }
-template <class... Args>
-inline ::std::vector<at::Dimname> compute_matmul_outnames(Args &&...) { return {}; }
-template <class... Args>
-inline ::std::vector<at::Dimname> compute_bmm_outnames(Args &&...) { return {}; }
-template <class... Args>
-inline ::std::vector<at::Dimname> compute_broadcast_outnames(Args &&...) { return {}; }
-template <class... Args>
-inline ::std::vector<at::Dimname> compute_cdist_outnames(Args &&...) { return {}; }
-template <class... Args>
-inline ::std::vector<at::Dimname> compute_cat_outnames(Args &&...) { return {}; }
-template <class... Args>
-inline ::std::vector<at::Dimname> broadcast_to_outnames(Args &&...) { return {}; }
-template <class... Args>
-inline bool are_names_equal(Args &&...) { return true; }
-}  // namespace namedinference
-}  // namespace at
+template <class... Args> inline void propagate_names(Args &&...) {}
+template <class... Args> inline void propagate_names_if_nonempty(Args &&...) {}
+template <class... Args> inline void propagate_names_for_reduction(Args &&...) {}
+template <class... Args> inline ::std::vector<at::Dimname> propagate_names_for_addmv(Args &&...) {
+    return {};
+}
+template <class... Args> inline ::std::vector<at::Dimname> propagate_names_for_addmm(Args &&...) {
+    return {};
+}
+template <class... Args> inline ::std::vector<at::Dimname> compute_matmul_outnames(Args &&...) {
+    return {};
+}
+template <class... Args> inline ::std::vector<at::Dimname> compute_bmm_outnames(Args &&...) {
+    return {};
+}
+template <class... Args> inline ::std::vector<at::Dimname> compute_broadcast_outnames(Args &&...) {
+    return {};
+}
+template <class... Args> inline ::std::vector<at::Dimname> compute_cdist_outnames(Args &&...) {
+    return {};
+}
+template <class... Args> inline ::std::vector<at::Dimname> compute_cat_outnames(Args &&...) {
+    return {};
+}
+template <class... Args> inline ::std::vector<at::Dimname> broadcast_to_outnames(Args &&...) {
+    return {};
+}
+template <class... Args> inline bool are_names_equal(Args &&...) {
+    return true;
+}
+} // namespace namedinference
+} // namespace at
 
-#endif  // !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
+#endif // !VERSION_BETWEEN(V2R13, VERSION_NEWEST)

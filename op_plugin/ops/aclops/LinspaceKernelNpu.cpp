@@ -22,12 +22,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& linspace_npu_out_nocheck(
-    at::Tensor& result,
-    const at::Scalar& start,
-    const at::Scalar& end,
-    int64_t steps)
-{
+at::Tensor &linspace_npu_out_nocheck(
+    at::Tensor &result, const at::Scalar &start, const at::Scalar &end, int64_t steps) {
     if (steps != 0) {
         if (steps == 1) {
             acl_op::fill_(result, start);
@@ -44,12 +40,10 @@ at::Tensor& linspace_npu_out_nocheck(
     }
     return result;
 }
-}  // namespace
+} // namespace
 
-at::Tensor& linspace_out(const at::Scalar& start, const at::Scalar& end, int64_t steps, at::Tensor& out)
-{
-    TORCH_CHECK(steps >= 0, "number of steps must be non-negative"
-        + OPS_ERROR(ErrCode::VALUE));
+at::Tensor &linspace_out(const at::Scalar &start, const at::Scalar &end, int64_t steps, at::Tensor &out) {
+    TORCH_CHECK(steps >= 0, "number of steps must be non-negative" + OPS_ERROR(ErrCode::VALUE));
 
     if (out.numel() != steps) {
         out.resize_({steps});
@@ -80,20 +74,12 @@ at::Tensor& linspace_out(const at::Scalar& start, const at::Scalar& end, int64_t
     return out;
 }
 
-at::Tensor linspace(
-    const at::Scalar& start,
-    const at::Scalar& end,
-    int64_t steps,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory)
-{
-    TORCH_CHECK(steps >= 0, "number of steps must be non-negative"
-        + OPS_ERROR(ErrCode::VALUE));
+at::Tensor linspace(const at::Scalar &start, const at::Scalar &end, int64_t steps, c10::optional<at::ScalarType> dtype,
+    c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+    TORCH_CHECK(steps >= 0, "number of steps must be non-negative" + OPS_ERROR(ErrCode::VALUE));
     auto device_value = c10::device_or_default(device);
-    at::TensorOptions option = c10::TensorOptions()
-        .dtype(dtype).layout(layout).device(device_value).pinned_memory(pin_memory);
+    at::TensorOptions option =
+        c10::TensorOptions().dtype(dtype).layout(layout).device(device_value).pinned_memory(pin_memory);
 
     at::Tensor result = npu_preparation::apply_tensor_with_format({steps}, option, ACL_FORMAT_ND);
     at::Tensor result_cast = result;
@@ -111,4 +97,4 @@ at::Tensor linspace(
     result = result_cast;
     return result;
 }
-}  // namespace acl_op
+} // namespace acl_op

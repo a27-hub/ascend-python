@@ -22,14 +22,11 @@ using npu_preparation = at_npu::native::OpPreparation;
 const int AXIS_THREE = 3;
 const int AXIS_TWO = 2;
 
-at::Tensor _nnpack_spatial_convolution(
-    const at::Tensor& input,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias_opt,
-    at::IntArrayRef padding,
-    at::IntArrayRef stride)
-{
-    const at::Tensor& bias = c10::value_or_else(bias_opt, [] {return at::Tensor();});
+at::Tensor _nnpack_spatial_convolution(const at::Tensor &input, const at::Tensor &weight,
+    const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef padding, at::IntArrayRef stride) {
+    const at::Tensor &bias = c10::value_or_else(bias_opt, [] {
+        return at::Tensor();
+    });
     auto output_size = op_infer::nnpack_spatial_convolution_npu_output_size(input, weight, padding, stride);
     c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[0], padding[0]};
     c10::SmallVector<int64_t, N> strides_size = {stride[0], stride[0]};
