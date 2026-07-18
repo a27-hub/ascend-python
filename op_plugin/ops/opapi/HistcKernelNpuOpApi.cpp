@@ -24,8 +24,8 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-std::pair<at::Scalar, at::Scalar> histc_check_and_get_min_max(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max)
-{
+std::pair<at::Scalar, at::Scalar> histc_check_and_get_min_max(
+    const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max) {
     TORCH_CHECK(bins > 0, "bins must be > 0", OPS_ERROR(ErrCode::VALUE));
     double leftmost_edge = min.to<double>();
     double rightmost_edge = max.to<double>();
@@ -37,17 +37,15 @@ std::pair<at::Scalar, at::Scalar> histc_check_and_get_min_max(const at::Tensor &
         leftmost_edge -= 1.0;
         rightmost_edge += 1.0;
     }
-    TORCH_CHECK(
-        !(std::isinf(leftmost_edge) || std::isinf(rightmost_edge) || std::isnan(leftmost_edge) || std::isnan(rightmost_edge)),
-        "range of [", leftmost_edge, ", ", rightmost_edge, "] is not finite",
-        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(!(std::isinf(leftmost_edge) || std::isinf(rightmost_edge) || std::isnan(leftmost_edge) ||
+                    std::isnan(rightmost_edge)),
+        "range of [", leftmost_edge, ", ", rightmost_edge, "] is not finite", OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(leftmost_edge < rightmost_edge, "max must be larger than min", OPS_ERROR(ErrCode::VALUE));
     return std::make_pair(at::Scalar(leftmost_edge), at::Scalar(rightmost_edge));
 }
 } // namespace
 
-at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max)
-{
+at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max) {
     auto min_max = histc_check_and_get_min_max(self, bins, min, max);
     auto min_arg = min_max.first;
     auto max_arg = min_max.second;
@@ -59,8 +57,8 @@ at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, co
     return out;
 }
 
-at::Tensor &histc_out(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max, at::Tensor &out)
-{
+at::Tensor &histc_out(
+    const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max, at::Tensor &out) {
     auto min_max = histc_check_and_get_min_max(self, bins, min, max);
     auto min_arg = min_max.first;
     auto max_arg = min_max.second;

@@ -24,10 +24,8 @@ using small_vector = c10::SmallVector<int64_t, SIZE>;
 
 namespace {
 small_vector slow_conv_transpose2d_npu_output_size(const at::Tensor &self, const at::Tensor &weight,
-                                                   at::IntArrayRef kernel_size,
-                                                   at::IntArrayRef stride, at::IntArrayRef padding,
-                                                   at::IntArrayRef output_padding, at::IntArrayRef dilation)
-{
+    at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef dilation) {
     int ndim = self.dim();
     int dimh = 1;
     int dimw = 2;
@@ -55,11 +53,9 @@ small_vector slow_conv_transpose2d_npu_output_size(const at::Tensor &self, const
     return output_size;
 }
 
-inline void slow_conv_transpose2d_shape_check(const at::Tensor &weight,
-                                              at::IntArrayRef kernel_size, const at::Tensor &bias,
-                                              at::IntArrayRef stride, at::IntArrayRef padding,
-                                              at::IntArrayRef output_padding, at::IntArrayRef dilation)
-{
+inline void slow_conv_transpose2d_shape_check(const at::Tensor &weight, at::IntArrayRef kernel_size,
+    const at::Tensor &bias, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef dilation) {
     TORCH_CHECK(kernel_size[0] > 0 && kernel_size[1] > 0,
         "kernel size should be greater than zero, but got kernel_height: ", kernel_size[0],
         " kernel_width: ", kernel_size[1], OPS_ERROR(ErrCode::PARAM));
@@ -70,23 +66,23 @@ inline void slow_conv_transpose2d_shape_check(const at::Tensor &weight,
         "dilation should be greater than zero, but got dilation_height: ", dilation[0],
         ", dilation_width: ", dilation[1], OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((output_padding[1] < stride[1] || output_padding[1] < dilation[1]) &&
-                (output_padding[0] < stride[0] || output_padding[0] < dilation[0]),
-                "output padding must be smaller than either stride or dilation, but got output_padding_height: ",
-                output_padding[0], " output_padding_width: ", output_padding[1], " stride_height: ", stride[0],
-                " stride_width: ", stride[1], " dilation_height: ", dilation[0], " dilation_width: ", dilation[1],
-                OPS_ERROR(ErrCode::PARAM));
+            (output_padding[0] < stride[0] || output_padding[0] < dilation[0]),
+        "output padding must be smaller than either stride or dilation, but got output_padding_height: ",
+        output_padding[0], " output_padding_width: ", output_padding[1], " stride_height: ", stride[0],
+        " stride_width: ", stride[1], " dilation_height: ", dilation[0], " dilation_width: ", dilation[1],
+        OPS_ERROR(ErrCode::PARAM));
 
     auto flag_a = 2;
     auto flag_b = 4;
 
     TORCH_CHECK(weight.numel() != 0 && (weight.dim() == flag_a || weight.dim() == flag_b),
-                "non-empty 2D or 4D weight tensor expected, but got: ", weight.sizes(), OPS_ERROR(ErrCode::PARAM));
+        "non-empty 2D or 4D weight tensor expected, but got: ", weight.sizes(), OPS_ERROR(ErrCode::PARAM));
     if (bias.defined()) {
         check_dim_size(bias, 1, 0, weight.size(1));
     }
 
     TORCH_CHECK(kernel_size.size() == flag_a, "It is expected kernel_size equals to 2, but got size ",
-                kernel_size.size(), OPS_ERROR(ErrCode::PARAM));
+        kernel_size.size(), OPS_ERROR(ErrCode::PARAM));
 
     TORCH_CHECK(dilation.size() == flag_a, "It is expected dilation equals to 2, but got size ", dilation.size(),
         OPS_ERROR(ErrCode::PARAM));
@@ -98,19 +94,19 @@ inline void slow_conv_transpose2d_shape_check(const at::Tensor &weight,
         OPS_ERROR(ErrCode::PARAM));
 
     TORCH_CHECK(output_padding.size() == flag_a, "It is expected stride equals to 2, but got size ",
-                output_padding.size(), OPS_ERROR(ErrCode::PARAM));
+        output_padding.size(), OPS_ERROR(ErrCode::PARAM));
 }
 
 at::Tensor &slow_conv_transpose2d_out_nocheck(at::Tensor &out, const at::Tensor &self, const at::Tensor &weight,
-                                              at::IntArrayRef kernel_size, const c10::optional<at::Tensor> &bias_opt,
-                                              at::IntArrayRef stride, at::IntArrayRef padding,
-                                              at::IntArrayRef output_padding, at::IntArrayRef dilation)
-{
-    const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
+    at::IntArrayRef kernel_size, const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation) {
+    const at::Tensor &bias = c10::value_or_else(bias_opt, [] {
+        return at::Tensor();
+    });
     slow_conv_transpose2d_shape_check(weight, kernel_size, bias, stride, padding, output_padding, dilation);
 
-    auto output_size = slow_conv_transpose2d_npu_output_size(self, weight, kernel_size, stride, padding,
-                                                             output_padding, dilation);
+    auto output_size =
+        slow_conv_transpose2d_npu_output_size(self, weight, kernel_size, stride, padding, output_padding, dilation);
     if (!out.sizes().equals(output_size)) {
         out.resize_(output_size);
     }
@@ -121,8 +117,8 @@ at::Tensor &slow_conv_transpose2d_out_nocheck(at::Tensor &out, const at::Tensor 
     c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[1], padding[1]};
     c10::SmallVector<int64_t, N> strides_size = {1, 1, stride[0], stride[1]};
     c10::SmallVector<int64_t, N> dilations = {1, 1, dilation[0], dilation[1]};
-    c10::SmallVector<int64_t, N> outputpadding = {output_padding[0], output_padding[0], output_padding[1],
-                                                  output_padding[1]};
+    c10::SmallVector<int64_t, N> outputpadding = {
+        output_padding[0], output_padding[0], output_padding[1], output_padding[1]};
     string data_formats = "NCHW";
     int64_t groups = 1;
     c10::SmallVector<int64_t, N> size_vec = op_infer::array_to_small_vector(out.sizes());
@@ -144,13 +140,13 @@ at::Tensor &slow_conv_transpose2d_out_nocheck(at::Tensor &out, const at::Tensor 
 } // namespace
 
 at::Tensor &slow_conv_transpose2d_out(const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size,
-                                      const c10::optional<at::Tensor> &bias, at::IntArrayRef stride,
-                                      at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation,
-                                      at::Tensor &out)
-{
-    const at::Tensor &bias_value_or = c10::value_or_else(bias, [] { return at::Tensor(); });
-    auto output_size = slow_conv_transpose2d_npu_output_size(self, weight, kernel_size, stride, padding,
-                                                             output_padding, dilation);
+    const c10::optional<at::Tensor> &bias, at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef output_padding, at::IntArrayRef dilation, at::Tensor &out) {
+    const at::Tensor &bias_value_or = c10::value_or_else(bias, [] {
+        return at::Tensor();
+    });
+    auto output_size =
+        slow_conv_transpose2d_npu_output_size(self, weight, kernel_size, stride, padding, output_padding, dilation);
 
     int64_t out_format = self.dtype() == at::kHalf ? ACL_FORMAT_NC1HWC0 : ACL_FORMAT_ND;
     if (bias_value_or.defined()) {
@@ -161,27 +157,26 @@ at::Tensor &slow_conv_transpose2d_out(const at::Tensor &self, const at::Tensor &
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_out = npu_utils::format_contiguous(out);
-        slow_conv_transpose2d_out_nocheck(contiguous_out, self, weight, kernel_size, bias, stride, padding,
-                                          output_padding, dilation);
+        slow_conv_transpose2d_out_nocheck(
+            contiguous_out, self, weight, kernel_size, bias, stride, padding, output_padding, dilation);
         npu_utils::format_fresh_view(out, contiguous_out);
     } else {
-        slow_conv_transpose2d_out_nocheck(out, self, weight, kernel_size, bias, stride, padding, output_padding,
-                                          dilation);
+        slow_conv_transpose2d_out_nocheck(
+            out, self, weight, kernel_size, bias, stride, padding, output_padding, dilation);
     }
     return out;
 }
 
 at::Tensor slow_conv_transpose2d(const at::Tensor &self, const at::Tensor &weight, at::IntArrayRef kernel_size,
-                                 const c10::optional<at::Tensor> &bias, at::IntArrayRef stride,
-                                 at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation)
-{
-    auto output_size = slow_conv_transpose2d_npu_output_size(self, weight, kernel_size, stride, padding,
-                                                             output_padding, dilation);
+    const c10::optional<at::Tensor> &bias, at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef output_padding, at::IntArrayRef dilation) {
+    auto output_size =
+        slow_conv_transpose2d_npu_output_size(self, weight, kernel_size, stride, padding, output_padding, dilation);
 
     int64_t result_format = self.dtype() == at::kHalf ? ACL_FORMAT_NC1HWC0 : ACL_FORMAT_ND;
     at::Tensor result = npu_preparation::apply_tensor_with_format(self, output_size, result_format);
-    slow_conv_transpose2d_out_nocheck(result, self, weight, kernel_size, bias, stride, padding, output_padding,
-                                      dilation);
+    slow_conv_transpose2d_out_nocheck(
+        result, self, weight, kernel_size, bias, stride, padding, output_padding, dilation);
 
     return result;
 }

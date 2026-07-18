@@ -18,11 +18,12 @@ using namespace std;
 
 namespace atb {
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
-void _npu_paged_attention_quant(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache, const int64_t num_kv_heads, const int64_t num_heads, const double scale_value, const at::Tensor &block_table, const at::Tensor &context_lens,
-    const int64_t quant_type, const int64_t outdata_type, const at::Tensor &k_descale, const at::Tensor &v_descale, at::Tensor &out)
-{
+void _npu_paged_attention_quant(const at::Tensor &query, const at::Tensor &key_cache, const at::Tensor &value_cache,
+    const int64_t num_kv_heads, const int64_t num_heads, const double scale_value, const at::Tensor &block_table,
+    const at::Tensor &context_lens, const int64_t quant_type, const int64_t outdata_type, const at::Tensor &k_descale,
+    const at::Tensor &v_descale, at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
+    OpParamCache<PagedAttentionParam> &pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
 
     pagedparam.headNum = num_heads;
@@ -44,13 +45,13 @@ void _npu_paged_attention_quant(const at::Tensor &query, const at::Tensor &key_c
 
     ParamSetter paramsetter;
     paramsetter.Input(query, true)
-            .Input(key_cache)
-            .Input(value_cache)
-            .Input(block_table, true)
-            .Input(context_lens, true)
-            .Input(k_descale, true)
-            .Input(v_descale, true)
-            .Output(out);
+        .Input(key_cache)
+        .Input(value_cache)
+        .Input(block_table, true)
+        .Input(context_lens, true)
+        .Input(k_descale, true)
+        .Input(v_descale, true)
+        .Output(out);
     auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
     RunAtbCmd(opPaged, paramsetter, "PagedAttentionOperation");
 
@@ -58,15 +59,15 @@ void _npu_paged_attention_quant(const at::Tensor &query, const at::Tensor &key_c
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
-    m.def("_npu_paged_attention_quant(Tensor query, Tensor key_cache, Tensor value_cache, int num_kv_heads, int num_heads, float scale_value, Tensor block_table, Tensor context_lens, int quant_type, int outdata_type, Tensor k_descale, Tensor v_descale, Tensor(a!) out) -> ()");
+TORCH_LIBRARY_FRAGMENT(atb, m) {
+    m.def("_npu_paged_attention_quant(Tensor query, Tensor key_cache, Tensor value_cache, int num_kv_heads, int "
+          "num_heads, float scale_value, Tensor block_table, Tensor context_lens, int quant_type, int outdata_type, "
+          "Tensor k_descale, Tensor v_descale, Tensor(a!) out) -> ()");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_paged_attention_quant", TORCH_FN(atb::_npu_paged_attention_quant));
 }
 }
