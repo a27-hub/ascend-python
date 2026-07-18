@@ -22,17 +22,18 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 std::tuple<at::Tensor, at::Tensor, at::Tensor> layer_norm_npu_support(const at::Tensor &input,
-                                                                      const c10::optional<at::Tensor> &weight_ex,
-                                                                      const c10::optional<at::Tensor> &bias_ex,
-                                                                      int64_t M, int64_t N, double eps)
-{
-    const at::Tensor &weight_ = c10::value_or_else(weight_ex, [] { return at::Tensor(); });
+    const c10::optional<at::Tensor> &weight_ex, const c10::optional<at::Tensor> &bias_ex, int64_t M, int64_t N,
+    double eps) {
+    const at::Tensor &weight_ = c10::value_or_else(weight_ex, [] {
+        return at::Tensor();
+    });
     at::Tensor weight = weight_;
-    const at::Tensor &bias_ = c10::value_or_else(bias_ex, [] { return at::Tensor(); });
+    const at::Tensor &bias_ = c10::value_or_else(bias_ex, [] {
+        return at::Tensor();
+    });
     at::Tensor bias = bias_;
 
-    TORCH_CHECK(input.numel() == M * N, "The numel of input should be equal to M * N"
-        + OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(input.numel() == M * N, "The numel of input should be equal to M * N" + OPS_ERROR(ErrCode::VALUE));
     DCHECK(!weight.defined() || weight.numel() == N);
     DCHECK(!bias.defined() || bias.numel() == N);
 
@@ -106,24 +107,23 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> layer_norm_npu_support(const at::
 } // namespace
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tensor &input,
-                                                                 at::IntArrayRef normalized_shape,
-                                                                 const c10::optional<at::Tensor> &weight,
-                                                                 const c10::optional<at::Tensor> &bias, double eps)
-{
-    const at::Tensor &weight_ex = c10::value_or_else(weight, [] { return at::Tensor(); });
-    const at::Tensor &bias_ex = c10::value_or_else(bias, [] { return at::Tensor(); });
+    at::IntArrayRef normalized_shape, const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias,
+    double eps) {
+    const at::Tensor &weight_ex = c10::value_or_else(weight, [] {
+        return at::Tensor();
+    });
+    const at::Tensor &bias_ex = c10::value_or_else(bias, [] {
+        return at::Tensor();
+    });
     const int normalized_ndim = static_cast<int>(normalized_shape.size());
     TORCH_CHECK(normalized_ndim >= 1, "Expected normalized_shape to be at least 1-dimensional, i.e., ",
-        "containing at least one element, but got normalized_shape = ", normalized_shape,
-        OPS_ERROR(ErrCode::PARAM));
+        "containing at least one element, but got normalized_shape = ", normalized_shape, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!weight_ex.defined() || weight_ex.sizes().equals(normalized_shape),
         "Expected weight to be of same shape as normalized_shape, but got ", "weight of shape ", weight_ex.sizes(),
-        " and normalized_shape = ", normalized_shape,
-        OPS_ERROR(ErrCode::PARAM));
+        " and normalized_shape = ", normalized_shape, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!bias_ex.defined() || bias_ex.sizes().equals(normalized_shape),
         "Expected bias to be of same shape as normalized_shape, but got ", "bias of shape ", bias_ex.sizes(),
-        " and normalized_shape = ", normalized_shape,
-        OPS_ERROR(ErrCode::PARAM));
+        " and normalized_shape = ", normalized_shape, OPS_ERROR(ErrCode::PARAM));
 
     const auto input_shape = input.sizes();
     const auto input_ndim = input.dim();
@@ -134,8 +134,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
             ss << ", " << size;
         }
         ss << "], but got input of size" << input_shape;
-        TORCH_CHECK(false, ss.str(),
-            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(false, ss.str(), OPS_ERROR(ErrCode::PARAM));
     }
 
     const int axis = input_ndim - normalized_ndim;

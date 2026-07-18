@@ -21,15 +21,14 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> triangular_solve_out_common_nocheck(const at::Tensor &self, const at::Tensor &A,
-                                                                       bool upper, bool transpose, bool unitriangular)
-{
+std::tuple<at::Tensor, at::Tensor> triangular_solve_out_common_nocheck(
+    const at::Tensor &self, const at::Tensor &A, bool upper, bool transpose, bool unitriangular) {
     at::Tensor self_broadcasted;
     at::Tensor a_broadcasted;
     std::tie(self_broadcasted, a_broadcasted) = at::native::_linalg_broadcast_batch_dims(self, A, "triangular_solve");
     TORCH_CHECK(self_broadcasted.dtype() == at::kFloat && a_broadcasted.dtype() == at::kFloat,
-                "_triangular_solve_helper_npu only supported Float, but get ", self_broadcasted.dtype(), ' ',
-                a_broadcasted.dtype(), OPS_ERROR(ErrCode::TYPE));
+        "_triangular_solve_helper_npu only supported Float, but get ", self_broadcasted.dtype(), ' ',
+        a_broadcasted.dtype(), OPS_ERROR(ErrCode::TYPE));
     auto self_working_copy = npu_preparation::apply_tensor(self_broadcasted);
     auto a_working_copy = a_broadcasted.clone();
     at::Tensor a_tensor = a_broadcasted;

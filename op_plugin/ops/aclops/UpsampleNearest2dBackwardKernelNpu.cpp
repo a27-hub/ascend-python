@@ -23,9 +23,7 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 at::Tensor &upsample_nearest2d_backward_out_nocheck(at::Tensor &y, const at::Tensor &grads, at::IntArrayRef output_size,
-                                                    at::IntArrayRef input_size, c10::optional<double> scales_h,
-                                                    c10::optional<double> scales_w)
-{
+    at::IntArrayRef input_size, c10::optional<double> scales_h, c10::optional<double> scales_w) {
     TORCH_CHECK(input_size.size() == 4, "The length of input_size should be equal to 4, but got ", input_size.size(),
         OPS_ERROR(ErrCode::PARAM));
 
@@ -44,9 +42,7 @@ at::Tensor &upsample_nearest2d_backward_out_nocheck(at::Tensor &y, const at::Ten
 } // namespace
 
 at::Tensor &upsample_nearest2d_backward_out(const at::Tensor &grads, at::IntArrayRef output_size,
-                                            at::IntArrayRef input_size, c10::optional<double> scales_h,
-                                            c10::optional<double> scales_w, at::Tensor &y)
-{
+    at::IntArrayRef input_size, c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &y) {
     npu_preparation::CheckOut({grads}, y, npu_preparation::get_tensor_npu_format(y), grads.scalar_type(), input_size);
 
     if (!npu_utils::check_match(&y)) {
@@ -61,9 +57,7 @@ at::Tensor &upsample_nearest2d_backward_out(const at::Tensor &grads, at::IntArra
 }
 
 at::Tensor upsample_nearest2d_backward(const at::Tensor &grad_output, at::IntArrayRef output_size,
-                                       at::IntArrayRef input_size, c10::optional<double> scales_h,
-                                       c10::optional<double> scales_w)
-{
+    at::IntArrayRef input_size, c10::optional<double> scales_h, c10::optional<double> scales_w) {
     at::Tensor grads = grad_output;
     if (grad_output.scalar_type() != at::ScalarType::Float) {
         grads = at_npu::native::custom_ops::_npu_dtype_cast(grad_output, at::kFloat);

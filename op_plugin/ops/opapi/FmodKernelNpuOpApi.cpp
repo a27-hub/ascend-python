@@ -20,25 +20,23 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-inline bool wrapped_to_scalar(const at::Tensor &tensor)
-{
-    return tensor.dim() == 0 && (tensor.scalar_type() == at::ScalarType::Double ||
-        tensor.scalar_type() == at::ScalarType::Long) && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+inline bool wrapped_to_scalar(const at::Tensor &tensor) {
+    return tensor.dim() == 0 &&
+        (tensor.scalar_type() == at::ScalarType::Double || tensor.scalar_type() == at::ScalarType::Long) &&
+        c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
 }
 
-static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
-                                        const c10::Device device)
-{
+static at::Tensor self_tensor_to_device(
+    const at::Tensor &tensor, const at::ScalarType result_type, const c10::Device device) {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor) ||
-       (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
+        (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
         at::Scalar scalar = tensor.item();
         return npu_preparation::copy_scalar_to_device(scalar, result_type, device);
     }
     return tensor;
 }
 
-at::Tensor &inplace_fmod_out_npu_no_check(at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor &inplace_fmod_out_npu_no_check(at::Tensor &self, const at::Tensor &other) {
     // wrapped tensor will turn to tensor+scalar process
     if (wrapped_to_scalar(other)) {
         c10::Scalar other_scalar = other.item();
@@ -49,8 +47,7 @@ at::Tensor &inplace_fmod_out_npu_no_check(at::Tensor &self, const at::Tensor &ot
     return self;
 }
 
-at::Tensor &fmod_out_npu_no_check(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &fmod_out_npu_no_check(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     // wrapped tensor will turn to tensor+scalar process
     if (wrapped_to_scalar(other)) {
         c10::Scalar other_scalar = other.item();
@@ -61,14 +58,12 @@ at::Tensor &fmod_out_npu_no_check(const at::Tensor &self, const at::Tensor &othe
     return result;
 }
 
-static at::Tensor fmod_dest_output(const at::Tensor &self, const at::Tensor &other)
-{
+static at::Tensor fmod_dest_output(const at::Tensor &self, const at::Tensor &other) {
     bool isSelfWrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
     return isSelfWrapped ? other : self;
 }
 
-at::Tensor &fmod_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &fmod_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnFmodTensor, acl_op::fmod_out(self, other, result));
     DO_COMPATIBILITY(aclnnFmodScalar, acl_op::fmod_out(self, other, result));
     // calculate the output size
@@ -82,8 +77,7 @@ at::Tensor &fmod_out(const at::Tensor &self, const at::Tensor &other, at::Tensor
     return result;
 }
 
-at::Tensor fmod(const at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor fmod(const at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnFmodTensor, acl_op::fmod(self, other));
     DO_COMPATIBILITY(aclnnFmodScalar, acl_op::fmod(self, other));
     // calculate the output size
@@ -102,8 +96,7 @@ at::Tensor fmod(const at::Tensor &self, const at::Tensor &other)
     return result;
 }
 
-at::Tensor &fmod_(at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor &fmod_(at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnInplaceFmodTensor, acl_op::fmod_(self, other));
     DO_COMPATIBILITY(aclnnInplaceFmodScalar, acl_op::fmod_(self, other));
     TORCH_CHECK(torch_npu::utils::is_npu(self), "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
