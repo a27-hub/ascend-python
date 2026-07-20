@@ -59,6 +59,8 @@ jobs:
       - name: UT
         run: |
           rm -rf *
+          # .ci/ 仅存在于默认分支，需先拉取
+          git clone -b ${{ atomgit.event.repository.default_branch }} ${REMOTE_URL} .
           bash .ci/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${workspace}
           pwd 
           cd ./CODE
