@@ -7293,4 +7293,3 @@ def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype
     else:
         out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
     return (out_weight, out_weight_scale, out_weight_offset, out_bias)
-
