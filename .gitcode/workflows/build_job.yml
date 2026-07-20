@@ -33,10 +33,7 @@ on:
         required: false
         type: string
         default: "large"
-      pr_id_wwq:
-        required: false
-        type: string
-        default: ${{ atomgit.event.pull_request.number }}
+
     secrets:
       OBS_AK:
         required: true
