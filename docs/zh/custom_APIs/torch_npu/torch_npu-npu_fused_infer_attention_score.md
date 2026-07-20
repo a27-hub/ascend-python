@@ -1005,65 +1005,95 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > - 如果 S2（KV_S + prefix_S）超出原 KV_S 限制则报错。若传入 `atten_mask`，S2 需大于 prefix_S + KV_S。
 > - 不支持 PageAttention、左 padding、tensorlist、qkv 全 int8。
 
-### 示例 9：图模式（torch.compile + torchair）
+### 示例 9：ACL Graph 模式（torch_npu.npu.NPUGraph）
 
-通过 `torch.compile` + `torchair` backend 将算子纳入计算图。
+"""
+通过 NPUGraph 捕获计算图，实现图模式执行和参数更新
+"""
 
 ```python
 import torch
 import torch_npu
 import math
-import torchair as tng
-from torchair.configs.compiler_config import CompilerConfig
 
-# ===== 图模式配置 =====
-config = CompilerConfig()
-config.debug.graph_dump.type = "pbtxt"
-npu_backend = tng.get_npu_backend(compiler_config=config)
-
-# ===== 数据准备 =====
+# ===== 1. 数据准备 =====
 B, Q_N, Q_S, D = 1, 8, 164, 128
-KV_N, KV_S = 8, 1024
-
-q = torch.randn(B, Q_N, Q_S, D, dtype=torch.float16).npu()
-k = torch.randn(B, KV_N, KV_S, D, dtype=torch.float16).npu()
-v = torch.randn(B, KV_N, KV_S, D, dtype=torch.float16).npu()
+KV_S = 1024
 scale = 1.0 / math.sqrt(D)
 
+q = torch.randn(B, Q_N, Q_S, D, dtype=torch.float16).npu()
+k = torch.randn(B, Q_N, KV_S, D, dtype=torch.float16).npu()
+v = torch.randn(B, Q_N, KV_S, D, dtype=torch.float16).npu()
 
+
+# ===== 2. 定义模型 =====
 class Model(torch.nn.Module):
-    def forward(self):
+    def __init__(self, num_heads, scale, pre_tokens=65535, next_tokens=65535):
+        super().__init__()
+        self.num_heads = num_heads
+        self.scale = scale
+        self.pre_tokens = pre_tokens
+        self.next_tokens = next_tokens
+
+    def forward(self, q, k, v):
         return torch_npu.npu_fused_infer_attention_score(
             q, k, v,
-            num_heads=Q_N,
+            num_heads=self.num_heads,
             input_layout="BNSD",
-            scale=scale,
-            pre_tokens=65535,
-            next_tokens=65535
-        )
+            scale=self.scale,
+            pre_tokens=self.pre_tokens,
+            next_tokens=self.next_tokens
+        )[0]  # 只取第一个返回值
 
 
-# ===== 编译 + 执行 =====
+# ===== 3. 图捕获 =====
+model = Model(Q_N, scale).npu()
+graph = torch_npu.npu.NPUGraph()
+
+with torch_npu.npu.graph(graph):
+    graph_out = model(q, k, v)
+
+print(f"图捕获完成，输出 shape: {graph_out.shape}")
+
+
+# ===== 4. 图重放（输入数据更新） =====
+# 生成新输入数据（内容变化，shape不变）
+q_new = torch.randn_like(q)
+k_new = torch.randn_like(k)
+v_new = torch.randn_like(v)
+
+# 重要：通过 copy_ 更新数据到捕获时的内存地址
+q.copy_(q_new)
+k.copy_(k_new)
+v.copy_(v_new)
+
+# 重放图
+graph.replay()
+print(f"图重放完成（输入数据更新），输出 shape: {graph_out.shape}")
+
+
+# ===== 5. 参数更新（模型配置变化） =====
+# 注意：pre_tokens/next_tokens 变化需要重新捕获图
+new_pre_tokens = 32768
+model_updated = Model(Q_N, scale, new_pre_tokens, 32768).npu()
+
+graph_updated = torch_npu.npu.NPUGraph()
+with torch_npu.npu.graph(graph_updated):
+    updated_out = model_updated(q, k, v)
+
+graph_updated.replay()
+print(f"图重放完成（pre_tokens={new_pre_tokens}），输出 shape: {updated_out.shape}")
+
+
+# ===== 6. 结果验证 =====
 with torch.no_grad():
-    model = Model()
-    compiled = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
-    graph_out = compiled()
+    single_out = model(q, k, v)
 
-    # 与单算子结果对比
-    single_out, _ = torch_npu.npu_fused_infer_attention_score(
-        q, k, v,
-        num_heads=Q_N,
-        input_layout="BNSD",
-        scale=scale,
-        pre_tokens=65535,
-        next_tokens=65535
-    )
-    print("graph output shape:", graph_out[0].shape)
-    print("single op output shape:", single_out.shape)
-    print("match:", torch.allclose(graph_out[0], single_out, atol=1e-2))
+match = torch.allclose(graph_out, single_out, atol=1e-2)
+print(f"\nGraph vs Eager 匹配: {'✓' if match else '✗'}")
+print(f"  graph output shape: {graph_out.shape}")
+print(f"  single op output shape: {single_out.shape}")
 ```
-
-> **说明**：图模式下参数含义与单算子模式一致。需确保 `torchair` 与 CANN 版本匹配。
 
 ## 参考资源
 
