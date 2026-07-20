@@ -1,0 +1,34 @@
+name: PR-pipeline_op-plugin
+
+concurrency:
+  max: 5
+  exceed-action: QUEUE
+  enable: true
+  preemption:
+    enable: true
+    events: [mr_id]
+
+on:
+  pull_request_comment:
+    types: [created]
+    branches: [ '*' ]
+    comments: [ '^(?:\/)?compile*' ]
+
+
+stages:
+
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
+
+      SCA:
+        name: SCA
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: composite_test
+            uses: WWQ129/.gitcode/actions/composite_test@main
+
