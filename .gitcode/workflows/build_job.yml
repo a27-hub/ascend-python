@@ -59,7 +59,6 @@ jobs:
           echo "pr_id=${{ inputs.pr_id }}"
           echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
           echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
-          echo "pr_id_wwq=${{ inputs.pr_id_wwq }}"
 
       - name: compile
         run: |
