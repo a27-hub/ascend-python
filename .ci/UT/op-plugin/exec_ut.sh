@@ -105,9 +105,9 @@ function main()
     # clone torch_adapter for ops ut
     PYTORCH_PATH=${CUR_DIR}/../pytorch_ut
     if [ ! -d ${PYTORCH_PATH} ]; then
-        bash "${WORKSPACE}"/.ci/common/retry_command.sh "git clone -b ${PYTORCH_VERSION} https://gitcode.com/Ascend/pytorch.git ${PYTORCH_PATH}"
+        bash "${WORKSPACE}"/cie/.ci/common/retry_command.sh "git clone -b ${PYTORCH_VERSION} https://gitcode.com/Ascend/pytorch.git ${PYTORCH_PATH}"
         cd ${PYTORCH_PATH}
-        bash "${WORKSPACE}"/.ci/common/retry_command.sh "git submodule update --init --recursive --force third_party/op-plugin  third_party/torchair/torchair"
+        bash "${WORKSPACE}"/cie/.ci/common/retry_command.sh "git submodule update --init --recursive --force third_party/op-plugin  third_party/torchair/torchair"
         if [ -f "${WORKSPACE}/CODE/test/allowlist_for_publicAPI.json" ];then
            cp -f ${WORKSPACE}/CODE/test/allowlist_for_publicAPI.json ./third_party/op-plugin/test/allowlist_for_publicAPI.json
         fi
@@ -217,7 +217,7 @@ function main()
     cd ${PYTORCH_PATH}/ci
     echo "Start to run access_control_test in PTA."
     if [ "${PYTORCH_VERSION:0:6}" == "v2.6.0" ]; then
-        cp -f ${WORKSPACE}/.ci/UT/pta/test_manager.py ${PYTORCH_PATH}/ci/access_control/test_manager.py
+        cp -f ${WORKSPACE}/cie/.ci/UT/pta/test_manager.py ${PYTORCH_PATH}/ci/access_control/test_manager.py
     fi
     # export ASCEND_LAUNCH_BLOCKING=0
     python"${PY_VERSION}" access_control_test.py --rank=${TEST_RANK} --world_size=${TEST_WORLD_SIZE}

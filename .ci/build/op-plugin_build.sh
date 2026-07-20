@@ -262,7 +262,7 @@ function main() {
             tar -C dist -cvzf "${WORKSPACE}"/../output/"${pr_id}"/torch_npu_v2.12.0-"${TARGET_BRANCH}"_${ARCH}.tar.gz ./
         fi
     elif [ "${pytorch_version}" == "master" ]; then
-        bash ${WORKSPACE}/.ci/common/retry_command.sh "rm -rf ${WORKSPACE}/tmp_pytorch && git clone --depth=1 https://gitcode.com/Ascend/pytorch.git ${WORKSPACE}/tmp_pytorch"
+        bash ${WORKSPACE}/cie/.ci/common/retry_command.sh "rm -rf ${WORKSPACE}/tmp_pytorch && git clone --depth=1 https://gitcode.com/Ascend/pytorch.git ${WORKSPACE}/tmp_pytorch"
         torch_version=`cat ${WORKSPACE}/tmp_pytorch/requirements.txt | grep torch== | cut -c 8-25`
         nightly_date=${torch_version:10:8}
         if [ ${#nightly_date} -ne 8 ]; then

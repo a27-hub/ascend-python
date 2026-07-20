@@ -71,14 +71,14 @@ jobs:
           git config --global http.lowSpeedLimit 5000
           git config --global http.lowSpeedTime 300
           # .ci/ 仅存在于默认分支，需先拉取
-          git clone -b ${{ atomgit.event.repository.default_branch }} ${{ env.REMOTE_URL }} .
-          bash .ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ env.REMOTE_URL }} ${{ env.pr_id }} ${ATOMGIT_WORKSPACE}
+          git clone -b ${{ atomgit.event.repository.default_branch }} ${{ env.REMOTE_URL }} cie
+          bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ env.REMOTE_URL }} ${{ env.pr_id }} ${ATOMGIT_WORKSPACE}
           cd ./CODE
           git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
           cat ../modify_files.txt
           cd -
-          source .ci/common/ccache_env.sh
-          bash .ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ env.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          source cie/.ci/common/ccache_env.sh
+          bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ env.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
       - name: Upload to OBS
         uses: obs-upload
         with:

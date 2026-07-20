@@ -60,14 +60,14 @@ jobs:
         run: |
           rm -rf *
           # .ci/ 仅存在于默认分支，需先拉取
-          git clone -b ${{ atomgit.event.repository.default_branch }} ${REMOTE_URL} .
-          bash .ci/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${workspace}
-          pwd 
+          git clone -b ${{ atomgit.event.repository.default_branch }} ${REMOTE_URL} cie
+          bash cie/.ci/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${workspace}
+          pwd
           cd ./CODE
           git diff-tree -r --name-only --no-commit-id origin/${TARGET_BRANCH} HEAD > ../modify_files.txt
-          cat ../modify_files.txt 
+          cat ../modify_files.txt
           cd -
-          # bash .ci/UT/op-plugin_ut_general.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
+          # bash cie/.ci/UT/op-plugin_ut_general.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
           echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
           echo "py_version: ${{ inputs.py_version }}"
           echo "pr_id: ${{ env.pr_id }}"

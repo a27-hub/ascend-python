@@ -131,7 +131,7 @@ function main() {
     elif [ ${pytorch_version:0:7} == "v2.10.0" ] || [ ${pytorch_version:0:7} == "v2.11.0" ]|| [ ${pytorch_version:0:7} == "v2.12.0" ] ; then
         torch_install_other "${pytorch_version:1:6}" "${py_version//./}"
     elif [ "${pytorch_version}" = "master" ]; then
-        bash ${WORKSPACE}/.ci/common/retry_command.sh "rm -rf ${WORKSPACE}/tmp_pytorch && git clone --depth=1 https://gitcode.com/Ascend/pytorch.git ${WORKSPACE}/tmp_pytorch"
+        bash ${WORKSPACE}/cie/.ci/common/retry_command.sh "rm -rf ${WORKSPACE}/tmp_pytorch && git clone --depth=1 https://gitcode.com/Ascend/pytorch.git ${WORKSPACE}/tmp_pytorch"
         nightly_version=`cat ${WORKSPACE}/tmp_pytorch/requirements.txt | grep torch== | cut -c 8-25`
         nightly_date=${nightly_version:10:8}
         echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -154,12 +154,12 @@ function main() {
 
     cp -rf modify_files.txt ./CODE
     if [ "${pytorch_version}" != "master" ]; then
-        cp -f ${WORKSPACE}/.ci/UT/op-plugin/common_files.txt ./CODE
+        cp -f ${WORKSPACE}/cie/.ci/UT/op-plugin/common_files.txt ./CODE
     fi
     cd ${WORKSPACE}/CODE
     rm -rf ci/exec_ut.sh
-    cp -f ${WORKSPACE}/.ci/UT/op-plugin/exec_ut.sh ${WORKSPACE}/CODE/ci/exec_ut.sh
-    cp -f ${WORKSPACE}/.ci/UT/op-plugin/delete_torchair_base_schema.py ${WORKSPACE}/CODE/ci/delete_torchair_base_schema.py
+    cp -f ${WORKSPACE}/cie/.ci/UT/op-plugin/exec_ut.sh ${WORKSPACE}/CODE/ci/exec_ut.sh
+    cp -f ${WORKSPACE}/cie/.ci/UT/op-plugin/delete_torchair_base_schema.py ${WORKSPACE}/CODE/ci/delete_torchair_base_schema.py
 
     pkill -f /usr/local/bin/python3 || echo "IGNORE KILL ERROR" > /dev/null
     pkill -f /opt/_internal/cpython || echo "IGNORE KILL ERROR" > /dev/null
