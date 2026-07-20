@@ -2114,18 +2114,22 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_grad_out_size(const at::Te
     return output_shape;
 }
 
-c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_permuted_tokens_out_size(const at::Tensor &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs)
+c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_permuted_tokens_out_size(const c10::optional<at::Tensor> &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs)
 {
-    TORCH_CHECK(permuted_tokens.dim() == DIM_2,
-                "permuted_tokens should be 2D (got ", permuted_tokens.dim(), "D)." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(grad_unpermuted_tokens.dim() == DIM_2,
                 "grad_unpermuted_tokens should be 2D (got ", grad_unpermuted_tokens.dim(), "D)." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(sorted_indices.dim() == DIM_1,
                 "sorted_indices should be 1D (got ", sorted_indices.dim(), "D)." + OPS_ERROR(ErrCode::PARAM));
-    return {permuted_tokens.size(0), permuted_tokens.size(1)};
+    if (permuted_tokens.has_value() && permuted_tokens.value().defined()) {
+        auto& permuted_tokens_tensor = permuted_tokens.value();
+        TORCH_CHECK(permuted_tokens_tensor.dim() == DIM_2,
+                    "permuted_tokens should be 2D (got ", permuted_tokens_tensor.dim(), "D)." + OPS_ERROR(ErrCode::PARAM));
+        return {permuted_tokens_tensor.size(0), permuted_tokens_tensor.size(1)};
+    }
+    return {sorted_indices.numel(), grad_unpermuted_tokens.size(1)};
 }
 
-c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_probs_out_size(const at::Tensor &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs)
+c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_probs_out_size(const c10::optional<at::Tensor> &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs)
 {
     if (probs.has_value() && probs.value().defined()) {
         TORCH_CHECK(probs.value().dim() == DIM_2,
