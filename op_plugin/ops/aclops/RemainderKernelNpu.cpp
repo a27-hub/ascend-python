@@ -24,71 +24,38 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
-at::Tensor& remainder_out_scalar_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Scalar other)
-{
+at::Tensor &remainder_out_scalar_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Scalar other) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("FloorMod")
-        .Input(self)
-        .Input(other, self.scalar_type())
-        .Output(result)
-        .Run();
+    cmd.Name("FloorMod").Input(self).Input(other, self.scalar_type()).Output(result).Run();
 
     return result;
 }
 
-at::Tensor& remainder_out_scalar_npu_nocheck(
-    at::Tensor& result,
-    const at::Scalar& self,
-    const at::Tensor& other)
-{
+at::Tensor &remainder_out_scalar_npu_nocheck(at::Tensor &result, const at::Scalar &self, const at::Tensor &other) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("FloorMod")
-        .Input(self, other.scalar_type())
-        .Input(other)
-        .Output(result)
-        .Run();
+    cmd.Name("FloorMod").Input(self, other.scalar_type()).Input(other).Output(result).Run();
     return result;
 }
 
-at::Tensor& remainder_out_tensor_npu_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& other)
-{
+at::Tensor &remainder_out_tensor_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &other) {
     auto unified_result = npu_preparation::binary_op_check(result, self, other, true);
     at_npu::native::OpCommand cmd;
-    cmd.Name("FloorMod")
-        .Expect(unified_result)
-        .Input(self)
-        .Input(other)
-        .Output(result)
-        .Run();
+    cmd.Name("FloorMod").Expect(unified_result).Input(self).Input(other).Output(result).Run();
     return result;
 }
 
-at::Tensor& remainder_out_scalar(
-    at::Tensor& result,
-    const at::Scalar& self,
-    const at::Tensor& other)
-{
+at::Tensor &remainder_out_scalar(at::Tensor &result, const at::Scalar &self, const at::Tensor &other) {
     at::ScalarType calculate_type = at::native::result_type(other, self);
     at::ScalarType result_type = result.scalar_type();
     TORCH_CHECK(canCast(calculate_type, result_type), "result type ", calculate_type,
-                " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
+        " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
 
-    at::Tensor other_cast = (other.dtype() == calculate_type) ? other :
-        at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
-    at::Tensor result_cast = (result_type == calculate_type) ? result :
-        at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
+    at::Tensor other_cast =
+        (other.dtype() == calculate_type) ? other : at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
+    at::Tensor result_cast =
+        (result_type == calculate_type) ? result : at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
 
-    npu_preparation::CheckOut(
-        {other},
-        result,
-        result,
-        other.sizes());
+    npu_preparation::CheckOut({other}, result, result, other.sizes());
 
     if (!npu_utils::check_match(&result_cast)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result_cast);
@@ -106,26 +73,18 @@ at::Tensor& remainder_out_scalar(
 }
 } // namespace
 
-at::Tensor& remainder_out(
-    const at::Tensor& self,
-    const at::Scalar& other,
-    at::Tensor& result)
-{
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        result,
-        self.sizes());
+at::Tensor &remainder_out(const at::Tensor &self, const at::Scalar &other, at::Tensor &result) {
+    npu_preparation::CheckOut({self}, result, result, self.sizes());
 
     at::ScalarType calculate_type = at::native::result_type(self, other);
     at::ScalarType result_type = result.scalar_type();
     TORCH_CHECK(canCast(calculate_type, result_type), "result type ", calculate_type,
-                " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
+        " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
 
-    at::Tensor self_cast = (self.dtype() == calculate_type) ? self :
-        at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
-    at::Tensor result_cast = (result_type == calculate_type) ? result :
-        at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
+    at::Tensor self_cast =
+        (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
+    at::Tensor result_cast =
+        (result_type == calculate_type) ? result : at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
     if (!npu_utils::check_match(&result_cast)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result_cast);
         remainder_out_scalar_npu_nocheck(contiguous_result, self_cast, other);
@@ -141,38 +100,32 @@ at::Tensor& remainder_out(
     return result;
 }
 
-at::Tensor& remainder_out(
-    const at::Tensor& self,
-    const at::Tensor& other,
-    at::Tensor& result)
-{
+at::Tensor &remainder_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     if (npu_preparation::IsCPUScalar(other)) {
         return acl_op::remainder_out(self, other.item(), result);
     } else if (npu_preparation::IsCPUScalar(self)) {
         return remainder_out_scalar(result, self.item(), other);
     } else {
         auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-        npu_preparation::CheckOut(
-            {self, other},
-            result,
-            result,
-            output_size);
+        npu_preparation::CheckOut({self, other}, result, result, output_size);
 
         at::ScalarType calculate_type = at::native::result_type(self, other);
         at::ScalarType result_type = result.scalar_type();
         TORCH_CHECK(canCast(calculate_type, result_type), "result type ", calculate_type,
-                    " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
+            " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
 
         TORCH_CHECK(self.device() == other.device(),
-                    "Expected all tensors to be on the same device, but found at least two devices, ",
-                    self.device(), " and ", other.device(), OPS_ERROR(ErrCode::PARAM));
+            "Expected all tensors to be on the same device, but found at least two devices, ", self.device(), " and ",
+            other.device(), OPS_ERROR(ErrCode::PARAM));
 
         at::Tensor self_cast =
             (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
-        at::Tensor other_cast =
-            (other.dtype() == calculate_type) ? other : at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
-        at::Tensor result_cast =
-            (result_type == calculate_type) ? result : at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
+        at::Tensor other_cast = (other.dtype() == calculate_type)
+            ? other
+            : at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
+        at::Tensor result_cast = (result_type == calculate_type)
+            ? result
+            : at_npu::native::custom_ops::_npu_dtype_cast(result, calculate_type);
         if (!npu_utils::check_match(&result_cast)) {
             at::Tensor contiguous_result = npu_utils::format_contiguous(result_cast);
             remainder_out_tensor_npu_nocheck(contiguous_result, self_cast, other_cast);
@@ -189,22 +142,22 @@ at::Tensor& remainder_out(
     }
 }
 
-at::Tensor remainder(const at::Tensor& self, const at::Tensor& other)
-{
+at::Tensor remainder(const at::Tensor &self, const at::Tensor &other) {
     if (npu_preparation::IsCPUScalar(other)) {
         return acl_op::remainder(self, other.item());
     } else if (npu_preparation::IsCPUScalar(self)) {
         return acl_op::remainder(self.item(), other);
     } else {
         TORCH_CHECK(self.device() == other.device(),
-                    "Expected all tensors to be on the same device, but found at least two devices, ",
-                    self.device(), " and ", other.device(), OPS_ERROR(ErrCode::PARAM));
+            "Expected all tensors to be on the same device, but found at least two devices, ", self.device(), " and ",
+            other.device(), OPS_ERROR(ErrCode::PARAM));
 
         at::ScalarType calculate_type = at::native::result_type(self, other);
         at::Tensor self_cast =
             (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
-        at::Tensor other_cast =
-            (other.dtype() == calculate_type) ? other : at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
+        at::Tensor other_cast = (other.dtype() == calculate_type)
+            ? other
+            : at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
 
         auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
         at::Tensor result = npu_preparation::apply_tensor(self_cast, output_size);
@@ -213,31 +166,27 @@ at::Tensor remainder(const at::Tensor& self, const at::Tensor& other)
     }
 }
 
-at::Tensor remainder(const at::Tensor& self, const at::Scalar& other)
-{
+at::Tensor remainder(const at::Tensor &self, const at::Scalar &other) {
     at::ScalarType calculate_type = at::native::result_type(self, other);
-    at::Tensor self_cast = (self.dtype() == calculate_type) ? self :
-        at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
+    at::Tensor self_cast =
+        (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
     at::Tensor result = npu_preparation::apply_tensor(self_cast);
     remainder_out_scalar_npu_nocheck(result, self_cast, other);
     return result;
 }
 
-at::Tensor& remainder_(at::Tensor& self, const at::Tensor& other)
-{
+at::Tensor &remainder_(at::Tensor &self, const at::Tensor &other) {
     return acl_op::remainder_out(self, other, self);
 }
 
-at::Tensor& remainder_(at::Tensor& self, const at::Scalar& other)
-{
+at::Tensor &remainder_(at::Tensor &self, const at::Scalar &other) {
     return acl_op::remainder_out(self, other, self);
 }
 
-at::Tensor remainder(const at::Scalar& self, const at::Tensor& other)
-{
+at::Tensor remainder(const at::Scalar &self, const at::Tensor &other) {
     at::ScalarType calculate_type = at::native::result_type(other, self);
-    at::Tensor other_cast = (other.dtype() == calculate_type) ? other :
-        at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
+    at::Tensor other_cast =
+        (other.dtype() == calculate_type) ? other : at_npu::native::custom_ops::_npu_dtype_cast(other, calculate_type);
     at::Tensor result = npu_preparation::apply_tensor(other_cast);
     remainder_out_scalar_npu_nocheck(result, self, other_cast);
     return result;

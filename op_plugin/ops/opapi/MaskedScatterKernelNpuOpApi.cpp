@@ -19,14 +19,12 @@
 
 namespace op_api {
 
+at::Tensor &masked_scatter_(at::Tensor &self, const at::Tensor &mask, const at::Tensor &source) {
+    DO_COMPATIBILITY(aclnnInplaceMaskedScatter, acl_op::masked_scatter_(self, mask, source));
 
-at::Tensor& masked_scatter_(at::Tensor& self, const at::Tensor& mask,
-                            const at::Tensor& source) {
-  DO_COMPATIBILITY(aclnnInplaceMaskedScatter, acl_op::masked_scatter_(self, mask, source));
+    at_npu::native::OpPreparation::check_memory({self, mask, source}, {self});
 
-  at_npu::native::OpPreparation::check_memory({self, mask, source}, {self});
-
-  EXEC_NPU_CMD(aclnnInplaceMaskedScatter, self, mask, source);
-  return self;
+    EXEC_NPU_CMD(aclnnInplaceMaskedScatter, self, mask, source);
+    return self;
 }
 }
