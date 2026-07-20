@@ -608,20 +608,8 @@ import torch_npu
 import math
 import torchair as tng
 
-from torchair.configs.compiler_config import CompilerConfig
-import torch._dynamo
-TORCHDYNAMO_VERBOSE=1
-TORCH_LOGS="+dynamo"
-
-# 支持入图的打印宏
-import logging
-from torchair.core.utils import logger
-logger.setLevel(logging.DEBUG)
-config = CompilerConfig()
-config.debug.graph_dump.type = "pbtxt"
+config = tng.CompilerConfig()
 npu_backend = tng.get_npu_backend(compiler_config=config)
-from torch.library import Library, impl
-
 # 数据生成
 q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
 k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
@@ -639,9 +627,11 @@ def MetaInfershape():
         model = Model()
         model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
         graph_output = model()
+    #单算子模式
     single_op = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
     print("single op output with mask:", single_op[0], single_op[0].shape)
     print("graph output with mask:", graph_output[0], graph_output[0].shape)
+
 
 if __name__ == "__main__":
     MetaInfershape()
@@ -717,22 +707,23 @@ if __name__ == "__main__":
 执行上述代码的输出类似如下：
 
 ```text
-single op output with mask: tensor([[[[ 3.1624e-03, -3.3356e-02,  6.9214e-02,  ...,  1.4023e-02, -1.9409e-02, -1.1520e-02],
-        [-4.2343e-03, -1.3504e-02,  7.6416e-02,  ..., -2.4033e-02, -9.6130e-02,  5.2376e-03],
-        [-4.2236e-02, -1.1292e-02,  1.6184e-03,  ...,  1.0748e-01, -6.3843e-02,  1.9569e-03],
-        ...,
-        [-6.2585e-06, -1.1063e-02, -4.8492e-02,  ..., -3.5461e-02, -1.5182e-02,  2.6230e-02],
-        [ 2.8793e-02,  4.2542e-02, -7.0839e-03,  ..., -3.2135e-02,  3.5706e-02, -7.4768e-02],
-        [-2.0508e-02,  7.3128e-03, -3.6926e-02,  ...,  1.0139e-02,  5.3864e-02, -1.3016e-02]]]],
-        device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
-graph output with mask: tensor([[[[ 3.1624e-03, -3.3356e-02,  6.9214e-02,  ...,  1.4023e-02, -1.9409e-02, -1.1520e-02],
-        [-4.2343e-03, -1.3504e-02,  7.6416e-02,  ..., -2.4033e-02, -9.6130e-02,  5.2376e-03],
-        [-4.2236e-02, -1.1292e-02,  1.6184e-03,  ...,  1.0748e-01, -6.3843e-02,  1.9569e-03],
-        ...,
-        [-6.2585e-06, -1.1063e-02, -4.8492e-02,  ..., -3.5461e-02, -1.5182e-02,  2.6230e-02],
-        [ 2.8793e-02,  4.2542e-02, -7.0839e-03,  ..., -3.2135e-02,  3.5706e-02, -7.4768e-02],
-        [-2.0508e-02,  7.3128e-03, -3.6926e-02,  ...,  1.0139e-02,  5.3864e-02, -1.3016e-02]]]],
-        device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+single op output with mask: tensor([[[[-0.0417,  0.0780,  0.0827,  ...,  0.0655, -0.0575,  0.0035],
+          [-0.0108, -0.0408, -0.0359,  ...,  0.0466,  0.0022,  0.0015],
+          [ 0.0052, -0.0380,  0.1528,  ...,  0.0970,  0.0013,  0.0779],
+          ...,
+          [ 0.0104, -0.0696, -0.0266,  ..., -0.0652, -0.0572, -0.0585],
+          [-0.0435, -0.0248, -0.0358,  ..., -0.0403,  0.0307, -0.0343],
+          [ 0.0108, -0.0703, -0.0366,  ..., -0.0621,  0.0567, -0.0403]]]],
+       device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+graph output with mask: tensor([[[[-0.0417,  0.0780,  0.0827,  ...,  0.0655, -0.0575,  0.0035],
+          [-0.0108, -0.0408, -0.0359,  ...,  0.0466,  0.0022,  0.0015],
+          [ 0.0052, -0.0380,  0.1528,  ...,  0.0970,  0.0013,  0.0779],
+          ...,
+          [ 0.0104, -0.0696, -0.0266,  ..., -0.0652, -0.0572, -0.0585],
+          [-0.0435, -0.0248, -0.0358,  ..., -0.0403,  0.0307, -0.0343],
+          [ 0.0108, -0.0703, -0.0366,  ..., -0.0621,  0.0567, -0.0403]]]],
+       device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+
 ```
 
 ### 示例 2：GQA + KV NZ + Page Attention 约束
@@ -904,4 +895,95 @@ out, _ = torch_npu.npu_fused_infer_attention_score_v2(
 )
 
 print(out)
+```
+
+### 示例 5 int8 后量化
+
+**场景说明**：输入为bfloat16，输出为int8。除参数名称外与`torch_npu.npu_fused_infer_attention_score`同名示例差别不大。
+
+**相关约束**：[通用约束](#通用约束)
+
+```python
+import torch
+import torch_npu
+import math
+
+B, Q_N, Q_S, D = 1, 8, 164, 128
+KV_N = 8
+KV_S = 1024
+
+# query/key/value: bfloat16, BNSD
+q = torch.randn(B, Q_N, Q_S, D, dtype=torch.bfloat16).npu()
+k = torch.randn(B, KV_N, KV_S, D, dtype=torch.bfloat16).npu()
+v = torch.randn(B, KV_N, KV_S, D, dtype=torch.bfloat16).npu()
+
+# quant_scale_out: 必传，bfloat16 输入时同时支持 float32 / bfloat16
+# perchannel: 输出 BNSD 推荐 (1, Q_N, 1, D)
+quant_scale_out = torch.randn(1, Q_N, 1, D, dtype=torch.float32).npu()
+# quant_offset_out: 可选，类型和 shape 与 scale 一致，不传则默认0
+
+softmax_scale = 1.0 / math.sqrt(D)
+
+out, _ = torch_npu.npu_fused_infer_attention_score_v2(
+    q, k, v,
+    quant_scale_out=quant_scale_out,        # 输出 int8 必传
+    num_query_heads=Q_N,
+    input_layout="BNSD",
+    softmax_scale=softmax_scale,
+    pre_tokens=65535,
+    next_tokens=65535
+)
+
+print(out.dtype)  # torch.int8
+print(out.shape)  # torch.Size([1, 8, 164, 128])
+```
+
+### 示例 6 伪量化（KV 分离模式）+ Decode
+
+**场景说明**：KV 分离传入`dequant_scale_key`与`dequant_scale_value`，与`torch_npu.npu_fused_infer_attention_score`的同名示例相比用法相同，仅有参数名的差异。
+
+**关键参数**：
+- `key_quant_mode` 与 `value_quant_mode` 取值需保持一致。
+- `dequant_scale_key/value` 要么都为空，要么都不为空。
+- QS = 1：`num_query_heads`=`num_key_value_heads`
+
+**相关约束**：[Q_S=1（增量推理）约束](#q_s1增量推理约束)
+
+```python
+import torch
+import torch_npu
+import math
+
+
+B, Q_N, Q_S, D = 1, 8, 1, 128       # Q_S=1 增量推理
+KV_N = 2                             # MHA
+KV_S = 2048
+
+# query: bfloat16, BNSD
+q = torch.randn(B, Q_N, Q_S, D, dtype=torch.bfloat16).npu()
+k = torch.randint(-128, 127, (B, KV_N, KV_S, D), dtype=torch.int8).npu()
+v = torch.randint(-128, 127, (B, KV_N, KV_S, D), dtype=torch.int8).npu()
+
+# dequant_scale: 必传，perchannel，dtype 与 query 一致
+# shape = (1, KV_N, 1, D)
+dequant_scale_key   = torch.randn(1, KV_N, 1, D, dtype=torch.bfloat16).npu()
+dequant_scale_value = torch.randn(1, KV_N, 1, D, dtype=torch.bfloat16).npu()
+# dequant_offset: 可选，shape 与 scale 一致
+
+softmax_scale = 1.0 / math.sqrt(D)
+
+out, _ = torch_npu.npu_fused_infer_attention_score_v2(
+    q, k, v,
+    dequant_scale_key=dequant_scale_key,            # KV 分离：key 反量化因子
+    dequant_scale_value=dequant_scale_value,        # KV 分离：value 反量化因子
+    key_quant_mode=0,                               # perchannel
+    value_quant_mode=0,                             # perchannel，需与 key 一致
+    num_query_heads=Q_N,
+    num_key_value_heads=KV_N,
+    input_layout="BNSD",
+    softmax_scale=softmax_scale
+)
+
+print(out.dtype)   # torch.bfloat16
+print(out.shape)   # torch.Size([1, 8, 1, 128])
 ```
