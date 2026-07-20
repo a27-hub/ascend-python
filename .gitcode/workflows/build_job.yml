@@ -59,9 +59,9 @@ jobs:
           echo "[ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]"
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
           echo "py_version=${{ inputs.py_version }}"
-          echo "pr_id=${{ env.pr_id }}"
+          echo "pr_id=${{ inputs.pr_id }}"
           echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
-          echo "REMOTE_URL=${{ env.REMOTE_URL }}"
+          echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
           echo "pr_id_wwq=${{ inputs.pr_id_wwq }}"
 
       - name: compile
@@ -71,14 +71,14 @@ jobs:
           git config --global http.lowSpeedLimit 5000
           git config --global http.lowSpeedTime 300
           # .ci/ 仅存在于默认分支，需先拉取
-          git clone -b ${{ atomgit.event.repository.default_branch }} ${{ env.REMOTE_URL }} cie
-          bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ env.REMOTE_URL }} ${{ env.pr_id }} ${ATOMGIT_WORKSPACE}
+          git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
+          bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
           cd ./CODE
           git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
           cat ../modify_files.txt
           cd -
           source cie/.ci/common/ccache_env.sh
-          bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ env.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
       - name: Upload to OBS
         uses: obs-upload
         with:
@@ -87,4 +87,4 @@ jobs:
           access-key: "${{ secrets.OBS_AK }}"
           secret-key: "${{ secrets.OBS_SK }}"
           artifact-path: "*.tar.gz*"
-          object-prefix: "op-plugin/PR/${{ env.pr_id }}/"
+          object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
