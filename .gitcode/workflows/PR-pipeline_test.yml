@@ -30,5 +30,5 @@ stages:
           options: --user root
         steps:
           - name: composite_test
-            uses: WWQ129/.gitcode/actions/composite_test@main
+            uses: WWQ129/.gitcode/actions/build_test@main
 
