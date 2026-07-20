@@ -943,6 +943,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 **场景说明**：KV 分离传入`dequant_scale_key`与`dequant_scale_value`，与`torch_npu.npu_fused_infer_attention_score`的同名示例相比用法相同，仅有参数名的差异。
 
 **关键参数**：
+
 - `key_quant_mode` 与 `value_quant_mode` 取值需保持一致。
 - `dequant_scale_key/value` 要么都为空，要么都不为空。
 - QS = 1：`num_query_heads`=`num_key_value_heads`
