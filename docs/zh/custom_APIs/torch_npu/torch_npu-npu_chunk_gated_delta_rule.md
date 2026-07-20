@@ -7,6 +7,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>            |    √     |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
@@ -31,7 +32,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None) -> tuple(Tensor, Tensor)
+torch_npu.npu_chunk_gated_delta_rule(query, key, value, beta, initial_state, actual_seq_lengths, scale, *, g=None) -> tuple(Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -47,13 +48,13 @@ torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_st
 
 - **value** (`Tensor`)：必选参数，对应公式中的$v$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$, $D_v$）。
 
-- **beta** (`Tensor`)：可选参数，对应公式中的$β$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$）。
+- **beta** (`Tensor`)：必选参数，对应公式中的$β$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$）。
 
-- **initial_state** (`Tensor`)：可选参数，对应公式中的状态矩阵$S_0$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$B$, $N_v$, $D_v$, $D_k$）。
+- **initial_state** (`Tensor`)：必选参数，对应公式中的状态矩阵$S_0$，数据类型支持`bfloat16`、`float32`，数据格式支持ND，shape为（$B$, $N_v$, $D_v$, $D_k$）。
 
-- **actual_seq_lengths** (`Tensor`)：可选参数，表示各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（$B$,）。
+- **actual_seq_lengths** (`Tensor`)：必选参数，表示各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（$B$,）。
 
-- **scale** (`float`)：可选参数，表示query的缩放因子，对应公式中的 $scale$。数据类型支持`float32`。默认值None表示为1.0。实际场景一般设为 $1/\sqrt{D_k}$
+- **scale** (`float`)：必选参数，表示query的缩放因子，对应公式中的 $scale$。数据类型支持`float32`。默认值None表示为1.0。实际场景一般设为 $1/\sqrt{D_k}$
 
 - **g** (`Tensor`)：可选参数，衰减系数，对应公式中的$α=e^g$。默认为None，表示全0。数据类型支持`float32`，数据格式支持ND，shape为（$T$, $N_v$）。
 
@@ -61,14 +62,20 @@ torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_st
 
 - **out** (`Tensor`)：公式中的$o_t$，注意力计算结果。数据类型为`bfloat16`，数据格式为ND，shape为($T$, $N_v$, $D_v$)。
 
-- **final_state** (`Tensor`)：最终的状态矩阵$S_L$，数据类型为`bfloat16`，数据格式为ND，shape为（$B$, $N_v$, $D_v$, $D_k$）。
+- **final_state** (`Tensor`)：最终的状态矩阵$S_L$，数据类型为`bfloat16`、`float32`，数据格式为ND，shape为（$B$, $N_v$, $D_v$, $D_k$）。
 
 ## 约束说明
 
 - 该接口仅支持推理场景下使用。
-- 输入shape大小需满足约束：
-  - $Nv \le 64$，$Nk \le 64$，且Nv是Nk的整数倍。
-  - $Dv = Dk = 128$。
+- 维度约束：
+  - $0 \lt Nv \le 64，0 \lt Nk \le 64$，且 $Nv \bmod Nk = 0$
+  - $0 \lt Dv \le 128$, $0 \lt Dk \le 128$
+  - $B \gt 0$, $T \gt 0$
+- 由于算法特性，用户需保障以下数值约束，否则计算结果可能出现溢出：
+  - $-1 \le query[i][j][k] \le 1$
+  - $-1 \le key[i][j][k] \le 1$
+  - $-1 \le g[i][j] \le 0$
+  - $0 < beta[i][j] < 1$
 
 ## 调用示例
 
@@ -121,8 +128,8 @@ torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_st
     # 配置图模式config
     config = torchair.CompilerConfig()
 
-    # 配置图执行模式，aclgraph模式为reduce-overhead, GE模式为max-autotune
-    config.mode = "max-autotune"
+    # 配置图执行模式，aclgraph模式为reduce-overhead
+    config.mode = "reduce-overhead"
     npu_backend = torchair.get_npu_backend(compiler_config=config)
 
     class MyModel(torch.nn.Module):
