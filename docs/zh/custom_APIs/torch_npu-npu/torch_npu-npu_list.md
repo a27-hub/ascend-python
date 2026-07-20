@@ -113,7 +113,7 @@
 </tr>
 <tr id="row1629143112919"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p1936712431249"><a name="p1936712431249"></a><a name="p1936712431249"></a><a href="（beta）torch_npu-npu-set_compile_mode.md">（beta）torch_npu.npu.set_compile_mode</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p1236764317242"><a name="p1236764317242"></a><a name="p1236764317242"></a>设置是否开启二进制编译。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p1236764317242"><a name="p1236764317242"></a><a name="p1236764317242"></a>设置是否开启JIT编译。</p>
 </td>
 </tr>
 <tr id="row2027910351793"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p16367343112416"><a name="p16367343112416"></a><a name="p16367343112416"></a><a href="（beta）torch_npu-npu-is_jit_compile_false.md">（beta）torch_npu.npu.is_jit_compile_false</a></p>
@@ -246,7 +246,7 @@
 </tr>
 <tr id="row174651448111817"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p946574881819"><a name="p946574881819"></a><a name="p946574881819"></a><a href="（beta）torch_npu-npu-get_autocast_dtype.md">（beta）torch_npu.npu.get_autocast_dtype</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p19465848131818"><a name="p19465848131818"></a><a name="p19465848131818"></a>在amp场景获取设备支持的数据类型，该dtype由torch_npu.npu.set_autocast_dtype设置，若未设置则使用默认数据类型float16。</p>
+<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p19465848131818"><a name="p19465848131818"></a><a name="p19465848131818"></a>在AMP场景获取设备支持的数据类型，该dtype由torch_npu.npu.set_autocast_dtype设置，若未设置则使用默认数据类型float16。</p>
 </td>
 </tr>
 <tr id="row1846564819185"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p146584811184"><a name="p146584811184"></a><a name="p146584811184"></a><a href="（beta）torch_npu-npu-set_autocast_dtype.md">（beta）torch_npu.npu.set_autocast_dtype</a></p>
@@ -502,7 +502,7 @@
 </tr>
 <tr id="row1373517244535"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p673592411537"><a name="p673592411537"></a><a name="p673592411537"></a><a href="torch_npu-npu-mstx-mstx_range.md">torch_npu.npu.mstx_range</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p1059918319532"><a name="p1059918319532"></a><a name="p1059918319532"></a>range装饰器，用来采集被装饰函数的range执行耗时。</p>
+<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p1059918319532"><a name="p1059918319532"></a><a name="p1059918319532"></a>mstx_range装饰器，用来采集被装饰函数的range执行耗时。</p>
 </td>
 </tr>
 </tbody>
