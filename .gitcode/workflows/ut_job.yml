@@ -59,14 +59,13 @@ jobs:
       - name: UT
         run: |
           rm -rf *
-          git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-          bash cie/common/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${workspace}
+          bash .ci/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${workspace}
           pwd 
           cd ./CODE
           git diff-tree -r --name-only --no-commit-id origin/${TARGET_BRANCH} HEAD > ../modify_files.txt
           cat ../modify_files.txt 
           cd -
-          bash cie/common/UT/op-plugin_ut_general.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
+          # bash .ci/UT/op-plugin_ut_general.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
           echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
           echo "py_version: ${{ inputs.py_version }}"
           echo "pr_id: ${{ env.pr_id }}"

@@ -65,14 +65,13 @@ jobs:
           git config --global http.postBuffer 524288000
           git config --global http.lowSpeedLimit 5000
           git config --global http.lowSpeedTime 300
-          git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-          bash cie/common/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ env.REMOTE_URL }} ${{ env.pr_id }} ${ATOMGIT_WORKSPACE}
+          bash .ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ env.REMOTE_URL }} ${{ env.pr_id }} ${ATOMGIT_WORKSPACE}
           cd ./CODE
           git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
           cat ../modify_files.txt
           cd -
-          source cie/common/common/ccache_env.sh
-          bash cie/common/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ env.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          source .ci/common/ccache_env.sh
+          bash .ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ env.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
       - name: Upload to OBS
         uses: obs-upload
         with:
