@@ -4223,6 +4223,28 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
             self.assertEqual(grad_permuted_tokens.shape, permuted_tokens.shape)
             self.assertIsNone(grad_probs)
 
+    def test_npu_moe_token_unpermute_grad_optional_permuted_tokens(self):
+        """Test npu_moe_token_unpermute_grad accepts undefined permuted_tokens."""
+        num_tokens = 100
+        hidden_size = 64
+
+        with FakeTensorMode():
+            grad_unpermuted_tokens = torch.randn(num_tokens, hidden_size).npu().to(torch.bfloat16)
+            sorted_indices = torch.arange(num_tokens).npu().to(torch.int32)
+
+            grad_permuted_tokens, grad_probs = torch_npu.npu_moe_token_unpermute_grad(
+                permuted_tokens=None,
+                grad_unpermuted_tokens=grad_unpermuted_tokens,
+                sorted_indices=sorted_indices,
+                probs=None,
+                padded_mode=False,
+                restore_shape=None,
+            )
+
+            self.assertEqual(grad_permuted_tokens.dtype, grad_unpermuted_tokens.dtype)
+            self.assertEqual(grad_permuted_tokens.shape, grad_unpermuted_tokens.shape)
+            self.assertIsNone(grad_probs)
+
 
 class TestNpuMoeUnpermuteWithRoutingMap(TestCase):
     def test_npu_moe_token_unpermute_with_routing_map_meta(self):

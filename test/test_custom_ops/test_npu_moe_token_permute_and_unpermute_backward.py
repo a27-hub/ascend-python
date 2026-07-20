@@ -261,3 +261,69 @@ class TestNpuFusedPermuteAndUnpermute():
 
         assert permuted_tokens.grad is not None
         assert permuted_tokens.grad.dtype == token_dtype
+
+    @staticmethod
+    def _storage_data_ptr(tensor):
+        return tensor.untyped_storage().data_ptr()
+
+    @staticmethod
+    def _is_gte_cann_version_910():
+        return torch_npu.npu.utils._is_gte_cann_version("9.1.0", "CANN")
+
+    def _run_unpermute_saved_tensor_case(self, use_probs):
+        num_tokens = 64
+        hidden_size = 128
+        topk = 4 if use_probs else 1
+        num_experts = 8
+        token_dtype = torch.bfloat16
+
+        tokens = torch.randn(num_tokens, hidden_size).npu().to(token_dtype).requires_grad_(True)
+        indices = torch.randint(0, num_experts, (num_tokens, topk)).npu()
+        probs = None
+        if use_probs:
+            probs = (torch.ones(num_tokens, topk) / topk).npu().to(torch.float32).requires_grad_(True)
+
+        permuted_tokens, sorted_indices = npu_moe_token_permute(tokens, indices)
+        permuted_tokens.retain_grad()
+
+        saved_storage_ptrs = []
+
+        def pack_hook(tensor):
+            saved_storage_ptrs.append(self._storage_data_ptr(tensor))
+            return tensor
+
+        def unpack_hook(tensor):
+            return tensor
+
+        with torch.autograd.graph.saved_tensors_hooks(pack_hook, unpack_hook):
+            unpermuted_tokens = npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
+
+        grad_output = torch.ones_like(unpermuted_tokens).to(token_dtype)
+        unpermuted_tokens.backward(grad_output)
+
+        assert tokens.grad is not None
+        assert permuted_tokens.grad is not None
+        if use_probs:
+            assert probs.grad is not None
+
+        return {
+            "saved_storage_ptrs": saved_storage_ptrs,
+            "permuted_storage_ptr": self._storage_data_ptr(permuted_tokens),
+            "probs_storage_ptr": None if probs is None else self._storage_data_ptr(probs),
+        }
+
+    def test_unpermute_backward_saved_tensors_probs_none_with_cann_fallback(self):
+        saved = self._run_unpermute_saved_tensor_case(use_probs=False)
+        if self._is_gte_cann_version_910():
+            assert saved["permuted_storage_ptr"] not in saved["saved_storage_ptrs"], \
+                "permuted_tokens should not be saved for backward when probs is None on CANN >= 9.1.0"
+        else:
+            assert saved["permuted_storage_ptr"] in saved["saved_storage_ptrs"], \
+                "permuted_tokens should be saved for backward as fallback when CANN < 9.1.0"
+
+    def test_unpermute_backward_saved_tensors_with_probs(self):
+        saved = self._run_unpermute_saved_tensor_case(use_probs=True)
+        assert saved["permuted_storage_ptr"] in saved["saved_storage_ptrs"], \
+            "permuted_tokens should still be saved for backward when probs is provided"
+        assert saved["probs_storage_ptr"] in saved["saved_storage_ptrs"], \
+            "probs should still be saved for backward when probs is provided"

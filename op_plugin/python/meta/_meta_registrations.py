@@ -6401,11 +6401,18 @@ def npu_moe_token_permute_grad_v2_meta(grad_permuted_tokens, sorted_indices, tok
 
 @impl(m, "npu_moe_token_unpermute_grad")
 def npu_moe_token_unpermute_grad_meta(permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs=None, padded_mode=False, restore_shape=None):
-    torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
     torch._check(grad_unpermuted_tokens.dim() == 2, lambda: f"The dims of input grad_unpermuted_tokens should be 2 dimensional, but got {grad_unpermuted_tokens.dim()}-dimensional.")
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
+    if permuted_tokens is not None:
+        torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
 
-    grad_permuted_tokens = torch.empty_like(permuted_tokens)
+    if permuted_tokens is not None:
+        grad_permuted_tokens = torch.empty_like(permuted_tokens)
+    else:
+        grad_permuted_tokens = torch.empty(
+            (sorted_indices.numel(), grad_unpermuted_tokens.shape[1]),
+            dtype=grad_unpermuted_tokens.dtype,
+            device=grad_unpermuted_tokens.device)
     grad_probs = torch.empty_like(probs, dtype=probs.dtype) if probs is not None else None
 
     return grad_permuted_tokens, grad_probs
