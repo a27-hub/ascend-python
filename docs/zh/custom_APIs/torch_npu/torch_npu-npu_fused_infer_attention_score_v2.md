@@ -598,7 +598,9 @@ tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
         device='npu:0', dtype=torch.float16)
 ```
 
-#### 图模式调用
+#### 图模式调用（默认GE图模式）
+
+当 `torch.compile` 的 `backend` 参数传入默认的`CompilerConfig`，即`mode="max-autotune"`时，使用[GE图模式](https://gitcode.com/Ascend/torchair/blob/master/docs/zh/ascend_ir/quick_start.md)。
 
 ```python
 import torch
@@ -664,6 +666,72 @@ graph output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.
         [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
         [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
         [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
+        device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+```
+
+#### 图模式调用（aclgraph模式）
+
+当显式传入`backend="npugraph_ex"`时，使用[aclgraph模式](https://gitcode.com/Ascend/torchair/blob/master/docs/zh/npugraph_ex/quick_start.md)。
+
+```python
+import torch
+import torch_npu
+import math
+import torchair as tng
+
+import torch._dynamo
+TORCHDYNAMO_VERBOSE=1
+TORCH_LOGS="+dynamo"
+
+# 支持入图的打印宏
+import logging
+from torchair.core.utils import logger
+logger.setLevel(logging.DEBUG)
+from torch.library import Library, impl
+
+# 数据生成
+q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
+k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+softmax_scale = 1/math.sqrt(128.0)
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self):
+        return torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+
+def MetaInfershape():
+    with torch.no_grad():
+        model = Model()
+        model = torch.compile(model, backend="npugraph_ex", dynamic=False, fullgraph=True)
+        graph_output = model()
+    single_op = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+    print("single op output with mask:", single_op[0], single_op[0].shape)
+    print("graph output with mask:", graph_output[0], graph_output[0].shape)
+
+if __name__ == "__main__":
+    MetaInfershape()
+```
+
+执行上述代码的输出类似如下：
+
+```text
+single op output with mask: tensor([[[[ 3.1624e-03, -3.3356e-02,  6.9214e-02,  ...,  1.4023e-02, -1.9409e-02, -1.1520e-02],
+        [-4.2343e-03, -1.3504e-02,  7.6416e-02,  ..., -2.4033e-02, -9.6130e-02,  5.2376e-03],
+        [-4.2236e-02, -1.1292e-02,  1.6184e-03,  ...,  1.0748e-01, -6.3843e-02,  1.9569e-03],
+        ...,
+        [-6.2585e-06, -1.1063e-02, -4.8492e-02,  ..., -3.5461e-02, -1.5182e-02,  2.6230e-02],
+        [ 2.8793e-02,  4.2542e-02, -7.0839e-03,  ..., -3.2135e-02,  3.5706e-02, -7.4768e-02],
+        [-2.0508e-02,  7.3128e-03, -3.6926e-02,  ...,  1.0139e-02,  5.3864e-02, -1.3016e-02]]]],
+        device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
+graph output with mask: tensor([[[[ 3.1624e-03, -3.3356e-02,  6.9214e-02,  ...,  1.4023e-02, -1.9409e-02, -1.1520e-02],
+        [-4.2343e-03, -1.3504e-02,  7.6416e-02,  ..., -2.4033e-02, -9.6130e-02,  5.2376e-03],
+        [-4.2236e-02, -1.1292e-02,  1.6184e-03,  ...,  1.0748e-01, -6.3843e-02,  1.9569e-03],
+        ...,
+        [-6.2585e-06, -1.1063e-02, -4.8492e-02,  ..., -3.5461e-02, -1.5182e-02,  2.6230e-02],
+        [ 2.8793e-02,  4.2542e-02, -7.0839e-03,  ..., -3.2135e-02,  3.5706e-02, -7.4768e-02],
+        [-2.0508e-02,  7.3128e-03, -3.6926e-02,  ...,  1.0139e-02,  5.3864e-02, -1.3016e-02]]]],
         device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
 ```
 
