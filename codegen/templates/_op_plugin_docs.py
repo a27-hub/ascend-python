@@ -761,22 +761,22 @@ tensor([[1, 1, 1, 1],
 _add_torch_npu_docstr(
     "npu_ciou",
     """
-torch_npu.npu_ciou(Tensor self, Tensor gtboxes, bool trans=False, bool is_cross=True, int mode=0, bool atan_sub_flag=False) -> Tensor
+torch_npu.npu_ciou(Tensor boxes1, Tensor boxes2, bool trans=False, bool is_cross=True, int mode=0, bool atan_sub_flag=False) -> Tensor
 功能描述
-应用基于NPU的CIoU操作。在DIoU的基础上增加了penalty item，并propose CIoU。
+基于NPU的CIoU操作，计算预测边界框与真实边界框之间的CIoU（Complete Intersection over Union）损失。
 
 参数说明
 boxes1 (Tensor)：格式为xywh、shape为(4, n)的预测检测框。
 boxes2 (Tensor)：相应的gt检测框，shape为(4, n)。
 trans (Bool，默认值为False)：是否有偏移。
-is_cross (Bool，默认值为True)：box1和box2之间是否有交叉操作。
+is_cross (Bool，默认值为True)：boxes1和boxes2之间是否有交叉操作。
 mode (Int，默认值为0)：选择CIoU的计算方式。0表示IoU，1表示IoF。
 atan_sub_flag (Bool，默认值为False)：是否将正向的第二个值传递给反向。
 输出说明
-torch.Tensor：mask操作的结果。
+torch.Tensor：CIoU计算结果。
 
 约束说明
-到目前为止，CIoU向后只支持当前版本中的trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
+到目前为止，CIoU反向传播只支持trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
 
 示例
     >>> box1 = torch.randn(4, 32).npu()
@@ -1004,7 +1004,7 @@ y=x1+ self *alpha
 
 Softmax(xi)= exp(xi)/∑jexp(xj)
 
-output = 根据mask舍弃x中的元素，留下来的元素乘(1/prob)
+output = 根据mask舍弃self中的元素，留下来的元素乘(1/prob)
 
 参数说明
 Tensor self：4维张量，shape为(N, C, H, W)。
@@ -4503,16 +4503,19 @@ _add_torch_npu_docstr(
     "npu_mhc_post",
     """
 接口原型：
-torch_npu.npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor
+torch_npu.npu_mhc_post(Tensor x, Tensor? h_res, Tensor h_out, Tensor h_post) -> Tensor
 
 功能描述
-算子功能: 融合主分支特征h_out与残差分支特征x_l（或residual），通过门控H_post和经sinkhorn投影后的双随机矩阵H_res机制实现信息流动.
+算子功能: 融合主分支特征h_out与残差分支特征x_l（或residual），通过门控H_post和经sinkhorn投影后的双随机矩阵H_res机制实现信息流动. 当h_res传入None时，跳过Res Mapping，直接进行残差相加.
 计算公式为:
+当h_res提供时:
 x_{l+1} = (H_{l}^{res})^{T} \times x_l + h_{l}^{out} \otimes H_{t}^{post}
+当h_res缺省(传入None)时:
+x_{l+1} = x_l + h_{l}^{out} \otimes H_{t}^{post}
 
 参数说明
 x: Tensor类型, 必选输入, 待计算数据，代表网络中mHC层的输入数据. 数据格式为ND，支持非连续Tensor, 支持的数据类型为BFLOAT16和FLOAT16， 数据维度可为3维[T, n, D]和4维.[B, S, n, D].
-h_res: Tensor类型, 必选输入, mHC的h_res变换矩阵，是做完sinkhorn变换之后的双随机矩阵.数据格式为ND，支持非连续Tensor, 支持的数据类型为FLOAT32， 数据维度可为3维[T, n, n]和4维[B, S, n, n].
+h_res: Tensor类型, 可选输入, mHC的h_res变换矩阵，是做完sinkhorn变换之后的双随机矩阵.传入None时跳过Res Mapping，计算公式退化为 x_{l+1} = x_l + h_{l}^{out} \otimes H_{t}^{post}，仅Ascend 950支持传入None，其他设备传入None会报错.数据格式为ND，支持非连续Tensor, 支持的数据类型为FLOAT32， 数据维度可为3维[T, n, n]和4维[B, S, n, n].
 h_out: Tensor类型, 必选输入，Attn/MLP层输出.数据格式为ND，支持非连续Tensor, 支持的数据类型为BFLOAT16和FLOAT16， 数据维度可为3维[B, S, D]和2维[T, D].
 h_post: Tensor类型, 必选输入，mHC的h_post变换矩阵.数据格式为ND，支持非连续Tensor, 支持的数据类型为FLOAT32， 数据维度可为3维[B, S, n]和2维[T, n].
 n：shape中n常取4，6，8.
@@ -4547,7 +4550,10 @@ x_npu = x.npu()
 h_res_npu = h_res.npu()
 h_out_npu = h_out.npu()
 h_post_npu = h_post.npu()
+# h_res提供时
 y_npu = torch_npu.npu_mhc_post(x_npu, h_res_npu, h_out_npu, h_post_npu)
+# h_res缺省时(仅Ascend 950支持)
+y_npu = torch_npu.npu_mhc_post(x_npu, None, h_out_npu, h_post_npu)
 
 图模式调用
 import torch
@@ -7729,7 +7735,7 @@ page attention使能场景下, 支持kv cache排布格式为(blocknum, numKvHead
 page attention使能场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且H(H=numKvHeads * headDims)超过64k时, 受硬件指令约束, 会被拦截报错.
 page attention场景下, 必须传入输入actual_seq_lengths, 每个batch的actualSeqLength表示每个batch对sequence真实长度, 该值除以属性输入blocksize即表示每个batch所需block数量.
 page attention场景下, block_table必须为二维Tensor, 第一维长度需等于batch数, 第二维长度不能小于maxBlockNumPerSeq(maxBlockNumPerSeq为每个batch中最大actual_seq_lengths对应的block数量). 例如, batch数为2, 属性blocksize=128, 当每个batch的actualSeqLength为512时, 表明每个batch至少需要4个block, 因此block_table的排布可以为(2, 4).
-page attention使能场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能, 通常为128或256. key、value输入类型为float16、bfloat16时block_size需要16对齐; key、value输入类型为int8时block_size需要32对齐. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降.
+page attention使能场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能, 通常为128或256. key、value输入类型为float16、bfloat16时block_size需要16对齐; key、value输入类型为int8时block_size需要32对齐. 通常情况下, page attention可以提高吞吐量, 但可能会增加单个token的解码时延.
 quant_scale2、quant_offset2为一组参数, 其中quant_offset2可选, 传入该组参数后算子输出数据类型会推导为int8, 若不期望int8输出, 请勿传入该组参数.
 kv左padding场景使用限制:
 kvCache的搬运起点计算公式为: Smax-kv_padding_size-actual_seq_lengths. kvCache的搬运终点计算公式为: Smax-kv_padding_size. 其中kvCache的搬运起点或终点小于0时, 返回数据结果为全0.
@@ -7775,8 +7781,9 @@ import math
 import torchair as tng
 from torchair.configs.compiler_config import CompilerConfig
 import torch._dynamo
-TORCHDYNAMO_VERBOSE=1
-TORCH_LOGS="+dynamo"
+import os
+os.environ["TORCHDYNAMO_VERBOSE"] = "1"
+os.environ["TORCH_LOGS"] = "+dynamo"
 
 # 支持入图的打印宏
 import logging
@@ -10807,7 +10814,7 @@ _add_torch_npu_docstr(
     "npu_moe_gating_top_k",
     """
 函数原型
-npu_moe_gating_top_k(x, k, bias=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
+npu_moe_gating_top_k(x, k, bias=None, input_ids=None, tid2eid=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
 
 ## 参数说明
 
@@ -10818,6 +10825,10 @@ npu_moe_gating_top_k(x, k, bias=None, k_group=1, group_count=1, group_select_mod
 -   <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
 -   **bias**（`Tensor`）：可选参数，表示与输入`x`进行计算的bias值。要求是1D的Tensor，要求shape值与`x`的最后一维相等。数据类型支持`float16`、`bfloat16`、`float32`，数据类型需要与`x`保持一致，数据格式要求为ND。支持非连续`Tensor`。
+
+-   **input_ids**（`Tensor`）：可选参数，表示Hash模式的输入索引，用于从`tid2eid`中查找专家索引。要求是1D的Tensor，要求shape值与`x`的第一维相等。数据类型支持`int32`、`int64`，数据格式要求为ND。支持非连续`Tensor`。
+
+-   **tid2eid**（`Tensor`）：可选参数，表示Hash映射表，存储预计算的专家索引。要求是2D的Tensor，要求shape值的最后一维与`k`相等。数据类型支持`int32`、`int64`，数据格式要求为ND。支持非连续`Tensor`。
 
 -   **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
 
@@ -14525,7 +14536,7 @@ torch_npu.npu.obfuscation_calculate(fd, x, param, obf_coefficient) -> Tensor
 
 参数说明:
 - fd（`Tensor`）：必选参数，socket连接符，数据类型为`int32`，填写调用[obfuscation_initialize](./torch_npu-npu-obfuscation_initialize.md)接口的返回值。
-- x（`Tensor`）：必选参数，待混淆处理的`Tensor`输入，对`Tensor`维度不作限制，shape为( , *, ... , hiddenSize)，即最后一维的size是[obfuscation_initialize](./torch_npu-npu-obfuscation_initialize.md)的入参`hiddenSize`。数据格式支持ND。
+- x（`Tensor`）：必选参数，待混淆处理的`Tensor`输入，对`Tensor`维度不作限制，shape为(*, ..., hiddenSize)，即最后一维的size是[obfuscation_initialize](./torch_npu-npu-obfuscation_initialize.md)的入参`hiddenSize`。数据格式支持ND。
     * <term>Atlas 推理系列产品</term>: `Tensor`数据类型支持`float16` 、`float32`、`int8`。
     * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>: `Tensor`数据类型支持`float16`、`float32`、`bfloat16`、`int8`。
 - param（`Tensor`）：必选参数，张量`x`的最后一维的维度，数据类型为`int32`。
@@ -15593,10 +15604,10 @@ _add_torch_npu_docstr(
  `npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant）的计算方法。该方法适用于需要对输入数据进行旋转变换后进行量化的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
 
  参数说明:
- x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
- rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
- alpha（`Tensor`）：可选输入，旋转角度缩放因子，数据类型为1维`Tensor`，默认值为None。
- dst_dtype: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8(1), torch.quint4x2(16), torch_npu.float4_e2m1fn_x2(296), torch.float8_e5m2(23), torch.float8_e4m3fn(24)。
+ x（Tensor）：必选输入，输入tensor。数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+ rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+ alpha（`Tensor`）：可选输入，旋转角度缩放因子，默认值为None。
+ dst_dtype: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8, torch.quint4x2, torch_npu.float4_e2m1fn_x2, torch.float8_e5m2, torch.float8_e4m3fn。
  axis: int类型, 指定量化输出的轴, 可选输入, 默认值为-1。
  round_mode: str类型, 指定取整模式, 可选输入, 默认值为"rint"。
  scale_alg: int类型, 指定scale算法, 可选输入, 默认值为0。
@@ -15605,19 +15616,27 @@ _add_torch_npu_docstr(
 
  输出说明:
  y（`Tensor`）：输出的量化结果，数据类型根据dst_dtype决定。数据格式支持ND，int场景中支持非连续的Tensor。
- scale（`Tensor`）：输出的量化因子，数据类型根据dst_dtype决定。当dst_dtype为MX类型(float4_e2m1fn_x2/float8_e5m2/float8_e4m3fn)时，scale为MX格式量化因子(uint8表示float8_e8m0)；其他类型时，scale为per-token量化因子(float32)。
+ scale（`Tensor`）：输出的量化因子，数据类型根据dst_dtype决定。当dst_dtype为MX类型(float4_e2m1fn_x2/float8_e5m2/float8_e4m3fn)时，scale为MX格式量化因子(uint8表示float8_e8m0)；其他类型时，scale为pertoken量化因子(float32)。
 
  支持的型号:
- Atlas A5 训练系列产品/Atlas A5 推理系列产品
+ Ascend 950PR/Ascend 950DT
  Atlas A3 训练系列产品/Atlas A3 推理系列产品
  Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
- 约束说明
- 关于数据shape的约束，其中：
- n：取值范围为128~16000，8字节对齐, n可以整除k。
- transpose_y当前版本仅支持False。
- 当dst_dtype为quint4x2时，输入最后一维必须可被8整除。
- 当dst_dtype为float4_e2m1fn_x2时，输入最后一维必须可被2整除。
+ 约束说明:
+ 该接口支持推理和训练场景下使用。
+ 该接口支持图模式。
+ 对于输入数据的shape，存在以下约束：
+    - 当前在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上，rotation的shape仅支持[K, K]一种形式，K的取值范围为[16, 1024]；在Ascend 950PR/Ascend 950DT平台上，rotation的shape支持[K, K]和[block_num, K, K]两种形式，K仅支持32、64、128三种取值, 其中block_num = N/K，N为x最后一维的大小。
+    - 输入x的最后一维需要能被K整除。在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上，x的shape仅支持2维，最后一维的大小需要在128~16000之间且必须同时可被8整除；在Ascend 950PR/Ascend 950DT平台上，x的shape支持1~7维，且当dst_dtype为torch_npu.float4_e2m1fn_x2时，输入x的最后一维必须同时可被2整除。
+ 对于输入数据的取值范围，存在以下约束：
+    - dst_dtype在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持torch.int8和torch.quint4x2；在Ascend 950PR/Ascend 950DT平台上仅支持torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn。
+    - alpha在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持传入None，无实际功能；在Ascend 950PR/Ascend 950DT平台上取值范围为(0.0, 1.0)，传入None或不在有效取值范围内时不做处理。
+    - axis在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持-1或1；在Ascend 950PR/Ascend 950DT平台上仅支持-1或D-1，D为输入x的维度数。
+    - 在Ascend 950PR/Ascend 950DT平台上，当dst_dtype为torch.float8_e5m2或torch.float8_e4m3fn时，round_mode仅支持"rint"。
+    - scale_alg在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持0；在Ascend 950PR/Ascend 950DT平台上支持取值0、1、2，其中当dst_dtype为torch.float8_e5m2或torch.float8_e4m3fn时仅支持0和1，当dst_dtype为torch_npu.float4_e2m1fn_x2时仅支持0和2。
+    - dst_type_max在Atlas A2 训练系列产品/Atlas A2 推理系列产品和Atlas A3 训练系列产品/Atlas A3 推理系列产品上仅支持0.0；在Ascend 950PR/Ascend 950DT平台上，当scale_alg为2时取值范围为[6.0, 12.0]，其余场景仅支持0.0。
+ x和rotation的数据类型必须一致。
 
  调用示例:
  import torch
@@ -15632,12 +15651,11 @@ _add_torch_npu_docstr(
      )
      return output, output_scale
 
- def test_rotate_quant_mxfp4(M=512, N=1024, K=1024):
+ def test_rotate_quant_mxfp4(M=512, N=1024, K=128):
      x = torch.randn(M, N, dtype=torch.bfloat16).npu()
      rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
      output, output_scale = torch_npu.npu_rotate_quant(
          x, rotation, dst_dtype=torch_npu.float4_e2m1fn_x2, axis=-1, round_mode="rint"
-         x, rotation, dst_dtype=torch.int8
      )
      return output, output_scale
 

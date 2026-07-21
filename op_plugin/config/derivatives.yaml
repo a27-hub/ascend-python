@@ -332,7 +332,7 @@ backward:
   permuted_tokens, probs: npu_moe_token_unpermute_grad(permuted_tokens, grad, sorted_indices, probs, padded_mode, restore_shape)
   version: [v2.1, newest]
 
-- name: npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, bool return_softmax_lse=False) -> (Tensor, Tensor, Tensor)
+- name: npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, bool return_softmax_lse=False, Tensor? sinks=None) -> (Tensor, Tensor, Tensor)
   query, key, value, query_rope, key_rope: npu_sparse_flash_attention_grad(query, key, value, sparse_indices, grad, result0, result1, result2, scale_value, sparse_block_size, query_rope, key_rope, actual_seq_lengths_query, actual_seq_lengths_kv, layout_query, sparse_mode, pre_tokens, next_tokens, attention_mode)
   version: all_version
 
@@ -360,11 +360,11 @@ backward:
   x: npu_mhc_sinkhorn_backward(grad, result1, result2)
   version: all_version
 
-- name: npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor
+- name: npu_mhc_post(Tensor x, Tensor? h_res, Tensor h_out, Tensor h_post) -> Tensor
   x, h_res, h_out, h_post: npu_mhc_post_backward(grad, x, h_res, h_out, h_post)
   version: all_version
 
-- name: npu_moe_gating_top_k(Tensor x, int k, *, Tensor? bias=None, int k_group=1, int group_count=1, int group_select_mode=0, int renorm=0, int norm_type=0, bool out_flag=False, float routed_scaling_factor=1.0, float eps=1e-20) -> (Tensor, Tensor, Tensor)
+- name: npu_moe_gating_top_k(Tensor x, int k, *, Tensor? bias=None, Tensor? input_ids=None, Tensor? tid2eid=None, int k_group=1, int group_count=1, int group_select_mode=0, int renorm=0, int norm_type=0, bool out_flag=False, float routed_scaling_factor=1.0, float eps=1e-20) -> (Tensor, Tensor, Tensor)
   output_differentiability: [true, false, false]
   x: npu_moe_gating_top_k_backward(result2, grad, result1, renorm, norm_type, routed_scaling_factor, eps)
   version: all_version

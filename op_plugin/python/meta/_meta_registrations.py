@@ -193,8 +193,8 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
         lambda: "Input phi should not be empty." + ops_error(ErrCode.VALUE),
     )
     torch._check(
-        alpha.numel() == 3,
-        lambda: "Input alpha must have 3 elements, but got " + str(alpha.numel()) + "." + ops_error(ErrCode.VALUE),
+        alpha.numel() == 3 or alpha.numel() == 2,
+        lambda: "Input alpha must have 3 or 2 elements, but got " + str(alpha.numel()) + "." + ops_error(ErrCode.VALUE),
     )
     torch._check(
         bias.numel() > 0,
@@ -210,6 +210,8 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
         lambda: f"Input out_flag must be 0 or 1, but got {out_flag}." + ops_error(ErrCode.VALUE),
     )
 
+    has_resi = alpha.numel() == 3
+
     if x.dim() == 4:
         batch = x.size(0)
         sequence = x.size(1)
@@ -219,7 +221,10 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
 
         out_hin = torch.empty([batch, sequence, dim], dtype=x.dtype, device="meta")
         out_hpost = torch.empty([batch, sequence, num_residual], dtype=torch.float32, device="meta")
-        out_hres = torch.empty([batch, sequence, num_residual, num_residual], dtype=torch.float32, device="meta")
+        if has_resi:
+            out_hres = torch.empty([batch, sequence, num_residual, num_residual], dtype=torch.float32, device="meta")
+        else:
+            out_hres = torch.empty([1], dtype=torch.float32, device="meta")
         out_inv_rms = torch.empty([batch, sequence], dtype=torch.float32, device="meta")
         out_hmix = torch.empty([batch, sequence, mat_k], dtype=torch.float32, device="meta")
         out_hpre = torch.empty([batch, sequence, num_residual], dtype=torch.float32, device="meta")
@@ -231,7 +236,10 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
 
         out_hin = torch.empty([t, dim], dtype=x.dtype, device="meta")
         out_hpost = torch.empty([t, num_residual], dtype=torch.float32, device="meta")
-        out_hres = torch.empty([t, num_residual, num_residual], dtype=torch.float32, device="meta")
+        if has_resi:
+            out_hres = torch.empty([t, num_residual, num_residual], dtype=torch.float32, device="meta")
+        else:
+            out_hres = torch.empty([1], dtype=torch.float32, device="meta")
         out_inv_rms = torch.empty([t], dtype=torch.float32, device="meta")
         out_hmix = torch.empty([t, mat_k], dtype=torch.float32, device="meta")
         out_hpre = torch.empty([t, num_residual], dtype=torch.float32, device="meta")
@@ -270,7 +278,7 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
                                          actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None,
                                          key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND",
                                          sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
-                                         attention_mode=0, return_softmax_lse=False):
+                                         attention_mode=0, return_softmax_lse=False, sinks=None):
     require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
 
     for item_name, item in require_param.items():
@@ -927,66 +935,6 @@ def npu_quant_mm_reduce_scatter_meta(self, x2, hcom, world_size, reduce_op='sum'
     out_m = math.floor(self.size(0) / world_size)
     torch_dtype = self.dtype if y_dtype is None else TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
     return (self.new_empty(out_m, x2.size(1), dtype=torch_dtype), self.new_empty(0, dtype=torch.float32))
-
-
-@impl(m, "npu_quant_reduce_scatter")
-def npu_quant_reduce_scatter_meta(x, scales, hcom_name, world_size, reduce_op='sum',
-                                  output_dtype=None, x_dtype=None, scales_dtype=None):
-    torch._check(
-        x is not None,
-        lambda: "x cannot be None, please input some value" + ops_error(ErrCode.TYPE),
-    )
-    torch._check(
-        scales is not None,
-        lambda: "scales cannot be None, please input some value" + ops_error(ErrCode.TYPE),
-    )
-
-    world_size_list = [2, 4, 8]
-    torch._check(
-        world_size in world_size_list,
-        lambda: "world_size must be in " + str(world_size_list) + ", but actual value is: " + str(world_size) + ops_error(ErrCode.VALUE),
-    )
-
-    if x.dim() == 2:
-        size = [x.size(0) // world_size, x.size(1)]
-    if x.dim() == 3:
-        size = [x.size(0) * x.size(1) // world_size, x.size(2)]
-
-    dtype = x.dtype
-    if output_dtype is not None:
-        dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[output_dtype]
-    else:
-        dtype = torch.bfloat16
-
-    return torch.empty(size, dtype=dtype, device='meta')
-
-
-@impl(m, "npu_quant_all_reduce")
-def npu_quant_all_reduce_meta(x, scales, hcom_name, world_size, reduce_op='sum',
-                              output_dtype=None, x_dtype=None, scales_dtype=None):
-    torch._check(
-        x is not None,
-        lambda: "x cannot be None, please input some value" + ops_error(ErrCode.TYPE),
-    )
-    torch._check(
-        scales is not None,
-        lambda: "scales cannot be None, please input some value" + ops_error(ErrCode.TYPE),
-    )
-
-    world_size_list = [2, 4, 8]
-    torch._check(
-        world_size in world_size_list,
-        lambda: "world_size must be in " + str(world_size_list) + ", but actual value is: " + str(world_size) + ops_error(ErrCode.VALUE),
-    )
-
-    size = x.size()
-    dtype = x.dtype
-    if output_dtype is not None:
-        dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[output_dtype]
-    else:
-        dtype = torch.bfloat16
-
-    return torch.empty(size, dtype=dtype, device='meta')
 
 
 @impl(m, "npu_gmm_alltoallv")
@@ -1787,7 +1735,7 @@ def npu_moe_gating_top_k_softmax_v2_meta(x, *, k=1, finished=None, renorm=0, out
 
 
 @impl(m, "npu_moe_gating_top_k")
-def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20):
+def npu_moe_gating_top_k_meta(x, k=1, bias=None, input_ids=None, tid2eid=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20):
     x_dim = x.dim()
     torch._check(
         x_dim == 2,
@@ -1799,6 +1747,30 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
             bias_dim == 1,
             lambda: "the bias shape support only 1d)" + ops_error(ErrCode.VALUE),
         )
+    torch._check((input_ids is None) == (tid2eid is None),
+        lambda: "input_ids and tid2eid must be both provided or both omitted)" + ops_error(ErrCode.VALUE),
+    )
+    if input_ids is not None:
+        input_ids_dim = input_ids.dim()
+        torch._check(
+            input_ids_dim == 1,
+            lambda: "the input_ids shape support only 1d)" + ops_error(ErrCode.VALUE),
+        )
+        torch._check(
+            input_ids.shape[0] == x.shape[0],
+            lambda: "The input_ids first dim should be same as x first dim)" + ops_error(ErrCode.VALUE),
+        )
+    if tid2eid is not None:
+        tid2eid_dim = tid2eid.dim()
+        torch._check(
+            tid2eid_dim == 2,
+            lambda: "the tid2eid shape support only 2d)" + ops_error(ErrCode.VALUE),
+        )
+        torch._check(
+            tid2eid.shape[1] == k,
+            lambda: "The tid2eid second dim should be same as k)" + ops_error(ErrCode.VALUE),
+        )
+
     y_dim_list = [x.size(0), k]
     expert_idx_dim_list = [x.size(0), k]
     y2_dim_list = [x.size(0), x.size(1)]
@@ -7045,7 +7017,7 @@ def npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=No
     state_shape = (initial_state.size(0), initial_state.size(1), initial_state.size(2), initial_state.size(3))
     out_shape = (value.size(0), value.size(1), value.size(2))
 
-    finalState = torch.empty(state_shape, dtype=torch.bfloat16, device=state.device)
+    finalState = torch.empty(state_shape, dtype=initial_state.dtype, device=initial_state.device)
     out = torch.empty(out_shape, dtype=torch.bfloat16, device=value.device)
     return out, finalState
 
