@@ -1,10 +1,5 @@
 all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13]
 backward:
-- name: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor
-  self: cholesky_backward(grad, upper, result)
-  result: cholesky_jvp(self_t, result, upper)
-  version: all_version
-
 - name: npu_gather_sparse_index(Tensor input, Tensor index) -> Tensor
   input: npu_gather_sparse_index_backward(grad, input.sym_sizes(), index)
   version: all_version
@@ -85,12 +80,6 @@ backward:
   self: npu_bmm_v2_mat1_backward(grad, self, mat2, self.sym_sizes())
   mat2: npu_bmm_v2_mat2_backward(grad, self, mat2, mat2.sym_sizes())
   version: [v2.1, newest]
-
-- name: npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, int[] block_shape, *, str q_input_layout='TND', str kv_input_layout='TND', int num_key_value_heads=1, float scale_value=0.0, int inner_precise=1, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=0) -> (Tensor, Tensor)
-  output_differentiability: [true, false]
-  query, key, value: npu_block_sparse_attention_backward(grad, query, key, value, result0, result1, block_sparse_mask, block_shape, actual_seq_lengths, actual_seq_lengths_kv, q_input_layout, kv_input_layout, num_key_value_heads, scale_value)
-  block_sparse_mask: non_differentiable
-  version: [v2.6, newest]
 
 - name: npu_confusion_transpose(Tensor self, int[] perm, int[] shape, bool transpose_first) -> Tensor
   self: npu_confusion_transpose_backward(grad, perm, self.sym_sizes(), !transpose_first)

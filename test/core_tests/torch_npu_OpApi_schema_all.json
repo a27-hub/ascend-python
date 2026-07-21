@@ -86,12 +86,6 @@
   "op_api: torch_npu.npu_bert_apply_adam(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
-  "op_api: torch_npu.npu_block_sparse_attention(*args, **kwargs)": {
-    "version": ["v2.6", "v2.7"]
-  },
-  "op_api: torch_npu.npu_block_sparse_attention_backward(*args, **kwargs)": {
-    "version": ["v2.6", "v2.7"]
-  },
   "op_api: torch_npu.npu_nsa_select_attention(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -399,12 +393,6 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_bert_apply_adam(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
-  "op_api: torch_npu.npu_block_sparse_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
-  "op_api: torch_npu.npu_block_sparse_attention_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_clear_float_status(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -983,12 +971,6 @@
     "version": ["all_version"]
   },
   "func: npu_bert_apply_adam.out(Scalar lr, Scalar beta1, Scalar beta2, Scalar epsilon, Tensor grad, Scalar max_grad_norm, Scalar global_grad_norm, Scalar weight_decay, Scalar? step_size=None, int adam_mode=0, *, Tensor(a!) var, Tensor(b!) m, Tensor(c!) v) -> (Tensor(a!), Tensor(b!), Tensor(c!))": {
-    "version": ["all_version"]
-  },
-  "func: npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, int[] block_shape, *, str q_input_layout='TND', str kv_input_layout='TND', int num_key_value_heads=1, float scale_value=0.0, int inner_precise=1, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=0) -> (Tensor, Tensor)": {
-    "version": ["all_version"]
-  },
-  "func: npu_block_sparse_attention_backward(Tensor d_out, Tensor query, Tensor key, Tensor value, Tensor attention_out, Tensor softmax_lse, Tensor block_sparse_mask, int[]? block_shape, int[]? actual_seq_lengths, int[]? actual_seq_lengths_kv, str q_input_layout, str kv_input_layout, int num_key_value_heads, float scale_value) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_conv_transpose2d_backward(Tensor input, Tensor grad_output, Tensor weight, int[] padding, int[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)": {
@@ -1592,9 +1574,6 @@
     "version": ["all_version"]
   },
   "func: npu_all_gather_base_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)": {
-    "version": ["all_version"]
-  },
-  "func: npu_all_gather_quant_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? quant_scale=None, int block_size=0, int gather_index=0, bool gather_output=True, int comm_turn=0, int[]? group_sizes=None, bool amax_output=False, int? y_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_quant_mm_reduce_scatter(Tensor self, Tensor x2, str hcom, int world_size, *, str reduce_op='sum', Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? quant_scale=None, int block_size=0, int comm_turn=0, int[]? group_sizes=None, bool amax_output=False, int? y_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> (Tensor, Tensor)": {
@@ -4809,12 +4788,6 @@
     "version": ["all_version"]
   },
   "func: split_with_sizes_copy.out(Tensor self, SymInt[] split_sizes, int dim=0, *, Tensor(a!)[] out) -> ()": {
-    "version": ["all_version"]
-  },
-  "func: linalg_cholesky.out(Tensor self, *, bool upper=False, Tensor(a!) out) -> Tensor(a!)": {
-    "version": ["all_version"]
-  },
-  "func: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_moe_token_permute_with_routing_map(Tensor tokens, Tensor routing_map, *, Tensor? probs=None, int? num_out_tokens=None, bool drop_and_pad=False) -> (Tensor, Tensor, Tensor)": {

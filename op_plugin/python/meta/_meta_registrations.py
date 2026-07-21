@@ -1272,32 +1272,6 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
     return (gmm_y, mm_y, permute_out)
 
 
-@impl(m, "npu_all_gather_quant_mm")
-def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale=None, x2_scale=None,
-                                 quant_scale=None, block_size=0, gather_index=0, gather_output=True,
-                                 comm_turn=0, group_sizes=None, amax_output=False, y_dtype=None, x1_dtype=None,
-                                 x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None):
-    if world_size <= 0:
-        raise RuntimeError("world_size must be bigger than zero")
-    # out_gather_mm
-    out_x = self.size(0)
-    if gather_index == 0:
-        out_x = self.size(0) * world_size
-    out_y = x2.size(1)
-    # out_gather
-    out_gather_x = x2.size(0) * world_size
-    out_gather_y = x2.size(1)
-    if gather_index == 0:
-        out_gather_x = self.size(0) * world_size
-        out_gather_y = self.size(1)
-    torch_dtype = self.dtype if y_dtype is None else TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
-
-    if gather_output:
-        return (self.new_empty((out_x, out_y), dtype=torch_dtype), self.new_empty(out_gather_x, out_gather_y),
-                self.new_empty(0, dtype=torch.float32))
-    else:
-        return (self.new_empty((out_x, out_y), dtype=torch_dtype), self.new_empty(0),
-                self.new_empty(0, dtype=torch.float32))
 
 
 @impl(m, "npu_mhc_post")
@@ -2612,44 +2586,6 @@ def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None)
     else:
         output = self.new_empty(input_shape, dtype=dtype)
     return output
-
-
-@impl(m, "npu_block_sparse_attention")
-def npu_block_sparse_attention_meta(query, key, value, block_sparse_mask, block_shape, *, q_input_layout='TND', kv_input_layout='TND',
-                                   num_key_value_heads=1, scale_value=0.0, inner_precise=1,
-                                   actual_seq_lengths=None, actual_seq_lengths_kv=None, softmax_lse_flag=0):
-    torch._check(
-        query.dim() == 3 or query.dim() == 4,
-        lambda: "query should be 3 or 4 dimensional, but got " + str(query.dim()) + ops_error(ErrCode.PARAM),
-    )
-    torch._check(
-        len(block_shape) >= 2 and block_shape[1] % 128 == 0,
-        lambda: "block_shape[1] (blockShapeY) must be a multiple of 128, got " + str(block_shape[1])
-        + ops_error(ErrCode.PARAM),
-    )
-    torch._check(
-        query.dtype != torch.bfloat16 or inner_precise == 0,
-        lambda: "when query/key/value are bfloat16, inner_precise must be 0, got " + str(inner_precise)
-        + ops_error(ErrCode.PARAM),
-    )
-    attention_out_shape = list(query.size())
-    attention_out_shape[-1] = value.size(-1)
-    attention_out = query.new_empty(attention_out_shape)
-    if query.dim() == 4:
-        softmax_lse = query.new_empty([query.size(0), query.size(1), query.size(2), 1], dtype=torch.float32)
-    else:
-        softmax_lse = query.new_empty([query.size(0), query.size(1), 1], dtype=torch.float32)
-    return (attention_out, softmax_lse)
-
-
-@impl(m, "npu_block_sparse_attention_backward")
-def npu_block_sparse_attention_backward_meta(d_out, query, key, value, attention_out, softmax_lse, block_sparse_mask,
-                                            block_shape, actual_seq_lengths, actual_seq_lengths_kv,
-                                            q_input_layout, kv_input_layout, num_key_value_heads, scale_value):
-    d_query = query.new_empty(query.size())
-    d_key = key.new_empty(key.size())
-    d_value = value.new_empty(value.size())
-    return (d_query, d_key, d_value)
 
 
 @impl(m, "npu_bmmV2")

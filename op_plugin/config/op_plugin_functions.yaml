@@ -5543,12 +5543,6 @@ official:
   - func: split_with_sizes_copy.out(Tensor self, SymInt[] split_sizes, int dim=0, *, Tensor(a!)[] out) -> ()
     op_api: [ v2.1, newest ]
 
-  - func: linalg_cholesky.out(Tensor self, *, bool upper=False, Tensor(a!) out) -> Tensor(a!)
-    op_api: all_version
-
-  - func: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor
-    op_api: all_version
-
   - func: _scaled_mm(Tensor mat_a, Tensor mat_b, Tensor scale_a, Tensor scale_b, Tensor? bias=None, Tensor? scale_result=None, ScalarType? out_dtype=None, bool use_fast_accum=False) -> Tensor
     op_api: [ v2.7, newest ]
 
@@ -5836,9 +5830,6 @@ custom:
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
-
-  - func: npu_all_gather_quant_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? quant_scale=None, int block_size=0, int gather_index=0, bool gather_output=True, int comm_turn=0, int[]? group_sizes=None, bool amax_output=False, int? y_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, str? comm_mode=None) -> (Tensor, Tensor, Tensor)
-    op_api: all_version
 
   - func: npu_alloc_float_status(Tensor self) -> Tensor
     acl_op: all_version
@@ -7460,13 +7451,6 @@ custom:
     exposed: all_version
 
   - func: npu_sparse_flash_attention_grad(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, Tensor d_out, Tensor out, Tensor softmax_max, Tensor softmax_sum, float scale_value, int sparse_block_size, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, str? layout="BSND", int? sparse_mode=3, int? pre_tokens=9223372036854775807, int? next_tokens=9223372036854775807, int? attention_mode=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
-    op_api: all_version
-
-  - func: npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, int[] block_shape, *, str q_input_layout='TND', str kv_input_layout='TND', int num_key_value_heads=1, float scale_value=0.0, int inner_precise=1, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=0) -> (Tensor, Tensor)
-    op_api: all_version
-    exposed: all_version
-
-  - func: npu_block_sparse_attention_backward(Tensor d_out, Tensor query, Tensor key, Tensor value, Tensor attention_out, Tensor softmax_lse, Tensor block_sparse_mask, int[]? block_shape, int[]? actual_seq_lengths, int[]? actual_seq_lengths_kv, str q_input_layout, str kv_input_layout, int num_key_value_heads, float scale_value) -> (Tensor, Tensor, Tensor)
     op_api: all_version
 
   - func: npu_sparse_lightning_indexer_grad_kl_loss(Tensor query, Tensor key, Tensor query_index, Tensor key_index, Tensor weights, Tensor sparse_indices, Tensor softmax_max, Tensor softmax_sum, float scale_value, *, Tensor? query_rope=None, Tensor? key_rope=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_klen=None, str? layout='BSND', int? sparse_mode=3, int? pre_tokens=9223372036854775807, int? next_tokens=9223372036854775807) -> (Tensor, Tensor, Tensor, Tensor)
