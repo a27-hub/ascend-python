@@ -10482,15 +10482,6 @@ multinomial:
   - float64
   test_variant_consistency_eager:
   - float32
-nn.functional.adaptive_max_pool3d:
-  test_neg_view:
-  - float64
-  test_variant_consistency_eager:
-  - float32
-  test_out:
-  - float32
-  test_backward:
-  - float32
 nn.functional.celu:
   test_neg_view:
   - float64
@@ -10889,15 +10880,6 @@ nn_functional_adaptive_max_pool1d:
   test_pointwise_ops:
   - float32
 nn_functional_adaptive_max_pool2d:
-  test_pointwise_ops:
-  - float32
-nn_functional_adaptive_max_pool3d:
-  test_fake_crossref_backward_amp:
-  - float32
-  test_fake_crossref_backward_no_amp:
-  - float32
-  test_fake:
-  - float32
   test_pointwise_ops:
   - float32
 nn_functional_fractional_max_pool2d:
