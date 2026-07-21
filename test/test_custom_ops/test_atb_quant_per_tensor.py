@@ -39,6 +39,16 @@ class TestElewiseQuantOperation(TestCase):
         self.assertEqual(out, y)
 
     @SupportedDevices(['Ascend910B'])
+    def test_quantpertensor_exceed_max_dim(self):
+        input_x = torch.ones((1,), dtype=torch.float16).npu()
+        input_scale = torch.ones((1,) * 9, dtype=torch.float16)
+        input_offset = torch.ones((1,), dtype=torch.int8).npu()
+        y = torch.zeros((1,), dtype=torch.int8).npu()
+
+        with self.assertRaisesRegex(RuntimeError, "ATB tensor supports at most 8 dimensions, but got 9"):
+            torch_npu._npu_quantize_per_tensor(input_x, input_scale, input_offset, y)
+
+    @SupportedDevices(['Ascend910B'])
     def test_quantpertensor_aclgraph(self):
         input_x = torch.ones(1, 16, 16, dtype=torch.float16).npu()
         input_scale = torch.ones(16, 16, dtype=torch.float16).npu()
