@@ -137,7 +137,6 @@ stages:
             run: |
               PYTHON310_BIN=$(dirname "$(which python3.10)")
               ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
-              export PATH="$PYTHON310_BIN:$PATH"
               echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
               python --version
           - name: install gitleaks
