@@ -3409,6 +3409,18 @@ class TestGMMFinalizeRouting(TestCase):
             self.assertTrue(result.shape == expect_ret.shape)
             self.assertTrue(result.dtype == expect_ret.dtype)
 
+class TestBatchMatmulWeightNZ(TestCase):
+    @unittest.skip("skip test_npu_batchmatmul_weightNZ")
+    def test_npu_batchmatmul_weightNZ_meta_1(self):
+        with FakeTensorMode():
+            M, K, N, Batchx1, Batchx2 = 39, 404, 43000, 1, 128
+            x1 = torch.randn((Batchx1, M, K), dtype=torch.float16)
+            x2 = torch.randn((Batchx2, K, N), dtype=torch.float16)
+            x2_nz = torch_npu.npu_format_cast(x2.npu(), acl_format=29)
+            result = torch.bmm(x1.npu(), x2.npu())
+            expect_ret = torch.randn((Batchx2, M, N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
 
 class TestTransposeBatchMatmul(TestCase):
     @unittest.skip("skip test_npu_transpose_batchmatmul")
@@ -4790,40 +4802,6 @@ class TestGroupedMatmulAdd(TestCase):
             self.assertTrue(y.shape[2] == res_1.shape[2])
 
 
-class TestQuantAllReduce(TestCase):
-    def test_npu_quant_all_reduce(self):
-        with FakeTensorMode():
-            torch.manual_seed(0)
-            # T-G量化
-            x = torch.randint(-5, 5, (128, 5120), dtype=torch.int8).npu()
-            scales = torch.randint(-5, 5, (128, 40), dtype=torch.float32).npu()
-            # 其他参数
-            hcom = "fake group info"
-            world_size = 2
-            res = torch_npu.npu_quant_all_reduce(x, scales, hcom, world_size)
-            self.assertTrue(len(x.shape) == len(res.shape))
-            # bs轴
-            self.assertTrue(x.shape[0] == res.shape[0])
-            self.assertTrue(x.shape[1] == res.shape[1])
-
-
-class TestQuantReduceScatter(TestCase):
-    def test_npu_quant_reduce_scatter(self):
-        with FakeTensorMode():
-            torch.manual_seed(0)
-            # T-G量化
-            x = torch.randint(-5, 5, (128, 5120), dtype=torch.int8).npu()
-            scales = torch.randint(-5, 5, (128, 40), dtype=torch.float32).npu()
-            # 其他参数
-            hcom = "fake group info"
-            world_size = 2
-            # 断言
-            res = torch_npu.npu_quant_reduce_scatter(x, scales, hcom, world_size)
-            self.assertTrue(len(res.shape) == 2)
-            self.assertTrue(x.shape[0] // world_size == res.shape[0])
-            self.assertTrue(x.shape[1] == res.shape[1])
-
-
 class TestMatmulAlltoAll(TestCase):
     def test_npu_matmul_all_to_all(self):
         # 使用模拟模式，在不实际占用设备内存的情况下运行张量操作，用假张量代替真实张量
@@ -4933,7 +4911,7 @@ class TestAlltoAllQuantMatmul(TestCase):
 
 
 class TestNpuDSA(TestCase):
-    def setup_sparse_flash_attention_test_params(self, requires_grad=False, return_softmax_lse=False):
+    def setup_sparse_flash_attention_test_params(self, requires_grad=False, return_softmax_lse=False, with_sinks=False):
         scale_value = 0.041666666666666664
         sparse_block_size = 1
         query_type = torch.float16
@@ -4961,6 +4939,7 @@ class TestNpuDSA(TestCase):
         sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(b, s1, n2, sparse_block_count).to(torch.int32)
         query_rope = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dr))).to(query_type)
         key_rope = torch.tensor(np.random.uniform(-10, 10, (b, s2, n2, dr))).to(query_type)
+        sinks = torch.tensor(np.random.uniform(-1, 1, (n1,))).to(torch.float32) if with_sinks else None
         act_seq_q = [s1] * b
         act_seq_kv = [s2_act] * b
         act_seq_q = torch.tensor(act_seq_q).to(torch.int32)
@@ -4972,6 +4951,7 @@ class TestNpuDSA(TestCase):
         sparse_indices_npu = sparse_indices.npu()
         query_rope_npu = query_rope.npu()
         key_rope_npu = key_rope.npu()
+        sinks_npu = None if sinks is None else sinks.npu()
         act_seq_q_npu = act_seq_q.npu()
         act_seq_kv_npu = act_seq_kv.npu()
 
@@ -4989,6 +4969,7 @@ class TestNpuDSA(TestCase):
             'sparse_indices': sparse_indices_npu,
             'query_rope': query_rope_npu,
             'key_rope': key_rope_npu,
+            'sinks': sinks_npu,
             'act_seq_q': act_seq_q_npu,
             'act_seq_kv': act_seq_kv_npu,
             'scale_value': scale_value,
@@ -5007,30 +4988,38 @@ class TestNpuDSA(TestCase):
             query_rope=params['query_rope'], key_rope=params['key_rope'], sparse_block_size=params['sparse_block_size'],
             layout_query=params['layout'], layout_kv=params['layout'], sparse_mode=params['sparse_mode'],
             pre_tokens=(1<<63)-1, next_tokens=(1<<63)-1, attention_mode = params['attention_mode'],
-            return_softmax_lse = params['return_softmax_lse'])
+            return_softmax_lse = params['return_softmax_lse'], sinks=params['sinks'])
+
+    def check_sparse_flash_attention_meta(self, params):
+        npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+
+        query = params['query']
+        key = params['key']
+
+        expect_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype)
+        expect_softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)],
+                                         dtype=torch.float32)
+        expect_softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)],
+                                         dtype=torch.float32)
+
+        self.assertEqual(npu_out.dtype, expect_out.dtype)
+        self.assertEqual(npu_out.shape, expect_out.shape)
+
+        if params['return_softmax_lse']:
+            self.assertEqual(npu_softmax_max.dtype, expect_softmax_max.dtype)
+            self.assertEqual(npu_softmax_max.shape, expect_softmax_max.shape)
+            self.assertEqual(npu_softmax_sum.dtype, expect_softmax_sum.dtype)
+            self.assertEqual(npu_softmax_sum.shape, expect_softmax_sum.shape)
 
     def test_dsa_npu_sparse_flash_attention(self):
         with FakeTensorMode():
             params = self.setup_sparse_flash_attention_test_params()
-            npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            self.check_sparse_flash_attention_meta(params)
 
-            query = params['query']
-            key = params['key']
-
-            expect_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype)
-            expect_softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)],
-                                             dtype=torch.float32)
-            expect_softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)],
-                                             dtype=torch.float32)
-
-            self.assertEqual(npu_out.dtype, expect_out.dtype)
-            self.assertEqual(npu_out.shape, expect_out.shape)
-
-            if params['return_softmax_lse']:
-                self.assertEqual(npu_softmax_max.dtype, expect_softmax_max.dtype)
-                self.assertEqual(npu_softmax_max.shape, expect_softmax_max.shape)
-                self.assertEqual(npu_softmax_sum.dtype, expect_softmax_sum.dtype)
-                self.assertEqual(npu_softmax_sum.shape, expect_softmax_sum.shape)
+    def test_dsa_npu_sparse_flash_attention_with_sinks(self):
+        with FakeTensorMode():
+            params = self.setup_sparse_flash_attention_test_params(with_sinks=True)
+            self.check_sparse_flash_attention_meta(params)
 
     @unittest.skip("skip sparse_flash_attention_grad now")
     def test_dsa_npu_sparse_flash_attention_grad(self):

@@ -14,7 +14,7 @@
 
 ## 功能说明
 
-应用基于NPU的CIoU操作。在DIoU的基础上增加了penalty term，并propose CIoU。
+基于NPU的CIoU操作，计算预测边界框与真实边界框之间的CIoU（Complete Intersection over Union）损失。
 
 ## 函数原型
 
@@ -43,6 +43,8 @@ torch_npu.contrib.function.npu_ciou(boxes1, boxes2, trans=True, is_cross=False, 
 ## 调用示例
 
 ```python
+>>> import torch
+>>> import torch_npu
 >>> from torch_npu.contrib.function import npu_ciou
 >>> box1 = torch.randn(4, 32).npu()
 >>> box1.requires_grad = True
