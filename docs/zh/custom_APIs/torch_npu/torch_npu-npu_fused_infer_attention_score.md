@@ -11,95 +11,42 @@
 
 - **API功能**：适配增量&全量推理场景的 FlashAttention 算子。当 `query` 矩阵的 S=1，进入 IncreFlashAttention（decode）分支；其余场景进入 PromptFlashAttention（prefill）分支。
 
-- **两种计算场景**：
-
-  | 场景 | 触发条件 | 说明 |
-  | ---- | -------- | ---- |
-  | PromptFlashAttention（prefill） | Q_S > 1 | `query/key/value` 为整段序列张量。关注吞吐，长序列需关注超时风险与切分策略。 |
-  | IncreFlashAttention（decode） | Q_S = 1 | `query` 的 S 维为 1，`key/value` 通常来自 KV Cache。关注单步延迟与 KV Cache 访问效率。 |
-
 - **计算公式**：
-
-  根据传入参数不同，算子自动选择以下公式分支：
-
-  | 公式分支 | 触发条件 |
-  | -------- | -------- |
-  | [基本公式](#basic_formula) | 不传量化参数、不传 rope、不传伪量化参数 |
-  | [位置编码公式](#pse_formula) | 传入 `pse_shift` |
-  | [全量化公式](#full_quant_formula) | 传入 `dequant_scale1` + `quant_scale1` + `dequant_scale2` + `quant_scale2`，输入/输出为 int8 |
-  | [后量化公式](#post_quant_formula) | 传入 `quant_scale2`，仅输出为 int8 |
-  | [伪量化公式](#pseudo_quant_formula) | 传入 `antiquant_scale` / `key_antiquant_scale` 等，key/value 为 int8/int4 |
-  | [MLA 公式](#mla_formula) | 传入 `query_rope` + `key_rope` |
-
-  <a id="basic_formula"></a>**基本公式**：
 
   $$
   attention\_out = softmax \left(scale \cdot (query \cdot key^\top) + atten\_mask \right) \cdot value
   $$
 
-  <a id="pse_formula"></a>**位置编码**：
 
-  $$
-  attention\_out = softmax\left( scale \cdot (query \cdot key^\top) + pse\_shift + atten\_mask \right) \cdot value
-  $$
+## 函数原型
 
-  <a id="full_quant_formula"></a>**全量化公式**：
+```python
+torch_npu.npu_fused_infer_attention_score(
+    query, key, value, *,
+    pse_shift=None, atten_mask=None,
+    actual_seq_lengths=None, actual_seq_lengths_kv=None,
+    dequant_scale1=None, quant_scale1=None,
+    dequant_scale2=None, quant_scale2=None, quant_offset2=None,
+    antiquant_scale=None, antiquant_offset=None,
+    block_table=None, query_padding_size=None, kv_padding_size=None,
+    key_antiquant_scale=None, key_antiquant_offset=None,
+    value_antiquant_scale=None, value_antiquant_offset=None,
+    key_shared_prefix=None, value_shared_prefix=None,
+    actual_shared_prefix_len=None,
+    query_rope=None, key_rope=None, key_rope_antiquant_scale=None,
+    num_heads=1, scale=1.0,
+    pre_tokens=2147483647, next_tokens=2147483647,
+    input_layout="BSH", num_key_value_heads=0,
+    sparse_mode=0, inner_precise=0,
+    block_size=0, antiquant_mode=0,
+    softmax_lse_flag=False,
+    key_antiquant_mode=0, value_antiquant_mode=0
+) -> (Tensor, Tensor)
+```
 
-  $$
-  query_{fp} = query \cdot dequant\_scale1
-  $$
+> **说明**：`*` 之前的 `query, key, value` 为位置参数（必须按顺序传入）；`*` 之后的为关键字参数（键值对赋值，可选，不传使用默认值）。
 
-  $$
-  key_{fp} = key \cdot dequant\_scale1
-  $$
-
-  $$
-  value_{fp} = value \cdot dequant\_scale1
-  $$
-
-  $$
-  score_{int8} = quantize(scale \cdot (query_{fp} \cdot key_{fp}^\top) + mask, \; quant\_scale1)
-  $$
-
-  $$
-  attention\_out = quantize(softmax(score_{int8}) \cdot value_{fp}, \; quant\_scale2, \; quant\_offset2)
-  $$
-
-  <a id="post_quant_formula"></a>**后量化公式**：
-
-  $$
-  attention\_out = quantize(softmax(scale \cdot (query \cdot key^\top) + mask) \cdot value, \; quant\_scale2, \; quant\_offset2)
-  $$
-
-  <a id="pseudo_quant_formula"></a>**伪量化公式**：
-
-  $$
-  key_{fp} = key \cdot antiquant\_scale + antiquant\_offset
-  $$
-
-  $$
-  value_{fp} = value \cdot antiquant\_scale + antiquant\_offset
-  $$
-
-  $$
-  attention\_out = softmax(scale \cdot (query \cdot key_{fp}^\top) + mask) \cdot value_{fp}
-  $$
-
-  <a id="mla_formula"></a>**MLA 场景**：
-
-  $$
-  query_{rot} = RoPE(query, query\_rope)
-  $$
-
-  $$
-  key_{rot} = RoPE(key, key\_rope)
-  $$
-
-  $$
-  attention\_out = softmax(scale \cdot (query_{rot} \cdot key_{rot}^\top) + mask) \cdot value
-  $$
-
-  其中，`quantize` 为量化函数，`RoPE` 为旋转位置编码函数。
+## 参数说明
 
 ## 参数快速参考
 
@@ -135,35 +82,6 @@
 | S (Q_S) | query 序列长度 | ≤ 20971520 (20M) | = 1 | — |
 | S (KV_S) | key/value 序列长度 | ≤ 20971520 (20M) | ≤ 262144 | — |
 
-## 函数原型
-
-```python
-torch_npu.npu_fused_infer_attention_score(
-    query, key, value, *,
-    pse_shift=None, atten_mask=None,
-    actual_seq_lengths=None, actual_seq_lengths_kv=None,
-    dequant_scale1=None, quant_scale1=None,
-    dequant_scale2=None, quant_scale2=None, quant_offset2=None,
-    antiquant_scale=None, antiquant_offset=None,
-    block_table=None, query_padding_size=None, kv_padding_size=None,
-    key_antiquant_scale=None, key_antiquant_offset=None,
-    value_antiquant_scale=None, value_antiquant_offset=None,
-    key_shared_prefix=None, value_shared_prefix=None,
-    actual_shared_prefix_len=None,
-    query_rope=None, key_rope=None, key_rope_antiquant_scale=None,
-    num_heads=1, scale=1.0,
-    pre_tokens=2147483647, next_tokens=2147483647,
-    input_layout="BSH", num_key_value_heads=0,
-    sparse_mode=0, inner_precise=0,
-    block_size=0, antiquant_mode=0,
-    softmax_lse_flag=False,
-    key_antiquant_mode=0, value_antiquant_mode=0
-) -> (Tensor, Tensor)
-```
-
-> **说明**：`*` 之前的 `query, key, value` 为位置参数（必须按顺序传入）；`*` 之后的为关键字参数（键值对赋值，可选，不传使用默认值）。
-
-## 参数说明
 
 ### input_layout 枚举说明
 
