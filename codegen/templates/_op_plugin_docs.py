@@ -11427,7 +11427,7 @@ _add_torch_npu_docstr(
     "npu_kronecker_quant",
     """
 接口原型：
-npu_kronecker_quant(Tensor x, Tensor kronecker_p1, Tensor kronecker_p2, float? clip_ratio=None, ScalarType? dst_dtype=None) -> (Tensor out, Tensor quant_scale)
+npu_kronecker_quant(Tensor x, Tensor kronecker_p1, Tensor kronecker_p2, float? clip_ratio=None, ScalarType? dst_dtype=None, Tensor? group_list=None, int? group_list_type=0) -> (Tensor out, Tensor quant_scale)
 
 功能描述
 为矩阵x依次进行两次小矩阵乘法，然后针对矩阵乘的结果进行量化处理。
@@ -11439,6 +11439,8 @@ kronecker_p2: Device侧的Tensor类型，表示输入；数据类型支持FLOAT1
 clip_ratio: float类型，可选参数，数据范围为(0, 1]，默认值为1。
 dst_dtype：ScalarType类型，可选参数，输入值允许为torch.int32，默认值为torch.int32。
 dst_type_max: float类型，可选参数，数据范围为0、[6, 12]，默认值为0。
+group_list: Device侧的Tensor类型，可选输入；数据类型支持INT64类型；当group_list_type为0或1时，shape为[G]，当group_list_type为2时，shape为[G, 2]，G表示分组数，G需要小于等于1024。
+group_list_type: int类型，可选参数，数据范围为0、1、2，默认值为0。
 
 输出说明
 out：Device侧的Tensor类型，表示量化输出；数据类型支持INT32；shape为[K, M, N/8]，第零维和第一维与x一致，第二维是x的1/8。
@@ -11450,6 +11452,7 @@ quant_scale: Device侧的Tensor类型，表示量化缩放系数；数据类型�
 支持的型号
 Atlas A2训练系列产品
 Atlas A3训练系列产品
+昇腾950 AI处理器
 
 调用示例:
 import torch
