@@ -48,10 +48,6 @@ torch_npu.npu_fused_infer_attention_score(
 
 ## 参数说明
 
-## 参数快速参考
-
-> **维度约定**：B = Batch Size, S = Sequence Length, H = Hidden Size, N = Head Num, D = Head Dim（满足 D = H / N）, T = 所有 Batch 序列长度的累加和。
-> Q_S/S1 = query 的 S, KV_S/S2 = key/value 的 S, Q_N = num_query_heads, KV_N = num_key_value_heads。
 
 ### 按场景分类的参数速查
 
@@ -72,6 +68,9 @@ torch_npu.npu_fused_infer_attention_score(
 | TND 布局 | `query, key, value, actual_seq_lengths, actual_seq_lengths_kv, input_layout="TND"` | — | [TND 布局约束](#tnd_constraints) |
 
 ### 各轴取值范围速查
+
+> **维度约定**：B = Batch Size, S = Sequence Length, H = Hidden Size, N = Head Num, D = Head Dim（满足 D = H / N）, T = 所有 Batch 序列长度的累加和。
+> Q_S/S1 = query 的 S, KV_S/S2 = key/value 的 S, Q_N = num_query_heads, KV_N = num_key_value_heads。
 
 | 轴 | 含义 | Q_S > 1 上限 | Q_S = 1 上限 | 对齐要求 |
 | -- | ---- | ------------ | ------------ | -------- |
