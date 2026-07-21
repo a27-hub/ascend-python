@@ -12,8 +12,8 @@ class TestElewiseQuantOperation(TestCase):
         os.environ["ASCEND_LAUNCH_BLOCKING"] = "0"
 
     def calculate_benchmark(self, input_x, input_scale, input_offset):
-        input_x_np = input_x.cpu().numpy()
-        input_scale_np = input_scale.cpu().numpy()
+        input_x_np = input_x.float().cpu().numpy()
+        input_scale_np = input_scale.float().cpu().numpy()
         input_offset_np = input_offset.cpu().numpy()
 
         if len(input_offset_np) == 0:
