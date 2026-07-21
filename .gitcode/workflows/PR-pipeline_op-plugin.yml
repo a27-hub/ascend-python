@@ -133,11 +133,12 @@ stages:
             uses: checkout
             with:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
-          - name: setup-python
-            uses: setup-python
           - name: setup-python310
             run: |
-              ln -sf /usr/local/bin/python3.10 /usr/bin/python
+              PYTHON310_BIN=$(dirname "$(which python3.10)")
+              ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
+              export PATH="$PYTHON310_BIN:$PATH"
+              echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
               python --version
           - name: install gitleaks
             run: |
