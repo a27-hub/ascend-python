@@ -50,26 +50,26 @@ env:
   img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260518"
 
 stages:
-  stage_0:
-    name: stage_0
-    select: selected_by_default
-    jobs:
-      PREHEAT_master_x86:
-        name: PREHEAT_master_x86
-        select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          - name: preheat_master_x86
-            uses: dedicate-preheat-plugin
-            with:
-              namespace_id: '13965860'
-              resource_pool_name: Computation-Ascend-GitCode-x64
-              arch: x64
-              image_name: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_x86 }}
-              timeout: '3600'
+  # stage_0:
+  #   name: stage_0
+  #   select: selected_by_default
+  #   jobs:
+  #     PREHEAT_master_x86:
+  #       name: PREHEAT_master_x86
+  #       select: selected_by_default
+  #       runs-on: [ dedicate-hosted, x64, large ]
+  #       container:
+  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+  #         options: --user root
+  #       steps:
+  #         - name: preheat_master_x86
+  #           uses: dedicate-preheat-plugin
+  #           with:
+  #             namespace_id: '13965860'
+  #             resource_pool_name: Computation-Ascend-GitCode-x64
+  #             arch: x64
+  #             image_name: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_x86 }}
+  #             timeout: '3600'
 
   stage_1:
     name: stage_1
