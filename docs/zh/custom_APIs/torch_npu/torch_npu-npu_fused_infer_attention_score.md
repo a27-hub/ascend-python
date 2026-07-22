@@ -484,8 +484,11 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `scale=1/√128`：必设，控制softmax之前QK^T的缩放。设错会导致attention分布异常。
+
 > - `pre_tokens=65535, next_tokens=65535`：表示不限制attention范围（等价于双向attention）。
+
 > - `input_layout="BNSD"`：表示输入为(B,N,S,D)。
+
 > -此场景命中Q_S > 1，走PromptFlashAttention分支。
 
 ### 示例2：GQA + Decode + PageAttention
@@ -541,9 +544,13 @@ print(out.shape)  # torch.Size([1, 1, 1024])
 > **关键参数说明**：
 >
 > - `num_key_value_heads=2`：启用GQA，num_heads / num_key_value_heads = 4。该参数不传时默认为0（即MHA），见[参数说明](#详细参数说明)。
+
 > - `block_table` + `block_size`：传入即开启PageAttention，kv cache排布见[PageAttention约束](#pa_constraints)。
+
 > - `input_layout="BSH"`：kv cache为BnBsH格式时必须用BSH。若kv cache为BnNBsD格式且query为BNSD，则可用BNSD。
+
 > - `actual_seq_lengths_kv`：PageAttention场景必须传入，对应约束见[PageAttention约束](#pa_constraints)。
+
 > -此场景Q_S=1，走IncreFlashAttention分支，约束见[Q_S = 1约束](#qs_eq_1)。
 
 ### 示例3：MHA + Causal Mask（带atten_mask）
