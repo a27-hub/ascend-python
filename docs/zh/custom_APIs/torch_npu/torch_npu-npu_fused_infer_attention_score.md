@@ -75,7 +75,7 @@ torch_npu.npu_fused_infer_attention_score(
 | B | Batch Size | ≤ 65536 | ≤ 65536 | — |
 | N (Q_N) | query head数 | ≤ 256 | ≤ 256 | — |
 | N (KV_N) | key/value head数 | ≤ 256 | ≤ 256 | — |
-| D | Head Dim | ≤ 512 | ≤ 512 | `float16`/`bfloat16`: 16对齐; `int8`: 32对齐; `int4`: 64对齐 |
+| D | Head Dim | ≤ 512 | ≤ 512 | `float16`/`bfloat16`: 16字节对齐; `int8`: 32字节对齐; `int4`: 64字节对齐 |
 | S (Q_S) | query序列长度 | ≤ 20971520 (20M) | = 1 | — |
 | S (KV_S) | key/value序列长度 | ≤ 20971520 (20M) | ≤ 262144 | — |
 
@@ -95,7 +95,7 @@ torch_npu.npu_fused_infer_attention_score(
 #### 位置编码参数
 
 - **pse_shift** (`Tensor`,可选)：位置编码参数。
-  - 数据类型：`float16`、`bfloat16`（需与`query`类型满足推导规则），数据格式：ND，不支持非连续，认值：None。Q_S > 1时：shape为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S)；KV_S非32对齐建议padding到32字节。Q_S = 1时：shape为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S)；仅支持D轴16整除。
+  - 数据类型：`float16`、`bfloat16`（需与`query`类型满足推导规则），数据格式：ND，不支持非连续，认值：None。Q_S > 1时：shape为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S)；KV_S非32字节对齐建议padding到32字节。Q_S = 1时：shape为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S)；仅支持D轴16整除。
   
 
 #### Mask与序列长度参数
@@ -422,7 +422,7 @@ torch_npu.npu_fused_infer_attention_score(
   - 无rope：Q_D、K_D、V_D = 128，或Q_D、K_D = 192且V_D = 128或192（NTD不支持V_D=192；NTD_TND要求Q_D、K_D = 128或192，V_D = 128）。
   - 有rope：Q_D、K_D、V_D = 128。
   - 支持TND、NTD、NTD_TND。
-  - PageAttention仅block_size=16对齐且 ≤ 1024。
+  - PageAttention仅block_size须为16的倍数且 ≤ 1024。
   - 不支持：左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
 ### <a id="qs_gt_1"></a>Q_S > 1（Prefill）专属约束
@@ -464,7 +464,7 @@ torch_npu.npu_fused_infer_attention_score(
 - **`int4`（`int32`）伪量化**：
   - PyTorch入图调用仅支持KV `int4`拼接为`int32`输入（建议通过dynamic_quant生成：1个`int32`包含8个`int4`）。
   - KV N、D或H为实际值的1/8（prefix同理）。
-  - `int4`仅支持D 64对齐（`int32`支持D 8对齐）。
+  - `int4`仅支持D 64字节对齐（`int32`支持D 8字节对齐）。
 - **actual_seq_lengths**：非TND布局时该参数无效。
 - **actual_seq_lengths_kv**：非TND布局时传入长度为1/≥batch；传入值 ≤ 对应KV_S。
 - **pse_shift**：dtype与query一致，仅支持D轴16整除。
@@ -720,7 +720,7 @@ import math
 B, Q_N, Q_S, D = 1, 8, 164, 128
 KV_N, KV_S = 8, 1024
 
-# int8输入（需确保D轴32对齐）
+# int8输入（需确保D轴32字节对齐）
 q = torch.randint(-128, 127, (B, Q_N, Q_S, D), dtype=torch.int8).npu()
 k = torch.randint(-128, 127, (B, KV_N, KV_S, D), dtype=torch.int8).npu()
 v = torch.randint(-128, 127, (B, KV_N, KV_S, D), dtype=torch.int8).npu()
@@ -755,7 +755,7 @@ print(out.dtype)  # torch.int8
 > **关键参数说明**：
 >
 > -四个量化参数必须**同时存在**。`quant_offset2`可选，不传时偏移为0。
-> - D轴需32对齐。input_layout仅支持BSH/BNSD/BSND/BNSD_BSND。
+> - D轴需32字节对齐。input_layout仅支持BSH/BNSD/BSND/BNSD_BSND。
 > -约束详见[int8量化约束](#int8_constraints)。
 
 ### 示例7：伪量化（KV分离模式）+ Decode
