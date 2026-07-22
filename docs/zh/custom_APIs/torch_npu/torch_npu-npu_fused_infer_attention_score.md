@@ -62,7 +62,7 @@ torch_npu.npu_fused_infer_attention_score(
 | 伪量化（KV由`int8`反量化为`float16`） | `query, key, value, antiquant_scale` | `antiquant_offset, antiquant_mode` | [伪量化约束](#pseudo_quant_constraints) |
 | 伪量化分离模式 | `query, key, value, key_antiquant_scale, value_antiquant_scale` | `key_antiquant_mode, value_antiquant_mode` | [Q_S > 1约束](#qs_gt_1) / [Q_S = 1约束](#qs_eq_1) |
 | 左Padding | `query, key, value, actual_seq_lengths, query_padding_size` | `kv_padding_size` | [Padding约束](#padding_constraints) |
-| Ring Attention | `query, key, value, softmax_lse_flag=True` | — | [返回值说明](#返回值说明) |
+| Ring Attention | `query, key, value, softmax_lse_flag=True` | — | / |
 | TND布局 | `query, key, value, actual_seq_lengths, actual_seq_lengths_kv, input_layout="TND"` | — | [TND布局约束](#tnd_constraints) |
 
 ### 各轴取值范围速查
@@ -275,7 +275,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **softmax_lse** (`Tensor`)：softmax的log-sum-exp值（用于Ring Attention分布式场景合并各设备结果）。
   - `softmax_lse_flag=True`时：
-    - `input_layout`为TND/NTD_TND时：shape (T, Q_N, 1)，dtype 为`float32`。其他情况shape (B, Q_N, Q_S, 1)，dtype `float32`。
+    - `input_layout`为TND/NTD_TND时：shape (T, Q_N, 1)，dtype 为`float32`。其他情况shape (B, Q_N, Q_S, 1)，dtype为`float32`。
   - `softmax_lse_flag=False`时：shape (1,)，值为0的Tensor。
 
   Ring Attention多设备合并公式：
@@ -315,9 +315,9 @@ torch_npu.npu_fused_infer_attention_score(
 ### <a id="pseudo_quant_constraints"></a>伪量化约束（antiquant_scale / antiquant_offset）
 
 - 仅支持kv dtype为`int8`。
-- perchannel：shape为(2, KV_N, 1, D)或(2, KV_N, D)或(2, H)，dtype与query同。`antiquant_mode`=0。
-- pertensor：shape为(2,)，dtype与query同。`antiquant_mode`=0。
-- pertoken：shape为(2, B, KV_S)，dtype固定`float32`。`antiquant_mode`=1。
+- perchannel：shape为(2, KV_N, 1, D)或(2, KV_N, D)或(2, H)，dtype与query相同。`antiquant_mode`=0。
+- pertensor：shape为(2,)，dtype与query相同。`antiquant_mode`=0。
+- pertoken：shape为(2, B, KV_S)，dtype固定为`float32`。`antiquant_mode`=1。
 - 对称量化：`antiquant_offset`=None；非对称量化：两者必须同时存在。
 - 算子根据shape dim自动判断模式（dim=1 时为 pertensor，否则为 perchannel）。
 - **建议使用KV伪量化分离模式**（用`key_antiquant_scale`和`value_antiquant_scale`代替`antiquant_scale`和`antiquant_offset`）。
