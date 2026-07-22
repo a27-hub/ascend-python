@@ -123,7 +123,7 @@ torch_npu.npu_fused_infer_attention_score(
 - **quant_scale2** (`Tensor`,可选)：输出的量化因子，支持pertensor、perchannel。
   - 数据类型：`float32`、`bfloat16`（`bfloat16`输入时两种均可，否则仅`float32`）。默认值：None。
   - perchannel下：
-    - 输出BSH：所有维度乘积= H，建议shape (1, 1, H)或(H,)，输出BNSD：乘积= Q_N × D，建议shape (1, Q_N, 1, D)或(Q_N, D)，输出BSND：乘积= Q_N × D，建议shape (1, 1, Q_N, D)或(Q_N, D)
+    - 输出BSH：所有维度乘积= H，建议shape (1, 1, H)或(H,)。输出BNSD：乘积= Q_N × D，建议shape (1, Q_N, 1, D)或(Q_N, D)。输出BSND：乘积= Q_N × D，建议shape (1, 1, Q_N, D)或(Q_N, D)。
 
 - **quant_offset2** (`Tensor`,可选)：输出的量化偏移，支持pertensor、perchannel。
   - 若传入，类型和shape须与`quant_scale2`一致，数据类型：`float32`、`bfloat16`。默认值：None（等效于0）。
@@ -137,7 +137,7 @@ torch_npu.npu_fused_infer_attention_score(
   - 约束同`antiquant_scale`（shape须一致）。默认值：None。对称量化时不传（None），非对称量化时必须传入。
 
 - **antiquant_mode** (`int`,可选)：伪量化方式。0=perchannel（含pertensor），1=pertoken。
-  - Q_S ≥ 2时无效；Q_S = 1时传入其他值会异常。默认值：0
+  - Q_S ≥ 2时无效；Q_S = 1时传入其他值会异常。默认值：0。
   
 
 #### PageAttention参数
@@ -344,9 +344,9 @@ torch_npu.npu_fused_infer_attention_score(
 - PageAttention开启时，以下场景需KV_S ≥ maxBlockNumPerSeq × block_size：
   - 传入`atten_mask`（如shape (B, 1, Q_S, KV_S)）
   - 传入`pse_shift`（如shape (B, Q_N, Q_S, KV_S)）
-  - Q_S = 1时开启`atten_mask`（`sparse_mode`非2/3/4）：`atten_mask`最后一维 ≥ block_table第二维 × block_size
-  - Q_S = 1时开启`pse_shift`：`pse_shift`最后一维 ≥ block_table第二维 × block_size
-  - Q_S = 1伪量化pertoken模式：`antiquant_scale`/`antiquant_offset` shape的S ≥ 该值
+  - Q_S = 1时开启`atten_mask`（`sparse_mode`非2/3/4）：`atten_mask`最后一维 ≥ block_table第二维 × block_size。
+  - Q_S = 1时开启`pse_shift`：`pse_shift`最后一维 ≥ block_table第二维 × block_size。
+  - Q_S = 1伪量化pertoken模式：`antiquant_scale`/`antiquant_offset` shape的S ≥ 该值。
 
 ### <a id="mla_constraints"></a>MLA约束
 
