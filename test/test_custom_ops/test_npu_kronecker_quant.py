@@ -30,20 +30,37 @@ class TestNPUFlatQuant(TestCase):
 
         return [npu_input_x.to("npu"), npu_input_p1.to("npu"), npu_input_p2.to("npu")]
 
-    def golden_op_exec_kronecker_quant(self, input_x, input_p1, input_p2, clip_ratio, dst_type_max):
+    def golden_op_exec_kronecker_quant(self, input_x, input_p1, input_p2, clip_ratio, dst_type_max, group_list, group_list_type):
         if(clip_ratio is None):
             clip_ratio = 1.0
         if(dst_type_max is None):
             dst_type_max = 0.0
-        K, M, N = input_x.shape
-        x1 = input_x @ input_p2
-        x2 = input_p1 @ x1
+        if group_list is not None:
+            if group_list_type == 0:
+                group_num = group_list[-1]
+            elif group_list_type == 1:
+                group_num = group_list.sum()
+            else:
+                group_num = group_list[:, 1].sum()
+        else:
+            group_num = input_x.shape[0]
+
+        quant_x = input_x[0:group_num, :, :]
+        K, M, N = quant_x.shape
+        x1 = quant_x @ input_p2
+        x2 = (input_p1.to(torch.float) @ x1.to(torch.float)).to(torch.half)
         x2 = x2.flatten(-2, -1)
         qscale = torch.abs(x2).max(dim=-1, keepdim=True)[0].to(torch.float)
-        ratio = torch.ones_like(qscale) * 7 * clip_ratio
+        ratio = torch.ones_like(qscale) * 7 / clip_ratio
         qscale2 = ratio / qscale
-        golden_out = (x2.to(torch.float) * qscale2).to(torch.half).to(torch.int8).reshape(K, M, N)
-        golden_scale = torch.flatten(qscale / ratio).reshape(K)
+        quant_out = (x2.to(torch.float) * qscale2).to(torch.half).reshape(K, M, N)
+        quant_out = torch.clamp(quant_out, -8, 7)
+        quant_out = torch.round(quant_out).to(torch.int8)
+        quant_scale = torch.flatten(qscale / ratio).reshape(K)
+        zero_out = torch.zeros(input_x.shape[0] - group_num, input_x.shape[1], input_x.shape[2]).to(torch.int8).npu()
+        zero_scale = torch.zeros(input_x.shape[0] - group_num).npu()
+        golden_out = torch.cat((quant_out, zero_out), dim = 0)
+        golden_scale = torch.cat((quant_scale, zero_scale), dim = 0)
         return golden_out.to("cpu").numpy(), golden_scale.to("cpu").numpy()
 
     def tensor_int32_to_int8(self, tensor_int32):
@@ -67,63 +84,84 @@ class TestNPUFlatQuant(TestCase):
         out, quantScale = torch_npu.npu_kronecker_quant(input_x, input_p1, input_p2, clip_ratio, dst_type_max=dst_type_max)
         return self.tensor_int32_to_int8(out.to("cpu")).numpy(), quantScale.to("cpu").numpy()
 
-    @unittest.skip("skip test_npu_kronecker_quant_float16 now")
+    def npu_op_exec_kronecker_quant_group_list(self, input_x, input_p1, input_p2, clip_ratio, dst_type_max, group_list, group_list_type):
+        out, quantScale = torch_npu.npu_kronecker_quant(input_x, input_p1, input_p2, clip_ratio, dst_type_max=dst_type_max,
+                                                        group_list=group_list, group_list_type=group_list_type)
+        return self.tensor_int32_to_int8(out.to("cpu")).numpy(), quantScale.to("cpu").numpy()
+
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_float16(self):
         datainfo = DataInfo(1, 1, (16, 7, 16), (7, 7), (16, 16), torch.float16)
         x, p1, p2 = self.generate_data_npu_quantize(datainfo)
-        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, None, None)
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, None, None, None, 0)
         npu_out, npu_scale = self.npu_op_exec_kronecker_quant(x, p1, p2)
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
-    @unittest.skip("skip test_npu_kronecker_quant_bfloat16 now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_bfloat16(self):
         datainfo = DataInfo(1, 1, (16, 56, 16), (56, 56), (16, 16), torch.bfloat16)
         x, p1, p2 = self.generate_data_npu_quantize(datainfo)
-        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, None, None)
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, None, None, None, 0)
         npu_out, npu_scale = self.npu_op_exec_kronecker_quant(x, p1, p2)
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
-    @unittest.skip("skip test_npu_kronecker_quant_float16_ratio now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_float16_ratio(self):
         datainfo = DataInfo(1, 1, (16, 8, 32), (8, 8), (32, 32), torch.float16)
         x, p1, p2 = self.generate_data_npu_quantize(datainfo)
-        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 0.9063, None)
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 0.9063, None, None, 0)
         npu_out, npu_scale = self.npu_op_exec_kronecker_quant_ratio(x, p1, p2, 0.9063)
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
-    @unittest.skip("skip test_npu_kronecker_quant_bfloat16_ratio now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_bfloat16_ratio(self):
         datainfo = DataInfo(1, 1, (16, 3, 64), (3, 3), (64, 64), torch.bfloat16)
         x, p1, p2 = self.generate_data_npu_quantize(datainfo)
-        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 0.7848, 0.0)
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 0.7848, 0.0, None, 0)
         npu_out, npu_scale = self.npu_op_exec_kronecker_quant_ratio(x, p1, p2, 0.7848)
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
-    @unittest.skip("skip test_npu_kronecker_quant_float16_dst_type_max now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_float16_dst_type_max(self):
         datainfo = DataInfo(1, 1, (16, 8, 32), (8, 8), (32, 32), torch.float16)
         x, p1, p2 = self.generate_data_npu_quantize(datainfo)
-        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 1.0, 0.0)
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 1.0, 0.0, None, 0)
         npu_out, npu_scale = self.npu_op_exec_kronecker_quant_dst_type_max(x, p1, p2, 1.0, 0.0)
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
-    @unittest.skip("skip test_npu_kronecker_quant_bfloat16_dst_type_max now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_bfloat16_dst_type_max(self):
         datainfo = DataInfo(1, 1, (16, 3, 64), (3, 3), (64, 64), torch.bfloat16)
         x, p1, p2 = self.generate_data_npu_quantize(datainfo)
-        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 1.0, 0.0)
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 1.0, 0.0, None, 0)
         npu_out, npu_scale = self.npu_op_exec_kronecker_quant_dst_type_max(x, p1, p2, 1.0, 0.0)
+        self.assertRtolEqual(golden_out, npu_out)
+        self.assertRtolEqual(golden_scale, npu_scale)
+
+    @unittest.skip("skip test_npu_kronecker_quant_float16_group_list now")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_kronecker_quant_float16_group_list(self):
+        datainfo = DataInfo(1, 1, (16, 8, 32), (8, 8), (32, 32), torch.float16)
+        x, p1, p2 = self.generate_data_npu_quantize(datainfo)
+        group_list = torch.Tensor(([8])).to(torch.int64).npu()
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 1.0, 0.0, group_list, 0)
+        npu_out, npu_scale = self.npu_op_exec_kronecker_quant_group_list(x, p1, p2, 1.0, 0.0, group_list, 0)
+        self.assertRtolEqual(golden_out, npu_out)
+        self.assertRtolEqual(golden_scale, npu_scale)
+
+    @unittest.skip("skip test_npu_kronecker_quant_bfloat16_group_list now")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_kronecker_quant_bfloat16_group_list(self):
+        datainfo = DataInfo(1, 1, (16, 3, 64), (3, 3), (64, 64), torch.bfloat16)
+        x, p1, p2 = self.generate_data_npu_quantize(datainfo)
+        group_list = torch.Tensor(([8])).to(torch.int64).npu()
+        golden_out, golden_scale = self.golden_op_exec_kronecker_quant(x, p1, p2, 1.0, 0.0, group_list, 0)
+        npu_out, npu_scale = self.npu_op_exec_kronecker_quant_group_list(x, p1, p2, 1.0, 0.0, group_list, 0)
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
