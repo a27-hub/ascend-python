@@ -301,14 +301,14 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **next_tokens** (`int`,可选)：稀疏计算中attention与后几个token的关联范围。Q_S=1时无效。默认值：2147483647。
 
-- **num_key_value_heads** (`int`,可选)：`key/value`中head个数，用于GQA。0表示与`query`的head数相等。需满足`num_heads`整除`num_key_value_heads`，比值 ≤ 64。BSND/BNSD/BNSD_BSND场景需与`key/value`的N轴一致。默认值：0。
+- **num_key_value_heads** (`int`,可选)：`key/value`中head个数，用于GQA。0表示与`query`的head数相等。需满足`num_heads`能被`num_key_value_heads`整除（即`num_heads` ÷ `num_key_value_heads`为整数），且比值 ≤ 64。BSND/BNSD/BNSD_BSND场景需与`key/value`的N轴一致。默认值：0。
 
 - **sparse_mode** (`int`,可选)：稀疏模式，详见表格，默认值：0。
 
   | sparse_mode | 模式 | 说明 | atten_mask要求 |
   | ----------- | ---- | ---- | --------------- |
-  | 0 | defaultMask | 默认模式。不传`atten_mask`时不做mask；传入时使用完整mask矩阵，`pre_tokens`/`next_tokens`之间的部分参与计算。Q_S=1且不带rope时此参数无效。 | shape：(Q_S, KV_S)或(1, Q_S, KV_S)等 |
-  | 1 | allMask | 必须传入完整`atten_mask`矩阵(S1×S2)。忽略`pre_tokens`/`next_tokens`。 | shape：(Q_S, KV_S)或(1, Q_S, KV_S)等 |
+  | 0 | defaultMask | 默认模式。不传`atten_mask`时不做mask；传入时使用完整mask矩阵，`pre_tokens`和`next_tokens`之间的部分参与计算。Q_S=1且不带rope时此参数无效。 | shape：(Q_S, KV_S)或(1, Q_S, KV_S)等 |
+  | 1 | allMask | 必须传入完整`atten_mask`矩阵(S1×S2)。忽略`pre_tokens`和`next_tokens`。 | shape：(Q_S, KV_S)或(1, Q_S, KV_S)等 |
   | 2 | leftUpCausal | 左上角causal mask。需传入优化后的`atten_mask`矩阵。 | shape：(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048) |
   | 3 | rightDownCausal | 右下角causal mask（以右顶点为划分的下三角）。需传入优化后的mask。 | shape：(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048) |
   | 4 | band | band模式mask。需传入优化后的`atten_mask`矩阵。 | shape：(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048) |
@@ -373,7 +373,7 @@ torch_npu.npu_fused_infer_attention_score(
 | int8 | float16 | `dequant_scale1, quant_scale1, dequant_scale2` | — | `quant_offset2, quant_scale2` |
 | float16/bf16 | int8 | `quant_scale2` | `quant_offset2` | `dequant_scale1, quant_scale1, dequant_scale2` |
 
-- `quant_scale2`和`quant_offset2`支持per-tensor/per-channel，dtype支持float32/bf16。`quant_offset2`传入时须与`quant_scale2`类型和shape一致。
+- `quant_scale2`和`quant_offset2`支持per-tensor或per-channel，dtype支持float32/bf16。`quant_offset2`传入时须与`quant_scale2`类型和shape一致。
 - 输出int8，`quant_scale2`/`quant_offset2` per-channel时：不支持左padding、Ring Attention或D非32字节对齐。
 - 输出int8时暂不支持sparse=band且preTokens/nextTokens为负。
 - 输出为int8且`quant_offset2`非None时，若矩阵存在不参与计算的行，会触发拦截（建议外部做后量化）。
@@ -382,12 +382,12 @@ torch_npu.npu_fused_infer_attention_score(
 ### <a id="pseudo_quant_constraints"></a>伪量化约束（antiquant_scale / antiquant_offset）
 
 - 仅支持kv dtype为int8。
-- per-channel：shape为(2, KV_N, 1, D) / (2, KV_N, D) / (2, H)，dtype与query同。`antiquant_mode`=0。
+- per-channel：shape为(2, KV_N, 1, D)或(2, KV_N, D)或(2, H)，dtype与query同。`antiquant_mode`=0。
 - per-tensor：shape为(2,)，dtype与query同。`antiquant_mode`=0。
 - per-token：shape为(2, B, KV_S)，dtype固定float32。`antiquant_mode`=1。
 - 对称量化：`antiquant_offset`=None；非对称量化：两者必须同时存在。
 - 算子根据shape dim自动判断模式（dim=1 → per-tensor，否则per-channel）。
-- **建议使用KV伪量化分离模式**（`key_antiquant_scale`/`value_antiquant_scale`代替`antiquant_scale`/`antiquant_offset`）。
+- **建议使用KV伪量化分离模式**（用`key_antiquant_scale`和`value_antiquant_scale`代替`antiquant_scale`和`antiquant_offset`）。
 
 ### <a id="pa_constraints"></a>PageAttention约束
 
@@ -478,12 +478,12 @@ torch_npu.npu_fused_infer_attention_score(
 
   - sparse：0/3/4。
   - 支持TND、TND_NTD。
-  - 支持PageAttention（`actual_seq_lengths_kv`长度= kv batch数，值 ≤ KV_S）。
+  - 支持PageAttention（`actual_seq_lengths_kv`长度 = kv batch数，值 ≤ KV_S）。
   - query N = 1/2/4/8/16/32/64/128，kv N = 1。
   - `query_rope`和`key_rope`非空（D=64）。
   - 不支持：左padding、tensorlist、pse、prefix、伪量化、全量化。
 - **query D ≠ 512时**：
-  - 无rope：Q_D、K_D、V_D = 128或Q_D、K_D = 192且V_D = 128/192（NTD不支持V_D=192；NTD_TND要求Q_D、K_D = 128/192，V_D = 128）。
+  - 无rope：Q_D、K_D、V_D = 128，或Q_D、K_D = 192且V_D = 128或192（NTD不支持V_D=192；NTD_TND要求Q_D、K_D = 128或192，V_D = 128）。
   - 有rope：Q_D、K_D、V_D = 128。
   - 支持TND、NTD、NTD_TND。
   - PageAttention仅block_size=16对齐且 ≤ 1024。
@@ -502,9 +502,9 @@ torch_npu.npu_fused_infer_attention_score(
   - B=20, Q_N=1, Q_S=2097152, D=256, KV_N=1, KV_S=2097152
   - B=1, Q_N=10, Q_S=2097152, D=512, KV_N=1, KV_S=2097152
 - **sparse_mode**：仅支持0/1/2/3/4，其他值报错。
-  - 0：`atten_mask`=None或在左padding时忽略`pre_tokens`/`next_tokens`。
+  - 0：`atten_mask`=None或在左padding时忽略`pre_tokens`和`next_tokens`。
   - 2/3/4：mask shape必须为(S,S)或(1,S,S)或(1,1,S,S)，其中S=2048，且用户保证下三角。
-  - 1/2/3：忽略`pre_tokens`/`next_tokens`。
+  - 1/2/3：忽略`pre_tokens`和`next_tokens`。
 - **kvCache反量化合成参数**：仅支持int8 → float16。key/value的data range × antiquant_scale的data range须在(−1, 1)内（高性能模式）否则需高精度模式。
 - **pse_shift**：query dtype为fp16/bf16/int8时可用。fp16 query + pse_shift → 强制高精度模式。Q_S ≥ query S，KV_S ≥ key S。prefix时KV_S ≥ actual_shared_prefix_len + key S。
 - **GQA伪量化+ KV NZ格式**：
@@ -514,7 +514,7 @@ torch_npu.npu_fused_infer_attention_score(
   - key/value NZ格式：[blockNum, KV_N, D/32, blockSize, 32]。
   - key/value_antiquant_scale dtype：per-channel → bf16, per-token → float32。
   - 仅KV分离模式，不支持offset、rope、左padding、tensorlist、pse、prefix、后量化。
-  - num_heads / num_key_value_heads支持组合：(10,1)、(64,8)、(80,8)、(128,16)。
+  - num_heads与num_key_value_heads支持组合：(10,1)、(64,8)、(80,8)、(128,16)。
   - MTP=0：sparse_mode=0不传mask。MTP>0且<16：sparse_mode=3传优化mask (2048×2048)。
   - 仅高性能模式。
 
@@ -638,7 +638,7 @@ print(out.shape)  # torch.Size([1, 1, 1024])
 
 > **关键参数说明**：
 >
-> - `num_key_value_heads=2`：启用GQA，num_heads / num_key_value_heads = 4。该参数不传时默认为0（即MHA），见[参数说明](#详细参数说明)。
+> - `num_key_value_heads=2`：启用GQA，num_heads ÷ num_key_value_heads = 4。该参数不传时默认为0（即MHA），见[参数说明](#详细参数说明)。
 > - `block_table` + `block_size`：传入即开启PageAttention，kv cache排布见[PageAttention约束](#pa_constraints)。
 > - `input_layout="BSH"`：kv cache为BnBsH格式时必须用BSH。若kv cache为BnNBsD格式且query为BNSD，则可用BNSD。
 > - `actual_seq_lengths_kv`：PageAttention场景必须传入，对应约束见[PageAttention约束](#pa_constraints)。
@@ -682,7 +682,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `atten_mask`：shape (1, Q_S, KV_S)，bool类型。更多mask shape选项见[atten_mask参数说明](#详细参数说明)。
-> - `sparse_mode=0`：defaultMask模式，使用`pre_tokens`/`next_tokens`控制计算范围。此处为完整双向attention。
+> - `sparse_mode=0`：defaultMask模式，使用`pre_tokens`和`next_tokens`控制计算范围。此处为完整双向attention。
 > -也可使用`sparse_mode=3`（rightDownCausal）+ 2048×2048优化mask。各模式含义见[sparse_mode枚举说明](#sparse_mode-枚举说明)。
 
 ### 示例4：MLA + Decode（Multi-head Latent Attention）
@@ -863,9 +863,9 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 
 > **关键参数说明**：
 >
-> -使用KV分离模式（优于`antiquant_scale`/`antiquant_offset`模式）。
+> -使用KV分离模式（优于`antiquant_scale`和`antiquant_offset`模式）。
 > - `key_antiquant_mode=0`：per-channel模式。此处Q_S=1 + query bf16 + kv int8 + key/value_antiquant_scale bf16 → 满足[Q_S = 1约束](#qs_eq_1)中的kv伪量化参数分离条件。
-> -当`key_antiquant_scale`/`value_antiquant_scale`与`antiquant_scale`同时传入时，以KV分离参数为准。
+> -当`key_antiquant_scale`和`value_antiquant_scale`与`antiquant_scale`同时传入时，以KV分离参数为准。
 > -各模式的shape和dtype要求见[key_antiquant_mode枚举表](#key_antiquant_mode--value_antiquant_mode-枚举说明)。
 
 ### 示例8：Prefix + Prefill（共享前缀）
