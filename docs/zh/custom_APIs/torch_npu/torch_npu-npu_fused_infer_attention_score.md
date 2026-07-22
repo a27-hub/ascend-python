@@ -248,8 +248,7 @@ torch_npu.npu_fused_infer_attention_score(
   - 数据类型：`float16`、`bfloat16`、`int8`。数据格式：ND。D维度与`value`的D一致，其余维度与`query`的shape一致。
 
 - **softmax_lse** (`Tensor`)：softmax的log-sum-exp值（用于Ring Attention分布式场景合并各设备结果）。
-  - `softmax_lse_flag=True`时：
-    - `input_layout`为TND/NTD_TND时：shape (T, Q_N, 1)，dtype 为`float32`。其他情况shape (B, Q_N, Q_S, 1)，dtype为`float32`。
+  - `softmax_lse_flag=True`时：`input_layout`为TND/NTD_TND时：shape (T, Q_N, 1)，dtype 为`float32`。其他情况shape (B, Q_N, Q_S, 1)，dtype为`float32`。
   - `softmax_lse_flag=False`时：shape (1,)，值为0的Tensor。
 
   Ring Attention多设备合并公式：
