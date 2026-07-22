@@ -236,7 +236,9 @@ torch_npu.npu_fused_infer_attention_score(
   | 2 | 高精度 | 是 | mask存在整行全1时提升精度 |
   | 3 | 高性能 | 是 | mask存在整行全1时提升精度（性能略降） |
 
-> **说明**：`bfloat16`和`int8`不区分高精度/高性能（bit0无效）。行无效修正对`float16`、`bfloat16`、`int8`均生效。当mask存在整行全1时精度可能损失，可尝试配置2或3。Q_S = 1时仅支持0和1。若算子可判断出存在无效行场景（如sparse_mode=3且Sq > Skv），会 自动开启行无效计算。
+> [!NOTE]
+>
+>`bfloat16`和`int8`不区分高精度/高性能（bit0无效）。行无效修正对`float16`、`bfloat16`、`int8`均生效。当mask存在整行全1时精度可能损失，可尝试配置2或3。Q_S = 1时仅支持0和1。若算子可判断出存在无效行场景（如sparse_mode=3且Sq > Skv），会 自动开启行无效计算。
 
 - **softmax_lse_flag** (`bool`,可选)：是否额外输出softmax_lse（用于Ring Attention分布式合并）。默认值：False。
 
