@@ -517,7 +517,7 @@ max_block_num = (KV_S + block_size - 1) // block_size  # = 16
 H_q = Q_N * D    # = 1024
 H_kv = KV_N * D  # = 256
 q = torch.randn(B, Q_S, H_q, dtype=torch.float16).npu()
-# KV Cache: BnBsH格式(blocknum, blocksize, H_kv)
+# KV Cache: BnBsH格式(blocknum, block_size, H_kv)
 k = torch.randn(max_block_num, block_size, H_kv, dtype=torch.float16).npu()
 v = torch.randn(max_block_num, block_size, H_kv, dtype=torch.float16).npu()
 
