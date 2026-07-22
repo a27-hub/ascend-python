@@ -222,9 +222,25 @@ torch_npu.npu_fused_infer_attention_score(
   - 约束同`key_antiquant_scale`。
   - 默认值：None。
 
-- **key_antiquant_mode** (`int`,可选)：key伪量化方式。取值0~5，详见[枚举表](#key_antiquant_mode--value_antiquant_mode-枚举说明)。默认值：0。
+- **key_antiquant_mode** (`int`,可选)：key伪量化方式。取值0~5,详见表格，默认值：0。
 
-- **value_antiquant_mode** (`int`,可选)：value伪量化方式。取值0~5。默认值：0。
+- **value_antiquant_mode** (`int`,可选)：value伪量化方式。取值0~5，详见表格。默认值：0。
+
+  | 值 | 模式 | 说明 |
+  | -- | ---- | ---- |
+  | 0 | perchannel | per-channel模式（包含per-tensor）。默认值。 |
+  | 1 | pertoken | per-token模式。 |
+  | 2 | pertensor + perhead | per-tensor叠加per-head模式。 |
+  | 3 | pertoken + perhead | per-token叠加per-head模式。 |
+  | 4 | pertoken + page attention | per-token叠加page attention管理scale/offset。 |
+  | 5 | pertoken + perhead + page attention | per-token叠加per-head并使用page attention管理scale/offset。 |
+
+> **特殊约束**：
+>
+> - Q_S ≥ 2时仅支持0、1。
+> - Q_S = 1时支持0~5。
+> -除`key_antiquant_mode=0`且`value_antiquant_mode=1`的场景外，`key_antiquant_mode`与`value_antiquant_mode`必须一致。
+
 
 #### Prefix（共享前缀）参数
 
@@ -334,9 +350,32 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **num_key_value_heads** (`int`,可选)：`key/value`中head个数，用于GQA。0表示与`query`的head数相等。需满足`num_heads`整除`num_key_value_heads`，比值 ≤ 64。BSND/BNSD/BNSD_BSND场景需与`key/value`的N轴一致。默认值：0。
 
-- **sparse_mode** (`int`,可选)：稀疏模式，详见[枚举表](#sparse_mode-枚举说明)。默认值：0。
+- **sparse_mode** (`int`,可选)：稀疏模式，详见表格，默认值：0。
 
-- **inner_precise** (`int`,可选)：精度/性能模式，详见[枚举表](#inner_precise-枚举说明)。默认值：0。
+  | sparse_mode | 模式 | 说明 | atten_mask要求 |
+  | ----------- | ---- | ---- | --------------- |
+  | 0 | defaultMask | 默认模式。不传`atten_mask`时不做mask；传入时使用完整mask矩阵，`pre_tokens`/`next_tokens`之间的部分参与计算。Q_S=1且不带rope时此参数无效。 | shape：(Q_S, KV_S)或(1, Q_S, KV_S)等 |
+  | 1 | allMask | 必须传入完整`atten_mask`矩阵(S1×S2)。忽略`pre_tokens`/`next_tokens`。 | shape：(Q_S, KV_S)或(1, Q_S, KV_S)等 |
+  | 2 | leftUpCausal | 左上角causal mask。需传入优化后的`atten_mask`矩阵。 | shape：(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048) |
+  | 3 | rightDownCausal | 右下角causal mask（以右顶点为划分的下三角）。需传入优化后的mask。 | shape：(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048) |
+  | 4 | band | band模式mask。需传入优化后的`atten_mask`矩阵。 | shape：(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048) |
+  | 5 | prefix | **暂不支持** | — |
+  | 6 | global | **暂不支持** | — |
+  | 7 | dilated | **暂不支持** | — |
+  | 8 | block_local | **暂不支持** | — |
+
+> **特殊约束**：Q_S = 1且不带rope输入时，`sparse_mode`参数无效。
+
+- **inner_precise** (`int`,可选)：精度/性能模式，详见表格，默认值：0。
+
+| inner_precise | 精度模式 | 行无效修正 | 适用场景 |
+| ------------- | -------- | ---------- | -------- |
+| 0 | 高精度 | 否 | 默认，精度优先 |
+| 1 | 高性能 | 否 | 性能优先 |
+| 2 | 高精度 | 是 | mask存在整行全1时提升精度 |
+| 3 | 高性能 | 是 | mask存在整行全1时提升精度（性能略降） |
+
+> **说明**：bf16和int8不区分高精度/高性能（bit0无效）。行无效修正对fp16、bf16、int8均生效。当mask存在整行全1时精度可能损失，可尝试配置2或3。Q_S = 1时仅支持0和1。若算子可判断出存在无效行场景（如sparse_mode=3且Sq > Skv），会自动开启行无效计算。
 
 - **softmax_lse_flag** (`bool`,可选)：是否额外输出softmax_lse（用于Ring Attention分布式合并）。默认值：False。
 
