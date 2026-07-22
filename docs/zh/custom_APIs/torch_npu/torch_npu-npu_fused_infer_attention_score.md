@@ -166,7 +166,6 @@ torch_npu.npu_fused_infer_attention_score(
 > - Q_S = 1时支持0~5。
 > -除`key_antiquant_mode=0`且`value_antiquant_mode=1`的场景外，`key_antiquant_mode`与`value_antiquant_mode`必须一致。
 
-
 #### Prefix（共享前缀）参数
 
 - **key_shared_prefix** (`Tensor`,可选)：Key的共享前缀部分。数据类型：`float16`、`bfloat16`、`int8`。数据格式：ND，不支持非连续。shape第一维batch必须为1。与`value_shared_prefix`必须同时为空或同时非空。默认值：None。
@@ -182,7 +181,6 @@ torch_npu.npu_fused_infer_attention_score(
 - **key_rope** (`Tensor`,可选)：MLA中Key的RoPE信息。约束同`query_rope`（shape中D为64，其余维度与`key`一致）。默认值：None。
 
 - **key_rope_antiquant_scale** (`Tensor`,可选)：预留参数，暂未使用。使用默认值即可。
-
 
 #### 其他标量参数
 
@@ -836,7 +834,6 @@ q = torch.randn(B, Q_N, Q_S, D, dtype=torch.float16).npu()
 k = torch.randn(B, Q_N, KV_S, D, dtype=torch.float16).npu()
 v = torch.randn(B, Q_N, KV_S, D, dtype=torch.float16).npu()
 
-
 # ===== 2.定义模型=====
 class Model(torch.nn.Module):
     def __init__(self, num_heads, scale, pre_tokens=65535, next_tokens=65535):
@@ -856,7 +853,6 @@ class Model(torch.nn.Module):
             next_tokens=self.next_tokens
         )[0]  # 只取第一个返回值
 
-
 # ===== 3.图捕获=====
 model = Model(Q_N, scale).npu()
 graph = torch_npu.npu.NPUGraph()
@@ -865,7 +861,6 @@ with torch_npu.npu.graph(graph):
     graph_out = model(q, k, v)
 
 print(f"图捕获完成，输出 shape: {graph_out.shape}")
-
 
 # ===== 4.图重放（输入数据更新） =====
 #生成新输入数据（内容变化，shape不变）
@@ -882,7 +877,6 @@ v.copy_(v_new)
 graph.replay()
 print(f"图重放完成（输入数据更新），输出 shape: {graph_out.shape}")
 
-
 # ===== 5.参数更新（模型配置变化） =====
 #注意：pre_tokens/next_tokens变化需要重新捕获图
 new_pre_tokens = 32768
@@ -894,7 +888,6 @@ with torch_npu.npu.graph(graph_updated):
 
 graph_updated.replay()
 print(f"图重放完成（pre_tokens={new_pre_tokens}），输出 shape: {updated_out.shape}")
-
 
 # ===== 6.结果验证=====
 with torch.no_grad():
