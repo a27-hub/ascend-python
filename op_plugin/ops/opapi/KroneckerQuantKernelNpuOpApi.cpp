@@ -61,7 +61,9 @@ c10::SmallVector<int64_t, SIZE> cal_quant_scale_size(const at::Tensor& self, acl
                                                          const at::Tensor& kronecker_p2,
                                                          c10::optional<double> clip_ratio,
                                                          c10::optional<int64_t> dst_dtype,
-                                                         c10::optional<double> dst_type_max)
+                                                         c10::optional<double> dst_type_max,
+                                                         const c10::optional<at::Tensor>& group_list,
+                                                         c10::optional<int64_t> group_list_type)
 {
     aclDataType dst_acltype = aclDataType::ACL_INT32;
     if (dst_dtype.has_value()) {
@@ -75,6 +77,7 @@ c10::SmallVector<int64_t, SIZE> cal_quant_scale_size(const at::Tensor& self, acl
                          : at::kFloat;
     auto clip_ratio_attr = clip_ratio.value_or(1.0);
     auto dst_type_max_attr = dst_type_max.value_or(0.0);
+    auto group_list_type_attr = group_list_type.value_or(0);
     at::SmallVector<int64_t, SIZE> out_size = cal_out_size(x, dst_acltype);
     at::SmallVector<int64_t, SIZE> quant_scale_size = cal_quant_scale_size(x, dst_acltype);
     at::Tensor out = npu_preparation::apply_tensor_without_format(out_size, x.options().dtype(out_dtype));
@@ -83,10 +86,15 @@ c10::SmallVector<int64_t, SIZE> cal_quant_scale_size(const at::Tensor& self, acl
     TensorWrapper out_wrapper = {out, dst_acltype};
     TensorWrapper scale_wrapper = {quant_scale,
         dst_acltype == aclDataType::ACL_FLOAT4_E2M1? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
-    if (check_aclnn_kernel_available("aclnnFlatQuantV2")) {
-        EXEC_NPU_CMD(aclnnFlatQuantV2, x, kronecker_p1, kronecker_p2, clip_ratio_attr, dst_type_max_attr, out_wrapper, scale_wrapper);
+    if (check_aclnn_kernel_available("aclnnFlatQuantV3")) {
+        EXEC_NPU_CMD(aclnnFlatQuantV3, x, kronecker_p1, kronecker_p2, group_list, clip_ratio_attr, dst_type_max_attr, group_list_type_attr, out_wrapper, scale_wrapper);
     } else {
-        EXEC_NPU_CMD(aclnnFlatQuant, x, kronecker_p1, kronecker_p2, clip_ratio_attr, out_wrapper, scale_wrapper);
+        TORCH_CHECK(!group_list.has_value(), "aclnnFlatQuantV2 or aclnnFlatQuant can't support group_list, please upgrade CANN.")
+        if (check_aclnn_kernel_available("aclnnFlatQuantV2")) {
+            EXEC_NPU_CMD(aclnnFlatQuantV2, x, kronecker_p1, kronecker_p2, clip_ratio_attr, dst_type_max_attr, out_wrapper, scale_wrapper);
+        } else {
+            EXEC_NPU_CMD(aclnnFlatQuant, x, kronecker_p1, kronecker_p2, clip_ratio_attr, out_wrapper, scale_wrapper);
+        }
     }
     return std::make_tuple(std::move(out), std::move(quant_scale));
 }
