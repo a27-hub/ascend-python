@@ -275,27 +275,25 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **key_rope_antiquant_scale** (`Tensor`,可选)：预留参数，暂未使用。使用默认值即可。
 
-### <a id="input_layout-枚举说明"></a>input_layout枚举说明
-
-`input_layout`标识输入`query, key, value`的数据排布格式。**格式中带下划线时**，下划线左边为输入layout，右边为输出layout，算子内部自动layout转换。
-
-| input_layout | 输入shape（query） | 输入shape（key/value） | 输出shape | 适用场景 |
-| ------------ | ------------------- | ----------------------- | ---------- | -------- |
-| `"BSH"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_S, H) | 通用，H = N × D |
-| `"BSND"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_S, Q_N, D) | 通用，N/D分离 |
-| `"BNSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 通用，N轴在前 |
-| `"BNSD_BSND"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_S, Q_N, D) | 仅Q_S > 1 |
-| `"BSH_NBSD"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_N, Q_S, D) | layout转换 |
-| `"BSND_NBSD"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_N, Q_S, D) | layout转换 |
-| `"BNSD_NBSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 仅Q_S > 1且Q_S ≤ 16 |
-| `"TND"` | (T, Q_N, D) | (T, KV_N, D) | (T, Q_N, D) | 变长序列，T = Σseqlen |
-| `"TND_NTD"` | (T, Q_N, D) | (T, KV_N, D) | (Q_N, T, D) | 变长序列+ transpose |
-| `"NTD_TND"` | (Q_N, T, D) | (KV_N, T, D) | (T, Q_N, D) | 变长序列+ transpose |
-
 
 #### 其他标量参数
 
 - **num_heads** (`int`,可选)：`query`的head个数。BNSD场景下需与`query`的N轴一致。默认值：1。
+
+- **input_layout** (`str`,可选)：输入`query/key/value`的数据排布格式。**格式中带下划线时**，下划线左边为输入layout，右边为输出layout，算子内部自动layout转换，详见表格，默认值："BSH"。
+
+  | input_layout | 输入shape（query） | 输入shape（key/value） | 输出shape | 适用场景 |
+  | ------------ | ------------------- | ----------------------- | ---------- | -------- |
+  | `"BSH"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_S, H) | 通用，H = N × D |
+  | `"BSND"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_S, Q_N, D) | 通用，N/D分离 |
+  | `"BNSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 通用，N轴在前 |
+  | `"BNSD_BSND"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_S, Q_N, D) | 仅Q_S > 1 |
+  | `"BSH_NBSD"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_N, Q_S, D) | layout转换 |
+  | `"BSND_NBSD"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_N, Q_S, D) | layout转换 |
+  | `"BNSD_NBSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 仅Q_S > 1且Q_S ≤ 16 |
+  | `"TND"` | (T, Q_N, D) | (T, KV_N, D) | (T, Q_N, D) | 变长序列，T = Σseqlen |
+  | `"TND_NTD"` | (T, Q_N, D) | (T, KV_N, D) | (Q_N, T, D) | 变长序列+ transpose |
+  | `"NTD_TND"` | (Q_N, T, D) | (KV_N, T, D) | (T, Q_N, D) | 变长序列+ transpose |
 
 - **scale** (`float`,可选)：缩放系数，通常为**1/√D**。⚠️ 默认值为1.0，**大多数场景需手动设置，否则计算结果将不正确**。默认值：1.0。
 
