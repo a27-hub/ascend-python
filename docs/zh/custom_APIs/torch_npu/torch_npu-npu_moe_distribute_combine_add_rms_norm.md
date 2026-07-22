@@ -130,8 +130,8 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 - moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num < MAX_INT32，其中MAX_INT32值为2147483647。
 - 参数里Shape使用的变量如下：
     - A：表示本卡需要分发的最大token数量，取值范围如下：
-        - 当`global_bs`为0时，要满足A >= Bs \* epWorldSize \* min(localExpertNum, K)；
-        - 当`global_bs`非0时，要满足A >= globalBs * min(localExpertNum, K)。
+        - 当`global_bs`为0时，要满足A >= bs * ep_world_size * min(local_expert_num, K)；
+        - 当`global_bs`非0时，要满足A >= global_bs * min(local_expert_num, K)。
 
     - H：表示hidden size隐藏层大小。
         - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[1024, 8192\]。
