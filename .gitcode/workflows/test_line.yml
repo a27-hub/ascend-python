@@ -56,8 +56,8 @@ stages:
     select: selected_by_default
     jobs:
 
-      Only_doc_commit:
-        name: Only_doc_commit
+      Compile_Torchair_Check:
+        name: Compile_Torchair_Check
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
