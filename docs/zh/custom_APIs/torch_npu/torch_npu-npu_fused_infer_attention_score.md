@@ -484,11 +484,11 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `scale=1/√128`：必设，控制softmax之前QK^T的缩放。设错会导致attention分布异常。
-
+>
 > - `pre_tokens=65535, next_tokens=65535`：表示不限制attention范围（等价于双向attention）。
-
+>
 > - `input_layout="BNSD"`：表示输入为(B,N,S,D)。
-
+>
 > -此场景命中Q_S > 1，走PromptFlashAttention分支。
 
 ### 示例2：GQA + Decode + PageAttention
@@ -544,13 +544,13 @@ print(out.shape)  # torch.Size([1, 1, 1024])
 > **关键参数说明**：
 >
 > - `num_key_value_heads=2`：启用GQA，num_heads / num_key_value_heads = 4。该参数不传时默认为0（即MHA），见[参数说明](#详细参数说明)。
-
+>
 > - `block_table` + `block_size`：传入即开启PageAttention，kv cache排布见[PageAttention约束](#pa_constraints)。
-
+>
 > - `input_layout="BSH"`：kv cache为BnBsH格式时必须用BSH。若kv cache为BnNBsD格式且query为BNSD，则可用BNSD。
-
+>
 > - `actual_seq_lengths_kv`：PageAttention场景必须传入，对应约束见[PageAttention约束](#pa_constraints)。
-
+>
 > -此场景Q_S=1，走IncreFlashAttention分支，约束见[Q_S = 1约束](#qs_eq_1)。
 
 ### 示例3：MHA + Causal Mask（带atten_mask）
@@ -591,7 +591,9 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `atten_mask`：shape (1, Q_S, KV_S)，bool类型。更多mask shape选项见[atten_mask参数说明](#详细参数说明)。
+>
 > - `sparse_mode=0`：defaultMask模式，使用`pre_tokens`/`next_tokens`控制计算范围。此处为完整双向attention。
+>
 > -也可使用`sparse_mode=3`（rightDownCausal）+ 2048×2048优化mask。
 
 ### 示例4：MLA + Decode（Multi-head Latent Attention）
@@ -636,7 +638,9 @@ print(out.shape)  # torch.Size([1, 16, 1, 512])
 > **关键参数说明**：
 >
 > - `query_rope` + `key_rope`：传入即进入MLA分支，必须同时传入。RoPE维度固定64。二者dtype/format须与query/key一致。
+>
 > - D=512：MLA prefill场景的D为512或128。D=512时可开启PageAttention、支持NZ格式等。约束详见[MLA约束](#mla_constraints)。
+>
 > -此场景不支持：softmax_lse、左padding、pse、prefix、伪量化、全量化。
 
 ### 示例5：int8后量化
@@ -678,7 +682,9 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `quant_scale2`：传入即触发后量化（输出int8）。不传`quant_offset2`则偏移为0。
+>
 > - int8输出场景下，**禁止**同时传入`dequant_scale1`/`quant_scale1`/`dequant_scale2`。约束详见[int8量化约束](#int8_constraints)。
+>
 > -如需perchannel量化，shape建议(Q_N, D)。详见[quant_scale2参数说明](#详细参数说明)。
 
 ### 示例6：int8全量化
@@ -728,7 +734,9 @@ print(out.dtype)  # torch.int8
 > **关键参数说明**：
 >
 > -四个量化参数必须**同时存在**。`quant_offset2`可选，不传时偏移为0。
+>
 > - D轴需32字节对齐。input_layout仅支持BSH/BNSD/BSND/BNSD_BSND。
+>
 > -约束详见[int8量化约束](#int8_constraints)。
 
 ### 示例7：伪量化（KV分离模式）+ Decode
@@ -773,7 +781,9 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 > **关键参数说明**：
 >
 > -使用KV分离模式（优于`antiquant_scale`和`antiquant_offset`模式）。
+>
 > - `key_antiquant_mode=0`：perchannel模式。此处Q_S=1 + query `bfloat16` + kv `int8` + key/value_antiquant_scale `bfloat16` → 满足[Q_S = 1约束](#qs_eq_1)中的kv 伪量化参数分离条件。
+>
 > -当`key_antiquant_scale`和`value_antiquant_scale`与`antiquant_scale`同时传入时，以KV分离参数为准。
 
 ### 示例8：Prefix + Prefill（共享前缀）
@@ -816,7 +826,9 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `key_shared_prefix` + `value_shared_prefix`：必须同时传入。shape第一维batch=1。约束见[Prefix约束](#prefix_constraints)。
+>
 > -如果S2（KV_S + prefix_S）超出原KV_S限制则报错。若传入`atten_mask`，S2需大于prefix_S + KV_S。
+>
 > -不支持PageAttention、左padding、tensorlist、qkv全int8。
 
 ### 示例9：ACL Graph模式（torch_npu.npu.NPUGraph）
