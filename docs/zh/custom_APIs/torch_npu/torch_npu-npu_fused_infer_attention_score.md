@@ -305,22 +305,22 @@ torch_npu.npu_fused_infer_attention_score(
 
 | 输入dtype | 输出dtype | 必须传入 | 可选传入 | 禁止传入 |
 | ---------- | ---------- | -------- | -------- | -------- |
-| int8 | int8 | `dequant_scale1, quant_scale1, dequant_scale2, quant_scale2` | `quant_offset2` | — |
-| int8 | float16 | `dequant_scale1, quant_scale1, dequant_scale2` | — | `quant_offset2, quant_scale2` |
-| float16/bfloat16 | int8 | `quant_scale2` | `quant_offset2` | `dequant_scale1, quant_scale1, dequant_scale2` |
+| `int8` | `int8` | `dequant_scale1, quant_scale1, dequant_scale2, quant_scale2` | `quant_offset2` | — |
+| `int8` | `float16` | `dequant_scale1, quant_scale1, dequant_scale2` | — | `quant_offset2, quant_scale2` |
+| `float16`/`bfloat16` | `int8` | `quant_scale2` | `quant_offset2` | `dequant_scale1, quant_scale1, dequant_scale2` |
 
-- `quant_scale2`和`quant_offset2`支持pertensor或perchannel，dtype支持float32/bfloat16。`quant_offset2`传入时须与`quant_scale2`类型和shape一致。
-- 输出int8，`quant_scale2`/`quant_offset2` perchannel时：不支持左padding、Ring Attention或D非32字节对齐。
-- 输出int8时暂不支持sparse=band且preTokens/nextTokens为负。
-- 输出为int8且`quant_offset2`非None时，若矩阵存在不参与计算的行，会触发拦截（建议外部做后量化）。
+- `quant_scale2`和`quant_offset2`支持pertensor或perchannel，dtype支持`float32`/`bfloat16`。`quant_offset2`传入时须与`quant_scale2`类型和shape一致。
+- 输出`int8`，`quant_scale2`和`quant_offset2` perchannel时：不支持左padding、Ring Attention或D非32字节对齐。
+- 输出`int8`时暂不支持sparse=band且preTokens/nextTokens为负。
+- 输出为`int8`且`quant_offset2`非None时，若矩阵存在不参与计算的行，会触发拦截（建议外部做后量化）。
 - `input_layout`仅支持BSH、BNSD、BSND、BNSD_BSND。
 
 ### <a id="pseudo_quant_constraints"></a>伪量化约束（antiquant_scale / antiquant_offset）
 
-- 仅支持kv dtype为int8。
+- 仅支持kv dtype为`int8`。
 - perchannel：shape为(2, KV_N, 1, D)或(2, KV_N, D)或(2, H)，dtype与query同。`antiquant_mode`=0。
 - pertensor：shape为(2,)，dtype与query同。`antiquant_mode`=0。
-- pertoken：shape为(2, B, KV_S)，dtype固定float32。`antiquant_mode`=1。
+- pertoken：shape为(2, B, KV_S)，dtype固定`float32`。`antiquant_mode`=1。
 - 对称量化：`antiquant_offset`=None；非对称量化：两者必须同时存在。
 - 算子根据shape dim自动判断模式（dim=1 → pertensor，否则perchannel）。
 - **建议使用KV伪量化分离模式**（用`key_antiquant_scale`和`value_antiquant_scale`代替`antiquant_scale`和`antiquant_offset`）。
@@ -332,15 +332,15 @@ torch_npu.npu_fused_infer_attention_score(
 | 约束项 | Q_S > 1 | Q_S = 1 |
 | ------ | ------- | ------- |
 | block_size | 最小128，最大512，须128倍数 | 非0，最大512，推荐128 |
-| kv dtype | float16、bfloat16 | float16、bfloat16、int8 |
-| query int8 | 不支持 | 不支持 |
+| kv dtype | `float16`、`bfloat16` | `float16`、`bfloat16`、`int8` |
+| query `int8` | 不支持 | 不支持 |
 | kv cache排布 | BSH/BSND仅BnBsH；BNSD/TND支持BnBsH和BnNBsD | 同左 |
 | 必须传入actual_seq_lengths_kv | ✓ | ✓ |
 | block_table二维 | [B, ≥maxBlockNumPerSeq] | [B, ≥maxBlockNumPerSeq] |
 | blocknum下限 | ≥ 各batch block数之和 | 同左 |
 | 支持tensorlist | ✗ | ✗ |
 | 支持左padding | ✗ | ✗ |
-| 支持伪量化 | ✗ | ✓（int8 kv） |
+| 支持伪量化 | ✗ | ✓（`int8` kv） |
 | 性能提示 | BnNBsD优于BnBsH | BnNBsD优于BnBsH |
 | H超65535时 | 开GQA或用BnNBsD | 开GQA或用BnNBsD |
 
@@ -364,7 +364,7 @@ torch_npu.npu_fused_infer_attention_score(
 - sparse支持0/3/4。
 - `query_rope`：要求query的N为1/2/4/8/16/32/64/128，shape中D=64，其余维度与query一致。
 - `key_rope`：要求key的N=1、D=512，shape中D=64，其余维度与key一致。
-- key/value/key_rope支持ND或NZ。NZ格式：float16/bfloat16 → [blockNum, KV_N, D/16, blockSize, 16]；int8 → [blockNum, KV_N, D/32, blockSize, 32]。
+- key/value/key_rope支持ND或NZ。NZ格式：`float16`/`bfloat16` → [blockNum, KV_N, D/16, blockSize, 16]；`int8` → [blockNum, KV_N, D/32, blockSize, 32]。
 - input_layout：BSH、BSND、BNSD、BNSD_NBSD、BSND_NBSD、BSH_NBSD、TND、TND_NTD。
 - 支持PageAttention（block_size：16的倍数、≤1024）
 - 不支持：softmax_lse、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
@@ -402,7 +402,7 @@ torch_npu.npu_fused_infer_attention_score(
 - 搬运终点= KV_S − kv_padding_size（Q_S > 1时须 ≤ KV_S；Q_S = 1时若< 0则返回全0）。
 - 需与`actual_seq_lengths_kv`一起开启。
 - 不支持PageAttention。
-- <term>Atlas A2/A3</term>：不支持Q为bfloat16/float16、KV为int4的场景。
+- <term>Atlas A2/A3</term>：不支持Q为`bfloat16`/`float16`、KV为`int4`的场景。
 
 ### <a id="tnd_constraints"></a>TND布局约束
 
@@ -431,7 +431,7 @@ torch_npu.npu_fused_infer_attention_score(
 - **N轴**：≤ 256。
 - **D轴**：≤ 512。BSH/BSND时建议N×D < 65535。
 - **S轴**：≤ 20971520 (20M)。
-- **D对齐**：int8 → 32对齐，int4 → 64对齐，float16/bfloat16 → 16对齐。
+- **D对齐**：`int8` → 32对齐，`int4` → 64对齐，`float16`/`bfloat16` → 16对齐。
 - **长序列超时风险**：B×N×S×D过大时可能超时（aicore timeout/trap error），建议S切分。典型高风险场景：
   - B=1, Q_N=20, Q_S=2097152, D=256, KV_N=1, KV_S=2097152
   - B=1, Q_N=2, Q_S=20971520, D=256, KV_N=2, KV_S=20971520
@@ -441,14 +441,14 @@ torch_npu.npu_fused_infer_attention_score(
   - 0：`atten_mask`=None或在左padding时忽略`pre_tokens`和`next_tokens`。
   - 2/3/4：mask shape必须为(S,S)或(1,S,S)或(1,1,S,S)，其中S=2048，且用户保证下三角。
   - 1/2/3：忽略`pre_tokens`和`next_tokens`。
-- **kvCache反量化合成参数**：仅支持int8 → float16。key/value的data range × antiquant_scale的data range须在(−1, 1)内（高性能模式）否则需高精度模式。
-- **pse_shift**：query dtype为float16/bfloat16/int8时可用。float16 query + pse_shift → 强制高精度模式。Q_S ≥ query S，KV_S ≥ key S。prefix时KV_S ≥ actual_shared_prefix_len + key S。
+- **kvCache反量化合成参数**：仅支持`int8` → `float16`。key/value的data range × antiquant_scale的data range须在(−1, 1)内（高性能模式）否则需高精度模式。
+- **pse_shift**：query dtype为`float16`/`bfloat16`/`int8`时可用。`float16` query + pse_shift → 强制高精度模式。Q_S ≥ query S，KV_S ≥ key S。prefix时KV_S ≥ actual_shared_prefix_len + key S。
 - **GQA伪量化+ KV NZ格式**：
-  - query: bfloat16, key/value: int8, D=128, Q_S=1~16。
+  - query: `bfloat16`, key/value: `int8`, D=128, Q_S=1~16。
   - input_layout: BSH/BSND/BNSD。
   - 仅PageAttention（block_size=128或512）。
   - key/value NZ格式：[blockNum, KV_N, D/32, blockSize, 32]。
-  - key/value_antiquant_scale dtype：perchannel → bfloat16, pertoken → float32。
+  - key/value_antiquant_scale dtype：perchannel → `bfloat16`, pertoken → `float32`。
   - 仅KV分离模式，不支持offset、rope、左padding、tensorlist、pse、prefix、后量化。
   - num_heads与num_key_value_heads支持组合：(10,1)、(64,8)、(80,8)、(128,16)。
   - MTP=0：sparse_mode=0不传mask。MTP>0且<16：sparse_mode=3传优化mask (2048×2048)。
@@ -460,16 +460,16 @@ torch_npu.npu_fused_infer_attention_score(
 - **N轴**：≤ 256。
 - **D轴**：≤ 512。
 - **S轴**（KV）：≤ 262144。
-- **qkv全int8**：不支持。
-- **int4（int32）伪量化**：
-  - PyTorch入图调用仅支持KV int4拼接为int32输入（建议通过dynamic_quant生成：1个int32包含8个int4）。
+- **qkv全`int8`**：不支持。
+- **`int4`（`int32`）伪量化**：
+  - PyTorch入图调用仅支持KV `int4`拼接为`int32`输入（建议通过dynamic_quant生成：1个`int32`包含8个`int4`）。
   - KV N、D或H为实际值的1/8（prefix同理）。
-  - int4仅支持D 64对齐（int32支持D 8对齐）。
+  - `int4`仅支持D 64对齐（`int32`支持D 8对齐）。
 - **actual_seq_lengths**：非TND布局时该参数无效。
 - **actual_seq_lengths_kv**：非TND布局时传入长度为1/≥batch；传入值 ≤ 对应KV_S。
 - **pse_shift**：dtype与query一致，仅支持D轴16整除。
 - **kv左padding**：搬运起点/终点< 0时返回全0；需与`actual_seq_lengths_kv`一起开启。
-- **int4 kv**：不支持左padding、page attention（Q: bfloat16/float16 + KV: int4）。
+- **`int4` kv**：不支持左padding、page attention（Q: `bfloat16`/`float16` + KV: `int4`）。
 
 ## 调用示例
 
