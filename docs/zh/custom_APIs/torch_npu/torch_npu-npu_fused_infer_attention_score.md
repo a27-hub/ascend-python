@@ -62,7 +62,7 @@ torch_npu.npu_fused_infer_attention_score(
 | 伪量化（KV由`int8`反量化为`float16`） | `query, key, value, antiquant_scale` | `antiquant_offset, antiquant_mode` | [伪量化约束](#pseudo_quant_constraints) |
 | 伪量化分离模式 | `query, key, value, key_antiquant_scale, value_antiquant_scale` | `key_antiquant_mode, value_antiquant_mode` | [Q_S > 1约束](#qs_gt_1) / [Q_S = 1约束](#qs_eq_1) |
 | 左Padding | `query, key, value, actual_seq_lengths, query_padding_size` | `kv_padding_size` | [Padding约束](#padding_constraints) |
-| Ring Attention | `query, key, value, softmax_lse_flag=True` | — | / |
+| Ring Attention | `query, key, value, softmax_lse_flag=True` | — | — |
 | TND布局 | `query, key, value, actual_seq_lengths, actual_seq_lengths_kv, input_layout="TND"` | — | [TND布局约束](#tnd_constraints) |
 
 ### 各轴取值范围速查
@@ -83,92 +83,69 @@ torch_npu.npu_fused_infer_attention_score(
 
 #### 必选参数（位置参数）
 
-- **query** (`Tensor`)：attention的Query输入。
-  - 数据类型：`float16`、`bfloat16`，数据格式：ND，不支持非连续Tensor。
+- **query** (`Tensor`)：attention的Query输入。数据类型：`float16`、`bfloat16`，数据格式：ND，不支持非连续Tensor。
 
-- **key** (`Tensor`)：attention的Key输入。
-  - 数据类型：`float16`、`bfloat16`、`int8`、`int4`（`int32`容器，即8个int4拼接为一个int32），数据格式：ND，不支持非连续Tensor。
+- **key** (`Tensor`)：attention的Key输入。数据类型：`float16`、`bfloat16`、`int8`、`int4`（`int32`容器，即8个int4拼接为一个int32），数据格式：ND，不支持非连续Tensor。
 
-- **value** (`Tensor`)：attention的Value输入。
-  - 数据类型：`float16`、`bfloat16`、`int8`、`int4`（`int32`容器），数据格式：ND，不支持非连续Tensor。
+- **value** (`Tensor`)：attention的Value输入。数据类型：`float16`、`bfloat16`、`int8`、`int4`（`int32`容器），数据格式：ND，不支持非连续Tensor。
 
 #### 位置编码参数
 
-- **pse_shift** (`Tensor`,可选)：位置编码参数。
-  - 数据类型：`float16`、`bfloat16`（需与`query`类型满足推导规则），数据格式：ND，不支持非连续，认值：None。Q_S > 1时：shape为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S)；KV_S非32字节对齐建议padding到32字节。Q_S = 1时：shape为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S)；仅支持D轴16整除。
+- **pse_shift** (`Tensor`,可选)：位置编码参数。数据类型：`float16`、`bfloat16`（需与`query`类型满足推导规则），数据格式：ND，不支持非连续，认值：None。Q_S > 1时：shape为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S)；KV_S非32字节对齐建议padding到32字节。Q_S = 1时：shape为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S)；仅支持D轴16整除。
   
 
 #### Mask与序列长度参数
 
-- **atten_mask** (`Tensor`,可选)：对Q×K结果做mask，指示Token间相关性是否计算。
-  - 数据类型：`bool`、`int8`、`uint8`，数据格式：ND，不支持非连续。默认值：None。`sparse_mode`=0/1时：支持shape (1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S)；当`input_layout`为BSH/BSND/BNSD/BNSD_BSND且不传rope时，Q_S=1支持(B, KV_S)，Q_S>1支持(Q_S, KV_S)。`sparse_mode`=2/3/4时：shape必须为(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048)，需用户保证为下三角。
+- **atten_mask** (`Tensor`,可选)：对Q×K结果做mask，指示Token间相关性是否计算。数据类型：`bool`、`int8`、`uint8`，数据格式：ND，不支持非连续。默认值：None。`sparse_mode`=0/1时：支持shape (1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S)；当`input_layout`为BSH/BSND/BNSD/BNSD_BSND且不传rope时，Q_S=1支持(B, KV_S)，Q_S>1支持(Q_S, KV_S)。`sparse_mode`=2/3/4时：shape必须为(2048, 2048)或(1, 2048, 2048)或(1, 1, 2048, 2048)，需用户保证为下三角。
 
-- **actual_seq_lengths** (`List[int]`,可选)：各Batch中`query`的有效序列长度。
-  - 数据类型：`int64`，默认值：None（表示与`query`的S相同）。每个batch有效seqlen不大于`query`中对应batch的seqlen。传入长度为1时，所有batch共用；长度 ≥ batch时取前batch个。**TND布局时必须传入**：每个元素值为当前batch与之前所有batch的seqlen **累加和**（后值 ≥ 前值，非负），元素个数即batch值（≤ 4096）。
+- **actual_seq_lengths** (`List[int]`,可选)：各Batch中`query`的有效序列长度。数据类型：`int64`，默认值：None（表示与`query`的S相同）。每个batch有效seqlen不大于`query`中对应batch的seqlen。传入长度为1时，所有batch共用；长度 ≥ batch时取前batch个。**TND布局时必须传入**：每个元素值为当前batch与之前所有batch的seqlen **累加和**（后值 ≥ 前值，非负），元素个数即batch值（≤ 4096）。
 
-- **actual_seq_lengths_kv** (`List[int]`,可选)：各Batch中`key/value`的有效序列长度。
-  - 数据类型：`int64`。默认值：None（表示与`key/value`的S相同）。约束同`actual_seq_lengths`。PageAttention场景下必须传入。
+- **actual_seq_lengths_kv** (`List[int]`,可选)：各Batch中`key/value`的有效序列长度。数据类型：`int64`。默认值：None（表示与`key/value`的S相同）。约束同`actual_seq_lengths`。PageAttention场景下必须传入。
 
 #### int8量化参数
 
-- **dequant_scale1** (`Tensor`,可选)：BMM1后面的反量化因子，pertensor。
-  - 数据类型：`uint64`、`float32`。默认值：None。
+- **dequant_scale1** (`Tensor`,可选)：BMM1后面的反量化因子，pertensor。数据类型：`uint64`、`float32`。默认值：None。
 
-- **quant_scale1** (`Tensor`,可选)：BMM2前面的量化因子，pertensor。
-  - 数据类型：`float32`。默认值：None。
+- **quant_scale1** (`Tensor`,可选)：BMM2前面的量化因子，pertensor。数据类型：`float32`。默认值：None。
 
-- **dequant_scale2** (`Tensor`,可选)：BMM2后面的反量化因子，pertensor。
-  - 数据类型：`uint64`、`float32`。默认值：None。
+- **dequant_scale2** (`Tensor`,可选)：BMM2后面的反量化因子，pertensor。数据类型：`uint64`、`float32`。默认值：None。
 
 - **quant_scale2** (`Tensor`,可选)：输出的量化因子，支持pertensor、perchannel。
   - 数据类型：`float32`、`bfloat16`（`bfloat16`输入时两种均可，否则仅`float32`）。默认值：None。
-  - perchannel下：
-    - 输出BSH：所有维度乘积= H，建议shape (1, 1, H)或(H,)。输出BNSD：乘积= Q_N × D，建议shape (1, Q_N, 1, D)或(Q_N, D)。输出BSND：乘积= Q_N × D，建议shape (1, 1, Q_N, D)或(Q_N, D)。
+  - perchannel下：输出BSH：所有维度乘积= H，建议shape (1, 1, H)或(H,)。输出BNSD：乘积= Q_N × D，建议shape (1, Q_N, 1, D)或(Q_N, D)。输出BSND：乘积= Q_N × D，建议shape (1, 1, Q_N, D)或(Q_N, D)。
 
-- **quant_offset2** (`Tensor`,可选)：输出的量化偏移，支持pertensor、perchannel。
-  - 若传入，类型和shape须与`quant_scale2`一致，数据类型：`float32`、`bfloat16`。默认值：None（等效于0）。
+- **quant_offset2** (`Tensor`,可选)：输出的量化偏移，支持pertensor、perchannel。若传入，类型和shape须与`quant_scale2`一致，数据类型：`float32`、`bfloat16`。默认值：None（等效于0）。
 
 #### 伪量化参数
 
-- **antiquant_scale** (`Tensor`,可选)：伪量化因子，pertensor或perchannel或pertoken。
-  - 数据类型：`float16`、`bfloat16`（Q_S ≥ 2时仅`float16`；Q_S = 1时perchannel与query同类型，pertoken为`float32`），默认值：None。建议使用KV伪量化分离模式（`key_antiquant_scale`和`value_antiquant_scale`）。
+- **antiquant_scale** (`Tensor`,可选)：伪量化因子，pertensor或perchannel或pertoken。数据类型：`float16`、`bfloat16`（Q_S ≥ 2时仅`float16`；Q_S = 1时perchannel与query同类型，pertoken为`float32`），默认值：None。建议使用KV伪量化分离模式（`key_antiquant_scale`和`value_antiquant_scale`）。
 
-- **antiquant_offset** (`Tensor`,可选)：伪量化偏移，pertensor或perchannel或pertoken。
-  - 约束同`antiquant_scale`（shape须一致）。默认值：None。对称量化时不传（None），非对称量化时必须传入。
+- **antiquant_offset** (`Tensor`,可选)：伪量化偏移，pertensor或perchannel或pertoken。约束同`antiquant_scale`（shape须一致）。默认值：None。对称量化时不传（None），非对称量化时必须传入。
 
-- **antiquant_mode** (`int`,可选)：伪量化方式。0=perchannel（含pertensor），1=pertoken。
-  - Q_S ≥ 2时无效；Q_S = 1时传入其他值会异常。默认值：0。
+- **antiquant_mode** (`int`,可选)：伪量化方式。0=perchannel（含pertensor），1=pertoken。Q_S ≥ 2时无效；Q_S = 1时传入其他值会异常。默认值：0。
   
 
 #### PageAttention参数
 
-- **block_table** (`Tensor`,可选)：PageAttention中KV存储的block映射表。
-  - 数据类型：`int32`，数据格式：ND，必须为二维：[B, maxBlockNumPerSeq]，blockid合法性由用户保证，传入此参数即开启PageAttention。默认值：None。
+- **block_table** (`Tensor`,可选)：PageAttention中KV存储的block映射表。数据类型：`int32`，数据格式：ND，必须为二维：[B, maxBlockNumPerSeq]，blockid合法性由用户保证，传入此参数即开启PageAttention。默认值：None。
 
-- **block_size** (`Tensor`,可选)：PageAttention中每个block最多token个数。
-  - 数据类型：`int64`，Q_S > 1：最小128，最大512，须为128倍数。 Q_S = 1： 非0值，最大512。`float16`/`bfloat16`需16字节对齐，`int8`需32字节对齐，推荐128。默认值：0（不开启PageAttention）。
+- **block_size** (`Tensor`,可选)：PageAttention中每个block最多token个数。数据类型：`int64`，Q_S > 1：最小128，最大512，须为128倍数。 Q_S = 1： 非0值，最大512。`float16`/`bfloat16`需16字节对齐，`int8`需32字节对齐，推荐128。默认值：0（不开启PageAttention）。
 
 #### Padding参数
 
-- **query_padding_size** (`Tensor`,可选)：`query`每个batch右对齐的padding数量。
-  - 数据类型：`int64`，仅Q_S > 1生效。需与`actual_seq_lengths`一起开启，否则默认为右padding。默认值：None。
+- **query_padding_size** (`Tensor`,可选)：`query`每个batch右对齐的padding数量。数据类型：`int64`，仅Q_S > 1生效。需与`actual_seq_lengths`一起开启，否则默认为右padding。默认值：None。
 
-- **kv_padding_size** (`Tensor`,可选)：`key/value`每个batch右对齐的padding数量。
-  - 数据类型：`int64`，小于0时被置为0。需与`actual_seq_lengths_kv`一起开启，否则默认为右padding。默认值：None。
+- **kv_padding_size** (`Tensor`,可选)：`key/value`每个batch右对齐的padding数量。数据类型：`int64`，小于0时被置为0。需与`actual_seq_lengths_kv`一起开启，否则默认为右padding。默认值：None。
 
 #### KV伪量化分离参数
 
-- **key_antiquant_scale** (`Tensor`,可选)：KV伪量化分离时key的反量化因子。
-  - 数据类型：`float16`、`bfloat16`、`float32`，支持perchannel、pertensor、pertoken、pertensor+perhead、pertoken+perhead、pertoken+PA等模式。与`value_antiquant_scale`必须同时为空或同时非空。默认值：None。
+- **key_antiquant_scale** (`Tensor`,可选)：KV伪量化分离时key的反量化因子。数据类型：`float16`、`bfloat16`、`float32`，支持perchannel、pertensor、pertoken、pertensor+perhead、pertoken+perhead、pertoken+PA等模式。与`value_antiquant_scale`必须同时为空或同时非空。默认值：None。
 
-- **key_antiquant_offset** (`Tensor`,可选)：KV伪量化分离时key的反量化偏移。
-  - 约束同`key_antiquant_scale`。与`value_antiquant_offset`必须同时为空或同时非空。默认值：None。
+- **key_antiquant_offset** (`Tensor`,可选)：KV伪量化分离时key的反量化偏移。约束同`key_antiquant_scale`。与`value_antiquant_offset`必须同时为空或同时非空。默认值：None。
 
-- **value_antiquant_scale** (`Tensor`,可选)：KV伪量化分离时value的反量化因子。
-  - 约束同`key_antiquant_scale`。默认值：None。
+- **value_antiquant_scale** (`Tensor`,可选)：KV伪量化分离时value的反量化因子。约束同`key_antiquant_scale`。默认值：None。
 
-- **value_antiquant_offset** (`Tensor`,可选)：KV伪量化分离时value的反量化偏移。
-  - 约束同`key_antiquant_scale`。默认值：None。
+- **value_antiquant_offset** (`Tensor`,可选)：KV伪量化分离时value的反量化偏移。约束同`key_antiquant_scale`。默认值：None。
 
 - **key_antiquant_mode** (`int`,可选)：key伪量化方式。取值0~5,详见表格。默认值：0。
 
@@ -192,22 +169,17 @@ torch_npu.npu_fused_infer_attention_score(
 
 #### Prefix（共享前缀）参数
 
-- **key_shared_prefix** (`Tensor`,可选)：Key的共享前缀部分。
-  - 数据类型：`float16`、`bfloat16`、`int8`。数据格式：ND，不支持非连续。shape第一维batch必须为1。与`value_shared_prefix`必须同时为空或同时非空。默认值：None。
+- **key_shared_prefix** (`Tensor`,可选)：Key的共享前缀部分。数据类型：`float16`、`bfloat16`、`int8`。数据格式：ND，不支持非连续。shape第一维batch必须为1。与`value_shared_prefix`必须同时为空或同时非空。默认值：None。
 
-- **value_shared_prefix** (`Tensor`,可选)：Value的共享前缀部分。
-  - 约束同`key_shared_prefix`。默认值：None。
+- **value_shared_prefix** (`Tensor`,可选)：Value的共享前缀部分。约束同`key_shared_prefix`。默认值：None。
 
-- **actual_shared_prefix_len** (`List[int]`,可选)：共享前缀的有效序列长度。
-  - 数据类型：`int64`。shape为[1]，值不能大于prefix的S。默认值：None（表示与prefix的S相同）。
+- **actual_shared_prefix_len** (`List[int]`,可选)：共享前缀的有效序列长度。数据类型：`int64`。shape为[1]，值不能大于prefix的S。默认值：None（表示与prefix的S相同）。
 
 #### MLA（Multi-head Latent Attention）参数
 
-- **query_rope** (`Tensor`,可选)：MLA中Query的RoPE信息。
-  - 数据类型：`float16`、`bfloat16`。数据格式：ND，不支持非连续。shape中D为64，其余维度与`query`一致。与`key_rope`必须同时配置或同时不配置。默认值：None。
+- **query_rope** (`Tensor`,可选)：MLA中Query的RoPE信息。数据类型：`float16`、`bfloat16`。数据格式：ND，不支持非连续。shape中D为64，其余维度与`query`一致。与`key_rope`必须同时配置或同时不配置。默认值：None。
 
-- **key_rope** (`Tensor`,可选)：MLA中Key的RoPE信息。
-  - 约束同`query_rope`（shape中D为64，其余维度与`key`一致）。默认值：None。
+- **key_rope** (`Tensor`,可选)：MLA中Key的RoPE信息。约束同`query_rope`（shape中D为64，其余维度与`key`一致）。默认值：None。
 
 - **key_rope_antiquant_scale** (`Tensor`,可选)：预留参数，暂未使用。使用默认值即可。
 
