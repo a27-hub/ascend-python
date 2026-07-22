@@ -59,7 +59,7 @@ torch_npu.npu_fused_infer_attention_score(
 | Prefix（共享前缀） | `query, key, value, key_shared_prefix, value_shared_prefix` | `actual_shared_prefix_len` | [Prefix约束](#prefix_constraints) |
 | int8全量化 | `query, key, value, dequant_scale1, quant_scale1, dequant_scale2, quant_scale2` | `quant_offset2` | [int8量化约束](#int8_constraints) |
 | int8后量化 | `query, key, value, quant_scale2` | `quant_offset2` | [int8量化约束](#int8_constraints) |
-| 伪量化（KV int8→float16） | `query, key, value, antiquant_scale` | `antiquant_offset, antiquant_mode` | [伪量化约束](#pseudo_quant_constraints) |
+| 伪量化（KV `int8`→`float16`） | `query, key, value, antiquant_scale` | `antiquant_offset, antiquant_mode` | [伪量化约束](#pseudo_quant_constraints) |
 | 伪量化分离模式 | `query, key, value, key_antiquant_scale, value_antiquant_scale` | `key_antiquant_mode, value_antiquant_mode` | [Q_S > 1约束](#qs_gt_1) / [Q_S = 1约束](#qs_eq_1) |
 | 左Padding | `query, key, value, actual_seq_lengths, query_padding_size` | `kv_padding_size` | [Padding约束](#padding_constraints) |
 | Ring Attention | `query, key, value, softmax_lse_flag=True` | — | [返回值说明](#返回值说明) |
@@ -75,7 +75,7 @@ torch_npu.npu_fused_infer_attention_score(
 | B | Batch Size | ≤ 65536 | ≤ 65536 | — |
 | N (Q_N) | query head数 | ≤ 256 | ≤ 256 | — |
 | N (KV_N) | key/value head数 | ≤ 256 | ≤ 256 | — |
-| D | Head Dim | ≤ 512 | ≤ 512 | float16/bfloat16: 16对齐; int8: 32对齐; int4: 64对齐 |
+| D | Head Dim | ≤ 512 | ≤ 512 | `float16`/`bfloat16`: 16对齐; `int8`: 32对齐; `int4`: 64对齐 |
 | S (Q_S) | query序列长度 | ≤ 20971520 (20M) | = 1 | — |
 | S (KV_S) | key/value序列长度 | ≤ 20971520 (20M) | ≤ 262144 | — |
 
@@ -146,7 +146,7 @@ torch_npu.npu_fused_infer_attention_score(
   - 数据类型：`int32`，数据格式：ND，必须为二维：[B, maxBlockNumPerSeq]，blockid合法性由用户保证，传入此参数即开启PageAttention。默认值：None。
 
 - **block_size** (`Tensor`,可选)：PageAttention中每个block最多token个数。
-  - 数据类型：`int64`，Q_S > 1：最小128，最大512，须为128倍数。 Q_S = 1：非0值，最大512。float16/bfloat16需16对齐，int8需32对齐，推荐128。默认值：0（不开启PageAttention）。
+  - 数据类型：`int64`，Q_S > 1：最小128，最大512，须为128倍数。 Q_S = 1： 非0值，最大512。`float16`/`bfloat16`需16对齐，`int8`需32对齐，推荐128。默认值：0（不开启PageAttention）。
 
 #### Padding参数
 
@@ -231,7 +231,7 @@ torch_npu.npu_fused_infer_attention_score(
   | `"TND_NTD"` | (T, Q_N, D) | (T, KV_N, D) | (Q_N, T, D) | 变长序列+ transpose |
   | `"NTD_TND"` | (Q_N, T, D) | (KV_N, T, D) | (T, Q_N, D) | 变长序列+ transpose |
 
-- **scale** (`float`,可选)：缩放系数，通常为**1/√D**。⚠️ 默认值为1.0，**大多数场景需手动设置，否则计算结果将不正确**。默认值：1.0。
+- **scale** (`float`,可选)：缩放系数，通常为**1/√D**。 默认值为1.0，**大多数场景需手动设置，否则计算结果将不正确**。默认值：1.0。
 
 - **pre_tokens** (`int`,可选)：稀疏计算中attention与前几个token的关联范围。Q_S=1时无效。默认值：2147483647。
 
@@ -264,7 +264,7 @@ torch_npu.npu_fused_infer_attention_score(
   | 2 | 高精度 | 是 | mask存在整行全1时提升精度 |
   | 3 | 高性能 | 是 | mask存在整行全1时提升精度（性能略降） |
 
-> **说明**：bfloat16和int8不区分高精度/高性能（bit0无效）。行无效修正对float16、bfloat16、int8均生效。当mask存在整行全1时精度可能损失，可尝试配置2或3。Q_S = 1时仅支持0和1。若算子可判断出存在无效行场景（如sparse_mode=3且Sq > Skv），会自动开启行无效计算。
+> **说明**：`bfloat16`和`int8`不区分高精度/高性能（bit0无效）。行无效修正对`float16`、`bfloat16`、`int8`均生效。当mask存在整行全1时精度可能损失，可尝试配置2或3。Q_S = 1时仅支持0和1。若算子可判断出存在无效行场景（如sparse_mode=3且Sq > Skv），会 自动开启行无效计算。
 
 - **softmax_lse_flag** (`bool`,可选)：是否额外输出softmax_lse（用于Ring Attention分布式合并）。默认值：False。
 
@@ -277,7 +277,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **softmax_lse** (`Tensor`)：softmax的log-sum-exp值（用于Ring Attention分布式场景合并各设备结果）。
   - `softmax_lse_flag=True`时：
-    - 一般场景：shape (B, Q_N, Q_S, 1)，dtype `float32`
+    - shape (B, Q_N, Q_S, 1)，dtype `float32`
     - `input_layout`为TND/NTD_TND时：shape (T, Q_N, 1)，dtype `float32`
   - `softmax_lse_flag=False`时：shape (1,)，值为0的Tensor。
 
