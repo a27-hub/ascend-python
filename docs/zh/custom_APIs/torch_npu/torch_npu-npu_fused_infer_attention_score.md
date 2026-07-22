@@ -82,69 +82,6 @@ torch_npu.npu_fused_infer_attention_score(
 | S (KV_S) | key/value 序列长度 | ≤ 20971520 (20M) | ≤ 262144 | — |
 
 
-### input_layout 枚举说明
-
-`input_layout` 标识输入 `query, key, value` 的数据排布格式。**格式中带下划线时**，下划线左边为输入 layout，右边为输出 layout，算子内部自动 layout 转换。
-
-| input_layout | 输入 shape（query） | 输入 shape（key/value） | 输出 shape | 适用场景 |
-| ------------ | ------------------- | ----------------------- | ---------- | -------- |
-| `"BSH"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_S, H) | 通用，H = N × D |
-| `"BSND"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_S, Q_N, D) | 通用，N/D 分离 |
-| `"BNSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 通用，N 轴在前 |
-| `"BNSD_BSND"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_S, Q_N, D) | 仅 Q_S > 1 |
-| `"BSH_NBSD"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_N, Q_S, D) | layout 转换 |
-| `"BSND_NBSD"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_N, Q_S, D) | layout 转换 |
-| `"BNSD_NBSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 仅 Q_S > 1 且 Q_S ≤ 16 |
-| `"TND"` | (T, Q_N, D) | (T, KV_N, D) | (T, Q_N, D) | 变长序列，T = Σseqlen |
-| `"TND_NTD"` | (T, Q_N, D) | (T, KV_N, D) | (Q_N, T, D) | 变长序列 + transpose |
-| `"NTD_TND"` | (Q_N, T, D) | (KV_N, T, D) | (T, Q_N, D) | 变长序列 + transpose |
-
-### sparse_mode 枚举说明
-
-| sparse_mode | 模式 | 说明 | atten_mask 要求 |
-| ----------- | ---- | ---- | --------------- |
-| 0 | defaultMask | 默认模式。不传 `atten_mask` 时不做 mask；传入时使用完整 mask 矩阵，`pre_tokens`/`next_tokens` 之间的部分参与计算。Q_S=1 且不带 rope 时此参数无效。 | shape：(Q_S, KV_S) 或 (1, Q_S, KV_S) 等 |
-| 1 | allMask | 必须传入完整 `atten_mask` 矩阵 (S1×S2)。忽略 `pre_tokens`/`next_tokens`。 | shape：(Q_S, KV_S) 或 (1, Q_S, KV_S) 等 |
-| 2 | leftUpCausal | 左上角 causal mask。需传入优化后的 `atten_mask` 矩阵。 | shape：(2048, 2048) 或 (1, 2048, 2048) 或 (1, 1, 2048, 2048) |
-| 3 | rightDownCausal | 右下角 causal mask（以右顶点为划分的下三角）。需传入优化后的 mask。 | shape：(2048, 2048) 或 (1, 2048, 2048) 或 (1, 1, 2048, 2048) |
-| 4 | band | band 模式 mask。需传入优化后的 `atten_mask` 矩阵。 | shape：(2048, 2048) 或 (1, 2048, 2048) 或 (1, 1, 2048, 2048) |
-| 5 | prefix | **暂不支持** | — |
-| 6 | global | **暂不支持** | — |
-| 7 | dilated | **暂不支持** | — |
-| 8 | block_local | **暂不支持** | — |
-
-> **特殊约束**：Q_S = 1 且不带 rope 输入时，`sparse_mode` 参数无效。
-
-### inner_precise 枚举说明
-
-共 4 种模式，使用两个 bit 位：bit0 = 高精度(0)/高性能(1)，bit1 = 是否行无效修正(0=否, 1=是)。
-
-| inner_precise | 精度模式 | 行无效修正 | 适用场景 |
-| ------------- | -------- | ---------- | -------- |
-| 0 | 高精度 | 否 | 默认，精度优先 |
-| 1 | 高性能 | 否 | 性能优先 |
-| 2 | 高精度 | 是 | mask 存在整行全 1 时提升精度 |
-| 3 | 高性能 | 是 | mask 存在整行全 1 时提升精度（性能略降） |
-
-> **说明**：bf16 和 int8 不区分高精度/高性能（bit0 无效）。行无效修正对 fp16、bf16、int8 均生效。当 mask 存在整行全 1 时精度可能损失，可尝试配置 2 或 3。Q_S = 1 时仅支持 0 和 1。若算子可判断出存在无效行场景（如 sparse_mode=3 且 Sq > Skv），会自动开启行无效计算。
-
-### key_antiquant_mode / value_antiquant_mode 枚举说明
-
-| 值 | 模式 | 说明 |
-| -- | ---- | ---- |
-| 0 | perchannel | per-channel 模式（包含 per-tensor）。默认值。 |
-| 1 | pertoken | per-token 模式。 |
-| 2 | pertensor + perhead | per-tensor 叠加 per-head 模式。 |
-| 3 | pertoken + perhead | per-token 叠加 per-head 模式。 |
-| 4 | pertoken + page attention | per-token 叠加 page attention 管理 scale/offset。 |
-| 5 | pertoken + perhead + page attention | per-token 叠加 per-head 并使用 page attention 管理 scale/offset。 |
-
-> **特殊约束**：
->
-> - Q_S ≥ 2 时仅支持 0、1。
-> - Q_S = 1 时支持 0~5。
-> - 除 `key_antiquant_mode=0` 且 `value_antiquant_mode=1` 的场景外，`key_antiquant_mode` 与 `value_antiquant_mode` 必须一致。
-
 ### 详细参数说明
 
 #### 必选参数（位置参数）
@@ -324,6 +261,69 @@ torch_npu.npu_fused_infer_attention_score(
   - 默认值：None。
 
 - **key_rope_antiquant_scale** (`Tensor`, 可选)：预留参数，暂未使用。使用默认值即可。
+
+### input_layout 枚举说明
+
+`input_layout` 标识输入 `query, key, value` 的数据排布格式。**格式中带下划线时**，下划线左边为输入 layout，右边为输出 layout，算子内部自动 layout 转换。
+
+| input_layout | 输入 shape（query） | 输入 shape（key/value） | 输出 shape | 适用场景 |
+| ------------ | ------------------- | ----------------------- | ---------- | -------- |
+| `"BSH"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_S, H) | 通用，H = N × D |
+| `"BSND"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_S, Q_N, D) | 通用，N/D 分离 |
+| `"BNSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 通用，N 轴在前 |
+| `"BNSD_BSND"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_S, Q_N, D) | 仅 Q_S > 1 |
+| `"BSH_NBSD"` | (B, Q_S, H) | (B, KV_S, H) | (B, Q_N, Q_S, D) | layout 转换 |
+| `"BSND_NBSD"` | (B, Q_S, Q_N, D) | (B, KV_S, KV_N, D) | (B, Q_N, Q_S, D) | layout 转换 |
+| `"BNSD_NBSD"` | (B, Q_N, Q_S, D) | (B, KV_N, KV_S, D) | (B, Q_N, Q_S, D) | 仅 Q_S > 1 且 Q_S ≤ 16 |
+| `"TND"` | (T, Q_N, D) | (T, KV_N, D) | (T, Q_N, D) | 变长序列，T = Σseqlen |
+| `"TND_NTD"` | (T, Q_N, D) | (T, KV_N, D) | (Q_N, T, D) | 变长序列 + transpose |
+| `"NTD_TND"` | (Q_N, T, D) | (KV_N, T, D) | (T, Q_N, D) | 变长序列 + transpose |
+
+### sparse_mode 枚举说明
+
+| sparse_mode | 模式 | 说明 | atten_mask 要求 |
+| ----------- | ---- | ---- | --------------- |
+| 0 | defaultMask | 默认模式。不传 `atten_mask` 时不做 mask；传入时使用完整 mask 矩阵，`pre_tokens`/`next_tokens` 之间的部分参与计算。Q_S=1 且不带 rope 时此参数无效。 | shape：(Q_S, KV_S) 或 (1, Q_S, KV_S) 等 |
+| 1 | allMask | 必须传入完整 `atten_mask` 矩阵 (S1×S2)。忽略 `pre_tokens`/`next_tokens`。 | shape：(Q_S, KV_S) 或 (1, Q_S, KV_S) 等 |
+| 2 | leftUpCausal | 左上角 causal mask。需传入优化后的 `atten_mask` 矩阵。 | shape：(2048, 2048) 或 (1, 2048, 2048) 或 (1, 1, 2048, 2048) |
+| 3 | rightDownCausal | 右下角 causal mask（以右顶点为划分的下三角）。需传入优化后的 mask。 | shape：(2048, 2048) 或 (1, 2048, 2048) 或 (1, 1, 2048, 2048) |
+| 4 | band | band 模式 mask。需传入优化后的 `atten_mask` 矩阵。 | shape：(2048, 2048) 或 (1, 2048, 2048) 或 (1, 1, 2048, 2048) |
+| 5 | prefix | **暂不支持** | — |
+| 6 | global | **暂不支持** | — |
+| 7 | dilated | **暂不支持** | — |
+| 8 | block_local | **暂不支持** | — |
+
+> **特殊约束**：Q_S = 1 且不带 rope 输入时，`sparse_mode` 参数无效。
+
+### inner_precise 枚举说明
+
+共 4 种模式，使用两个 bit 位：bit0 = 高精度(0)/高性能(1)，bit1 = 是否行无效修正(0=否, 1=是)。
+
+| inner_precise | 精度模式 | 行无效修正 | 适用场景 |
+| ------------- | -------- | ---------- | -------- |
+| 0 | 高精度 | 否 | 默认，精度优先 |
+| 1 | 高性能 | 否 | 性能优先 |
+| 2 | 高精度 | 是 | mask 存在整行全 1 时提升精度 |
+| 3 | 高性能 | 是 | mask 存在整行全 1 时提升精度（性能略降） |
+
+> **说明**：bf16 和 int8 不区分高精度/高性能（bit0 无效）。行无效修正对 fp16、bf16、int8 均生效。当 mask 存在整行全 1 时精度可能损失，可尝试配置 2 或 3。Q_S = 1 时仅支持 0 和 1。若算子可判断出存在无效行场景（如 sparse_mode=3 且 Sq > Skv），会自动开启行无效计算。
+
+### key_antiquant_mode / value_antiquant_mode 枚举说明
+
+| 值 | 模式 | 说明 |
+| -- | ---- | ---- |
+| 0 | perchannel | per-channel 模式（包含 per-tensor）。默认值。 |
+| 1 | pertoken | per-token 模式。 |
+| 2 | pertensor + perhead | per-tensor 叠加 per-head 模式。 |
+| 3 | pertoken + perhead | per-token 叠加 per-head 模式。 |
+| 4 | pertoken + page attention | per-token 叠加 page attention 管理 scale/offset。 |
+| 5 | pertoken + perhead + page attention | per-token 叠加 per-head 并使用 page attention 管理 scale/offset。 |
+
+> **特殊约束**：
+>
+> - Q_S ≥ 2 时仅支持 0、1。
+> - Q_S = 1 时支持 0~5。
+> - 除 `key_antiquant_mode=0` 且 `value_antiquant_mode=1` 的场景外，`key_antiquant_mode` 与 `value_antiquant_mode` 必须一致。
 
 #### 其他标量参数
 
