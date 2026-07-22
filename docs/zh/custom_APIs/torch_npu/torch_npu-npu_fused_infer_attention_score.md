@@ -104,11 +104,11 @@ torch_npu.npu_fused_infer_attention_score(
 
 #### int8量化参数
 
-- **dequant_scale1** (`Tensor`,可选)：BMM1后面的反量化因子，pertensor。数据类型：`uint64`、`float32`。默认值：None。
+- **dequant_scale1** (`Tensor`,可选)：BMM1后面的反量化因子，支持pertensor。数据类型：`uint64`、`float32`。默认值：None。
 
-- **quant_scale1** (`Tensor`,可选)：BMM2前面的量化因子，pertensor。数据类型：`float32`。默认值：None。
+- **quant_scale1** (`Tensor`,可选)：BMM2前面的量化因子，支持pertensor。数据类型：`float32`。默认值：None。
 
-- **dequant_scale2** (`Tensor`,可选)：BMM2后面的反量化因子，pertensor。数据类型：`uint64`、`float32`。默认值：None。
+- **dequant_scale2** (`Tensor`,可选)：BMM2后面的反量化因子，支持pertensor。数据类型：`uint64`、`float32`。默认值：None。
 
 - **quant_scale2** (`Tensor`,可选)：输出的量化因子，支持pertensor、perchannel。
   - 数据类型：`float32`、`bfloat16`（`bfloat16`输入时两种均可，否则仅`float32`）。默认值：None。
