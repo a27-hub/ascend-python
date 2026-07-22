@@ -135,7 +135,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **query_padding_size** (`Tensor`,可选)：`query`每个batch右对齐的padding数量。数据类型：`int64`，仅Q_S > 1生效。需与`actual_seq_lengths`一起开启，否则默认为右padding。默认值：None。
 
-- **kv_padding_size** (`Tensor`,可选)：`key/value`每个batch右对齐的padding数量。数据类型：`int64`，小于0时被置为0。需与`actual_seq_lengths_kv`一起开启，否则默认为右padding。默认值：None。
+- **kv_padding_size** (`Tensor`,可选)：`key`或`value`每个batch右对齐的padding数量。数据类型：`int64`，小于0时被置为0。需与`actual_seq_lengths_kv`一起开启，否则默认为右padding。默认值：None。
 
 #### KV伪量化分离参数
 
