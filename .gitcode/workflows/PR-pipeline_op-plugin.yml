@@ -58,9 +58,9 @@ stages:
         name: PREHEAT_master_x86
         select: selected_by_default
         runs-on: [ dedicate-hosted, x64, large ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
+        # container:
+        #   image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+        #   options: --user root
         steps:
           - name: preheat_master_x86
             uses: dedicate-preheat-plugin
