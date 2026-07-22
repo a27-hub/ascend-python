@@ -282,7 +282,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 - `quant_scale2`和`quant_offset2`支持pertensor或perchannel，dtype支持`float32`/`bfloat16`。`quant_offset2`传入时须与`quant_scale2`类型和shape一致。
 - 输出`int8`，参数`quant_scale2`和`quant_offset2` 为perchannel时：不支持左padding、Ring Attention或D非32字节对齐。
-- 输出`int8`时暂不支持sparse=band且preTokens/nextTokens为负。
+- 输出`int8`时暂不支持sparse=band且pre_tokens/next_okens为负。
 - 输出为`int8`且`quant_offset2`非None时，若矩阵存在不参与计算的行，会触发拦截（建议外部做后量化）。
 - `input_layout`仅支持BSH、BNSD、BSND、BNSD_BSND。
 
