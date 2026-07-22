@@ -262,7 +262,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **key_rope_antiquant_scale** (`Tensor`, 可选)：预留参数，暂未使用。使用默认值即可。
 
-### input_layout 枚举说明
+### <a id="input_layout-枚举说明"></a>input_layout 枚举说明
 
 `input_layout` 标识输入 `query, key, value` 的数据排布格式。**格式中带下划线时**，下划线左边为输入 layout，右边为输出 layout，算子内部自动 layout 转换。
 
@@ -279,7 +279,7 @@ torch_npu.npu_fused_infer_attention_score(
 | `"TND_NTD"` | (T, Q_N, D) | (T, KV_N, D) | (Q_N, T, D) | 变长序列 + transpose |
 | `"NTD_TND"` | (Q_N, T, D) | (KV_N, T, D) | (T, Q_N, D) | 变长序列 + transpose |
 
-### sparse_mode 枚举说明
+### <a id="sparse_mode-枚举说明"></a>sparse_mode 枚举说明
 
 | sparse_mode | 模式 | 说明 | atten_mask 要求 |
 | ----------- | ---- | ---- | --------------- |
@@ -295,7 +295,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 > **特殊约束**：Q_S = 1 且不带 rope 输入时，`sparse_mode` 参数无效。
 
-### inner_precise 枚举说明
+### <a id="inner_precise-枚举说明"></a>inner_precise 枚举说明
 
 共 4 种模式，使用两个 bit 位：bit0 = 高精度(0)/高性能(1)，bit1 = 是否行无效修正(0=否, 1=是)。
 
@@ -308,7 +308,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 > **说明**：bf16 和 int8 不区分高精度/高性能（bit0 无效）。行无效修正对 fp16、bf16、int8 均生效。当 mask 存在整行全 1 时精度可能损失，可尝试配置 2 或 3。Q_S = 1 时仅支持 0 和 1。若算子可判断出存在无效行场景（如 sparse_mode=3 且 Sq > Skv），会自动开启行无效计算。
 
-### key_antiquant_mode / value_antiquant_mode 枚举说明
+### <a id="key_antiquant_mode--value_antiquant_mode-枚举说明"></a>key_antiquant_mode / value_antiquant_mode 枚举说明
 
 | 值 | 模式 | 说明 |
 | -- | ---- | ---- |
