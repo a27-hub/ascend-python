@@ -488,9 +488,9 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `scale=1/√128`：必设，控制softmax之前QK^T的缩放。设错会导致attention分布异常。
-> - `pre_tokens=65535, next_tokens=65535`：表示不限制attention范围（等价于双向attention），对应的约束见[sparse_mode枚举说明](#sparse_mode-枚举说明)。
-> - `input_layout="BNSD"`：表示输入为(B,N,S,D)，见[input_layout枚举说明](#input_layout-枚举说明)。
-> -此场景命中Q_S > 1，走PromptFlashAttention分支，约束见[Q_S > 1约束](#qs_gt_1)。
+> - `pre_tokens=65535, next_tokens=65535`：表示不限制attention范围（等价于双向attention）。
+> - `input_layout="BNSD"`：表示输入为(B,N,S,D)。
+> -此场景命中Q_S > 1，走PromptFlashAttention分支。
 
 ### 示例2：GQA + Decode + PageAttention
 
@@ -589,7 +589,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 >
 > - `atten_mask`：shape (1, Q_S, KV_S)，bool类型。更多mask shape选项见[atten_mask参数说明](#详细参数说明)。
 > - `sparse_mode=0`：defaultMask模式，使用`pre_tokens`/`next_tokens`控制计算范围。此处为完整双向attention。
-> -也可使用`sparse_mode=3`（rightDownCausal）+ 2048×2048优化mask。各模式含义见[sparse_mode枚举说明](#sparse_mode-枚举说明)。
+> -也可使用`sparse_mode=3`（rightDownCausal）+ 2048×2048优化mask。
 
 ### 示例4：MLA + Decode（Multi-head Latent Attention）
 
@@ -772,7 +772,6 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 > -使用KV分离模式（优于`antiquant_scale`和`antiquant_offset`模式）。
 > - `key_antiquant_mode=0`：perchannel模式。此处Q_S=1 + query `bfloat16` + kv `int8` + key/value_antiquant_scale `bfloat16` → 满足[Q_S = 1约束](#qs_eq_1)中的kv 伪量化参数分离条件。
 > -当`key_antiquant_scale`和`value_antiquant_scale`与`antiquant_scale`同时传入时，以KV分离参数为准。
-> -各模式的shape和dtype要求见[key_antiquant_mode枚举表](#key_antiquant_mode--value_antiquant_mode-枚举说明)。
 
 ### 示例8：Prefix + Prefill（共享前缀）
 
