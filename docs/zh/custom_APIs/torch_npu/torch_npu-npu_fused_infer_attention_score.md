@@ -638,7 +638,7 @@ print(out.shape)  # torch.Size([1, 1, 1024])
 
 > **关键参数说明**：
 >
-> - `num_key_value_heads=2`：启用GQA，num_heads ÷ num_key_value_heads = 4。该参数不传时默认为0（即MHA），见[参数说明](#详细参数说明)。
+> - `num_key_value_heads=2`：启用GQA，num_heads / num_key_value_heads = 4。该参数不传时默认为0（即MHA），见[参数说明](#详细参数说明)。
 > - `block_table` + `block_size`：传入即开启PageAttention，kv cache排布见[PageAttention约束](#pa_constraints)。
 > - `input_layout="BSH"`：kv cache为BnBsH格式时必须用BSH。若kv cache为BnNBsD格式且query为BNSD，则可用BNSD。
 > - `actual_seq_lengths_kv`：PageAttention场景必须传入，对应约束见[PageAttention约束](#pa_constraints)。
@@ -682,7 +682,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 > **关键参数说明**：
 >
 > - `atten_mask`：shape (1, Q_S, KV_S)，bool类型。更多mask shape选项见[atten_mask参数说明](#详细参数说明)。
-> - `sparse_mode=0`：defaultMask模式，使用`pre_tokens`和`next_tokens`控制计算范围。此处为完整双向attention。
+> - `sparse_mode=0`：defaultMask模式，使用`pre_tokens`/`next_tokens`控制计算范围。此处为完整双向attention。
 > -也可使用`sparse_mode=3`（rightDownCausal）+ 2048×2048优化mask。各模式含义见[sparse_mode枚举说明](#sparse_mode-枚举说明)。
 
 ### 示例4：MLA + Decode（Multi-head Latent Attention）
@@ -863,9 +863,9 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 
 > **关键参数说明**：
 >
-> -使用KV分离模式（优于`antiquant_scale`和`antiquant_offset`模式）。
+> -使用KV分离模式（优于`antiquant_scale`/`antiquant_offset`模式）。
 > - `key_antiquant_mode=0`：per-channel模式。此处Q_S=1 + query bf16 + kv int8 + key/value_antiquant_scale bf16 → 满足[Q_S = 1约束](#qs_eq_1)中的kv伪量化参数分离条件。
-> -当`key_antiquant_scale`和`value_antiquant_scale`与`antiquant_scale`同时传入时，以KV分离参数为准。
+> -当`key_antiquant_scale`/`value_antiquant_scale`与`antiquant_scale`同时传入时，以KV分离参数为准。
 > -各模式的shape和dtype要求见[key_antiquant_mode枚举表](#key_antiquant_mode--value_antiquant_mode-枚举说明)。
 
 ### 示例8：Prefix + Prefill（共享前缀）
