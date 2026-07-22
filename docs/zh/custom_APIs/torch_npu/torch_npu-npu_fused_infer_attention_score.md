@@ -278,7 +278,7 @@ torch_npu.npu_fused_infer_attention_score(
 - **softmax_lse** (`Tensor`)：softmax的log-sum-exp值（用于Ring Attention分布式场景合并各设备结果）。
   - `softmax_lse_flag=True`时：
     - shape (B, Q_N, Q_S, 1)，dtype `float32`
-    - `input_layout`为TND/NTD_TND时：shape (T, Q_N, 1)，dtype `float32`
+    - `input_layout`为TND/NTD_TND时：shape (T, Q_N, 1)，dtype 为`float32`
   - `softmax_lse_flag=False`时：shape (1,)，值为0的Tensor。
 
   Ring Attention多设备合并公式：
@@ -310,7 +310,7 @@ torch_npu.npu_fused_infer_attention_score(
 | `float16`/`bfloat16` | `int8` | `quant_scale2` | `quant_offset2` | `dequant_scale1, quant_scale1, dequant_scale2` |
 
 - `quant_scale2`和`quant_offset2`支持pertensor或perchannel，dtype支持`float32`/`bfloat16`。`quant_offset2`传入时须与`quant_scale2`类型和shape一致。
-- 输出`int8`，`quant_scale2`和`quant_offset2` perchannel时：不支持左padding、Ring Attention或D非32字节对齐。
+- 输出`int8`，参数`quant_scale2`和`quant_offset2` 为perchannel时：不支持左padding、Ring Attention或D非32字节对齐。
 - 输出`int8`时暂不支持sparse=band且preTokens/nextTokens为负。
 - 输出为`int8`且`quant_offset2`非None时，若矩阵存在不参与计算的行，会触发拦截（建议外部做后量化）。
 - `input_layout`仅支持BSH、BNSD、BSND、BNSD_BSND。
@@ -800,7 +800,7 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 > **关键参数说明**：
 >
 > -使用KV分离模式（优于`antiquant_scale`和`antiquant_offset`模式）。
-> - `key_antiquant_mode=0`：perchannel模式。此处Q_S=1 + query bfloat16 + kv int8 + key/value_antiquant_scale bfloat16 → 满足[Q_S = 1约束](#qs_eq_1)中的kv伪量化参数分离条件。
+> - `key_antiquant_mode=0`：perchannel模式。此处Q_S=1 + query `bfloat16` + kv `int8` + key/value_antiquant_scale `bfloat16` → 满足[Q_S = 1约束](#qs_eq_1)中的kv 伪量化参数分离条件。
 > -当`key_antiquant_scale`和`value_antiquant_scale`与`antiquant_scale`同时传入时，以KV分离参数为准。
 > -各模式的shape和dtype要求见[key_antiquant_mode枚举表](#key_antiquant_mode--value_antiquant_mode-枚举说明)。
 
