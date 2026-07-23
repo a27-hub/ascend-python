@@ -434,7 +434,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         - page attention场景下，`block_table`必须为二维，第一维长度需等于B，第二维长度不能小于maxBlockNumPerSeq（maxBlockNumPerSeq为不同batch中最大actual\_seq\_kvlen对应的block数量）。
         - page attention场景下，当query的input\_layout为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）和（blocknum, KV\_N, blocksize, D）两种格式，当query的input\_layout为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）一种格式。blocknum不能小于根据actual\_seq\_kvlen和blockSize计算的每个batch的block数量之和。且key和value的shape需保证一致。
         - page attention场景下，kv cache排布为（blocknum, KV\_N, blocksize, D）时性能通常优于kv cache排布为（blocknum, blocksize, H）时的性能，建议优先选择（blocknum, KV\_N, blocksize, D）格式。
-        - page attention开启场景下，当输入kv cache排布格式为（blocknum, blocksize, H），且numKvHeads \* headDim 超过64k时，受硬件指令约束，会被拦截报错。可通过开启GQA（减小 numKvHeads）或调整kv cache排布格式为（blocknum, numKvHeads, blocksize, D）解决。
+        - page attention开启场景下，当输入kv cache排布格式为（blocknum, blocksize, H），且numKvHeads \* headDim超过64k时，受硬件指令约束，会被拦截报错。可通过开启GQA（减小numKvHeads）或调整kv cache排布格式为（blocknum, numKvHeads, blocksize, D）解决。
         - page attention场景的参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围。
 
     - kv伪量化参数分离：
@@ -599,16 +599,16 @@ tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 
 ### 示例 2：GQA + KV NZ + PageAttention
 
-**场景说明**：Decode 阶段，Q_S=1（逐 token 增量推理）。GQA 下 KV_N=1 < Q_N=10，KV Cache 以 Page Attention 方式管理，`key`/`value` 为 INT8 并通过伪量化反量化为 FLOAT16 计算，选择NZ格式时仅支持高性能模式。
+**场景说明**：Decode阶段，Q_S=1（逐token增量推理）。GQA下KV_N=1 < Q_N=10，KV Cache以Page Attention方式管理，`key`/`value` 为int8并通过伪量化反量化为float16计算，选择NZ格式时仅支持高性能模式。
 
 **关键参数**：
 
-- `num_query_heads=10, num_key_value_heads=1`：必传，GQA支持组合：(10,1)/(64,8)/(80,8)/(128,16)
-- `block_table=128`：必传，开启 PageAttention，仅支持128或512
-- `dequant_scale_value, dequant_scale_key`：使用per-channel伪量化必传，dtype固定为bfloat16
-- `key_quant_mode=0,value_quant_mode=0`：使用per-channel伪量化必传，固定为0
-- `key, value`: 必传，类型为int8，NZ格式[blockNum, KV_N, D/32, blockSize, 32]
-- `inner_precise=1`：必传，KV NZ格式约束下仅支持高性能模式
+- `num_query_heads=10, num_key_value_heads=1`：必传，GQA支持组合：(10,1)/(64,8)/(80,8)/(128,16)。
+- `block_table=128`：必传，开启PageAttention，仅支持128或512。
+- `dequant_scale_value, dequant_scale_key`：使用per-channel伪量化必传，dtype固定为bfloat16。
+- `key_quant_mode=0,value_quant_mode=0`：使用per-channel伪量化必传，固定为0。
+- `key, value`: 必传，类型为int8，NZ格式[blockNum, KV_N, D/32, blockSize, 32]。
+- `inner_precise=1`：必传，KV NZ格式约束下仅支持高性能模式。
 
 **相关约束**：[GQA伪量化+KV NZ格式约束](#gqa伪量化kv-nz格式约束)，[增量推理约束](#q_s1增量推理约束)
 
@@ -620,24 +620,24 @@ import math
 B, Q_N, Q_S, D = 1, 10, 1, 128
 KV_N = 1            # 组合 (10, 1)
 block_size = 128     # 仅支持 128 或 512
-KV_S = 1024          # key/value 序列长度
+KV_S = 1024          # key/value序列长度
 
-# 计算 block 数量
+# 计算block数量
 block_num = (KV_S + block_size - 1) // block_size
 
 # query: bfloat16, BNSD
 q = torch.randn(B, Q_N, Q_S, D, dtype=torch.bfloat16).npu()
 
-# key/value: int8, NZ 格式 [blockNum, KV_N, D/32, blockSize, 32]
+# key/value: int8, NZ格式 [blockNum, KV_N, D/32, blockSize, 32]
 k = torch.randint(-128, 127, (block_num, KV_N, D // 32, block_size, 32), dtype=torch.int8).npu()
 v = torch.randint(-128, 127, (block_num, KV_N, D // 32, block_size, 32), dtype=torch.int8).npu()
 
-# dequant_scale: perchannel 模式, bfloat16
-# layout=BNSD 时 shape 为 [KV_N, 1, D]
+# dequant_scale: perchannel模式, bfloat16
+# layout=BNSD时shape为 [KV_N, 1, D]
 dequant_scale_key = torch.randn(KV_N, 1, D, dtype=torch.bfloat16).npu()
 dequant_scale_value = torch.randn(KV_N, 1, D, dtype=torch.bfloat16).npu()
 
-# block_table: page attention 映射表
+# block_table: page attention映射表
 block_table = torch.arange(block_num, dtype=torch.int32).reshape(B, block_num).npu()
 
 softmax_scale = 1.0 / math.sqrt(D)
@@ -654,9 +654,9 @@ out, _ = torch_npu.npu_fused_infer_attention_score_v2(q, k, v,
 print(out)
 ```
 
-### 示例 3：MLA + TND 约束
+### 示例 3：MLA + TND约束
 
-**场景说明**：MLA 场景，独立传入 RoPE 位置编码信息。TND layout，D=128。
+**场景说明**：MLA场景，独立传入RoPE位置编码信息。TND layout，D=128。
 
 **关键参数**：
 
@@ -675,9 +675,9 @@ Q_N, KV_N = 8, 8
 D = 128
 D_rope = 64
 
-# TND 场景：T 为所有 Batch 的 seqlen 累加和
-# actual_seq_qlen 表示每个 batch 的累加 seqlen
-# 单 batch 场景: T = S
+# TND场景：T为所有Batch的seqlen累加和
+# actual_seq_qlen表示每个batch的累加seqlen
+# 单batch场景: T = S
 S_q = 164
 S_kv = 1024
 
@@ -693,8 +693,8 @@ v = torch.randn(S_kv, KV_N, D, dtype=torch.float16).npu()
 query_rope = torch.randn(S_q, Q_N, D_rope, dtype=torch.float16).npu()
 key_rope   = torch.randn(S_kv, KV_N, D_rope, dtype=torch.float16).npu()
 
-# TND 场景必须传入 actual_seq_qlen / actual_seq_kvlen
-# 元素为当前 batch 与之前所有 batch 的 S 累加和（单 batch 直接给 S 值）
+# TND场景必须传入actual_seq_qlen / actual_seq_kvlen
+# 元素为当前batch与之前所有batch的S累加和（单batch直接给S值）
 actual_seq_qlen = [S_q]
 actual_seq_kvlen = [S_kv]
 
@@ -704,14 +704,14 @@ out, _ = torch_npu.npu_fused_infer_attention_score_v2(
     q, k, v,
     query_rope=query_rope,
     key_rope=key_rope,
-    actual_seq_qlen=actual_seq_qlen,       # TND 场景必须传入
-    actual_seq_kvlen=actual_seq_kvlen,     # TND 场景必须传入
+    actual_seq_qlen=actual_seq_qlen,       # TND场景必须传入
+    actual_seq_kvlen=actual_seq_kvlen,     # TND场景必须传入
     num_query_heads=Q_N,
     num_key_value_heads=KV_N,
-    input_layout="TND",                    # TND 布局
+    input_layout="TND",                    # TND布局
     softmax_scale=softmax_scale,
-    sparse_mode=0,                         # 不传 atten_mask
-    inner_precise=1                        # float16 仅支持 0 或 1
+    sparse_mode=0,                         # 不传atten_mask
+    inner_precise=1                        # 仅支持 0 或 1
 )
 
 print(out)  #tensor([[[...]]], device='npu:0', dtype=torch.float16)
@@ -737,9 +737,9 @@ import math
 S_q = 164
 S_kv = 1024
 Q_N, KV_N = 8, 8
-D = 128               # value 的 D ≤ 128
+D = 128               # value的D ≤ 128
 
-# query/key/value: TND 布局, bfloat16
+# query/key/value: TND布局, bfloat16
 q = torch.randn(S_q, Q_N, D, dtype=torch.bfloat16).npu()
 k = torch.randn(S_kv, KV_N, D, dtype=torch.bfloat16).npu()
 v = torch.randn(S_kv, KV_N, D, dtype=torch.bfloat16).npu()
@@ -747,7 +747,7 @@ v = torch.randn(S_kv, KV_N, D, dtype=torch.bfloat16).npu()
 # learnable_sink: shape=(Q_N,), dtype=bfloat16
 learnable_sink = torch.randn(Q_N, dtype=torch.bfloat16).npu()
 
-# TND 场景必须传入 actual_seq_qlen / actual_seq_kvlen
+# TND场景必须传入actual_seq_qlen / actual_seq_kvlen
 actual_seq_qlen = [S_q]
 actual_seq_kvlen = [S_kv]
 
@@ -755,7 +755,7 @@ softmax_scale = 1.0 / math.sqrt(D)
 
 out, _ = torch_npu.npu_fused_infer_attention_score_v2(
     q, k, v,
-    learnable_sink=learnable_sink,          # 可学习的 Sink Token
+    learnable_sink=learnable_sink,          # 可学习的Sink Token
     actual_seq_qlen=actual_seq_qlen,
     actual_seq_kvlen=actual_seq_kvlen,
     num_query_heads=Q_N,
@@ -774,8 +774,8 @@ print(out)
 
 **关键参数**：
 
-- `quant_scale_out`: 必传，bfloat16 输入时同时支持 float32 / bfloat16
-- `quant_offset_out`: 可选，类型和shape与scale一致，不传则默认0
+- `quant_scale_out`: 必传，bfloat16输入时同时支持float32 / bfloat16。
+- `quant_offset_out`: 可选，类型和shape与scale一致，不传则默认0。
 
 **相关约束**：[通用约束](#通用约束)
 
@@ -793,16 +793,16 @@ q = torch.randn(B, Q_N, Q_S, D, dtype=torch.bfloat16).npu()
 k = torch.randn(B, KV_N, KV_S, D, dtype=torch.bfloat16).npu()
 v = torch.randn(B, KV_N, KV_S, D, dtype=torch.bfloat16).npu()
 
-# quant_scale_out: 必传，bfloat16 输入时同时支持 float32 / bfloat16
-# perchannel: 输出 BNSD 推荐 (1, Q_N, 1, D)
+# quant_scale_out: 必传，bfloat16 输入时同时支持float32 / bfloat16
+# perchannel: 输出BNSD推荐 (1, Q_N, 1, D)
 quant_scale_out = torch.randn(1, Q_N, 1, D, dtype=torch.float32).npu()
-# quant_offset_out: 可选，类型和 shape 与 scale 一致，不传则默认0
+# quant_offset_out: 可选，类型和shape与scale一致，不传则默认0
 
 softmax_scale = 1.0 / math.sqrt(D)
 
 out, _ = torch_npu.npu_fused_infer_attention_score_v2(
     q, k, v,
-    quant_scale_out=quant_scale_out,        # 输出 int8 必传
+    quant_scale_out=quant_scale_out,        # 输出int8 必传
     num_query_heads=Q_N,
     input_layout="BNSD",
     softmax_scale=softmax_scale,
@@ -818,9 +818,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 
 **场景说明**：KV分离传入`dequant_scale_key`与`dequant_scale_value`，与`torch_npu.npu_fused_infer_attention_score`的同名示例相比用法相同，仅有参数名的差异。
 
-**关键参数**：
-
-- `key_quant_mode,value_quant_mode`：必传，取值需保持一致，为0时使用perchannel模式。
+**关键参数**：`key_quant_mode,value_quant_mode`：必传，取值需保持一致，为0时使用perchannel模式。
 
 **相关约束**：[Q_S=1（增量推理）约束](#q_s1增量推理约束)
 
@@ -839,20 +837,20 @@ q = torch.randn(B, Q_N, Q_S, D, dtype=torch.bfloat16).npu()
 k = torch.randint(-128, 127, (B, KV_N, KV_S, D), dtype=torch.int8).npu()
 v = torch.randint(-128, 127, (B, KV_N, KV_S, D), dtype=torch.int8).npu()
 
-# dequant_scale: 必传，perchannel，dtype 与 query 一致
+# dequant_scale: 必传，perchannel，dtype与query一致
 # shape = (1, KV_N, 1, D)
 dequant_scale_key   = torch.randn(1, KV_N, 1, D, dtype=torch.bfloat16).npu()
 dequant_scale_value = torch.randn(1, KV_N, 1, D, dtype=torch.bfloat16).npu()
-# dequant_offset: 可选，shape 与 scale 一致
+# dequant_offset: 可选，shape与scale一致
 
 softmax_scale = 1.0 / math.sqrt(D)
 
 out, _ = torch_npu.npu_fused_infer_attention_score_v2(
     q, k, v,
-    dequant_scale_key=dequant_scale_key,            # KV 分离：key 反量化因子
-    dequant_scale_value=dequant_scale_value,        # KV 分离：value 反量化因子
+    dequant_scale_key=dequant_scale_key,            # KV分离：key反量化因子
+    dequant_scale_value=dequant_scale_value,        # KV分离：value反量化因子
     key_quant_mode=0,                               # perchannel
-    value_quant_mode=0,                             # perchannel，需与 key 一致
+    value_quant_mode=0,                             # perchannel，需与key一致
     num_query_heads=Q_N,
     num_key_value_heads=KV_N,
     input_layout="BNSD",
@@ -867,9 +865,7 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 
 **场景说明**：当显式传入`backend="npugraph_ex"`时，使用[aclgraph模式](https://gitcode.com/Ascend/torchair/blob/master/docs/zh/npugraph_ex/quick_start.md)。
 
-**关键参数**：
-
-- `backend="npugraph_ex"`：`torch.compile`必传，使用aclgraph模式。
+**关键参数**：`backend="npugraph_ex"`：`torch.compile`必传，使用aclgraph模式。
 
 **相关约束**：[通用约束](#通用约束)
 
