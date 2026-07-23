@@ -61,7 +61,6 @@ jobs:
           rm -rf *
           # .ci/ 仅存在于默认分支，需先拉取
           git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
-          ls -l cie/.ci/common
           bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
           pwd
           cd ./CODE
@@ -72,7 +71,6 @@ jobs:
           echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
           echo "py_version: ${{ inputs.py_version }}"
           echo "pr_id: ${{ env.pr_id }}"
-          echo "ATOMGIT_WORKSPACE: ${{ inputs.ATOMGIT_WORKSPACE }}"
           echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
 
 
