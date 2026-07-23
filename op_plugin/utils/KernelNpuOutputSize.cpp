@@ -2168,6 +2168,14 @@ std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> tri
     );
 }
 
+c10::SmallVector<int64_t, SIZE> npu_gelu_mul_output_size(const at::Tensor &input)
+{
+    auto shape = array_to_small_vector(input.sizes());
+    int64_t last_dim_idx = input.dim() - 1;
+    shape[last_dim_idx] = shape[last_dim_idx] / 2;
+    return shape;
+}
+
 c10::SmallVector<int64_t, SIZE> lstm_npu_output_size(const at::Tensor &input, at::TensorList params, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
 {
     const at::Tensor X1 = params[0];

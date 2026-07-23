@@ -2555,11 +2555,6 @@ def npu_add_layer_norm_meta(x1, x2, gamma, beta, epsilon=1e-5, additional_output
     return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
 
 
-@impl(m, "npu_gelu_quant")
-def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None,
-                        approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
-    if not (quant_mode == "dynamic" or quant_mode == "static"):
-        raise RuntimeError("Parameter(quant_mode) must be 'dynamic' or 'static', got " + quant_mode + ops_error(ErrCode.VALUE))
 
     out_scale = None
     if quant_mode == "static":
