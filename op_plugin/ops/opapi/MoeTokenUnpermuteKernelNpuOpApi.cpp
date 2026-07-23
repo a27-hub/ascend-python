@@ -16,14 +16,26 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/KernelNpuOutputSize.h"
-#include "op_plugin/utils/OpUtils.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/core/npu/GetCANNInfo.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 
 #include <array>
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list = std::tuple<at::Tensor, at::Tensor>;
+
+namespace {
+bool is_support_optional_permuted_tokens()
+{
+    const static bool result = []() -> bool {
+        return c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
+               IsGteCANNVersion("9.1.0", "CANN");
+    }();
+    return result;
+}
+}  // namespace
 
 tensor_list _npu_moe_token_unpermute(
     const at::Tensor &permuted_tokens,
@@ -47,7 +59,8 @@ tensor_list _npu_moe_token_unpermute(
         unpermuted_tokens);
 
     bool has_probs = probs.has_value() && probs.value().defined();
-    bool need_save_permuted_tokens = has_probs || !op_plugin::utils::is_gte_cann_version_910();
+    bool need_save_permuted_tokens =
+        has_probs || !is_support_optional_permuted_tokens();
     at::Tensor permuted_tokens_for_backward = need_save_permuted_tokens ? permuted_tokens : at::Tensor();
     return std::make_tuple(unpermuted_tokens, permuted_tokens_for_backward);
 }
