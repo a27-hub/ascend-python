@@ -266,6 +266,10 @@ class TestNpuFusedPermuteAndUnpermute():
     def _storage_data_ptr(tensor):
         return tensor.untyped_storage().data_ptr()
 
+    @staticmethod
+    def _is_ascend950():
+        return torch_npu.npu.get_device_name().startswith("Ascend950")
+
     def _run_unpermute_saved_tensor_case(self, num_tokens, hidden_size, topk, num_experts, use_probs):
         token_dtype = torch.bfloat16
         tokens = torch.randn(num_tokens, hidden_size).npu().to(token_dtype).requires_grad_(True)
@@ -308,8 +312,12 @@ class TestNpuFusedPermuteAndUnpermute():
         saved = self._run_unpermute_saved_tensor_case(
             num_tokens=64, hidden_size=128, topk=1, num_experts=8, use_probs=False)
 
-        assert saved["permuted_storage_ptr"] not in saved["saved_storage_ptrs"], \
-            "permuted_tokens should not be saved for backward when probs is None"
+        if self._is_ascend950():
+            assert saved["permuted_storage_ptr"] in saved["saved_storage_ptrs"], \
+                "permuted_tokens should be saved for backward on Ascend950 fallback path"
+        else:
+            assert saved["permuted_storage_ptr"] not in saved["saved_storage_ptrs"], \
+                "permuted_tokens should not be saved for backward when probs is None"
 
     def test_unpermute_backward_saved_tensors_with_probs(self):
         saved = self._run_unpermute_saved_tensor_case(

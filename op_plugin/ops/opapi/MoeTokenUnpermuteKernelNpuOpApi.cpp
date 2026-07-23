@@ -47,7 +47,8 @@ tensor_list _npu_moe_token_unpermute(
         unpermuted_tokens);
 
     bool has_probs = probs.has_value() && probs.value().defined();
-    bool need_save_permuted_tokens = has_probs || !op_plugin::utils::is_gte_cann_version_910();
+    bool need_save_permuted_tokens =
+        has_probs || !op_plugin::utils::is_support_moe_unpermute_optional_permuted_tokens();
     at::Tensor permuted_tokens_for_backward = need_save_permuted_tokens ? permuted_tokens : at::Tensor();
     return std::make_tuple(unpermuted_tokens, permuted_tokens_for_backward);
 }

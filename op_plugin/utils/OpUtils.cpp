@@ -465,6 +465,18 @@ bool is_gte_cann_version_910()
     return result;
 }
 
+bool is_support_moe_unpermute_optional_permuted_tokens()
+{
+    const static bool result = []() -> bool {
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+            return false;
+        }
+
+        return IsGteCANNVersion("9.1.0", "CANN");
+    }();
+    return result;
+}
+
 const std::string DTypeToString(int64_t input_type)
 {
     return c10_npu::IsCustomDType(input_type) ?
