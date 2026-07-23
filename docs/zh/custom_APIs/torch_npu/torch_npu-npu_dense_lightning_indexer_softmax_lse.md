@@ -126,3 +126,24 @@ $，数据格式支持$ND$，数据类型支持`float32`。
         pre_tokens=pre_tokens,
         next_tokens=next_tokens)
     ```
+
+- 图模式调用示例
+
+    该接口支持图模式（`torch.compile`），调用示例参考如下：
+
+    ```python
+    import torch
+    import torch_npu
+
+    B, N1, N2, S1, S2, D = 1, 32, 1, 512, 2048, 128
+    query_index = torch.randn(B, S1, N1, D, dtype=torch.float16, device=torch.device('npu'))
+    key_index = torch.randn(B, S2, N2, D, dtype=torch.float16, device=torch.device('npu'))
+    weights = torch.randn(B, S1, N1, dtype=torch.float16, device=torch.device('npu'))
+
+    def forward(query_index, key_index, weights):
+        return torch_npu.npu_dense_lightning_indexer_softmax_lse(
+            query_index, key_index, weights, layout='BSND', sparse_mode=3)
+
+    compiled_forward = torch.compile(forward, backend="npugraph_ex")
+    softmax_max_index, softmax_sum_index = compiled_forward(query_index, key_index, weights)
+    ```

@@ -77,7 +77,6 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
 
         return softmax_max_out.reshape(-1, B*k_head_num*q_seq_len_1batch), softmax_sum_out.reshape(-1, B*k_head_num*q_seq_len_1batch)
 
-    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_bsnd_dense_lightning_indexer_softmax_lse_eager(self):
         b = 20
         s1 = 512
@@ -113,7 +112,6 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
         self.assertRtolEqual(npu_out, cpu_out, prec=1.e-3)
         self.assertRtolEqual(npu_out1, cpu_out1, prec=1.e-3)
 
-    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_tnd_dense_lightning_indexer_softmax_lse_eager(self):
         b = 2
         s1 = 512

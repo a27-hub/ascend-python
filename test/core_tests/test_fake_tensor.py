@@ -5310,5 +5310,33 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
 
+class TestNpuDenseLightningIndexerSoftmaxLse(TestCase):
+    def test_npu_dense_lightning_indexer_softmax_lse_meta(self):
+        # BSND layout: query_index (B,S1,Nidx1,D) -> output (B, Nidx2, S1), dtype float32
+        with FakeTensorMode():
+            query_index = torch.randn(1, 512, 32, 128, dtype=torch.float16, device='npu')
+            key_index = torch.randn(1, 512, 1, 128, dtype=torch.float16, device='npu')
+            weights = torch.randn(1, 512, 32, dtype=torch.float16, device='npu')
+            softmax_max, softmax_sum = torch_npu.npu_dense_lightning_indexer_softmax_lse(
+                query_index, key_index, weights, layout='BSND', sparse_mode=3)
+            self.assertEqual(softmax_max.shape, torch.Size([1, 1, 512]))
+            self.assertEqual(softmax_sum.shape, torch.Size([1, 1, 512]))
+            self.assertEqual(softmax_max.dtype, torch.float32)
+            self.assertEqual(softmax_sum.dtype, torch.float32)
+
+        # TND layout: query_index (T1,Nidx1,D) -> output (Nidx2, T1), dtype float32
+        with FakeTensorMode():
+            query_index = torch.randn(512, 32, 128, dtype=torch.float16, device='npu')
+            key_index = torch.randn(512, 1, 128, dtype=torch.float16, device='npu')
+            weights = torch.randn(512, 32, dtype=torch.float16, device='npu')
+            softmax_max, softmax_sum = torch_npu.npu_dense_lightning_indexer_softmax_lse(
+                query_index, key_index, weights, actual_seq_qlen=[512], actual_seq_klen=[512],
+                layout='TND', sparse_mode=3)
+            self.assertEqual(softmax_max.shape, torch.Size([1, 512]))
+            self.assertEqual(softmax_sum.shape, torch.Size([1, 512]))
+            self.assertEqual(softmax_max.dtype, torch.float32)
+            self.assertEqual(softmax_sum.dtype, torch.float32)
+
+
 if __name__ == "__main__":
     run_tests()

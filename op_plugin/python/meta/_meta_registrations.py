@@ -2243,14 +2243,29 @@ def npu_dense_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_i
 
 
 @impl(m, "npu_dense_lightning_indexer_softmax_lse")
-def npu_dense_lightning_indexer_softmax_lse_meta(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
-    if layout == "TND":
-        output_size = [key_index.size(1), query_index.size(0)]
+def npu_dense_lightning_indexer_softmax_lse_meta(query_index, key_index, weights, *, actual_seq_qlen=None,
+    actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807,
+    next_tokens=9223372036854775807):
+    # NOTE: sync with C++ shape derivation in DenseLightningIndexerSoftmaxLseKernelNpuOpApi.cpp
+    torch._check(
+        layout == "BSND" or layout == "TND",
+        lambda: "layout only supports BSND or TND, but got " + str(layout) + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        query_index.dtype == key_index.dtype,
+        lambda: "query_index and key_index should have the same dtype, but got query_index "
+            + str(query_index.dtype) + " and key_index " + str(key_index.dtype) + ops_error(ErrCode.PARAM),
+    )
+    # softmax_max / softmax_sum share the same shape (dtype always float32):
+    #   BSND: query_index (B,S1,Nidx1,D), key_index (B,S2,Nidx2,D) -> (B, Nidx2, S1)
+    #   TND:  query_index (T1,Nidx1,D),   key_index (T2,Nidx2,D)   -> (Nidx2, T1)
+    if layout == "BSND":
+        softmax_shape = [query_index.size(0), key_index.size(2), query_index.size(1)]
     else:
-        output_size = [query_index.size(0), key_index.size(2), query_index.size(1)]
-    softmax_max_out = torch.empty(output_size, dtype=torch.float32, device='meta')
-    softmax_sum_out = torch.empty(output_size, dtype=torch.float32, device='meta')
-    return (softmax_max_out, softmax_sum_out)
+        softmax_shape = [key_index.size(1), query_index.size(0)]
+    softmax_max = torch.empty(softmax_shape, dtype=torch.float32, device='meta')
+    softmax_sum = torch.empty(softmax_shape, dtype=torch.float32, device='meta')
+    return (softmax_max, softmax_sum)
 
 
 @impl(m, "npu_quant_fusion_attention_backward")
