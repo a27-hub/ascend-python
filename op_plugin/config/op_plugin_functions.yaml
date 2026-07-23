@@ -6505,22 +6505,9 @@ custom:
         dtype: x
       exec: aclnnMhcPost
 
-  - func: npu_mhc_post_backward(Tensor grad_output, Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> (Tensor, Tensor, Tensor, Tensor)
+  - func: npu_mhc_post_backward(Tensor grad_y, Tensor x, Tensor? h_res, Tensor h_out, Tensor h_post) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
-    gen_opapi:
-      out0:
-        size: x
-        dtype: x
-      out1:
-        size: h_res
-        dtype: h_res
-      out2:
-        size: h_out
-        dtype: h_out
-      out3:
-        size: h_post
-        dtype: h_post
-      exec: aclnnMhcPostBackward
+    exposed: all_version
 
   - func: npu_mm_all_reduce_base(Tensor x1, Tensor x2, str hcom, *, str reduce_op='sum', Tensor? bias=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? x3=None, Tensor? dequant_scale=None, Tensor? pertoken_scale=None, Tensor? comm_quant_scale_1=None, Tensor? comm_quant_scale_2=None, int antiquant_group_size=0, int comm_turn=0, int[]? group_sizes=None, int? y_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? dequant_scale_dtype=None, int? pertoken_scale_dtype=None, int comm_quant_mode=0, str? comm_mode=None) -> Tensor
     op_api: all_version
@@ -7093,10 +7080,6 @@ custom:
   - func: npu_weight_quant_batchmatmul(Tensor x, Tensor weight, Tensor antiquant_scale, Tensor? antiquant_offset=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? bias=None, int antiquant_group_size=0, int inner_precise=0, int? weight_dtype=None) -> Tensor
     op_api: all_version
     exposed: all_version
-    internal_format_opapi: all_version
-
-  - func: npu_weight_quant_preprocess(Tensor weight, Tensor weight_scale, int x_dtype, int weight_dtype, int weight_scale_dtype, Tensor? weight_offset=None, Tensor? bias=None, int? x_scale_dtype=None, int? k_group_size=0) -> (Tensor, Tensor, Tensor, Tensor)
-    op_api: all_version
     internal_format_opapi: all_version
 
   - func: npu_transpose_batchmatmul(Tensor input, Tensor weight, *, Tensor? bias=None, Tensor? scale=None, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1) -> Tensor
