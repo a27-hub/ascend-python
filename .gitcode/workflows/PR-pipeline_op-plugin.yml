@@ -95,7 +95,7 @@ stages:
               region: cn-north-4
               name: ${{ secrets.IAM_USER_NAME }}
               password: ${{ secrets.IAM_USER_PASSWORD }}
-              domain-name: hwstaff_jsz_gjl
+              domain-name: ${{ secrets.IAM_DOMAIN_NAME }}
           - name: codecheck
             uses: codecheck_gitcode_v2
             with:
