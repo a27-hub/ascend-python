@@ -12,7 +12,7 @@ on:
   pull_request_comment:
     types: [created]
     branches: [ '*' ]
-    comments: [ '^(?:\/)?compile*' ]
+    comments: [ '^(?:\/)?compile_test*' ]
 inputs:
   repo:
     type: string
