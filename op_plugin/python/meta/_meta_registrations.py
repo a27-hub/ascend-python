@@ -2555,16 +2555,6 @@ def npu_add_layer_norm_meta(x1, x2, gamma, beta, epsilon=1e-5, additional_output
     return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
 
 
-@impl(m, "npu_gelu_mul")
-def npu_gelu_mul_meta(input_tensor, *, approximate="none"):
-    output_shape = list(input_tensor.shape)
-    last_dim = input_tensor.shape[-1]
-    output_shape[-1] = last_dim // 2
-    output_shape = tuple(output_shape)
-    output_dtype = input_tensor.dtype
-    return torch.empty(size=output_shape, dtype=output_dtype, device=torch.device("meta"))
-
-
 @impl(m, "npu_gelu_quant")
 def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None,
                         approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
@@ -7193,61 +7183,6 @@ def npu_multi_head_attention_backward_meta(query, key, value, query_weight, key_
 
     return (query_weight_grad, key_weight_grad, value_weight_grad, out_proj_weight_grad, query_grad,
             key_grad, value_grad, query_bias_grad, key_bias_grad, value_bias_grad, out_proj_bias_grad)
-
-
-@impl(m, "npu_rotate_quant")
-def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0, transpose_y=False):
-    BLOCK_SIZE_BASE_NUM = 32
-    ALIGN_NUM = 2
-    if transpose_y is not False:
-        raise RuntimeError("In the current CANN version, for aclnnRotateQuant, the parameter transpose_y only supports False. "
-                           "Please set transpose_y=False." + ops_error(ErrCode.PARAM))
-    dim_num = x.dim()
-    if axis < -dim_num or axis >= dim_num:
-        raise RuntimeError("Param (axis) is out of input dimension range [{0}, {1}]".format(-dim_num, dim_num - 1) +
-                           ops_error(ErrCode.PARAM))
-    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, dst_dtype if isinstance(dst_dtype, torch.dtype) else torch.int8)
-    is_int4_packed = (torch_dtype == torch.quint4x2)
-    is_fp4 = (torch_dtype == torch_npu.float4_e2m1fn_x2 or dst_dtype == 296)  # 296: enum value of torch_npu.float4_e2m1fn_x2
-    is_mx_type = (is_fp4 or torch_dtype == torch.float8_e5m2 or dst_dtype == 291 or torch_dtype == torch.float8_e4m3fn or dst_dtype == 292)  # 291: enum value of torch_npu.float8_e5m2, 292: enum value of torch_npu.float8_e4m3fn
-    if is_int4_packed:
-        if x.size(dim_num - 1) % 8:  # 8: int4 values packed per int32
-            raise RuntimeError("If dst_dtype is quint4x2, the last dim of input must be divisible by 8" +
-                               ops_error(ErrCode.NOT_SUPPORT))
-        output_shape = []
-        for dim in range(dim_num - 1):
-            output_shape.append(x.size(dim))
-        output_shape.append(x.size(dim_num - 1) // 8)
-        output = x.new_empty(output_shape, dtype=torch.int32)
-        scale_shape = [x.size(0)]
-        scale = x.new_empty(scale_shape, dtype=torch.float32)
-    elif is_fp4:
-        if x.size(dim_num - 1) % 2:  # 2: fp4 values packed per uint8
-            raise RuntimeError("If dst_dtype is float4_e2m1, the last dim of input must be divisible by 2" +
-                               ops_error(ErrCode.NOT_SUPPORT))
-        output_shape = []
-        for dim in range(dim_num - 1):
-            output_shape.append(x.size(dim))
-        output_shape.append(x.size(dim_num - 1) // 2)  # 2: fp4 values packed per uint8
-        output = x.new_empty(output_shape, dtype=torch.uint8)
-        scale_shape = [x.size(0)]
-        scale = x.new_empty(scale_shape, dtype=torch.float32)
-    else:
-        output_shape = list(x.shape)
-        output = x.new_empty(output_shape, dtype=torch_dtype)
-        scale_shape = [x.size(0)]
-        scale = x.new_empty(scale_shape, dtype=torch.float32)
-    if is_mx_type:
-        axis_change = axis if axis >= 0 else axis + dim_num
-        mxscale_shape = []
-        for dim in range(dim_num):
-            mxscale_shape.append(x.size(dim))
-        mxscale_shape.append(ALIGN_NUM)
-        dim_size = int(math.ceil(mxscale_shape[axis_change] / BLOCK_SIZE_BASE_NUM))
-        dim_size = (dim_size + ALIGN_NUM - 1) // ALIGN_NUM
-        mxscale_shape[axis_change] = dim_size
-        scale = x.new_empty(mxscale_shape, dtype=torch_npu.float8_e8m0fnu)
-    return output, scale
 
 
 @impl(m, "npu_quant_max")
