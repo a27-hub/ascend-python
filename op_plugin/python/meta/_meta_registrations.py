@@ -2242,32 +2242,6 @@ def npu_dense_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_i
     return (d_query_index, d_key_index, d_weights, loss)
 
 
-@impl(m, "npu_dense_lightning_indexer_softmax_lse")
-def npu_dense_lightning_indexer_softmax_lse_meta(query_index, key_index, weights, *, actual_seq_qlen=None,
-    actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807,
-    next_tokens=9223372036854775807):
-    # NOTE: sync with C++ shape derivation in DenseLightningIndexerSoftmaxLseKernelNpuOpApi.cpp
-    torch._check(
-        layout == "BSND" or layout == "TND",
-        lambda: "layout only supports BSND or TND, but got " + str(layout) + ops_error(ErrCode.PARAM),
-    )
-    torch._check(
-        query_index.dtype == key_index.dtype,
-        lambda: "query_index and key_index should have the same dtype, but got query_index "
-            + str(query_index.dtype) + " and key_index " + str(key_index.dtype) + ops_error(ErrCode.PARAM),
-    )
-    # softmax_max / softmax_sum share the same shape (dtype always float32):
-    #   BSND: query_index (B,S1,Nidx1,D), key_index (B,S2,Nidx2,D) -> (B, Nidx2, S1)
-    #   TND:  query_index (T1,Nidx1,D),   key_index (T2,Nidx2,D)   -> (Nidx2, T1)
-    if layout == "BSND":
-        softmax_shape = [query_index.size(0), key_index.size(2), query_index.size(1)]
-    else:
-        softmax_shape = [key_index.size(1), query_index.size(0)]
-    softmax_max = torch.empty(softmax_shape, dtype=torch.float32, device='meta')
-    softmax_sum = torch.empty(softmax_shape, dtype=torch.float32, device='meta')
-    return (softmax_max, softmax_sum)
-
-
 @impl(m, "npu_quant_fusion_attention_backward")
 def npu_quant_fusion_attention_backward(query, key, value, dy, head_num, input_layout, d_scale_q, d_scale_k, d_scale_v, d_scale_dy, *, p_scale=None, ds_scale=None, softmax_max=None, softmax_sum=None, attention_in=None, scale_value=1.0, query_dtype=None):
     if out_dtype is not None and out_dtype == 1:
@@ -4157,7 +4131,7 @@ def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dt
             lambda: "When output_dtype is int32, scale's dtype must be bfloat16 or float32, but scale's dtype is " +
                     str(scale.dtype) + ops_error(ErrCode.TYPE),
         )
-    if is_a4w4:
+    if is_a4w4 and pertoken_scale is None:
         torch._check(
             output_dtype == TORCH_DTYPE_MAP[torch.float16],
             lambda: "When input's dtype is int32, output_dtype must be float16, but output_dtype is " +
@@ -4986,6 +4960,8 @@ def npu_anti_quant_meta(x, scale, *, offset=None, dst_dtype=None, src_dtype=None
 def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=None):
     if dst_dtype is None:
         dst_dtype = torch.int32
+    elif dst_dtype == 3:#3 -> torch.int32
+        dst_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype)
     if dst_dtype != torch.int32 and dst_dtype != torch_npu.float4_e2m1fn_x2:
         raise RuntimeError("the dtype of dst_dtype must be int32, or mxfp4" + ops_error(ErrCode.NOT_SUPPORT))
     dim_num = x.dim()
