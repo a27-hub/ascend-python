@@ -34,10 +34,6 @@ inputs:
     type: string
     description: "工作目录"
     default: ${{ env.ATOMGIT_WORKSPACE }}
-  pr_id_wwq:
-    type: string
-    description: "PR ID"
-    default: "ComputingActionTest"
 
 env:
   img_master_arm: "pytorch_2.13.0_a2_aarch64_builder:20260709"
@@ -79,43 +75,6 @@ stages:
     name: stage_1
     select: selected_by_default
     jobs:
-      TEST:
-          name: TEST
-          runs-on: [ dedicate-hosted, x64, 2xlarge ]
-          container:
-            image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-            options: --user root
-          steps:
-            - name: checkout
-              uses: checkout
-              with:
-                ref: refs/merge-requests/${{ env.pr_id }}/merge
-            - name: TEST
-              run: |
-                echo "pr_id_wwq=${{ inputs.pr_id_wwq }}"
-
-      CodeCheck:
-        name: CodeCheck
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          - name: Login to CodeArts
-            uses: codearts-login
-            with:
-              region: cn-north-4
-              name: ${{ secrets.IAM_USER_NAME }}
-              password: ${{ secrets.IAM_USER_PASSWORD }}
-              domain-name: ${{ secrets.IAM_DOMAIN_NAME }}
-          - name: codecheck
-            uses: codecheck_gitcode_v2
-            with:
-              project_id: a9b188a62f334fc0963bcfb523426d17
-              task_name: wwq-op-plugin-test
-              branch: ${{ atomgit.event.pull_request.base.ref }}
 
       SCA:
         name: SCA
