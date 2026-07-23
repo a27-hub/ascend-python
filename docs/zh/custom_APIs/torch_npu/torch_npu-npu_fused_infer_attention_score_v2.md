@@ -550,6 +550,19 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
 ## 调用示例<a name="zh-cn_topic_0000001832267082_section14459801435"></a>
 
+### 不同示例场景参数参考
+
+按示例列举了不同场景的约束参考，**必选参数**代表主场景（如MHA、GQA等）下所必须的参数，关键可选参数代表示例所演示的场景（如非量化，KV NZ，TND约束等）需要的其他参数。
+
+| 场景 | 必选参数 | 关键可选参数 | 对应约束章节|
+| ---- | ---- | ---- | ---- |
+| MHA + 非量化 + BNSD | `query, key, value` | `num_query_heads, input_layout, softmax_scale` | [通用约束](#通用约束) |
+| GQA + KV NZ + Page Attention 约束 | `query, key, value, num_query_heads, num_key_value_heads` | `block_table, input_layout, dequant_scale_key, dequant_scale_value, softmax_scale, inner_precise` | [GQA伪量化+KV NZ格式约束](#gqa伪量化kv-nz格式约束)<br>[增量推理约束](#q_s1增量推理约束) |
+| MLA + TND 约束 | `query, key, value, query_rope, key_rope` | `input_layout, actual_seq_qlen, actual_seq_kvlen, softmax_scale` | [MLA场景约束](#mla场景约束) |
+| learnable_sink + 非量化 约束 | `query, key, value, learnable_sink` | `input_layout, num_query_heads, actual_seq_qlen, actual_seq_kvlen, softmax_scale` | [learnable_sink约束](#learnable_sink约束) |
+| int8后量化 | `query, key, value, quant_scale_out` | `input_layout, num_query_heads, softmax_scale` | [通用约束](#通用约束) |
+| 伪量化（KV 分离模式）+ Decode | `query, key, value, key_quant_mode, value_quant_mode, num_query_heads, num_key_value_heads` | `input_layout, softmax_scale, dequant_scale_key, dequant_scale_value` | [Q_S=1（增量推理）约束](#q_s1增量推理约束) |
+
 ### 示例 1：MHA + 非量化 + BNSD（PromptFlashAttention）
 
 **场景说明**：query/key/value 均为 FLOAT16，非量化场景，BNSD layout。无 BMM1/BMM2 量化参数，也不做输出量化。
