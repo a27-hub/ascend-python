@@ -4,7 +4,6 @@
     "v2.1": [],
     "v2.5": [],
     "v2.6": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -14,7 +13,6 @@
       "npu_masked_causal_conv1d_backward"
     ],
     "v2.7": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -27,7 +25,6 @@
       "npu_renorm_backward"
     ],
     "v2.8": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -40,7 +37,6 @@
       "npu_renorm_backward"
     ],
     "v2.9": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -53,7 +49,6 @@
       "npu_renorm_backward"
     ],
     "v2.10": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -66,7 +61,6 @@
       "npu_renorm_backward"
     ],
     "v2.11": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -79,7 +73,6 @@
       "npu_renorm_backward"
     ],
     "v2.12": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -92,7 +85,6 @@
       "npu_renorm_backward"
     ],
     "v2.13": [
- 	  "npu_gelu_mul",
  	  "npu_clipped_swiglu",
  	  "npu_sim_exponential_",
  	  "npu_fused_floyd_attention",
@@ -105,7 +97,6 @@
       "npu_renorm_backward"
  	],
     "v2.14": [
-      "npu_gelu_mul",
       "npu_clipped_swiglu",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
@@ -223,7 +214,6 @@
       "npu_mhc_post_backward",
       "npu_mhc_pre",
       "npu_chunk_gated_delta_rule",
-      "npu_rotate_quant",
       "npu_mhc_pre_backward",
       "npu_quant_max"
     ]
