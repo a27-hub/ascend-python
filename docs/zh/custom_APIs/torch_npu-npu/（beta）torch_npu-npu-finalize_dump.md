@@ -12,7 +12,7 @@
 
 ## 功能说明
 
-结束dump。配置前需要确保环境变量`NPU_DUMP_ENABLE=1`已设置。
+结束dump，并触发dump数据落盘。调用前需确保已通过`torch_npu.npu.init_dump()`初始化dump，否则会因dump未初始化而报错。
 
 ## 函数原型
 
