@@ -44,7 +44,7 @@
 
 ## API清单
 
- 当使用<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>或<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>，[表1](#默认不支持确定性计算的API列表-1)所示API默认不支持确定性计算，需手动开启确定性计算方可支持。
+ 当使用<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>或<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>时，[表1](#默认不支持确定性计算的API列表-1)所示API默认不支持确定性计算，需手动开启确定性计算方可支持。
 
  **表 1** API列表<a id="默认不支持确定性计算的API列表-1"></a>
 
@@ -60,6 +60,8 @@
 
 | API |
 |-----|
-| `torch_npu.npu_scatter_nd_update` / `torch_npu.npu_scatter_nd_update_` |
-| `torch_npu.scatter_update` / `torch_npu.scatter_update_` |
+| `torch_npu.npu_scatter_nd_update` |
+| `torch_npu.npu_scatter_nd_update_` |
+| `torch_npu.scatter_update` |
+| `torch_npu.scatter_update_` |
 | `torch_npu.npu_fusion_attention_grad` |
