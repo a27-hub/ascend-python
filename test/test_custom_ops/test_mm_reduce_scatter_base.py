@@ -1,4 +1,6 @@
+# coding: utf-8
 import os
+import time
 import unittest
 import numpy as np
 import torch
@@ -9,6 +11,9 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 from torch_npu.testing.common_distributed import skipIfUnsupportMultiNPU
+
+# 连续运行次数
+REPEAT = 100
 
 
 class TestMmReduceScatterBase(TestCase):
@@ -34,15 +39,25 @@ class TestMmReduceScatterBase(TestCase):
 
         x1 = x1.npu()
         x2 = x2.npu()
-        out = torch_npu.npu_mm_reduce_scatter_base(x1,
-                                               x2,
-                                               hcom_name,
-                                               world_size,
-                                               reduce_op='sum',
-                                               bias=None,
-                                               comm_turn=0, comm_mode=comm_mode)
 
-        c2p.put((rank, out.cpu()))
+        for i in range(REPEAT):
+            t0 = time.time()
+            out = torch_npu.npu_mm_reduce_scatter_base(x1,
+                                                   x2,
+                                                   hcom_name,
+                                                   world_size,
+                                                   reduce_op='sum',
+                                                   bias=None,
+                                                   comm_turn=0, comm_mode=comm_mode)
+            torch.npu.synchronize()
+            elapsed = time.time() - t0
+
+            if i == 0:
+                c2p.put((rank, out.cpu()))
+
+            if i % 10 == 0 or i == REPEAT - 1:
+                print(f"[Rank {rank}] base iter {i+1}/{REPEAT}: OK ({elapsed:.4f}s)", flush=True)
+
         pg.barrier()
 
     @classmethod
@@ -61,24 +76,35 @@ class TestMmReduceScatterBase(TestCase):
         x1_scale = x1_scale.npu()
         if is_nz:
             x2 = torch_npu.npu_format_cast(x2, torch_npu.Format.FRACTAL_NZ)
-        if dequant_type:
-            out = torch_npu.npu_mm_reduce_scatter_base(x1,
-                                                x2,
-                                                hcom_name,
-                                                world_size,
-                                                reduce_op='sum',
-                                                bias=None,
-                                                comm_turn=0, x1_scale=x1_scale, x2_scale=x2_scale, output_dtype=output_dtype, comm_mode=comm_mode)
-        else:
-            out = torch_npu.npu_mm_reduce_scatter_base(x1,
-                                                x2,
-                                                hcom_name,
-                                                world_size,
-                                                reduce_op='sum',
-                                                bias=None,
-                                                comm_turn=0, x2_scale=x2_scale, output_dtype=output_dtype, comm_mode=comm_mode)
 
-        c2p.put((rank, out.to(torch.float32).cpu()))
+        for i in range(REPEAT):
+            t0 = time.time()
+            if dequant_type:
+                out, _ = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name, 
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0, x1_scale=x1_scale, x2_scale=x2_scale, y_dtype=output_dtype, comm_mode=comm_mode,group_sizes=[128, 128, 128])
+            else:
+                out, _ = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name, 
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0, x2_scale=x2_scale, y_dtype=output_dtype, comm_mode=comm_mode,group_sizes=[128, 128, 128])
+            torch.npu.synchronize()
+            elapsed = time.time() - t0
+
+            # 第一次迭代做精度校验, 把结果发回主进程
+            if i == 0:
+                c2p.put((rank, out.to(torch.float32).cpu()))
+
+            if i % 10 == 0 or i == REPEAT - 1:
+                print(f"[Rank {rank}] quant iter {i+1}/{REPEAT}: OK ({elapsed:.4f}s)", flush=True)
+
         pg.barrier()
 
     def _test_multiprocess(self, f, init_pg, input_list):
@@ -120,15 +146,24 @@ class TestMmReduceScatterBase(TestCase):
         return [out[index * i:index * (i + 1), :] for i in range(world_size)]
 
     def _construct_quant_excepted_result(self, x1_list, x2_list, world_size, dequant_type, x1_scale_list=None, x2_scale_list=None):
+        BLOCK = 128
         out = None
         for i in range(world_size):
-            x1 = x1_list[i].to(torch.int32)
-            x2 = x2_list[i].to(torch.int32)
-            out_single = torch.matmul(x1, x2)
-            if dequant_type == 0:
-                out_single = (out_single * x2_scale_list[i]).to(torch.float32)
-            if dequant_type == 1:
-                out_single = (out_single * x1_scale_list[i] * x2_scale_list[i]).to(torch.float32)
+            x1_fp8 = x1_list[i].to(torch.float32)
+            x2_fp8 = x2_list[i].to(torch.float32)
+            s1 = x1_scale_list[i]
+            s2 = x2_scale_list[i]
+
+            # 扩展scale到输入完整维度
+            s1_full = s1.repeat_interleave(BLOCK, dim=0).repeat_interleave(BLOCK, dim=1)
+            s2_full = s2.repeat_interleave(BLOCK, dim=0).repeat_interleave(BLOCK, dim=1)
+
+            # 反量化恢复fp32真值
+            x1_fp32 = x1_fp8 * s1_full
+            x2_fp32 = x2_fp8 * s2_full
+
+            # 矩阵乘
+            out_single = torch.matmul(x1_fp32, x2_fp32)
 
             if out is None:
                 out = out_single
@@ -138,10 +173,10 @@ class TestMmReduceScatterBase(TestCase):
         index = x1_list[0].shape[0] // world_size
         return [out[index * i:index * (i + 1), :] for i in range(world_size)]
 
-    @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B'])
+    @skipIfUnsupportMultiNPU(2)
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_reduce_scatter_base(self):
-        world_size = 8
+        world_size = 2
         dtype = np.float16
         data_format = -1
         x1_shape = [dtype, data_format, [128, 512]]
@@ -154,15 +189,15 @@ class TestMmReduceScatterBase(TestCase):
             x1_list.append(x1)
             x2_list.append(x2)
         expt_out_list = self._construct_excepted_result(x1_list, x2_list, world_size)
-        for comm_mode in ['aiv', 'ai_cpu']:
+        for comm_mode in ['ai_cpu', 'ccu']:
             self._test_multiprocess(TestMmReduceScatterBase._test_npu_mm_reduce_scatter_base,
                                     TestMmReduceScatterBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size, comm_mode, None, None, None, None, None])
 
 
-    @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B'])
+    @skipIfUnsupportMultiNPU(2)
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_reduce_scatter_quant(self):
-        world_size = 8
+        world_size = 2
         dtype = torch.int8
         m, k, n = 128, 512, 256
         for output_dtype in [torch.float16, torch.bfloat16]:
@@ -172,18 +207,24 @@ class TestMmReduceScatterBase(TestCase):
             x2_scale_list = []
             dequant_type = 1
             for _ in range(world_size):
-                x1 = torch.randint(-10, 10, size=(m, k), dtype=torch.int8)
-                x2 = torch.randint(-10, 10, size=(k, n), dtype=torch.int8)
+                x1_fp32 = torch.rand((m, k), dtype=torch.float32) * 20 - 10
+                x1 = x1_fp32.to(torch.float8_e5m2)
+                #x1 = torch.rand(-10, 10, size=(m, k), dtype=torch.float8_e5m2)
+                x2_fp32 = torch.rand((k, n), dtype=torch.float32) * 20 - 10
+                x2 = x2_fp32.to(torch.float8_e5m2)
+                #x2 = torch.rand(-10, 10, size=(k, n), dtype=torch.float8_e5m2)
                 x1_list.append(x1)
                 x2_list.append(x2)
-                x1_scale = torch.randn((m, 1), dtype=torch.float32)
-                x2_scale = torch.randn((1, n), dtype=torch.float32)
+                # x1_scale = torch.randn((m, 1), dtype=torch.float32)
+                x1_scale = torch.randn((m//128, k//128), dtype=torch.float32)
+                # x2_scale = torch.randn((1, n), dtype=torch.float32)
+                x2_scale = torch.randn((k//128, n//128), dtype=torch.float32)
                 x1_scale_list.append(x1_scale)
                 x2_scale_list.append(x2_scale)
             expt_out_list = self._construct_quant_excepted_result(x1_list, x2_list, world_size, dequant_type, x1_scale_list, x2_scale_list)
             for is_nz in [False]:
                 self._test_multiprocess(TestMmReduceScatterBase._test_npu_mm_reduce_scatter_quant,
-                                        TestMmReduceScatterBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size, 'aiv', x1_scale_list, x2_scale_list, output_dtype, dequant_type, is_nz])
+                                        TestMmReduceScatterBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size, 'ai_cpu', x1_scale_list, x2_scale_list, output_dtype, dequant_type, is_nz])
 
 
 if __name__ == '__main__':
