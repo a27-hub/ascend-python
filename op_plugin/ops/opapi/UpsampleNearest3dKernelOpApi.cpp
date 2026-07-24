@@ -20,16 +20,10 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& upsample_nearest3d_out(
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    c10::optional<double> scales_d,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w,
-    at::Tensor& out)
-{
-    DO_COMPATIBILITY(aclnnUpsampleNearest3d,
-        acl_op::upsample_nearest3d_out(self, output_size, scales_d, scales_h, scales_w, out));
+at::Tensor &upsample_nearest3d_out(const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales_d,
+    c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &out) {
+    DO_COMPATIBILITY(
+        aclnnUpsampleNearest3d, acl_op::upsample_nearest3d_out(self, output_size, scales_d, scales_h, scales_w, out));
     auto output_osize = op_infer::upsample_nearest3d_npu_output_size(self, output_size);
     npu_preparation::check_tensor({self}, out, self, output_osize);
     double scales_d_attr = scales_d.value_or(0);
@@ -39,15 +33,10 @@ at::Tensor& upsample_nearest3d_out(
     return out;
 }
 
-at::Tensor upsample_nearest3d(
-    const at::Tensor& self,
-    at::IntArrayRef output_size,
-    c10::optional<double> scales_d,
-    c10::optional<double> scales_h,
-    c10::optional<double> scales_w)
-{
-    DO_COMPATIBILITY(aclnnUpsampleNearest3d,
-        acl_op::upsample_nearest3d(self, output_size, scales_d, scales_h, scales_w));
+at::Tensor upsample_nearest3d(const at::Tensor &self, at::IntArrayRef output_size, c10::optional<double> scales_d,
+    c10::optional<double> scales_h, c10::optional<double> scales_w) {
+    DO_COMPATIBILITY(
+        aclnnUpsampleNearest3d, acl_op::upsample_nearest3d(self, output_size, scales_d, scales_h, scales_w));
     auto output_osize = op_infer::upsample_nearest3d_npu_output_size(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor_without_format(self, output_osize);
     double scales_d_attr = scales_d.value_or(0);

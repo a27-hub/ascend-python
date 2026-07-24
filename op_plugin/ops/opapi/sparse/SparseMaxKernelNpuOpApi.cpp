@@ -18,14 +18,12 @@
 
 namespace sparse {
 
-at::Tensor max_sparse(const at::Tensor &self)
-{
+at::Tensor max_sparse(const at::Tensor &self) {
     auto dense_tensor = self.to_dense();
     return at::max(dense_tensor);
 }
 
-at::Tensor &max_out_sparse(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &max_out_sparse(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     auto dense_tensor = self.to_dense();
     return at::max_out(dense_tensor, other, result);
 }

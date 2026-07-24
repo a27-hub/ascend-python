@@ -18,22 +18,12 @@ using namespace std;
 
 namespace atb {
 using SelfAttentionParam = atb::infer::SelfAttentionParam;
-at::Tensor& _npu_flash_attention_v2(
-    const at::Tensor &query,
-    const at::Tensor &key,
-    const at::Tensor &value,
-    c10::SymIntArrayRef seq_len,
-    const c10::optional<at::Tensor> &mask,
-    const c10::optional<at::Tensor> &slopes,
-    int64_t kernel_type,
-    int64_t mask_type,
-    double scale_value,
-    int64_t num_heads,
-    int64_t num_kv_heads,
-    at::Tensor &out)
-{
+at::Tensor &_npu_flash_attention_v2(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    c10::SymIntArrayRef seq_len, const c10::optional<at::Tensor> &mask, const c10::optional<at::Tensor> &slopes,
+    int64_t kernel_type, int64_t mask_type, double scale_value, int64_t num_heads, int64_t num_kv_heads,
+    at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
+    OpParamCache<SelfAttentionParam> &selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
 
     SelfAttentionParam selfattentionparam;
     selfattentionparam.calcType = SelfAttentionParam::PA_ENCODER;
@@ -72,20 +62,10 @@ at::Tensor& _npu_flash_attention_v2(
     if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS ||
         selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS_SQRT ||
         selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS_LEFT_ALIGN) {
-        parametter.Input(query)
-            .Input(key)
-            .Input(value)
-            .Input(mask)
-            .Input(seq_len_tensor)
-            .Input(slopes)
-            .Output(out);
-    } else if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI || selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_NORM) {
-        parametter.Input(query)
-            .Input(key)
-            .Input(value)
-            .Input(mask)
-            .Input(seq_len_tensor)
-            .Output(out);
+        parametter.Input(query).Input(key).Input(value).Input(mask).Input(seq_len_tensor).Input(slopes).Output(out);
+    } else if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI ||
+        selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_NORM) {
+        parametter.Input(query).Input(key).Input(value).Input(mask).Input(seq_len_tensor).Output(out);
     }
     auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
     RunAtbCmd(opSelfattention, parametter, "SelfAttentionOperation");
@@ -93,15 +73,15 @@ at::Tensor& _npu_flash_attention_v2(
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
-    m.def("_npu_flash_attention_v2.out(Tensor query, Tensor key, Tensor value, SymInt[] seq_len, *, Tensor? mask=None, Tensor? slopes=None, int kernel_type=0, int mask_type=2, float scale_value=1, int num_heads=0, int num_kv_heads=0, Tensor(a!) out) -> Tensor(a!)");
+TORCH_LIBRARY_FRAGMENT(atb, m) {
+    m.def("_npu_flash_attention_v2.out(Tensor query, Tensor key, Tensor value, SymInt[] seq_len, *, Tensor? mask=None, "
+          "Tensor? slopes=None, int kernel_type=0, int mask_type=2, float scale_value=1, int num_heads=0, int "
+          "num_kv_heads=0, Tensor(a!) out) -> Tensor(a!)");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_flash_attention_v2.out", TORCH_FN(atb::_npu_flash_attention_v2));
 }
 }

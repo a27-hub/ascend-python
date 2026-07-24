@@ -21,14 +21,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& smooth_l1_loss_backward_out_nocheck(
-    at::Tensor& grad_input,
-    const at::Tensor& grad_out,
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    double beta)
-{
+at::Tensor &smooth_l1_loss_backward_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_out,
+    const at::Tensor &self, const at::Tensor &target, int64_t reduction, double beta) {
     string reduction_str(op_plugin::utils::get_reduction_str(reduction));
     at_npu::native::OpCommand cmd;
     cmd.Name("SmoothL1LossGradV2")
@@ -43,41 +37,24 @@ at::Tensor& smooth_l1_loss_backward_out_nocheck(
 }
 } // namespace
 
-at::Tensor& smooth_l1_loss_backward_out(
-    const at::Tensor& grad_out,
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    double beta,
-    at::Tensor& grad_input)
-{
-    npu_preparation::CheckOut(
-        {grad_out, self, target},
-        grad_input,
-        self);
+at::Tensor &smooth_l1_loss_backward_out(const at::Tensor &grad_out, const at::Tensor &self, const at::Tensor &target,
+    int64_t reduction, double beta, at::Tensor &grad_input) {
+    npu_preparation::CheckOut({grad_out, self, target}, grad_input, self);
 
     if (!npu_utils::check_match(&grad_input)) {
         at::Tensor contiguous_grad_input = npu_utils::format_contiguous(grad_input);
-        smooth_l1_loss_backward_out_nocheck(
-            contiguous_grad_input, grad_out, self, target, reduction, beta);
+        smooth_l1_loss_backward_out_nocheck(contiguous_grad_input, grad_out, self, target, reduction, beta);
         npu_utils::format_fresh_view(grad_input, contiguous_grad_input);
     } else {
-        smooth_l1_loss_backward_out_nocheck(
-            grad_input, grad_out, self, target, reduction, beta);
+        smooth_l1_loss_backward_out_nocheck(grad_input, grad_out, self, target, reduction, beta);
     }
     return grad_input;
 }
 
 at::Tensor smooth_l1_loss_backward(
-    const at::Tensor& grad_out,
-    const at::Tensor& self,
-    const at::Tensor& target,
-    int64_t reduction,
-    double beta)
-{
+    const at::Tensor &grad_out, const at::Tensor &self, const at::Tensor &target, int64_t reduction, double beta) {
     at::Tensor grad_input = npu_preparation::apply_tensor(self);
-    acl_op::smooth_l1_loss_backward_out(
-        grad_out, self, target, reduction, beta, grad_input);
+    acl_op::smooth_l1_loss_backward_out(grad_out, self, target, reduction, beta, grad_input);
     return grad_input;
 }
 } // namespace acl_op

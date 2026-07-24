@@ -21,10 +21,7 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> _prelu_kernel_backward(
-    const at::Tensor& grad_output,
-    const at::Tensor& self,
-    const at::Tensor& weight)
-{
+    const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &weight) {
     c10::SmallVector<int64_t, N> weight_shape = op_infer::array_to_small_vector(weight.sizes());
     at::Tensor reshape_weight = weight.reshape({-1});
 

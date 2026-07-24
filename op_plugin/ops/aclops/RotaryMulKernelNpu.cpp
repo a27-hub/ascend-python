@@ -22,8 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list = std::tuple<at::Tensor &, at::Tensor &, at::Tensor &>;
 
 namespace {
-at::Tensor &rotary_mul_nocheck(at::Tensor &y, const at::Tensor &x, const at::Tensor &r1, const at::Tensor &r2)
-{
+at::Tensor &rotary_mul_nocheck(at::Tensor &y, const at::Tensor &x, const at::Tensor &r1, const at::Tensor &r2) {
     if (x.sizes()[3] % 64 != 0) {
         std::vector<at::Tensor> chunkResult = x.chunk(2, -1);
         at::Tensor x_new = at::cat({chunkResult[1] * (-1), chunkResult[0]}, 3);
@@ -36,8 +35,7 @@ at::Tensor &rotary_mul_nocheck(at::Tensor &y, const at::Tensor &x, const at::Ten
 }
 
 tensor_list rotary_mul_backward_nocheck(at::Tensor &dx, at::Tensor &dr1, at::Tensor &dr2, const at::Tensor &x,
-                                        const at::Tensor &r1, const at::Tensor &r2, const at::Tensor &dy)
-{
+    const at::Tensor &r1, const at::Tensor &r2, const at::Tensor &dy) {
     TORCH_CHECK(x.dim() == 4, "The dim of input tensor [x] shoule equal to four." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(r1.dim() == 4, "The dim of input tensor [r1] shoule equal to four." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(r2.dim() == 4, "The dim of input tensor [r2] shoule equal to four." + OPS_ERROR(ErrCode::PARAM));
@@ -103,12 +101,10 @@ tensor_list rotary_mul_backward_nocheck(at::Tensor &dx, at::Tensor &dr1, at::Ten
 }
 } // namespace
 
-at::Tensor npu_rotary_mul(const at::Tensor &self, const at::Tensor &r1, const at::Tensor &r2, c10::string_view rotary_mode,
-                          const c10::optional<at::Tensor> &rotate)
-{
-    TORCH_CHECK(rotary_mode == "half",
-        "npu_rotary_mul in aclop only support rotary_mode with half, but got ", rotary_mode,
-        OPS_ERROR(ErrCode::PARAM));
+at::Tensor npu_rotary_mul(const at::Tensor &self, const at::Tensor &r1, const at::Tensor &r2,
+    c10::string_view rotary_mode, const c10::optional<at::Tensor> &rotate) {
+    TORCH_CHECK(rotary_mode == "half", "npu_rotary_mul in aclop only support rotary_mode with half, but got ",
+        rotary_mode, OPS_ERROR(ErrCode::PARAM));
     int64_t mode = op_plugin::utils::get_rotary_mode(rotary_mode);
     at::Tensor result = npu_preparation::apply_tensor(self);
     rotary_mul_nocheck(result, self, r1, r2);
@@ -116,11 +112,9 @@ at::Tensor npu_rotary_mul(const at::Tensor &self, const at::Tensor &r1, const at
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(const at::Tensor &grad, const at::Tensor &self,
-                                                                       const at::Tensor &r1, const at::Tensor &r2, c10::string_view rotary_mode)
-{
-    TORCH_CHECK(rotary_mode == "half",
-        "npu_rotary_mul_backward in aclop only support rotary_mode with half, but got ", rotary_mode,
-        OPS_ERROR(ErrCode::PARAM));
+    const at::Tensor &r1, const at::Tensor &r2, c10::string_view rotary_mode) {
+    TORCH_CHECK(rotary_mode == "half", "npu_rotary_mul_backward in aclop only support rotary_mode with half, but got ",
+        rotary_mode, OPS_ERROR(ErrCode::PARAM));
     int64_t mode = op_plugin::utils::get_rotary_mode(rotary_mode);
     at::Tensor dx = npu_preparation::apply_tensor(self);
     at::Tensor dr1 = npu_preparation::apply_tensor(r1);
