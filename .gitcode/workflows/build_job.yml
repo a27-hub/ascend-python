@@ -36,7 +36,7 @@ on:
       pr_id_wwq:
         required: false
         type: string
-        default: ${{ atomgit.event.pull_request.number }}
+        default: ${{ atomgit.event.pull_request.base.ref }}
 
     secrets:
       OBS_AK:
