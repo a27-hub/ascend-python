@@ -957,18 +957,28 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
             }
         }
     } else {
-        switch (dimNum) {
-            case NCL_DIM_NUM:
-                format = ACL_FORMAT_NCL;
-                break;
-            case NCHW_DIM_NUM:
-                format = ACL_FORMAT_NCHW;
-                break;
-            case NCDHW_DIM_NUM:
-                format = ACL_FORMAT_NCDHW;
-                break;
-            default:
-                format = ACL_FORMAT_ND;
+        // If the tensor's storage format is explicitly ACL_FORMAT_ND, keep it as
+        // ND instead of inferring NCL/NCHW/NCDHW from the dimension count. Some
+        // aclnn operators (e.g. aclnnGRUBackward) require ACL_FORMAT_ND and
+        // reject the dimension-inferred formats. Limit to 3D to minimise impact:
+        // 4D/5D tensors commonly rely on NCHW/NCDHW semantics (e.g. conv layers).
+        auto storage_format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
+        if (storage_format == ACL_FORMAT_ND && dimNum == NCL_DIM_NUM) {
+            format = ACL_FORMAT_ND;
+        } else {
+            switch (dimNum) {
+                case NCL_DIM_NUM:
+                    format = ACL_FORMAT_NCL;
+                    break;
+                case NCHW_DIM_NUM:
+                    format = ACL_FORMAT_NCHW;
+                    break;
+                case NCDHW_DIM_NUM:
+                    format = ACL_FORMAT_NCDHW;
+                    break;
+                default:
+                    format = ACL_FORMAT_ND;
+            }
         }
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
@@ -1194,18 +1204,24 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
             }
         }
     } else {
-        switch (dimNum) {
-            case NCL_DIM_NUM:
-                format = ACL_FORMAT_NCL;
-                break;
-            case NCHW_DIM_NUM:
-                format = ACL_FORMAT_NCHW;
-                break;
-            case NCDHW_DIM_NUM:
-                format = ACL_FORMAT_NCDHW;
-                break;
-            default:
-                format = ACL_FORMAT_ND;
+        // Keep ACL_FORMAT_ND for 3D tensors that are already ND (see comment above).
+        auto storage_format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
+        if (storage_format == ACL_FORMAT_ND && dimNum == NCL_DIM_NUM) {
+            format = ACL_FORMAT_ND;
+        } else {
+            switch (dimNum) {
+                case NCL_DIM_NUM:
+                    format = ACL_FORMAT_NCL;
+                    break;
+                case NCHW_DIM_NUM:
+                    format = ACL_FORMAT_NCHW;
+                    break;
+                case NCDHW_DIM_NUM:
+                    format = ACL_FORMAT_NCDHW;
+                    break;
+                default:
+                    format = ACL_FORMAT_ND;
+            }
         }
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
@@ -1280,18 +1296,23 @@ aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
             }
         }
     } else {
-        switch (dimNum) {
-            case NCL_DIM_NUM:
-                format = ACL_FORMAT_NCL;
-                break;
-            case NCHW_DIM_NUM:
-                format = ACL_FORMAT_NCHW;
-                break;
-            case NCDHW_DIM_NUM:
-                format = ACL_FORMAT_NCDHW;
-                break;
-            default:
-                format = ACL_FORMAT_ND;
+        // Keep ACL_FORMAT_ND for 3D tensors that are already ND (see comment above).
+        if ((*at_tensor).acl_format == ACL_FORMAT_ND && dimNum == NCL_DIM_NUM) {
+            format = ACL_FORMAT_ND;
+        } else {
+            switch (dimNum) {
+                case NCL_DIM_NUM:
+                    format = ACL_FORMAT_NCL;
+                    break;
+                case NCHW_DIM_NUM:
+                    format = ACL_FORMAT_NCHW;
+                    break;
+                case NCDHW_DIM_NUM:
+                    format = ACL_FORMAT_NCDHW;
+                    break;
+                default:
+                    format = ACL_FORMAT_ND;
+            }
         }
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
