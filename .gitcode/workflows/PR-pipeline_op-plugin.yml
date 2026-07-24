@@ -15,6 +15,7 @@ on:
     comments: [ '^(?:\/)?compile*' ]
 
 env:
+  repo: ${{ atomgit.event.repository.name }}
   pr_id: ${{ atomgit.event.pull_request.number }}
   org_name: "ComputingActionTest"
   img_master_arm: "pytorch_2.13.0_a2_aarch64_builder:20260709"
@@ -123,7 +124,7 @@ stages:
               wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
               unzip -q ApiGateway-python-sdk-2.0.7.zip
               cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${{ atomgit.event.repository.name }}
+              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
