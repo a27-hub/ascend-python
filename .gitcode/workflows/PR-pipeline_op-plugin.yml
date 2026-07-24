@@ -107,6 +107,11 @@ stages:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
+          - name: print env
+            run: |
+              echo "pr_id: ${{ env.pr_id }}"
+              echo "------------------------"
+              env
           - name: checkout
             uses: checkout
             with:
