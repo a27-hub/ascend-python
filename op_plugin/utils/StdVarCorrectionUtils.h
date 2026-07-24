@@ -16,8 +16,7 @@
 #include <c10/core/Scalar.h>
 #include <c10/util/Optional.h>
 
-inline bool correction_fits_aclnn_int64(const c10::optional<c10::Scalar> &correction)
-{
+inline bool correction_fits_aclnn_int64(const c10::optional<c10::Scalar> &correction) {
     if (!correction.has_value()) {
         return true;
     }

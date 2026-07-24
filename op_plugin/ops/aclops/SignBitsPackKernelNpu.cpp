@@ -20,7 +20,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_sign_bits_pack(const at::Tensor& self, int64_t size) {
+at::Tensor npu_sign_bits_pack(const at::Tensor &self, int64_t size) {
     TORCH_CHECK(self.dim() == 1, "input must be one-dimensional" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.scalar_type() == at::ScalarType::Half || self.scalar_type() == at::ScalarType::Float,
         "all only supports torch.float16 and torch.float32 dtypes" + OPS_ERROR(ErrCode::TYPE));
@@ -29,11 +29,7 @@ at::Tensor npu_sign_bits_pack(const at::Tensor& self, int64_t size) {
     at::Tensor result = npu_preparation::apply_tensor({size, ysize / size}, self.options().dtype(at::kByte), self);
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("SignBitsPack")
-        .Input(self)
-        .Output(result)
-        .Attr("size", size)
-        .Run();
+    cmd.Name("SignBitsPack").Input(self).Output(result).Attr("size", size).Run();
     return result;
 }
 

@@ -20,25 +20,21 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-inline void alpha_check_npu_tensor(const at::ScalarType self_dtype, const at::ScalarType other_dtype, at::Scalar alpha)
-{
-    TORCH_CHECK(isFloatingType(self_dtype) || isComplexType(self_dtype) ||
-                isFloatingType(other_dtype) || isComplexType(other_dtype) || alpha.isIntegral(true),
-                "For integral input tensors, argument alpha must not be a floating point number.",
-                OPS_ERROR(ErrCode::TYPE));
+inline void alpha_check_npu_tensor(
+    const at::ScalarType self_dtype, const at::ScalarType other_dtype, at::Scalar alpha) {
+    TORCH_CHECK(isFloatingType(self_dtype) || isComplexType(self_dtype) || isFloatingType(other_dtype) ||
+            isComplexType(other_dtype) || alpha.isIntegral(true),
+        "For integral input tensors, argument alpha must not be a floating point number.", OPS_ERROR(ErrCode::TYPE));
 }
 
-inline void alpha_check_npu_scalar(const at::ScalarType self_dtype, at::Scalar other, at::Scalar alpha)
-{
-    TORCH_CHECK(isFloatingType(self_dtype) || isComplexType(self_dtype) ||
-                other.isFloatingPoint() || alpha.isIntegral(true),
-                "For integral input tensors, argument alpha must not be a floating point number.",
-                OPS_ERROR(ErrCode::TYPE));
+inline void alpha_check_npu_scalar(const at::ScalarType self_dtype, at::Scalar other, at::Scalar alpha) {
+    TORCH_CHECK(
+        isFloatingType(self_dtype) || isComplexType(self_dtype) || other.isFloatingPoint() || alpha.isIntegral(true),
+        "For integral input tensors, argument alpha must not be a floating point number.", OPS_ERROR(ErrCode::TYPE));
 }
 
-static at::Tensor &sub_out_npu_nocheck(const at::Tensor &self, const at::Tensor &other, const at::Scalar alpha,
-                                       at::Tensor &result)
-{
+static at::Tensor &sub_out_npu_nocheck(
+    const at::Tensor &self, const at::Tensor &other, const at::Scalar alpha, at::Tensor &result) {
     if (npu_preparation::IsCPUScalar(other)) {
         c10::Scalar other_scalar = other.item();
         EXEC_NPU_CMD(aclnnSubs, self, other_scalar, alpha, result);
@@ -48,8 +44,7 @@ static at::Tensor &sub_out_npu_nocheck(const at::Tensor &self, const at::Tensor 
     return result;
 }
 
-static at::Tensor& inplace_sub_out_npu_no_check(at::Tensor& self, const at::Tensor& other, const at::Scalar& alpha)
-{
+static at::Tensor &inplace_sub_out_npu_no_check(at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha) {
     if (npu_preparation::IsCPUScalar(other)) {
         c10::Scalar other_scalar = other.item();
         EXEC_NPU_CMD(aclnnInplaceSubs, self, other_scalar, alpha);
@@ -59,9 +54,8 @@ static at::Tensor& inplace_sub_out_npu_no_check(at::Tensor& self, const at::Tens
     return self;
 }
 
-static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
-                                        const c10::Device device)
-{
+static at::Tensor self_tensor_to_device(
+    const at::Tensor &tensor, const at::ScalarType result_type, const c10::Device device) {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor)) {
         at::Scalar scalar = tensor.item();
         return npu_preparation::copy_scalar_to_device(scalar, result_type, device);
@@ -69,14 +63,12 @@ static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::Scal
     return tensor;
 }
 
-static at::Tensor sub_dest_output(const at::Tensor& self, const at::Tensor& other)
-{
+static at::Tensor sub_dest_output(const at::Tensor &self, const at::Tensor &other) {
     bool is_self_wrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
     return is_self_wrapped ? other : self;
 }
 
-at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor &result)
-{
+at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnSub, acl_op::sub_out(self, other, alpha, result));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub_out(self, other, alpha, result));
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
@@ -89,8 +81,7 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
     return result;
 }
 
-at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha)
-{
+at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha) {
     DO_COMPATIBILITY(aclnnSub, acl_op::sub(self, other, alpha));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub(self, other, alpha));
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
@@ -103,8 +94,7 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
     return result;
 }
 
-at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
-{
+at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha) {
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub(self, other, alpha));
     alpha_check_npu_scalar(self.scalar_type(), other, alpha);
     auto output_size = op_infer::input_same_output_size(self);
@@ -114,8 +104,7 @@ at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar
     return result;
 }
 
-at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha)
-{
+at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha) {
     DO_COMPATIBILITY(aclnnInplaceSub, acl_op::sub_(self, other, alpha));
     DO_COMPATIBILITY(aclnnInplaceSubs, acl_op::sub_(self, other, alpha));
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
@@ -124,8 +113,7 @@ at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &al
     return self;
 }
 
-at::Tensor &sub_(at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
-{
+at::Tensor &sub_(at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha) {
     DO_COMPATIBILITY(aclnnInplaceSubs, acl_op::sub_(self, other, alpha));
     alpha_check_npu_scalar(self.scalar_type(), other, alpha);
     EXEC_NPU_CMD(aclnnInplaceSubs, self, other, alpha);

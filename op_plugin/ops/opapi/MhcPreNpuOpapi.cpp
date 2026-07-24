@@ -29,12 +29,10 @@ constexpr int64_t ALPHA_NUMEL = 3;
 constexpr int64_t ALPHA_NUMEL_HY = 2;
 
 // aclnnMhcPre 依赖 CANN 9.0.0 及以上版本，此次校验避免旧版本环境出现找不到算子的兼容性问题。
-inline void check_mhc_pre_supported()
-{
+inline void check_mhc_pre_supported() {
     static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_900();
     static const bool is_aclnn_kernel_available = check_aclnn_kernel_available("aclnnMhcPre");
-    TORCH_CHECK(
-        is_cann_ready && is_aclnn_kernel_available,
+    TORCH_CHECK(is_cann_ready && is_aclnn_kernel_available,
         "torch_npu.npu_mhc_pre requires CANN >= 9.0.0 and aclnnMhcPre support. "
         "Please upgrade CANN.",
         OPS_ERROR(ErrCode::NOT_SUPPORT));
@@ -56,8 +54,7 @@ inline void check_mhc_pre_supported()
  * (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
  */
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> construct_mhc_pre_outputs(
-    const at::Tensor &x, const at::Tensor &phi, int64_t out_flag, bool hasResi)
-{
+    const at::Tensor &x, const at::Tensor &phi, int64_t out_flag, bool hasResi) {
     c10::TensorOptions hInOptions = x.options().dtype(x.dtype());
     c10::TensorOptions hOptions = x.options().dtype(at::kFloat);
     auto matK = phi.size(DIM_0);
@@ -191,10 +188,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 } // namespace
 
 namespace op_api {
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_pre(
-    const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha, const at::Tensor &bias,
-    const c10::optional<at::Tensor> &gamma, double norm_eps, double hc_eps, int64_t out_flag)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_pre(const at::Tensor &x,
+    const at::Tensor &phi, const at::Tensor &alpha, const at::Tensor &bias, const c10::optional<at::Tensor> &gamma,
+    double norm_eps, double hc_eps, int64_t out_flag) {
     TORCH_CHECK(x.numel() > 0, "Input x should not be empty.");
     TORCH_CHECK(phi.numel() > 0, "Input phi should not be empty.");
     TORCH_CHECK(alpha.numel() == ALPHA_NUMEL || alpha.numel() == ALPHA_NUMEL_HY,
@@ -222,8 +218,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor outHmix = std::get<4>(mhcPreOutput);
     at::Tensor outHpre = std::get<5>(mhcPreOutput);
 
-    EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
-                     outHres, outInvRms, outHmix, outHpre);
+    EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost, outHres, outInvRms,
+        outHmix, outHpre);
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
 }
 } // namespace op_api

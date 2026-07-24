@@ -21,11 +21,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_linear(
-    const at::Tensor &input,
-    const at::Tensor &weight,
-    const c10::optional<at::Tensor> &bias)
-{
+at::Tensor npu_linear(const at::Tensor &input, const at::Tensor &weight, const c10::optional<at::Tensor> &bias) {
     const at::Tensor &bias_opt = bias.value_or(at::Tensor());
     const at::Tensor &weight_t = weight.t();
     auto output_size = {input.size(0), weight.size(0)};
@@ -44,10 +40,7 @@ at::Tensor npu_linear(
 }
 
 std::tuple<at::Tensor, at::Tensor> npu_linear_backward(
-    const at::Tensor &grad,
-    const at::Tensor &input,
-    const at::Tensor &weight)
-{
+    const at::Tensor &grad, const at::Tensor &input, const at::Tensor &weight) {
     DO_COMPATIBILITY(aclnnMm, acl_op::npu_linear_backward(grad, input, weight));
     at::Tensor input_grad = npu_preparation::apply_tensor_without_format(input.sizes(), grad.options());
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();

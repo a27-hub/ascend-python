@@ -20,10 +20,9 @@ using namespace std;
 namespace atb {
 
 using GroupTopkParam = atb::infer::GroupTopkParam;
-void _npu_group_topk(const at::Tensor &self, int64_t k, int64_t group_num, int64_t n)
-{
+void _npu_group_topk(const at::Tensor &self, int64_t k, int64_t group_num, int64_t n) {
     const c10::OptionalDeviceGuard device_guard(device_of(self));
-    OpParamCache<GroupTopkParam>& GroupTopkParamCache = OpParamCache<GroupTopkParam>::getInstance();
+    OpParamCache<GroupTopkParam> &GroupTopkParamCache = OpParamCache<GroupTopkParam>::getInstance();
     GroupTopkParam GroupTopkParam;
     GroupTopkParam.groupNum = static_cast<int32_t>(group_num);
     GroupTopkParam.k = static_cast<int32_t>(k);
@@ -37,24 +36,20 @@ void _npu_group_topk(const at::Tensor &self, int64_t k, int64_t group_num, int64
     auto idx = at::arange(1024, self.options().device(at::Device(at::kPrivateUse1)).dtype(at::kInt));
 
     ParamSetter paramsetter;
-    paramsetter.Input(self, true)
-                .Input(idx, true)
-                .Output(out);
+    paramsetter.Input(self, true).Input(idx, true).Output(out);
     auto opGroupTopk = GroupTopkParamCache.getOperation(GroupTopkParam, "GroupTopkOperation");
     RunAtbCmd(opGroupTopk, paramsetter, "GroupTopkOperation");
     return;
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
+TORCH_LIBRARY_FRAGMENT(atb, m) {
     m.def("_npu_group_topk(Tensor self, int k=0, int group_num=1, int n=1) -> ()");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_group_topk", TORCH_FN(atb::_npu_group_topk));
 }
 }

@@ -16,10 +16,11 @@
 using namespace std;
 namespace atb {
 using SelfAttentionParam = atb::infer::SelfAttentionParam;
-void _npu_flash_attention(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value, const at::Tensor &mask, const at::Tensor &seq_len, const double scale_value, const int64_t num_heads, const int64_t num_kv_heads, at::Tensor &out)
-{
+void _npu_flash_attention(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const at::Tensor &mask, const at::Tensor &seq_len, const double scale_value, const int64_t num_heads,
+    const int64_t num_kv_heads, at::Tensor &out) {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
-    OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
+    OpParamCache<SelfAttentionParam> &selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
     SelfAttentionParam selfattentionparam;
 
     selfattentionparam.calcType = SelfAttentionParam::PA_ENCODER;
@@ -44,12 +45,7 @@ void _npu_flash_attention(const at::Tensor &query, const at::Tensor &key, const 
     selfattentionparam.windowSize = 0;
 
     ParamSetter parametter;
-    parametter.Input(query, true)
-        .Input(key, true)
-        .Input(value, true)
-        .Input(mask)
-        .Input(seq_len, true)
-        .Output(out);
+    parametter.Input(query, true).Input(key, true).Input(value, true).Input(mask).Input(seq_len, true).Output(out);
 
     auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
     RunAtbCmd(opSelfattention, parametter, "SelfAttentionOperation");
@@ -58,15 +54,14 @@ void _npu_flash_attention(const at::Tensor &query, const at::Tensor &key, const 
 }
 
 namespace {
-TORCH_LIBRARY_FRAGMENT(atb, m)
-{
-    m.def("_npu_flash_attention(Tensor query, Tensor key, Tensor value, Tensor mask, Tensor seq_len, float scale_value, int num_heads, int num_kv_heads, Tensor(a!) out) -> ()");
+TORCH_LIBRARY_FRAGMENT(atb, m) {
+    m.def("_npu_flash_attention(Tensor query, Tensor key, Tensor value, Tensor mask, Tensor seq_len, float "
+          "scale_value, int num_heads, int num_kv_heads, Tensor(a!) out) -> ()");
 }
 }
 
 namespace {
-TORCH_LIBRARY_IMPL(atb, PrivateUse1, m)
-{
+TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
     m.impl("_npu_flash_attention", TORCH_FN(atb::_npu_flash_attention));
 }
 }
