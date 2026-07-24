@@ -21,24 +21,15 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& tril_out_nocheck(at::Tensor& result, const at::Tensor& self, int64_t diagonal)
-{
+at::Tensor &tril_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_t diagonal) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("Tril")
-        .Input(self)
-        .Output(result)
-        .Attr("diagonal", diagonal)
-        .Run();
+    cmd.Name("Tril").Input(self).Output(result).Attr("diagonal", diagonal).Run();
     return result;
 }
 } // namespace
 
-at::Tensor& tril_out(const at::Tensor& self, int64_t diagonal, at::Tensor& result)
-{
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        self);
+at::Tensor &tril_out(const at::Tensor &self, int64_t diagonal, at::Tensor &result) {
+    npu_preparation::CheckOut({self}, result, self);
 
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -51,8 +42,7 @@ at::Tensor& tril_out(const at::Tensor& self, int64_t diagonal, at::Tensor& resul
     return result;
 }
 
-at::Tensor tril(const at::Tensor& self, int64_t diagonal)
-{
+at::Tensor tril(const at::Tensor &self, int64_t diagonal) {
     auto is_last_two_dims = [&self]() {
         auto self_storage = torch_npu::NPUBridge::GetNpuStorageImpl(self)->get_npu_desc().storage_sizes_;
         if (self_storage.size() <= 1) {
@@ -68,8 +58,7 @@ at::Tensor tril(const at::Tensor& self, int64_t diagonal)
     return result;
 }
 
-at::Tensor& tril_(at::Tensor& self, int64_t diagonal)
-{
+at::Tensor &tril_(at::Tensor &self, int64_t diagonal) {
     acl_op::tril_out(self, diagonal, self);
 
     return self;

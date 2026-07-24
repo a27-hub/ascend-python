@@ -22,23 +22,14 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& hardsigmoid_out_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self)
-{
+at::Tensor &hardsigmoid_out_nocheck(at::Tensor &result, const at::Tensor &self) {
     at_npu::native::OpCommand cmd;
-    cmd.Name("HardSigmoid")
-        .Input(self)
-        .Output(result)
-        .Run();
+    cmd.Name("HardSigmoid").Input(self).Output(result).Run();
     return result;
 }
 } // namespace
 
-at::Tensor& hardsigmoid_out(
-    const at::Tensor& self,
-    at::Tensor& out)
-{
+at::Tensor &hardsigmoid_out(const at::Tensor &self, at::Tensor &out) {
     npu_preparation::CheckOut({self}, out, self);
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -50,15 +41,13 @@ at::Tensor& hardsigmoid_out(
     return out;
 }
 
-at::Tensor hardsigmoid(const at::Tensor& self)
-{
+at::Tensor hardsigmoid(const at::Tensor &self) {
     at::Tensor result = npu_preparation::apply_tensor(self);
     hardsigmoid_out_nocheck(result, self);
     return result;
 }
 
-at::Tensor& hardsigmoid_(at::Tensor& self)
-{
+at::Tensor &hardsigmoid_(at::Tensor &self) {
     acl_op::hardsigmoid_out(self, self);
     return self;
 }

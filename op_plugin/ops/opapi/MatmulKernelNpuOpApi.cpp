@@ -26,14 +26,13 @@ using npu_preparation = at_npu::native::OpPreparation;
 const int8_t ALLOW_FP32_DOWN_PRECISION = 1;
 const int8_t KEEP_DTYPE = 0;
 
-static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2)
-{
+static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2) {
     c10::SmallVector<int64_t, op_infer::SIZE> output_size;
     auto dim_tensor1 = tensor1.dim();
     auto dim_tensor2 = tensor2.dim();
 
     TORCH_CHECK(dim_tensor1 > 0 && dim_tensor2 > 0, "matmul got error dimentions: ", "(", dim_tensor1, ", ",
-                dim_tensor2, ")", OPS_ERROR(ErrCode::PARAM));
+        dim_tensor2, ")", OPS_ERROR(ErrCode::PARAM));
 
     if (dim_tensor1 == 1 && dim_tensor2 == 1) {
         output_size = {};
@@ -72,17 +71,14 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tenso
         output_expand_size.insert(output_expand_size.end(), {n, p});
         output_size = output_expand_size;
     } else {
-        TORCH_CHECK(false,
-            "matmul got error sizes: ",
-            "(", dim_tensor1, ", ", dim_tensor2, ")",
-            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            false, "matmul got error sizes: ", "(", dim_tensor1, ", ", dim_tensor2, ")", OPS_ERROR(ErrCode::PARAM));
     }
 
     return output_size;
 }
 
-static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self, const at::Tensor &mat2)
-{
+static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self, const at::Tensor &mat2) {
     // allow dicrease precision
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     // matmul & matmul_out have processed the aclop scenario
@@ -95,8 +91,7 @@ static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self,
     return;
 }
 
-at::Tensor matmul_forward(const at::Tensor &self, const at::Tensor &mat2)
-{
+at::Tensor matmul_forward(const at::Tensor &self, const at::Tensor &mat2) {
     at::NoNamesGuard guard;
     auto output_size = get_output_size(self, mat2);
     auto out = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options());
@@ -104,8 +99,7 @@ at::Tensor matmul_forward(const at::Tensor &self, const at::Tensor &mat2)
     return out;
 }
 
-at::Tensor matmul(const at::Tensor &tensor1, const at::Tensor &tensor2)
-{
+at::Tensor matmul(const at::Tensor &tensor1, const at::Tensor &tensor2) {
     DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMatmul, tensor1, tensor2, acl_op::matmul(tensor1, tensor2));
     // aclnn
     auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);
@@ -114,8 +108,7 @@ at::Tensor matmul(const at::Tensor &tensor1, const at::Tensor &tensor2)
     return result;
 }
 
-at::Tensor &matmul_out(const at::Tensor &tensor1, const at::Tensor &tensor2, at::Tensor &result)
-{
+at::Tensor &matmul_out(const at::Tensor &tensor1, const at::Tensor &tensor2, at::Tensor &result) {
     DO_MATMUL_COMPATIBILITY(
         aclnnMatmulWeightNz, aclnnMatmul, tensor1, tensor2, acl_op::matmul_out(tensor1, tensor2, result));
     // aclnn
@@ -128,4 +121,4 @@ at::Tensor &matmul_out(const at::Tensor &tensor1, const at::Tensor &tensor2, at:
     return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

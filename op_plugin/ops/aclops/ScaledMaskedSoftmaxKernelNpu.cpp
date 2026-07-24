@@ -19,14 +19,8 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-
-at::Tensor npu_scaled_masked_softmax_backward(
-    const at::Tensor& y_grad,
-    const at::Tensor& y,
-    const at::Tensor& mask,
-    const at::Scalar& scale,
-    bool fixed_triu_mask)
-{
+at::Tensor npu_scaled_masked_softmax_backward(const at::Tensor &y_grad, const at::Tensor &y, const at::Tensor &mask,
+    const at::Scalar &scale, bool fixed_triu_mask) {
     at::Tensor result = npu_preparation::apply_tensor(y_grad);
     at_npu::native::OpCommand cmd;
     cmd.Name("ScaledMaskedSoftmaxGrad")
@@ -41,11 +35,7 @@ at::Tensor npu_scaled_masked_softmax_backward(
 }
 
 at::Tensor npu_scaled_masked_softmax(
-    const at::Tensor& self,
-    const at::Tensor& mask,
-    const at::Scalar& scale,
-    bool fixed_triu_mask)
-{
+    const at::Tensor &self, const at::Tensor &mask, const at::Scalar &scale, bool fixed_triu_mask) {
     at::Tensor result = npu_preparation::apply_tensor(self);
     at_npu::native::OpCommand cmd;
     cmd.Name("ScaledMaskedSoftmax")

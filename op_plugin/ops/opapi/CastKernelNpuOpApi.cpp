@@ -24,17 +24,14 @@ namespace {
 using npu_preparation = at_npu::native::OpPreparation;
 const int64_t FP4_IN_UINT8_NUM = 2;
 
-at::Tensor npu_dtype_cast_impl_op_api(
-    const at::Tensor& self,
-    int64_t dtype,
-    c10::optional<int64_t> input_dtype)
-{
+at::Tensor npu_dtype_cast_impl_op_api(const at::Tensor &self, int64_t dtype, c10::optional<int64_t> input_dtype) {
     // check if input dtype is valid
-    int64_t input_dtype_tocheck = input_dtype.has_value() ? input_dtype.value() : static_cast<int64_t>(self.scalar_type());
+    int64_t input_dtype_tocheck =
+        input_dtype.has_value() ? input_dtype.value() : static_cast<int64_t>(self.scalar_type());
     bool special_output_type = (dtype == static_cast<int64_t>(c10_npu::DType::HIFLOAT8) ||
-                                dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
-                                dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
-                                dtype == static_cast<int64_t>(c10_npu::DType::INT4));
+        dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
+        dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+        dtype == static_cast<int64_t>(c10_npu::DType::INT4));
     at::SmallVector<int64_t, op_infer::SIZE> input_shape;
     at::SmallVector<int64_t, op_infer::SIZE> output_shape;
     int32_t input_dim = self.dim();
@@ -50,14 +47,15 @@ at::Tensor npu_dtype_cast_impl_op_api(
         } else {
             input_shape.push_back(self.size(index));
         }
-  
+
         // float4/int4 shape check
         if (dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
             dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
             dtype == static_cast<int64_t>(c10_npu::DType::INT4)) {
             TORCH_CHECK(input_shape[index] % FP4_IN_UINT8_NUM == 0,
-                        "The last dim input shape must be divisible by 2 if "
-                        "output dtype is torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2 or torch_npu.int4" + OPS_ERROR(ErrCode::PARAM));
+                "The last dim input shape must be divisible by 2 if "
+                "output dtype is torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2 or torch_npu.int4" +
+                    OPS_ERROR(ErrCode::PARAM));
             output_shape.push_back(input_shape[index] / FP4_IN_UINT8_NUM);
         } else {
             output_shape.push_back(input_shape[index]);
@@ -81,17 +79,12 @@ at::Tensor npu_dtype_cast_impl_op_api(
 }
 } // namespace
 
-at::Tensor npu_dtype_cast(
-    const at::Tensor& self,
-    int64_t dtype,
-    c10::optional<int64_t> input_dtype)
-{
+at::Tensor npu_dtype_cast(const at::Tensor &self, int64_t dtype, c10::optional<int64_t> input_dtype) {
     DO_COMPATIBILITY(aclnnCast, acl_op::npu_dtype_cast(self, dtype, input_dtype));
     return npu_dtype_cast_impl_op_api(self, dtype, input_dtype);
 }
 
-at::Tensor _npu_dtype_cast(const at::Tensor& self, at::ScalarType dtype)
-{
+at::Tensor _npu_dtype_cast(const at::Tensor &self, at::ScalarType dtype) {
     DO_COMPATIBILITY(aclnnCast, acl_op::_npu_dtype_cast(self, dtype));
     if (self.dtype() == dtype) {
         return self.clone();
@@ -101,18 +94,13 @@ at::Tensor _npu_dtype_cast(const at::Tensor& self, at::ScalarType dtype)
     return result;
 }
 
-at::Tensor npu_dtype_cast_backward(
-    const at::Tensor& grad,
-    at::ScalarType dtype,
-    c10::optional<int64_t> grad_dtype,
-    c10::optional<int64_t> input_dtype)
-{
+at::Tensor npu_dtype_cast_backward(const at::Tensor &grad, at::ScalarType dtype, c10::optional<int64_t> grad_dtype,
+    c10::optional<int64_t> input_dtype) {
     grad.requires_grad_();
     int64_t input_dtype_tocheck = input_dtype.has_value() ? input_dtype.value() : static_cast<int64_t>(dtype);
     return at_npu::native::custom_ops::npu_dtype_cast(grad, input_dtype_tocheck, grad_dtype);
 };
-at::Tensor _npu_dtype_cast_backward(const at::Tensor& grad, at::ScalarType dtype)
-{
+at::Tensor _npu_dtype_cast_backward(const at::Tensor &grad, at::ScalarType dtype) {
     grad.requires_grad_();
     return at_npu::native::custom_ops::_npu_dtype_cast(grad, dtype);
 };

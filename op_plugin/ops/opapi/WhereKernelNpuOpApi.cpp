@@ -20,20 +20,16 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-vector<at::Tensor> where(const at::Tensor &condition)
-{
+vector<at::Tensor> where(const at::Tensor &condition) {
     return at::native::where(condition);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> unify_tensors_to_npu(
-    const at::Tensor& condition,
-    const at::Tensor& self,
-    const at::Tensor& other)
-{
+    const at::Tensor &condition, const at::Tensor &self, const at::Tensor &other) {
     std::vector<at::Tensor> tensors = {condition, self, other};
     c10::Device target_device = condition.device();
     bool found_npu = false;
-    for (const auto& tensor : tensors) {
+    for (const auto &tensor : tensors) {
         if (!npu_preparation::is_scalar_wrapped_to_tensor(tensor)) {
             target_device = tensor.device();
             found_npu = true;
@@ -53,7 +49,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> unify_tensors_to_npu(
     at::Scalar scalar;
     if (npu_preparation::is_scalar_wrapped_to_tensor(condition)) {
         scalar = condition.item();
-        condition_npu = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, condition.scalar_type(), target_device);
+        condition_npu =
+            at_npu::native::OpPreparation::copy_scalar_to_device(scalar, condition.scalar_type(), target_device);
     }
     if (npu_preparation::is_scalar_wrapped_to_tensor(self)) {
         scalar = self.item();
@@ -66,13 +63,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> unify_tensors_to_npu(
     return std::make_tuple(condition_npu, self_npu, other_npu);
 }
 
-
-at::Tensor& where_out(
-    const at::Tensor& condition,
-    const at::Tensor& self,
-    const at::Tensor& other,
-    at::Tensor& out)
-{
+at::Tensor &where_out(const at::Tensor &condition, const at::Tensor &self, const at::Tensor &other, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnSWhere, acl_op::where_out(condition, self, other, out));
 
     auto broadcast_output_size = op_infer::broadcast_ops_npu_output_size(self, other);
@@ -86,11 +77,7 @@ at::Tensor& where_out(
     return out;
 }
 
-at::Tensor where(
-    const at::Tensor& condition,
-    const at::Tensor& self,
-    const at::Tensor& other)
-{
+at::Tensor where(const at::Tensor &condition, const at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnSWhere, acl_op::where(condition, self, other));
     auto broadcast_output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(condition.sizes(), broadcast_output_size);
