@@ -1,4 +1,4 @@
-# 确定性计算API支持清单
+# 确定性计算API清单
 
 ## 简介
 
@@ -42,6 +42,24 @@
 
     执行训练时，打印此接口的返回值为True表示当前已开启确定性计算开关，返回False则表示未开启。
 
-## API支持清单
+## API清单
 
-目前昇腾支持确定性计算的自定义API为[（beta）torch_npu.npu_group_norm_swish](torch_npu/torch_npu-npu_group_norm_swish.md)。
+ 当使用<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>或<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>，[表1](#默认不支持确定性计算的API列表-1)所示API默认不支持确定性计算，需手动开启确定性计算方可支持；其余未在表格中列出的API默认支持确定性计算。
+
+ **表 1** API列表<a id="默认不支持确定性计算的API列表-1"></a>
+
+| API |
+|-----|
+| `torch_npu.npu_convolution_transpose` |
+| `torch_npu.npu_linear` |
+| `torch_npu.npu_deformable_conv2d` |
+
+当使用<term>Ascend 950DT</term>时，[表2](#默认不支持确定性计算的API列表-2)所示API默认不支持确定性计算，需手动开启确定性计算方可支持；其余未在表格中列出的API默认支持确定性计算。
+
+**表 2** API列表<a id="默认不支持确定性计算的API列表-2"></a>
+
+| API |
+|-----|
+| `torch_npu.npu_scatter_nd_update` / `torch_npu.npu_scatter_nd_update_` |
+| `torch_npu.scatter_update` / `torch_npu.scatter_update_` |
+| `torch_npu.npu_fusion_attention_grad` |
