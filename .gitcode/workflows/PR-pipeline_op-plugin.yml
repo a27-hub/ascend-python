@@ -75,7 +75,26 @@ stages:
     name: stage_1
     select: selected_by_default
     jobs:
-
+      CodeCheck:
+        name: CodeCheck
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: Login to CodeArts
+            uses: codearts-login
+            with:
+              region: cn-north-4
+              name: wangshusheng
+              password: ${{ secrets.IAM_USER_PASSWORD }}
+              domain-name: hwstaff_jsz_gjl
+          - name: codecheck
+            uses: codecheck_gitcode_v2
+            with:
+              project_id: a9b188a62f334fc0963bcfb523426d17
+              task_name: op-plugin-20260724103005
+              branch: ${{ atomgit.event.pull_request.base.ref }}
       SCA:
         name: SCA
         # runs-on: [ self-hosted, arch=x64, os=euler ]
