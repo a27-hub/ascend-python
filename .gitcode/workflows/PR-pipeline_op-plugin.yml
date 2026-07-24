@@ -13,29 +13,10 @@ on:
     types: [created]
     branches: [ '*' ]
     comments: [ '^(?:\/)?compile*' ]
-inputs:
-  repo:
-    type: string
-    description: "仓库名称"
-    default: ${{ atomgit.event.repository.name }}
-  REMOTE_URL:
-    type: string
-    description: "远程仓库URL"
-    default: ${{ env.ATOMGIT_REPOSITORY_URL }}
-  org_name:
-    type: string
-    description: "组织名称"
-    default: "ComputingActionTest"
-  pr_id:
-    type: string
-    description: "PR ID"
-    default: ${{ atomgit.event.pull_request.number }}
-  workspace:
-    type: string
-    description: "工作目录"
-    default: ${{ env.ATOMGIT_WORKSPACE }}
 
 env:
+  pr_id: ${{ atomgit.event.pull_request.number }}
+  org_name: "ComputingActionTest"
   img_master_arm: "pytorch_2.13.0_a2_aarch64_builder:20260709"
   img_2_7_1_arm: "pytorch_2.7.1_a2_aarch64_builder:20260518"
   img_2_9_0_arm: "pytorch_2.9.0_a2_aarch64_builder:20260518"
@@ -137,7 +118,7 @@ stages:
               wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
               unzip -q ApiGateway-python-sdk-2.0.7.zip
               cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${{ atomgit.event.repository.name }}
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
@@ -166,8 +147,6 @@ stages:
               cd -
           - name: pre-commit
             uses: openlibing-pre-commit-action
-            with:
-              gc_token: ${{ secrets.ATOMGIT_TOKEN }}
 
       Only_doc_commit:
         name: Only_doc_commit
@@ -190,7 +169,7 @@ stages:
             with:
               pr_id: ${{ env.pr_id }}
               target_branch: ${{ atomgit.event.pull_request.base.ref }}
-              remote_url: ${{ env.REMOTE_URL }}
+              remote_url: ${{ env.ATOMGIT_REPOSITORY_URL }}
           - name: set build skip flag
             id: set-skip
             run: |
