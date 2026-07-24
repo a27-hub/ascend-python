@@ -54,7 +54,7 @@
 | `torch_npu.npu_linear` |
 | `torch_npu.npu_deformable_conv2d` |
 
-当使用<term>Ascend 950DT</term>时，[表2](#默认不支持确定性计算的API列表-2)所示API默认不支持确定性计算，需手动开启确定性计算方可支持；其余未在表格中列出的API默认支持确定性计算。
+当使用<term>Ascend 950DT</term>时，[表2](#默认不支持确定性计算的API列表-2)所示API默认不支持确定性计算，需手动开启确定性计算方可支持。
 
 **表 2** API列表<a id="默认不支持确定性计算的API列表-2"></a>
 
