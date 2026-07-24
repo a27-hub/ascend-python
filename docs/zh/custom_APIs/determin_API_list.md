@@ -54,7 +54,7 @@
 | `torch_npu.npu_linear` |
 | `torch_npu.npu_deformable_conv2d` |
 
-当使用<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>或<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>时，[表1](#可开启确定性计算的API列表-2)所示API计算存在随机性，开启确定性计算开关可以保持计算结果的确定性。
+当使用<term>Ascend 950DT</term>时，[表2](#可开启确定性计算的API列表-2)所示API计算存在随机性，开启确定性计算开关可以保持计算结果的确定性。
 
 **表 2** API列表<a id="可开启确定性计算的API列表-2"></a>
 
