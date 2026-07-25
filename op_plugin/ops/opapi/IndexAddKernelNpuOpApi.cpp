@@ -27,47 +27,48 @@ at::Tensor& index_add_out(
     const at::Tensor& source,
     const at::Scalar& alpha,
     at::Tensor& result) {
-    DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add_out(self, dim, index, source, alpha, result));
-    auto self_sizes = self.sizes().vec();
-    auto source_sizes = source.sizes().vec();
-    if (source.dim() != 0 && self.dim() != 0) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        self_sizes.erase(self_sizes.begin() + wrapped_dim);
-        source_sizes.erase(source_sizes.begin() + wrapped_dim);
-    }
-    TORCH_CHECK(self_sizes == source_sizes,
-                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
-                self.sizes(),
-                " source.shape = ",
-                source.sizes(),
-                OPS_ERROR(ErrCode::PARAM));
-    at_npu::native::OpPreparation::check_tensor({self, index, source},
-                                                result,
-                                                result.scalar_type(),
-                                                self.sizes());
-    if (!result.is_same(self)) {
-        result.copy_(self);
-    }
+  DO_COMPATIBILITY(
+      aclnnIndexAdd,
+      acl_op::index_add_out(self, dim, index, source, alpha, result));
+  auto self_sizes = self.sizes().vec();
+  auto source_sizes = source.sizes().vec();
+  if (source.dim() != 0 && self.dim() != 0) {
+    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+    self_sizes.erase(self_sizes.begin() + wrapped_dim);
+    source_sizes.erase(source_sizes.begin() + wrapped_dim);
+  }
+  TORCH_CHECK(
+      self_sizes == source_sizes,
+      "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
+      self.sizes(),
+      " source.shape = ",
+      source.sizes(),
+      OPS_ERROR(ErrCode::PARAM));
+  at_npu::native::OpPreparation::check_tensor(
+      {self, index, source}, result, result.scalar_type(), self.sizes());
+  if (!result.is_same(self)) {
+    result.copy_(self);
+  }
 
-    if (at::globalContext().deterministicAlgorithms() &&
-    c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        c10::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(self.dim());
-        for (const auto i : c10::irange(self.dim())) {
-            if (i == wrapped_dim) {
-                indices.emplace_back(index.to(at::kLong));
-            } else {
-                indices.emplace_back(c10::nullopt);
-            }
-        }
-
-        result.index_put_(indices, source * alpha, true);
-        return result;
+  if (at::globalContext().deterministicAlgorithms() &&
+      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+    c10::List<c10::optional<at::Tensor>> indices;
+    indices.reserve(self.dim());
+    for (const auto i : c10::irange(self.dim())) {
+      if (i == wrapped_dim) {
+        indices.emplace_back(index.to(at::kLong));
+      } else {
+        indices.emplace_back(c10::nullopt);
+      }
     }
 
-    EXEC_NPU_CMD(aclnnIndexAdd, result, dim, index, source, alpha, result);
+    result.index_put_(indices, source * alpha, true);
     return result;
+  }
+
+  EXEC_NPU_CMD(aclnnIndexAdd, result, dim, index, source, alpha, result);
+  return result;
 }
 
 at::Tensor index_add(
@@ -76,42 +77,47 @@ at::Tensor index_add(
     const at::Tensor& index,
     const at::Tensor& source,
     const at::Scalar& alpha) {
-    DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add(self, dim, index, source, alpha));
-    auto self_sizes = self.sizes().vec();
-    auto source_sizes = source.sizes().vec();
-    if (source.dim() != 0 && self.dim() != 0) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        self_sizes.erase(self_sizes.begin() + wrapped_dim);
-        source_sizes.erase(source_sizes.begin() + wrapped_dim);
+  DO_COMPATIBILITY(
+      aclnnIndexAdd, acl_op::index_add(self, dim, index, source, alpha));
+  auto self_sizes = self.sizes().vec();
+  auto source_sizes = source.sizes().vec();
+  if (source.dim() != 0 && self.dim() != 0) {
+    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+    self_sizes.erase(self_sizes.begin() + wrapped_dim);
+    source_sizes.erase(source_sizes.begin() + wrapped_dim);
+  }
+  TORCH_CHECK(
+      self_sizes == source_sizes,
+      "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
+      self.sizes(),
+      " source.shape = ",
+      source.sizes(),
+      OPS_ERROR(ErrCode::PARAM));
+  at::Tensor result =
+      at_npu::native::OpPreparation::apply_tensor_without_format(
+          self.sizes(), self.options());
+
+  if (at::globalContext().deterministicAlgorithms() &&
+      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+    result.copy_(self);
+    c10::List<c10::optional<at::Tensor>> indices;
+    indices.reserve(self.dim());
+    for (const auto i : c10::irange(self.dim())) {
+      if (i == wrapped_dim) {
+        indices.emplace_back(index.to(at::kLong));
+      } else {
+        indices.emplace_back(c10::nullopt);
+      }
     }
-    TORCH_CHECK(self_sizes == source_sizes,
-                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
-                self.sizes(),
-                " source.shape = ",
-                source.sizes(),
-                OPS_ERROR(ErrCode::PARAM));
-    at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self.sizes(), self.options());
 
-    if (at::globalContext().deterministicAlgorithms() &&
-    c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        result.copy_(self);
-        c10::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(self.dim());
-        for (const auto i : c10::irange(self.dim())) {
-            if (i == wrapped_dim) {
-                indices.emplace_back(index.to(at::kLong));
-            } else {
-                indices.emplace_back(c10::nullopt);
-            }
-        }
-
-        result.index_put_(indices, source * alpha, true);
-        return result;
-    }
-
-    EXEC_NPU_CMD(aclnnIndexAdd, result.copy_(self), dim, index, source, alpha, result);
+    result.index_put_(indices, source * alpha, true);
     return result;
+  }
+
+  EXEC_NPU_CMD(
+      aclnnIndexAdd, result.copy_(self), dim, index, source, alpha, result);
+  return result;
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
@@ -121,7 +127,8 @@ at::Tensor index_add(
     const at::Tensor& index,
     const at::Tensor& source,
     const at::Scalar& alpha) {
-    return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
+  return op_api::index_add(
+      self, dimname_to_position(self, dim), index, source, alpha);
 }
 #endif
 
