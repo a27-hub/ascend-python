@@ -5856,19 +5856,6 @@ def rope_quant_kvcache(x, cos, k_cache, v_cache, size_splits, kv_output=False):
             k_cache, v_cache)
 
 
-@impl(m, "npu_swiglu_quant")
-def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode=0,
-                          group_list_type=0, dst_type=torch.int8):
-    y_size = []
-    scale_size = []
-    for i in range(x.dim() - 1):
-        y_size.append(x.size(i))
-        scale_size.append(x.size(i))
-    y_size.append(math.floor(x.size(x.dim() - 1) / 2))
-    return (torch.empty(y_size, dtype=dst_type, device=x.device),
-            torch.empty(scale_size, dtype=torch.float32, device=x.device))
-
-
 @impl(m, "npu_swiglu_group_quant")
 def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, scale=None,
                                 dst_type=296, quant_mode=0, block_size=0, round_scale=False,
@@ -7305,3 +7292,47 @@ def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype
     else:
         out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
     return (out_weight, out_weight_scale, out_weight_offset, out_bias)
+
+
+@impl(m, "npu_swiglu_quant")
+def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None, activate_left=False,
+                          quant_mode="dynamic", group_list_type=0, dst_type=2):
+    # Constraints mirror the C++ TORCH_CHECK in SwigluquantKernelNpuOpApi.cpp
+    torch._check(
+        x.dim() > 1,
+        lambda: f"x dim should be larger than 1, but got {x.dim()}" + ops_error(ErrCode.PARAM),
+    )
+    x_last_dim = x.size(x.dim() - 1)
+    torch._check(
+        x_last_dim % 2 == 0,
+        lambda: f"x last dim should be even, but got {x_last_dim}" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        x_last_dim <= 8192,
+        lambda: f"x last dim should not exceed 8192, but got {x_last_dim}" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        dst_type == 2 or dst_type == 29,
+        lambda: f"dst_type only supports 2 (int8) or 29 (int4), but got {dst_type}" + ops_error(ErrCode.PARAM),
+    )
+    if dst_type == 29:
+        torch._check(
+            x_last_dim % 4 == 0,
+            lambda: f"x last dim should be a multiple of 4 when dst_type is int4 (29), but got {x_last_dim}"
+            + ops_error(ErrCode.PARAM),
+        )
+
+    # y: same shape as x except last dim halved; scale: x with the last dim removed.
+    y_size = []
+    scale_size = []
+    for i in range(x.dim() - 1):
+        y_size.append(x.size(i))
+        scale_size.append(x.size(i))
+    y_size.append(x_last_dim // 2)
+
+    # dst_type is a ge DataType enum (2=DT_INT8, 29=DT_INT4). Match the C++ y allocation:
+    # int8 -> torch.int8, int4 -> torch.uint8 (Byte), keeping the same last dim.
+    y_dtype = torch.int8 if dst_type == 2 else torch.uint8
+
+    return (torch.empty(y_size, dtype=y_dtype, device=x.device),
+            torch.empty(scale_size, dtype=torch.float32, device=x.device))

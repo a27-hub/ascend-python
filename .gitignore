@@ -193,3 +193,5 @@ TAGS
 
 # bazel symlinks
 bazel-*
+extra-info/data-dump/
+extra-info/data-dump/

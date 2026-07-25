@@ -1,0 +1,1 @@
+[{"dtype": "torch.int8", "shape": [2, 10], "stride": [10, 1]}, {"dtype": "torch.float32", "shape": [2], "stride": [1]}]

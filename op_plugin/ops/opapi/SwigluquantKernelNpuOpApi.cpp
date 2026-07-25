@@ -20,66 +20,108 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-constexpr int64_t INT8 = 2;
-constexpr int64_t INT4 = 29;
-constexpr int64_t MAX_LAST_DIM = 8192;
-// the last dimension of x should be divisible by 4
-constexpr int64_t DIV_LAST_DIM = 4;
-constexpr int64_t INT4_IN_INT8_NUM = 2;
+const int64_t SWISH_NUM = 2;
+const int64_t MAX_LAST_DIM = 8192;
+const int64_t DST_TYPE_INT8 = 2;
+const int64_t DST_TYPE_INT4 = 29;
+const int64_t INT4_LAST_DIM_ALIGN = 4;
+const int64_t GROUP_LIST_TYPE_CUMSUM = 0;
+const int64_t GROUP_LIST_TYPE_COUNT = 1;
 }  // namespace
 
-std::tuple<at::Tensor, at::Tensor> npu_swiglu_quant(const at::Tensor& x, const c10::optional<at::Tensor>& smooth_scales,
-    const c10::optional<at::Tensor>& offsets, const c10::optional<at::Tensor>& group_index, bool activate_left,
-    int64_t quant_mode, int64_t group_list_type, c10::optional<at::ScalarType> dst_type)
+std::tuple<at::Tensor, at::Tensor> npu_swiglu_quant(
+    const at::Tensor& x,
+    const c10::optional<at::Tensor>& smooth_scales,
+    const c10::optional<at::Tensor>& offsets,
+    const c10::optional<at::Tensor>& group_index,
+    bool activate_left,
+    c10::string_view quant_mode,
+    int64_t group_list_type,
+    int64_t dst_type)
 {
-    TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "quant_mode only support 0(static) or 1(dynamic), but got ",
-                quant_mode, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(group_list_type == 0 || group_list_type == 1,
-                "group_list_type only support 0(cumsum) or 1(count), but got ",
-                group_list_type, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(!dst_type.has_value() || dst_type == at::ScalarType::Char || dst_type == at::ScalarType::QUInt4x2,
-                "dtype must be torch.int8 for int8 or torch.quint4x2 for int4" + OPS_ERROR(ErrCode::TYPE));
-    if (!dst_type.has_value()) {
-        // dst_type default is torch.int8
-        dst_type = at::ScalarType::Char;
+    // Input validation (constraints from aclnnSwiGluQuantV2.md)
+    TORCH_CHECK(x.dim() > 1, "x dim should be larger than 1, but got ", x.dim(), OPS_ERROR(ErrCode::PARAM));
+    int64_t x_last_dim = x.size(x.dim() - 1);
+    TORCH_CHECK(x_last_dim % SWISH_NUM == 0, "x last dim should be even, but got ", x_last_dim,
+                OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(x_last_dim <= MAX_LAST_DIM, "x last dim should not exceed 8192, but got ", x_last_dim,
+                OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(quant_mode == "dynamic" || quant_mode == "static",
+                "quant_mode only supports 'dynamic' or 'static', but got ", quant_mode, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(group_list_type == GROUP_LIST_TYPE_CUMSUM || group_list_type == GROUP_LIST_TYPE_COUNT,
+                "group_list_type only supports 0 (cumsum) or 1 (count), but got ", group_list_type,
+                OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(dst_type == DST_TYPE_INT8 || dst_type == DST_TYPE_INT4,
+                "dst_type only supports 2 (int8) or 29 (int4), but got ", dst_type, OPS_ERROR(ErrCode::PARAM));
+    if (dst_type == DST_TYPE_INT4) {
+        TORCH_CHECK(x_last_dim % INT4_LAST_DIM_ALIGN == 0,
+                    "x last dim should be a multiple of 4 when dst_type is int4 (29), but got ", x_last_dim,
+                    OPS_ERROR(ErrCode::PARAM));
     }
 
+    // Unpack optional tensors (aclnn passes undefined tensor for absent optionals)
     const at::Tensor& smooth_scales_opt = c10::value_or_else(smooth_scales, [] { return at::Tensor(); });
     const at::Tensor& offsets_opt = c10::value_or_else(offsets, [] { return at::Tensor(); });
-    TORCH_CHECK(quant_mode != 0 || smooth_scales_opt.sizes() == offsets_opt.sizes(),
-                "smooth_scales and offsets should have the same shape when quant_mode is 0",
-                OPS_ERROR(ErrCode::PARAM));
-    
-    // check x last dim
-    int64_t x_last_dim = x.size(x.dim() - 1);
-    TORCH_CHECK(x_last_dim <= MAX_LAST_DIM, "x last dim size should not be larger than ", MAX_LAST_DIM, ", but got ",
-                x_last_dim, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(x_last_dim % 2 == 0, "x last dim size should be even", OPS_ERROR(ErrCode::PARAM));
-    // to concatenate two INT4 into one INT8, the last dimension of x should be divisible by 4
-    TORCH_CHECK(dst_type != at::ScalarType::QUInt4x2 || x_last_dim % DIV_LAST_DIM == 0,
-                "x shape last dim must be divded by 4 when dst_type is torch.quint4x2, but got ",
-                x_last_dim, OPS_ERROR(ErrCode::PARAM));
+    const at::Tensor& group_index_opt = c10::value_or_else(group_index, [] { return at::Tensor(); });
 
+    // dtype validation (constraints from aclnnSwiGluQuantV2.md). Reject up front
+    // with a clear message so an unsupported dtype does not reach the kernel and
+    // leave a latched aclnn error state (107000) that would corrupt the next call.
+    TORCH_CHECK(x.scalar_type() == at::kFloat || x.scalar_type() == at::kHalf ||
+                    x.scalar_type() == at::kBFloat16,
+                "x only supports float16, bfloat16 or float32, but got ", x.scalar_type(),
+                OPS_ERROR(ErrCode::PARAM));
+    if (smooth_scales_opt.defined()) {
+        TORCH_CHECK(smooth_scales_opt.scalar_type() == at::kFloat,
+                    "smooth_scales only supports float32, but got ", smooth_scales_opt.scalar_type(),
+                    OPS_ERROR(ErrCode::PARAM));
+    }
+    if (offsets_opt.defined()) {
+        TORCH_CHECK(offsets_opt.scalar_type() == at::kFloat,
+                    "offsets only supports float32, but got ", offsets_opt.scalar_type(),
+                    OPS_ERROR(ErrCode::PARAM));
+    }
+    if (group_index_opt.defined()) {
+        TORCH_CHECK(group_index_opt.scalar_type() == at::kInt,
+                    "group_index only supports int32, but got ", group_index_opt.scalar_type(),
+                    OPS_ERROR(ErrCode::PARAM));
+    }
+
+    // quant_mode: string_view -> null-terminated char* (safer than string_view::data())
+    std::string quant_mode_str(quant_mode);
+    char* quant_mode_ptr = const_cast<char*>(quant_mode_str.c_str());
+
+    // Output shapes:
+    //   y     : same as x except last dim = x_last / 2
+    //   scale : x with the last dim removed
     at::SmallVector<int64_t, op_infer::SIZE> y_size;
     at::SmallVector<int64_t, op_infer::SIZE> scale_size;
     for (int i = 0; i < x.dim() - 1; i++) {
         y_size.push_back(x.size(i));
         scale_size.push_back(x.size(i));
     }
-    auto last_dim = dst_type == at::ScalarType::Char ? x_last_dim / 2 : x_last_dim / 2 / INT4_IN_INT8_NUM;
-    y_size.push_back(last_dim);
+    y_size.push_back(x_last_dim / SWISH_NUM);
 
-    // The dtype of y is INT8(char), change y_size for different quantization types
-    at::Tensor y = npu_preparation::apply_tensor_without_format(y_size, c10::dtype(c10::ScalarType::Char));
-    at::Tensor scale = npu_preparation::apply_tensor_without_format(scale_size, c10::dtype(c10::ScalarType::Float));
+    // y dtype is decided by dst_type (2->int8, 29->int4). dst_type follows the
+    // ge::DataType convention, which is numerically aligned with aclDataType
+    // (ACL_INT8=2, ACL_INT4=29), so cast directly. Do NOT route through
+    // c10_npu::GetAclDataType, which treats its argument as an aten ScalarType
+    // ordinal (2 -> Short -> ACL_INT16) and would mismatch the kernel's support list.
+    aclDataType y_acltype = static_cast<aclDataType>(dst_type);
+    at::Tensor y;
+    if (dst_type == DST_TYPE_INT4) {
+        y = npu_preparation::apply_tensor_without_format(y_size, at::ScalarType::Byte);
+    } else {
+        at::ScalarType y_scalar_type = npu_preparation::convert_to_scalar_type(y_acltype);
+        y = npu_preparation::apply_tensor_without_format(y_size, c10::dtype(y_scalar_type));
+    }
+    TensorWrapper y_wrapper = {y, y_acltype};
 
-    std::string quant_mode_str = quant_mode == 0 ? "static" : "dynamic";
-    char* quant_mode_ptr = const_cast<char*>(quant_mode_str.c_str());
+    at::Tensor scale =
+        npu_preparation::apply_tensor_without_format(scale_size, c10::dtype(c10::ScalarType::Float));
 
-    const at::Tensor& group_index_opt = c10::value_or_else(group_index, [] { return at::Tensor(); });
-    int output_type = dst_type == at::ScalarType::Char ? INT8 : INT4;
-    EXEC_NPU_CMD(aclnnSwiGluQuantV2, x, smooth_scales_opt, offsets_opt, group_index_opt, activate_left, quant_mode_ptr,
-        group_list_type, output_type, y, scale);
+    EXEC_NPU_CMD(aclnnSwiGluQuantV2, x, smooth_scales_opt, offsets_opt, group_index_opt, activate_left,
+                 quant_mode_ptr, group_list_type, dst_type, y_wrapper, scale);
 
     return std::tie(y, scale);
 }

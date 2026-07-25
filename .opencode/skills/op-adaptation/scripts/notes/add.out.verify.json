@@ -1,0 +1,27 @@
+{
+  "op_name": "add.out",
+  "yaml": {
+    "op_name": null,
+    "return_type": null,
+    "params": [],
+    "error": "Cannot parse func line: add.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)"
+  },
+  "cpp": null,
+  "meta": null,
+  "derivatives": null,
+  "mismatches": [
+    {
+      "check": "cpp",
+      "error": "C++ file not found for 'add.out' in /home/c00618179/op-plugin/op_plugin/ops/opapi (may be a gen_opapi operator)",
+      "severity": "warning"
+    },
+    {
+      "check": "meta",
+      "error": "Meta registration not found for 'add.out' in _meta_registrations.py"
+    }
+  ],
+  "passed": false,
+  "known_inconsistent": false,
+  "warning_count": 1,
+  "known_count": 0
+}

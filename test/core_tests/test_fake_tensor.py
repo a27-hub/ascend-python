@@ -6599,5 +6599,37 @@ class FakeTensorFormatCastTest(TestCase):
             self.assertEqual(list(out.shape), [4, 15, 17])
 
 
+class TestNpuSwigluQuant(TestCase):
+    def test_npu_swiglu_quant_int8_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([32, 256], dtype=torch.float16, device='npu')
+            y_npu, scale_npu = torch_npu.npu_swiglu_quant(x)
+            self.assertEqual(y_npu.shape, torch.Size([32, 128]))
+            self.assertEqual(y_npu.dtype, torch.int8)
+            self.assertEqual(scale_npu.shape, torch.Size([32]))
+            self.assertEqual(scale_npu.dtype, torch.float32)
+
+    def test_npu_swiglu_quant_int4_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([32, 256], dtype=torch.float16, device='npu')
+            y_npu, scale_npu = torch_npu.npu_swiglu_quant(x, dst_type=29)
+            self.assertEqual(y_npu.shape, torch.Size([32, 128]))
+            self.assertEqual(y_npu.dtype, torch.uint8)
+            self.assertEqual(scale_npu.shape, torch.Size([32]))
+            self.assertEqual(scale_npu.dtype, torch.float32)
+
+    def test_npu_swiglu_quant_3d_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([2, 32, 256], dtype=torch.bfloat16, device='npu')
+            smooth_scales = torch.ones([2, 128], dtype=torch.float32, device='npu')
+            group_index = torch.tensor([32, 64], dtype=torch.int32, device='npu')
+            y_npu, scale_npu = torch_npu.npu_swiglu_quant(
+                x, smooth_scales=smooth_scales, group_index=group_index)
+            self.assertEqual(y_npu.shape, torch.Size([2, 32, 128]))
+            self.assertEqual(y_npu.dtype, torch.int8)
+            self.assertEqual(scale_npu.shape, torch.Size([2, 32]))
+            self.assertEqual(scale_npu.dtype, torch.float32)
+
+
 if __name__ == "__main__":
     run_tests()
