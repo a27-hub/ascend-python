@@ -43,10 +43,7 @@ at::Tensor& hardtanh_out(
     const at::Scalar& min,
     const at::Scalar& max,
     at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+  npu_preparation::CheckOut({self}, result, self);
 
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -55,16 +52,22 @@ at::Tensor& hardtanh_out(
   } else {
     hardtanh_out_npu_nocheck(result, self, min, max);
   }
-    return result;
+  return result;
 }
 
-at::Tensor hardtanh(const at::Tensor& self, const at::Scalar& min, const at::Scalar& max) {
+at::Tensor hardtanh(
+    const at::Tensor& self,
+    const at::Scalar& min,
+    const at::Scalar& max) {
   at::Tensor result = npu_preparation::apply_tensor(self);
   hardtanh_out(self, min, max, result);
   return result;
 }
 
-at::Tensor& hardtanh_(at::Tensor& self, const at::Scalar& min, const at::Scalar& max) {
+at::Tensor& hardtanh_(
+    at::Tensor& self,
+    const at::Scalar& min,
+    const at::Scalar& max) {
   return acl_op::hardtanh_out(self, min, max, self);
 }
 } // namespace acl_op

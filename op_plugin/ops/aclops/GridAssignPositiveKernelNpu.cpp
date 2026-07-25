@@ -21,21 +21,23 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-static inline void grid_assign_positive_check(const at::Tensor& argmax_overlaps,
-    const at::Tensor& gt_argmax_overlaps)
-{
-    TORCH_CHECK(
-        at::isIntegralType(argmax_overlaps.scalar_type(), true) &&
-        argmax_overlaps.scalar_type() != at::ScalarType::Long,
-        "int32 argmax_overlaps tensor expected but got a tensor with dtype: ", argmax_overlaps.scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(
-        at::isIntegralType(gt_argmax_overlaps.scalar_type(), true) &&
-            gt_argmax_overlaps.scalar_type() != at::ScalarType::Long,
-        "int32 gt_argmax_overlaps tensor expected but got a tensor with dtype: ", gt_argmax_overlaps.scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
+static inline void grid_assign_positive_check(
+    const at::Tensor& argmax_overlaps,
+    const at::Tensor& gt_argmax_overlaps) {
+  TORCH_CHECK(
+      at::isIntegralType(argmax_overlaps.scalar_type(), true) &&
+          argmax_overlaps.scalar_type() != at::ScalarType::Long,
+      "int32 argmax_overlaps tensor expected but got a tensor with dtype: ",
+      argmax_overlaps.scalar_type(),
+      OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(
+      at::isIntegralType(gt_argmax_overlaps.scalar_type(), true) &&
+          gt_argmax_overlaps.scalar_type() != at::ScalarType::Long,
+      "int32 gt_argmax_overlaps tensor expected but got a tensor with dtype: ",
+      gt_argmax_overlaps.scalar_type(),
+      OPS_ERROR(ErrCode::TYPE));
 }
-}  // namespace
+} // namespace
 
 at::Tensor npu_grid_assign_positive(
     const at::Tensor& self,
@@ -48,34 +50,35 @@ at::Tensor npu_grid_assign_positive(
     int64_t num_gts,
     double pos_iou_thr,
     double min_pos_iou,
-    bool gt_max_assign_all)
-{
-    grid_assign_positive_check(argmax_overlaps, gt_argmax_overlaps);
-    at::Tensor result = npu_preparation::apply_tensor(self);
-    auto option = self.options().dtype(at::kInt);
+    bool gt_max_assign_all) {
+  grid_assign_positive_check(argmax_overlaps, gt_argmax_overlaps);
+  at::Tensor result = npu_preparation::apply_tensor(self);
+  auto option = self.options().dtype(at::kInt);
 
-    at::Scalar s(num_gts);
-    auto num = at::empty({}, option);
-    at::Tensor num_of_gts = acl_op::fill_(num, s);
-    at::Tensor argmax_overLaps = at_npu::native::custom_ops::_npu_dtype_cast(argmax_overlaps, at::ScalarType::Int);
-    at::Tensor gt_argmax_overLaps = at_npu::native::custom_ops::_npu_dtype_cast(gt_argmax_overlaps, at::ScalarType::Int);
+  at::Scalar s(num_gts);
+  auto num = at::empty({}, option);
+  at::Tensor num_of_gts = acl_op::fill_(num, s);
+  at::Tensor argmax_overLaps = at_npu::native::custom_ops::_npu_dtype_cast(
+      argmax_overlaps, at::ScalarType::Int);
+  at::Tensor gt_argmax_overLaps = at_npu::native::custom_ops::_npu_dtype_cast(
+      gt_argmax_overlaps, at::ScalarType::Int);
 
-    at_npu::native::OpCommand cmd;
-    cmd.Name("GridAssignPositive")
-        .Input(self)
-        .Input(overlaps)
-        .Input(box_responsible_flags)
-        .Input(max_overlaps)
-        .Input(argmax_overLaps)
-        .Input(gt_max_overlaps)
-        .Input(gt_argmax_overLaps)
-        .Input(num_of_gts)
-        .Output(result)
-        .Attr("pos_iou_thr", (float)pos_iou_thr)
-        .Attr("min_pos_iou", (float)min_pos_iou)
-        .Attr("gt_max_assign_all", gt_max_assign_all)
-        .Run();
+  at_npu::native::OpCommand cmd;
+  cmd.Name("GridAssignPositive")
+      .Input(self)
+      .Input(overlaps)
+      .Input(box_responsible_flags)
+      .Input(max_overlaps)
+      .Input(argmax_overLaps)
+      .Input(gt_max_overlaps)
+      .Input(gt_argmax_overLaps)
+      .Input(num_of_gts)
+      .Output(result)
+      .Attr("pos_iou_thr", (float)pos_iou_thr)
+      .Attr("min_pos_iou", (float)min_pos_iou)
+      .Attr("gt_max_assign_all", gt_max_assign_all)
+      .Run();
 
-    return result;
+  return result;
 }
-}  // op_plugin
+} // namespace acl_op

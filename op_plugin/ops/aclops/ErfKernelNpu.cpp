@@ -23,19 +23,13 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 at::Tensor& erf_npu_nocheck(at::Tensor& result, const at::Tensor& self) {
   at_npu::native::OpCommand cmd;
-  cmd.Name("Erf")
-      .Input(self)
-      .Output(result)
-      .Run();
+  cmd.Name("Erf").Input(self).Output(result).Run();
   return result;
 }
 } // namespace
 
 at::Tensor& erf_out(const at::Tensor& self, at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+  npu_preparation::CheckOut({self}, result, self);
 
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
