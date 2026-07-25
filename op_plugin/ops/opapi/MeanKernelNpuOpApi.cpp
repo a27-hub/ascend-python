@@ -19,9 +19,8 @@
 
 namespace op_api {
 
-at::Tensor& mean_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
-                     c10::optional<c10::ScalarType> dtype, at::Tensor& out)
-{
+at::Tensor &mean_out(const at::Tensor &self, at::OptionalIntArrayRef dim, bool keepdim,
+    c10::optional<c10::ScalarType> dtype, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnMean, acl_op::mean_out(self, dim, keepdim, dtype, out));
     at::IntArrayRef dimArray;
     c10::SmallVector<int64_t, N> dimlist;
@@ -48,9 +47,8 @@ at::Tensor& mean_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool k
     return out;
 }
 
-at::Tensor mean(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
-                c10::optional<c10::ScalarType> dtype)
-{
+at::Tensor mean(
+    const at::Tensor &self, at::OptionalIntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype) {
     DO_COMPATIBILITY(aclnnMean, acl_op::mean(self, dim, keepdim, dtype));
     c10::ScalarType dstType = dtype.has_value() ? dtype.value() : self.scalar_type();
     at::IntArrayRef dimArray;
@@ -74,23 +72,20 @@ at::Tensor mean(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdi
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor mean(const at::Tensor& self, at::DimnameList dim, bool keepdim, c10::optional<c10::ScalarType> dtype)
-{
+at::Tensor mean(const at::Tensor &self, at::DimnameList dim, bool keepdim, c10::optional<c10::ScalarType> dtype) {
     DO_COMPATIBILITY(aclnnMean, acl_op::mean(self, dim, keepdim, dtype));
     return op_api::mean(self, dimnames_to_positions(self, dim), keepdim, dtype);
 }
 
-at::Tensor& mean_out(const at::Tensor& self, at::DimnameList dim, bool keepdim, c10::optional<c10::ScalarType> dtype,
-                     at::Tensor& out)
-{
+at::Tensor &mean_out(
+    const at::Tensor &self, at::DimnameList dim, bool keepdim, c10::optional<c10::ScalarType> dtype, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnMean, acl_op::mean_out(self, dim, keepdim, dtype, out));
     return op_api::mean_out(self, dimnames_to_positions(self, dim), keepdim, dtype, out);
 }
 #endif
 
-at::Tensor mean(const at::Tensor& self, c10::optional<c10::ScalarType> dtype)
-{
+at::Tensor mean(const at::Tensor &self, c10::optional<c10::ScalarType> dtype) {
     DO_COMPATIBILITY(aclnnMean, acl_op::mean(self, dtype));
     return op_api::mean(self, c10::SmallVector<int64_t, N>{}, false, dtype);
 }
-}
+} // namespace op_api

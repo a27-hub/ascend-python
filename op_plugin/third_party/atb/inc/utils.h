@@ -32,7 +32,7 @@ namespace atb {
 //! 该接口类定义了一系列的公共接口
 //!
 class Utils {
-public:
+  public:
     //!
     //! \brief 获取加速库版本信息。
     //!
@@ -77,7 +77,8 @@ public:
     static uint64_t GetTensorNumel(const TensorDesc &tensorDesc);
 
     //!
-    //! \brief 量化场景使用。float数组转成uint64数组，实现逻辑是复制float到uint64的后32位，uint64的前32位置0。
+    //! \brief
+    //! 量化场景使用。float数组转成uint64数组，实现逻辑是复制float到uint64的后32位，uint64的前32位置0。
     //!
     //! \param src 输入float数组
     //! \param dest 转化得到的uint64数组

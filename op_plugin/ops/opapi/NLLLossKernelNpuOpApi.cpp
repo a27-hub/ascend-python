@@ -20,23 +20,23 @@
 
 namespace op_api {
 
-static std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_npu_nocheck(
-    at::Tensor& result, at::Tensor& total_weight, const at::Tensor& self, const at::Tensor& target,
-    const at::Tensor& weight_value, int64_t reduction, int64_t ignore_index)
-{
+static std::tuple<at::Tensor &, at::Tensor &> nll_loss_forward_npu_nocheck(at::Tensor &result, at::Tensor &total_weight,
+    const at::Tensor &self, const at::Tensor &target, const at::Tensor &weight_value, int64_t reduction,
+    int64_t ignore_index) {
     at::Tensor weight_tensor = weight_value.defined() ? weight_value : at::ones(self.size(-1), self.options());
 
     EXEC_NPU_CMD(aclnnNLLLoss, self, target, weight_tensor, reduction, ignore_index, result, total_weight);
-    return std::tuple<at::Tensor&, at::Tensor&>(result, total_weight);
+    return std::tuple<at::Tensor &, at::Tensor &>(result, total_weight);
 }
 
-std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_out(
-    const at::Tensor& self, const at::Tensor& target, const c10::optional<at::Tensor>& weight, int64_t reduction,
-    int64_t ignore_index, at::Tensor& output, at::Tensor& total_weight)
-{
-    DO_COMPATIBILITY(aclnnNLLLoss, acl_op::nll_loss_forward_out(self, target, weight, reduction,
-                                                                ignore_index, output, total_weight));
-    at::Tensor weight_value = c10::value_or_else(weight, [] { return at::Tensor(); });
+std::tuple<at::Tensor &, at::Tensor &> nll_loss_forward_out(const at::Tensor &self, const at::Tensor &target,
+    const c10::optional<at::Tensor> &weight, int64_t reduction, int64_t ignore_index, at::Tensor &output,
+    at::Tensor &total_weight) {
+    DO_COMPATIBILITY(aclnnNLLLoss,
+        acl_op::nll_loss_forward_out(self, target, weight, reduction, ignore_index, output, total_weight));
+    at::Tensor weight_value = c10::value_or_else(weight, [] {
+        return at::Tensor();
+    });
     if (!weight_value.defined()) {
         weight_value = at::ones(self.size(-1), self.options());
     }
@@ -52,16 +52,14 @@ std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_out(
     return std::tie(output, total_weight);
 }
 
-std::tuple<at::Tensor, at::Tensor> nll_loss_forward(const at::Tensor& self,
-                                                    const at::Tensor& target,
-                                                    const c10::optional<at::Tensor>& weight,
-                                                    int64_t reduction, int64_t ignore_index)
-{
-    DO_COMPATIBILITY(aclnnNLLLoss,
-                     acl_op::nll_loss_forward(self, target, weight, reduction, ignore_index));
+std::tuple<at::Tensor, at::Tensor> nll_loss_forward(const at::Tensor &self, const at::Tensor &target,
+    const c10::optional<at::Tensor> &weight, int64_t reduction, int64_t ignore_index) {
+    DO_COMPATIBILITY(aclnnNLLLoss, acl_op::nll_loss_forward(self, target, weight, reduction, ignore_index));
     c10::SmallVector<int64_t, SIZE> output_size = {};
     c10::SmallVector<int64_t, SIZE> totalWeightSize = {};
-    const at::Tensor& weight_value = c10::value_or_else(weight, [] { return at::Tensor(); });
+    const at::Tensor &weight_value = c10::value_or_else(weight, [] {
+        return at::Tensor();
+    });
 
     if (reduction == at::Reduction::None && self.dim() != 1) {
         output_size = {self.size(0)};

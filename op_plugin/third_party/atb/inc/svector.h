@@ -44,13 +44,12 @@ struct MaxSizeExceeded : public std::exception {};
 //! 封装动态数组的顺序容器
 //!
 template <class T> class SVector {
-public:
+  public:
     //! \brief 默认构造函数
     //!
     //! \note 容量为DEFAULT_SVECTOR_SIZE
     //!
-    constexpr SVector() : size_(0)
-    {
+    constexpr SVector() : size_(0) {
         for (std::size_t i = 0; i < DEFAULT_SVECTOR_SIZE; ++i) {
             storage_[i] = {};
         }
@@ -61,8 +60,7 @@ public:
     //!
     //! \note list长度需小于DEFAULT_SVECTOR_SIZE，否则会抛出异常
     //!
-    SVector(std::initializer_list<T> list)
-    {
+    SVector(std::initializer_list<T> list) {
         if (CHECK_BOUND && list.size() > DEFAULT_SVECTOR_SIZE) {
             throw MaxSizeExceeded();
         }
@@ -79,8 +77,7 @@ public:
     //!
     //! \note size大小需小于DEFAULT_SVECTOR_SIZE，否则会抛出异常
     //!
-    explicit SVector(std::size_t size, const T &value = 0) : size_(0)
-    {
+    explicit SVector(std::size_t size, const T &value = 0) : size_(0) {
         if (CHECK_BOUND && size > DEFAULT_SVECTOR_SIZE) {
             throw MaxSizeExceeded();
         }
@@ -89,12 +86,12 @@ public:
             storage_[i] = value;
         }
     }
-    //! \brief 拷贝构造函数，创建一个新的SVector对象并将另一个SVector对象的值复制到新对象
+    //! \brief
+    //! 拷贝构造函数，创建一个新的SVector对象并将另一个SVector对象的值复制到新对象
     //!
     //! \param other
     //!
-    SVector(const SVector<T> &other)
-    {
+    SVector(const SVector<T> &other) {
         if (other.heap_) {
             heap_ = reinterpret_cast<T *>(malloc(other.size_ * sizeof(T)));
             if (!heap_) {
@@ -112,8 +109,7 @@ public:
         }
     }
 
-    ~SVector()
-    {
+    ~SVector() {
         if (heap_) {
             free(heap_);
         }
@@ -125,8 +121,7 @@ public:
     //!
     //! \note 待添加SVector内元素必须小于SVector容量，否则会抛出异常
     //!
-    void push_back(const T &val) noexcept((!CHECK_BOUND) && std::is_nothrow_assignable<T, const T &>::value)
-    {
+    void push_back(const T &val) noexcept((!CHECK_BOUND) && std::is_nothrow_assignable<T, const T &>::value) {
         if (heap_) {
             if (CHECK_BOUND && size_ == capacity_) {
                 throw MaxSizeExceeded();
@@ -144,8 +139,7 @@ public:
     //!
     //! \return 指针
     //!
-    T *begin() noexcept
-    {
+    T *begin() noexcept {
         if (heap_) {
             return &heap_[0];
         }
@@ -156,8 +150,7 @@ public:
     //!
     //! \return 常量指针
     //!
-    const T *begin() const noexcept
-    {
+    const T *begin() const noexcept {
         if (heap_) {
             return &heap_[0];
         }
@@ -168,8 +161,7 @@ public:
     //!
     //! \return 指针
     //!
-    T *end() noexcept
-    {
+    T *end() noexcept {
         if (heap_) {
             return (&heap_[0]) + size_;
         }
@@ -180,8 +172,7 @@ public:
     //!
     //! \return 常量指针
     //!
-    const T *end() const noexcept
-    {
+    const T *end() const noexcept {
         if (heap_) {
             return (&heap_[0]) + size_;
         }
@@ -194,8 +185,7 @@ public:
     //!
     //! \return 引用
     //!
-    T &operator[](std::size_t i)
-    {
+    T &operator[](std::size_t i) {
         if (heap_) {
             if (size_ == 0 || i >= size_) {
                 throw std::out_of_range("out of range");
@@ -214,8 +204,7 @@ public:
     //!
     //! \return 常量引用
     //!
-    const T &operator[](std::size_t i) const
-    {
+    const T &operator[](std::size_t i) const {
         if (heap_) {
             if (size_ == 0 || i >= size_) {
                 throw std::out_of_range("out of range");
@@ -234,8 +223,7 @@ public:
     //!
     //! \return 引用
     //!
-    T &at(std::size_t i)
-    {
+    T &at(std::size_t i) {
         if (heap_) {
             if (size_ == 0 || i >= size_) {
                 throw std::out_of_range("out of range");
@@ -255,8 +243,7 @@ public:
     //!
     //! \return 引用
     //!
-    const T &at(std::size_t i) const
-    {
+    const T &at(std::size_t i) const {
         if (heap_) {
             if (size_ == 0 || i >= size_) {
                 throw std::out_of_range("heap out of range");
@@ -273,8 +260,7 @@ public:
     //!
     //! \return size
     //!
-    std::size_t size() const noexcept
-    {
+    std::size_t size() const noexcept {
         return size_;
     }
 
@@ -285,9 +271,8 @@ public:
     //!
     //! \note pos必须小于SVector容量，否则会抛出异常
     //!
-    void insert(const std::size_t pos,
-                const T &value) noexcept((!CHECK_BOUND) && std::is_nothrow_assignable<T, const T &>::value)
-    {
+    void insert(const std::size_t pos, const T &value) noexcept(
+        (!CHECK_BOUND) && std::is_nothrow_assignable<T, const T &>::value) {
         if (heap_) {
             if (pos > size_ || pos == capacity_) {
                 throw MaxSizeExceeded();
@@ -318,14 +303,12 @@ public:
     //!
     //! \return bool值
     //!
-    bool empty() const noexcept
-    {
+    bool empty() const noexcept {
         return size_ == 0;
     }
 
     //! \brief 清空容器
-    void clear() noexcept
-    {
+    void clear() noexcept {
         size_ = 0;
     }
 
@@ -333,8 +316,7 @@ public:
     //!
     //! \return 指针
     //!
-    T *data() noexcept
-    {
+    T *data() noexcept {
         if (heap_) {
             return &heap_[0];
         }
@@ -345,8 +327,7 @@ public:
     //!
     //! \return 常量指针
     //!
-    const T *data() const noexcept
-    {
+    const T *data() const noexcept {
         if (heap_) {
             return &heap_[0];
         }
@@ -359,22 +340,22 @@ public:
     //!
     //! \note 传入size参数不能超过SVector容量，反之，则会抛出异常。
     //!
-    void resize(std::size_t size)
-    {
+    void resize(std::size_t size) {
         if (heap_ && size > capacity_) {
             throw MaxSizeExceeded();
         }
         size_ = size;
     }
 
-    //! \brief 改变SVector容量大小，清空内部数据，并将SVector容量大小定义为size大小
+    //! \brief
+    //! 改变SVector容量大小，清空内部数据，并将SVector容量大小定义为size大小
     //!
     //! \param size
     //!
-    //! \note 用于预分配内存空间，SVector默认容量为DEFAULT_SVECTOR_SIZE，传入的size需大于DEFAULT_SVECTOR_SIZ且小于MAX_SVECTOR_SIZE，反之，则会抛出异常。
+    //! \note
+    //! 用于预分配内存空间，SVector默认容量为DEFAULT_SVECTOR_SIZE，传入的size需大于DEFAULT_SVECTOR_SIZ且小于MAX_SVECTOR_SIZE，反之，则会抛出异常。
     //!
-    void reserve(std::size_t size)
-    {
+    void reserve(std::size_t size) {
         if (size > MAX_SVECTOR_SIZE) {
             throw MaxSizeExceeded();
         }
@@ -400,8 +381,7 @@ public:
     //!
     //! \return bool值
     //!
-    bool operator==(const SVector<T> &other) const
-    {
+    bool operator==(const SVector<T> &other) const {
         if (heap_) {
             if (size_ != other.size_ || !other.heap_) {
                 return false;
@@ -430,8 +410,7 @@ public:
     //!
     //! \return bool值
     //!
-    bool operator!=(const SVector<T> &other) const
-    {
+    bool operator!=(const SVector<T> &other) const {
         if (heap_) {
             if (size_ != other.size_ || !other.heap_) {
                 return true;
@@ -460,8 +439,7 @@ public:
     //!
     //! \return bool值
     //!
-    bool operator<(const SVector<T> &other) const
-    {
+    bool operator<(const SVector<T> &other) const {
         if (heap_) {
             if (size_ != other.size_ || !other.heap_) {
                 return size_ < other.size_;
@@ -490,8 +468,7 @@ public:
     //!
     //! \return 容器引用
     //!
-    SVector &operator=(std::initializer_list<T> list)
-    {
+    SVector &operator=(std::initializer_list<T> list) {
         if (heap_) {
             if (CHECK_BOUND && list.size() > MAX_SVECTOR_SIZE) {
                 throw MaxSizeExceeded();
@@ -521,8 +498,7 @@ public:
     //!
     //! \return 容器引用
     //!
-    SVector &operator=(const SVector &other)
-    {
+    SVector &operator=(const SVector &other) {
         if (heap_) {
             size_ = other.size_;
             for (std::size_t i = 0; i < other.size_; ++i) {
@@ -538,7 +514,7 @@ public:
         }
     }
 
-private:
+  private:
     std::size_t capacity_ = 0;
     std::size_t size_ = 0;
     T storage_[DEFAULT_SVECTOR_SIZE + 1];
@@ -552,8 +528,7 @@ private:
 //!
 //! \return 输出流
 //!
-template <class T> std::ostream &operator<<(std::ostream &os, const SVector<T> &svector)
-{
+template <class T> std::ostream &operator<<(std::ostream &os, const SVector<T> &svector) {
     if (svector.size() == 0) {
         return os;
     }

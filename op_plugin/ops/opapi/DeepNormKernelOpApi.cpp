@@ -40,4 +40,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_deep_norm(const at::Tensor &x
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(mean, rstd, y);
 }
 
-}
+} // namespace op_api

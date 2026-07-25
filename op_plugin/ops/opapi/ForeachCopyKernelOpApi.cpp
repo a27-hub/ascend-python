@@ -25,36 +25,35 @@
 
 namespace op_api {
 namespace {
-    bool should_group(const at::TensorList tensors, const at::TensorList tensors2)
-    {
-        if (tensors.empty() && tensors2.empty()) {
-            return false;
-        }
-
-        const at::Tensor& base_tensor = !tensors.empty() ? tensors[0] : tensors2[0];
-        const auto base_device = base_tensor.device();
-        const auto base_dtype = base_tensor.scalar_type();
-
-        bool has_dtype_mismatch = false;
-
-        auto check_list = [&base_device, &base_dtype, &has_dtype_mismatch](const at::TensorList& list) -> bool {
-            for (const auto& t : list) {
-                if (t.device() != base_device) {
-                    return false;
-                }
-                if (t.scalar_type() != base_dtype) {
-                    has_dtype_mismatch = true;
-                }
-            }
-            return true;
-        };
-        if (!check_list(tensors) || !check_list(tensors2)) {
-            return false;
-        }
-
-        return has_dtype_mismatch;
+bool should_group(const at::TensorList tensors, const at::TensorList tensors2) {
+    if (tensors.empty() && tensors2.empty()) {
+        return false;
     }
-} // namespace anonymous
+
+    const at::Tensor &base_tensor = !tensors.empty() ? tensors[0] : tensors2[0];
+    const auto base_device = base_tensor.device();
+    const auto base_dtype = base_tensor.scalar_type();
+
+    bool has_dtype_mismatch = false;
+
+    auto check_list = [&base_device, &base_dtype, &has_dtype_mismatch](const at::TensorList &list) -> bool {
+        for (const auto &t : list) {
+            if (t.device() != base_device) {
+                return false;
+            }
+            if (t.scalar_type() != base_dtype) {
+                has_dtype_mismatch = true;
+            }
+        }
+        return true;
+    };
+    if (!check_list(tensors) || !check_list(tensors2)) {
+        return false;
+    }
+
+    return has_dtype_mismatch;
+}
+} // namespace
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
 const size_t SIZE_OF_NOT_INT = 4;
@@ -62,13 +61,11 @@ const size_t SIZE_OF_SHORT = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_calcu_util = at_npu::native::CalcuOpUtil;
 
-void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking)
-{
+void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking) {
     EXEC_NPU_CMD(aclnnForeachCopy, src, dst);
 }
 
-void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking)
-{
+void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking) {
     size_t tensor_count = src.size();
     size_t max_tensor_count = SINGLE_FOREACH_OP_TENSOR_COUNT;
     size_t loop_time = tensor_count / max_tensor_count;
@@ -91,36 +88,35 @@ void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, b
     }
 }
 
-bool check_tensor_dtype_support_base(const at::TensorList src)
-{
+bool check_tensor_dtype_support_base(const at::TensorList src) {
     if ((sizeof(src[0]) == SIZE_OF_NOT_INT && src[0].scalar_type() != at::ScalarType::QInt32) ||
-         src[0].scalar_type() == at::ScalarType::Int) {
+        src[0].scalar_type() == at::ScalarType::Int) {
         return true;
     }
     if (sizeof(src[0]) == SIZE_OF_SHORT || src[0].scalar_type() == at::ScalarType::Short) {
         return true;
     }
     if (src[0].scalar_type() == at::ScalarType::Char || src[0].scalar_type() == at::ScalarType::Byte ||
-        src[0].scalar_type() == at::ScalarType::BFloat16 ||
-        src[0].scalar_type() == at::ScalarType::Float || src[0].scalar_type() == at::ScalarType::Half) {
+        src[0].scalar_type() == at::ScalarType::BFloat16 || src[0].scalar_type() == at::ScalarType::Float ||
+        src[0].scalar_type() == at::ScalarType::Half) {
         return true;
-    } else if (op_plugin::utils::is_gte_cann_version_810rc1() && (src[0].scalar_type() == at::ScalarType::Long ||
-            src[0].scalar_type() == at::ScalarType::Double || src[0].scalar_type() == at::ScalarType::Bool)) {
+    } else if (op_plugin::utils::is_gte_cann_version_810rc1() &&
+        (src[0].scalar_type() == at::ScalarType::Long || src[0].scalar_type() == at::ScalarType::Double ||
+            src[0].scalar_type() == at::ScalarType::Bool)) {
         return true;
     }
     return false;
 }
 
-bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorList srcs, bool non_blocking)
-{
+bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorList srcs, bool non_blocking) {
     if (dsts.size() != srcs.size() || dsts.size() == 0 || srcs.size() == 0) {
         return false;
     }
     // 方向一致校验
-    const auto expected_dst_dtype =  dsts[0].device().type();
-    const auto expected_src_dtype =  srcs[0].device().type();
-    int expected_dst_device_index =  -1;
-    int expected_src_device_index =  -1;
+    const auto expected_dst_dtype = dsts[0].device().type();
+    const auto expected_src_dtype = srcs[0].device().type();
+    int expected_dst_device_index = -1;
+    int expected_src_device_index = -1;
     // 如果是异步，需要做流校验，不支持跨卡集合copy
     int current_device_index = -1;
     if (non_blocking) {
@@ -138,7 +134,7 @@ bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorL
             return false;
         }
     }
-    for (const auto &dst: dsts) {
+    for (const auto &dst : dsts) {
         if (dst.device().type() != expected_dst_dtype) {
             return false;
         }
@@ -146,7 +142,7 @@ bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorL
             return false;
         }
     }
-    for (const auto &src: srcs) {
+    for (const auto &src : srcs) {
         if (src.device().type() != expected_src_dtype) {
             return false;
         }
@@ -161,10 +157,9 @@ bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorL
     return true;
 }
 
-void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking)
-{
+void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking) {
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
-                " and the src size is ", dst.size(), "." + OPS_ERROR(ErrCode::PARAM));
+        " and the src size is ", dst.size(), "." + OPS_ERROR(ErrCode::PARAM));
     size_t count = dst.size();
     void *dsts[count];
     void *srcs[count];
@@ -211,8 +206,8 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
     size_t failIdx = SIZE_MAX;
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
     if (non_blocking) {
-        auto ret = c10_npu::queue::LaunchBatchAsyncCopyTask(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes,
-                                                            count, acl_stream);
+        auto ret = c10_npu::queue::LaunchBatchAsyncCopyTask(
+            dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count, acl_stream);
         NPU_CHECK_ERROR(ret, "aclrtMemcpyBatchAsync");
     } else {
         aclError error = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(acl_stream);
@@ -221,19 +216,18 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
             C10_NPU_SHOW_ERR_MSG();
             if (c10_npu::option::OptionsManager::IsResumeModeEnable()) {
                 TORCH_NPU_WARN("ACL stream synchronize failed, error code:", error,
-                               ". But in checkpoint-resume mode will not throw exceptions.");
+                    ". But in checkpoint-resume mode will not throw exceptions.");
             } else {
                 AT_ERROR("ACL stream synchronize failed, error code:", error);
             }
         }
-        auto ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count,
-                                                  &failIdx);
+        auto ret =
+            c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count, &failIdx);
         NPU_CHECK_ERROR(ret, "aclrtMemcpyBatch");
     }
 }
 
-bool is_supported_cross_dtype_copy(at::ScalarType src_dtype, at::ScalarType dst_dtype)
-{
+bool is_supported_cross_dtype_copy(at::ScalarType src_dtype, at::ScalarType dst_dtype) {
     if (src_dtype == at::ScalarType::Float &&
         (dst_dtype == at::ScalarType::Half || dst_dtype == at::ScalarType::BFloat16)) {
         return true;
@@ -245,8 +239,7 @@ bool is_supported_cross_dtype_copy(at::ScalarType src_dtype, at::ScalarType dst_
     return false;
 }
 
-bool check_cross_dtype_supported(const at::TensorList dst, const at::TensorList src)
-{
+bool check_cross_dtype_supported(const at::TensorList dst, const at::TensorList src) {
     if (!op_plugin::utils::is_gte_cann_version_910()) {
         return false;
     }
@@ -262,14 +255,15 @@ bool check_cross_dtype_supported(const at::TensorList dst, const at::TensorList 
 }
 
 void process_tensor_list_batch(const at::TensorList self, const at::TensorList src, bool non_blocking,
-    bool is_support_nd_out, bool is_support_batch)
-{
+    bool is_support_nd_out, bool is_support_batch) {
     bool can_fast_route = at::native::can_use_fast_route(self, src);
     bool cross_dtype_supported = !can_fast_route && check_cross_dtype_supported(self, src);
 
     if (!is_support_nd_out || (!can_fast_route && !cross_dtype_supported) || !check_tensor_dtype_support_base(src)) {
-        if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
-                (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src, non_blocking)) {
+        if (is_support_batch &&
+            ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
+                (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) &&
+            check_tensor_device_dtype_base(self, src, non_blocking)) {
             return memcpyBatch(self, src, non_blocking);
         }
         ASCEND_LOGW(
@@ -284,16 +278,15 @@ void process_tensor_list_batch(const at::TensorList self, const at::TensorList s
     split_and_exec_npu_cmd_copy(self, src, /*non_blocking=*/true);
 }
 
-void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking)
-{
+void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking) {
     DO_COMPATIBILITY(aclnnForeachCopy, at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking));
     at::native::check_foreach_api_restrictions(self, src);
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     static const bool is_support_batch = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend910_9391);
+                                             c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend910_9391);
 
     if (!should_group(src, self)) {
         process_tensor_list_batch(self, src, non_blocking, is_support_nd_out, is_support_batch);
@@ -304,7 +297,7 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
             temp_groups[src[i].scalar_type()].second.push_back(src[i]);
         }
 
-        for (auto const& [dtype, vecs] : temp_groups) {
+        for (auto const &[dtype, vecs] : temp_groups) {
             at::TensorList current_self(vecs.first);
             at::TensorList current_src(vecs.second);
 
@@ -314,4 +307,4 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
 }
 
 #endif
-} // namespace at_npu
+} // namespace op_api

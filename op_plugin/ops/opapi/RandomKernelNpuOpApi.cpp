@@ -131,7 +131,8 @@ at::Tensor &random_without_from_to_op_api_(at::Tensor &self, c10::optional<at::G
     auto gen =
         at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
     auto is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
-    // Remove false after aclnnInplaceRandomWithoutFromTo supports aclnnSetPytorchRandom.
+    // Remove false after aclnnInplaceRandomWithoutFromTo supports
+    // aclnnSetPytorchRandom.
     auto counter_offset = op_plugin::utils::calc_final_counter_offset(self, false);
     if (is_capture == c10_npu::CaptureStatus::None) {
         auto pair = gen->philox_engine_inputs(counter_offset);
@@ -175,4 +176,4 @@ at::Tensor &random_(at::Tensor &self, c10::optional<at::Generator> generator) {
     return self;
 }
 
-}
+} // namespace op_api

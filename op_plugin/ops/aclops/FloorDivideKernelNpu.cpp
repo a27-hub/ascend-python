@@ -21,22 +21,19 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor &floor_divide_scalar_out_nocheck(at::Tensor &result, const at::Tensor &self, at::Scalar other)
-{
+at::Tensor &floor_divide_scalar_out_nocheck(at::Tensor &result, const at::Tensor &self, at::Scalar other) {
     at_npu::native::OpCommand cmd;
     cmd.Name("FloorDiv").Input(self).Input(other, self.scalar_type()).Output(result).Run();
     return result;
 }
 
-at::Tensor &floor_divide_scalar_out_nocheck(at::Tensor &result, at::Scalar self, const at::Tensor &other)
-{
+at::Tensor &floor_divide_scalar_out_nocheck(at::Tensor &result, at::Scalar self, const at::Tensor &other) {
     at_npu::native::OpCommand cmd;
     cmd.Name("FloorDiv").Input(self, other.scalar_type()).Input(other).Output(result).Run();
     return result;
 }
 
-at::Tensor &floor_divide_out_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor &floor_divide_out_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &other) {
     if (npu_preparation::IsCPUScalar(other)) {
         floor_divide_scalar_out_nocheck(result, self, other.item());
     } else if (npu_preparation::IsCPUScalar(self)) {
@@ -48,8 +45,7 @@ at::Tensor &floor_divide_out_nocheck(at::Tensor &result, const at::Tensor &self,
     return result;
 }
 
-at::Tensor &check_self_dtype_npu(at::Tensor &self)
-{
+at::Tensor &check_self_dtype_npu(at::Tensor &self) {
     if (self.dtype() == at::kBool || self.dtype() == at::kInt) {
         self = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
     }
@@ -57,16 +53,14 @@ at::Tensor &check_self_dtype_npu(at::Tensor &self)
 }
 } // namespace
 
-at::Tensor &floor_divide_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &floor_divide_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     npu_preparation::CheckOut({self, other}, result, result, output_size);
 
     at::ScalarType result_type = result.scalar_type();
     at::ScalarType high_type = at::native::result_type(self, other);
     TORCH_CHECK(canCast(high_type, result_type), "result type ", high_type,
-        " can't be cast to the desired output type ", result_type,
-        OPS_ERROR(ErrCode::TYPE));
+        " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
 
     at::ScalarType cal_type = op_plugin::utils::get_divide_calculate_type(self, other);
     at::Tensor self_cast = self.scalar_type() != cal_type ? self.to(cal_type) : self;
@@ -90,8 +84,7 @@ at::Tensor &floor_divide_out(const at::Tensor &self, const at::Tensor &other, at
     return result;
 }
 
-at::Tensor floor_divide(const at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor floor_divide(const at::Tensor &self, const at::Tensor &other) {
     at::ScalarType cal_type = op_plugin::utils::get_divide_calculate_type(self, other);
     at::Tensor self_cast = self.scalar_type() != cal_type ? self.to(cal_type) : self;
     at::Tensor other_cast = other.scalar_type() != cal_type ? other.to(cal_type) : other;
@@ -110,8 +103,7 @@ at::Tensor floor_divide(const at::Tensor &self, const at::Tensor &other)
     return result;
 }
 
-at::Tensor floor_divide(const at::Tensor &self, const at::Scalar &other)
-{
+at::Tensor floor_divide(const at::Tensor &self, const at::Scalar &other) {
     at::Tensor self_cast = self;
     check_self_dtype_npu(self_cast);
     at::Tensor format_cast_self = npu_preparation::CastBackToOriFormat(self_cast);
@@ -121,13 +113,11 @@ at::Tensor floor_divide(const at::Tensor &self, const at::Scalar &other)
     return result;
 }
 
-at::Tensor &floor_divide_(at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor &floor_divide_(at::Tensor &self, const at::Tensor &other) {
     return acl_op::floor_divide_out(self, other, self);
 }
 
-at::Tensor &floor_divide_(at::Tensor &self, const at::Scalar &other)
-{
+at::Tensor &floor_divide_(at::Tensor &self, const at::Scalar &other) {
     check_self_dtype_npu(self);
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);

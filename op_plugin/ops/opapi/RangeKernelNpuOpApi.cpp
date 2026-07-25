@@ -91,4 +91,4 @@ at::Tensor &range_out(const at::Scalar &start, const at::Scalar &end, const at::
     EXEC_NPU_CMD(aclnnRange, start, end, step, result);
     return result;
 }
-}
+} // namespace op_api

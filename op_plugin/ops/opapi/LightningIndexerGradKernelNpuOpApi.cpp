@@ -23,19 +23,11 @@
 namespace op_api {
 using namespace at_npu::native;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_lightning_indexer_grad(
-    const at::Tensor &query,
-    const at::Tensor &key,
-    const at::Tensor &dy,
-    const at::Tensor &sparse_indices,
-    const at::Tensor &weights,
-    const c10::optional<at::Tensor> &actual_seq_lengths_query,
-    const c10::optional<at::Tensor> &actual_seq_lengths_key,
-    c10::optional<c10::string_view> layout,
-    c10::optional<int64_t> sparse_mode,
-    c10::optional<int64_t> pre_tokens,
-    c10::optional<int64_t> next_tokens)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_lightning_indexer_grad(const at::Tensor &query,
+    const at::Tensor &key, const at::Tensor &dy, const at::Tensor &sparse_indices, const at::Tensor &weights,
+    const c10::optional<at::Tensor> &actual_seq_lengths_query, const c10::optional<at::Tensor> &actual_seq_lengths_key,
+    c10::optional<c10::string_view> layout, c10::optional<int64_t> sparse_mode, c10::optional<int64_t> pre_tokens,
+    c10::optional<int64_t> next_tokens) {
     const at::Tensor &actual_seq_lengths_query_const = actual_seq_lengths_query.value_or(at::Tensor());
     const at::Tensor &actual_seq_lengths_key_const = actual_seq_lengths_key.value_or(at::Tensor());
 
@@ -51,12 +43,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_lightning_indexer_grad(
     const int64_t head_num = 0;
     const bool deterministic = at::globalContext().deterministicAlgorithms();
 
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(
-        aclnnLightningIndexerGrad, query, key, dy, sparse_indices, weights,
-        actual_seq_lengths_query_const, actual_seq_lengths_key_const,
-        head_num, layout_ptr, sparse_mode_const, pre_tokens_const, next_tokens_const, deterministic,
-        d_query, d_key, d_weights);
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnLightningIndexerGrad, query, key, dy, sparse_indices, weights,
+        actual_seq_lengths_query_const, actual_seq_lengths_key_const, head_num, layout_ptr, sparse_mode_const,
+        pre_tokens_const, next_tokens_const, deterministic, d_query, d_key, d_weights);
 
     return std::make_tuple(d_query, d_key, d_weights);
 }
-}
+} // namespace op_api

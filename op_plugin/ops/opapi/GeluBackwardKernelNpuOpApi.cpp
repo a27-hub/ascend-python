@@ -19,13 +19,12 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self, c10::string_view approximate)
-{
+at::Tensor gelu_backward(const at::Tensor &grad_output, const at::Tensor &self, c10::string_view approximate) {
     static auto gelu_sc = at_npu::native::env::CheckCompatibleImpl();
     auto output_size_0 = op_infer::broadcast_ops_npu_output_size(grad_output, self);
     auto output_dtype_0 = at::native::result_type(grad_output, self);
-    at::Tensor grad_input = npu_preparation::apply_tensor_without_format(output_size_0,
-                                                                         grad_output.options().dtype(output_dtype_0));
+    at::Tensor grad_input =
+        npu_preparation::apply_tensor_without_format(output_size_0, grad_output.options().dtype(output_dtype_0));
     auto approximate_str = op_infer::npu_gelu_approximate_str(approximate);
     auto approximate_ptr = const_cast<char *>(approximate_str.c_str());
     if (!c10_npu::IsAclnnOnly() && !gelu_sc) {
@@ -36,4 +35,4 @@ at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self
     }
     return grad_input;
 }
-}
+} // namespace op_api

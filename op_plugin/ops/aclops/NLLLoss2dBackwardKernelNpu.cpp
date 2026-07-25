@@ -24,10 +24,8 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 at::Tensor &nll_loss2d_backward_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
-                                            const at::Tensor &self, const at::Tensor &target,
-                                            const at::Tensor &weight_tensor, int64_t reduction, int64_t ignore_index,
-                                            const at::Tensor &total_weight)
-{
+    const at::Tensor &self, const at::Tensor &target, const at::Tensor &weight_tensor, int64_t reduction,
+    int64_t ignore_index, const at::Tensor &total_weight) {
     auto reduction_str = op_plugin::utils::get_reduction_str(reduction);
 
     at_npu::native::OpCommand cmd;
@@ -45,10 +43,11 @@ at::Tensor &nll_loss2d_backward_out_nocheck(at::Tensor &grad_input, const at::Te
 } // namespace
 
 at::Tensor &nll_loss2d_backward_out(const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &target,
-                                    const c10::optional<at::Tensor> &weight, int64_t reduction,
-                                    int64_t ignore_index, const at::Tensor &total_weight, at::Tensor &grad_input)
-{
-    at::Tensor weight_ = c10::value_or_else(weight, [] { return at::Tensor(); });
+    const c10::optional<at::Tensor> &weight, int64_t reduction, int64_t ignore_index, const at::Tensor &total_weight,
+    at::Tensor &grad_input) {
+    at::Tensor weight_ = c10::value_or_else(weight, [] {
+        return at::Tensor();
+    });
     at::Tensor weight_tensor = at::ones(self.size(1), self.options());
     if (weight_.defined()) {
         weight_tensor = npu_utils::format_contiguous(weight_);
@@ -57,36 +56,33 @@ at::Tensor &nll_loss2d_backward_out(const at::Tensor &grad_output, const at::Ten
     if (ignore_index >= 0 && ignore_index < self.size(1)) {
         at::Tensor zero = at::zeros(1, self.options());
         calcu_op_util::AclrtMemcpyAsync({weight_tensor, ignore_index}, weight_tensor.itemsize(), {zero, 0},
-                                        weight_tensor.itemsize(), ACL_MEMCPY_DEVICE_TO_DEVICE);
+            weight_tensor.itemsize(), ACL_MEMCPY_DEVICE_TO_DEVICE);
     }
 
     npu_preparation::CheckOut({self, grad_output, target, weight_tensor, total_weight}, grad_input, self);
 
     if (!npu_utils::check_match(&grad_input)) {
         at::Tensor contiguous_grad_input = npu_utils::format_contiguous(grad_input);
-        nll_loss2d_backward_out_nocheck(contiguous_grad_input, grad_output, self, target, weight_tensor, reduction,
-                                        ignore_index, total_weight);
+        nll_loss2d_backward_out_nocheck(
+            contiguous_grad_input, grad_output, self, target, weight_tensor, reduction, ignore_index, total_weight);
         npu_utils::format_fresh_view(grad_input, contiguous_grad_input);
     } else {
-        nll_loss2d_backward_out_nocheck(grad_input, grad_output, self, target, weight_tensor, reduction, ignore_index,
-                                        total_weight);
+        nll_loss2d_backward_out_nocheck(
+            grad_input, grad_output, self, target, weight_tensor, reduction, ignore_index, total_weight);
     }
 
     return grad_input;
 }
 
 at::Tensor nll_loss2d_backward(const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &target,
-                               const c10::optional<at::Tensor> &weight_opt, int64_t reduction, int64_t ignore_index,
-                               const at::Tensor &total_weight)
-{
-    TORCH_CHECK(self.dim() == 4, "Expected 4D input (got ", self.dim(), "D input)"
-        + OPS_ERROR(ErrCode::PARAM));
+    const c10::optional<at::Tensor> &weight_opt, int64_t reduction, int64_t ignore_index,
+    const at::Tensor &total_weight) {
+    TORCH_CHECK(self.dim() == 4, "Expected 4D input (got ", self.dim(), "D input)" + OPS_ERROR(ErrCode::PARAM));
     // Check Target Dtype
     auto scalar_type = target.scalar_type();
     TORCH_CHECK((scalar_type == at::kLong || scalar_type == at::kInt), "Expected object of scalar type ", at::kLong,
         " or ", at::kInt, " but got scalar type ", scalar_type,
-        " for argument 'target' in call to nll_loss2d_backward"
-        + OPS_ERROR(ErrCode::TYPE));
+        " for argument 'target' in call to nll_loss2d_backward" + OPS_ERROR(ErrCode::TYPE));
     at::Tensor target_cast =
         (scalar_type == at::kLong) ? at_npu::native::custom_ops::_npu_dtype_cast(target, at::kInt) : target;
 
@@ -106,8 +102,8 @@ at::Tensor nll_loss2d_backward(const at::Tensor &grad_output, const at::Tensor &
     auto output_size = op_infer::input_same_output_size(self_input);
     at::Tensor grad_input = npu_preparation::apply_tensor(self_input, output_size);
 
-    acl_op::nll_loss2d_backward_out(grad_output_reshape, self_input, target_input, weight_opt, reduction, ignore_index,
-                                    total_weight, grad_input);
+    acl_op::nll_loss2d_backward_out(
+        grad_output_reshape, self_input, target_input, weight_opt, reduction, ignore_index, total_weight, grad_input);
 
     grad_input = grad_input.reshape({self.size(0), self.size(2), self.size(3), self.size(1)}).permute({0, 3, 1, 2});
 

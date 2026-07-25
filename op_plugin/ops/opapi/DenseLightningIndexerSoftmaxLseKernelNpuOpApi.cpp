@@ -61,4 +61,4 @@ std::tuple<at::Tensor, at::Tensor> npu_dense_lightning_indexer_softmax_lse_symin
 
     return std::make_tuple(softmax_max_out, softmax_sum_out);
 }
-}
+} // namespace op_api

@@ -22,15 +22,14 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace op_api {
 
-at::Tensor minimum(const at::Tensor& self, const at::Tensor& other)
-{
+at::Tensor minimum(const at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnMinimum, acl_op::minimum(self, other));
     if (is_ascend950_path()) {
         auto [self_device, other_device] = prepare_binary_tensors(self, other);
         at::ScalarType result_dtype = at::native::result_type(self_device, other_device);
         auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
-        at::Tensor result = npu_preparation::apply_tensor_without_format(
-            output_size, self_device.options().dtype(result_dtype));
+        at::Tensor result =
+            npu_preparation::apply_tensor_without_format(output_size, self_device.options().dtype(result_dtype));
         EXEC_NPU_CMD(aclnnMinimum, self_device, other_device, result);
         return result;
     }
@@ -41,8 +40,7 @@ at::Tensor minimum(const at::Tensor& self, const at::Tensor& other)
     return op_api::minimum_out(self, other, result);
 }
 
-at::Tensor& minimum_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
-{
+at::Tensor &minimum_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnMinimum, acl_op::minimum_out(self, other, result));
     if (is_ascend950_path()) {
         auto [self_device, other_device] = prepare_binary_tensors(self, other);
@@ -66,12 +64,10 @@ at::Tensor& minimum_out(const at::Tensor& self, const at::Tensor& other, at::Ten
     return result;
 }
 
-
-at::Tensor min(const at::Tensor& self)
-{
+at::Tensor min(const at::Tensor &self) {
     TORCH_CHECK(self.numel() > 0,
-    "min(): Expected reduction dim to be specified for input.numel() == 0. "
-    "Specify the reduction dim with the 'dim' argument.");
+        "min(): Expected reduction dim to be specified for input.numel() == 0. "
+        "Specify the reduction dim with the 'dim' argument.");
     DO_COMPATIBILITY(aclnnMin, acl_op::min(self));
     at::SmallVector<int64_t, op_infer::SIZE> dims = op_plugin::utils::get_dimlist_for_tensor(self);
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, false);
@@ -80,13 +76,8 @@ at::Tensor min(const at::Tensor& self)
     return result;
 }
 
-std::tuple<at::Tensor&, at::Tensor&> min_out(
-    const at::Tensor& self,
-    int64_t dim,
-    bool keepdim,
-    at::Tensor& output,
-    at::Tensor& indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> min_out(
+    const at::Tensor &self, int64_t dim, bool keepdim, at::Tensor &output, at::Tensor &indices) {
     DO_COMPATIBILITY(aclnnMinDim, acl_op::min_out(self, dim, keepdim, output, indices));
     at::SmallVector<int64_t, op_infer::SIZE> dims = {dim};
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
@@ -96,8 +87,7 @@ std::tuple<at::Tensor&, at::Tensor&> min_out(
     return std::tie(output, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim, bool keepdim)
-{
+std::tuple<at::Tensor, at::Tensor> min(const at::Tensor &self, int64_t dim, bool keepdim) {
     DO_COMPATIBILITY(aclnnMinDim, acl_op::min(self, dim, keepdim));
     at::SmallVector<int64_t, op_infer::SIZE> dims = {dim};
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
@@ -108,11 +98,11 @@ std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim, bool
     return std::tie(outputs, indices);
 }
 
-at::Tensor& min_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
-{
-    TORCH_CHECK(!(self.requires_grad() || other.requires_grad() || result.requires_grad()) || !at::GradMode::is_enabled(),
-                "minimum(): functions with out=... arguments don`t support automatic differentiation, "
-                "but one of the arguments requires grad.");
+at::Tensor &min_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
+    TORCH_CHECK(
+        !(self.requires_grad() || other.requires_grad() || result.requires_grad()) || !at::GradMode::is_enabled(),
+        "minimum(): functions with out=... arguments don`t support automatic differentiation, "
+        "but one of the arguments requires grad.");
     DO_COMPATIBILITY(aclnnMinimum, acl_op::min_out(self, other, result));
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at_npu::native::OpPreparation::check_tensor({self, other}, result, result.scalar_type(), output_size);
@@ -121,22 +111,16 @@ at::Tensor& min_out(const at::Tensor& self, const at::Tensor& other, at::Tensor&
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor&, at::Tensor&> min_out(
-    const at::Tensor& self,
-    at::Dimname dim,
-    bool keepdim,
-    at::Tensor& output,
-    at::Tensor& indices)
-{
+std::tuple<at::Tensor &, at::Tensor &> min_out(
+    const at::Tensor &self, at::Dimname dim, bool keepdim, at::Tensor &output, at::Tensor &indices) {
     DO_COMPATIBILITY(aclnnMinDim, acl_op::min_out(self, dim, keepdim, output, indices));
     return op_api::min_out(self, dimname_to_position(self, dim), keepdim, output, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, at::Dimname dim, bool keepdim)
-{
+std::tuple<at::Tensor, at::Tensor> min(const at::Tensor &self, at::Dimname dim, bool keepdim) {
     DO_COMPATIBILITY(aclnnMinDim, acl_op::min(self, dim, keepdim));
     return op_api::min(self, dimname_to_position(self, dim), keepdim);
 }
 #endif
 
-}
+} // namespace op_api

@@ -22,16 +22,14 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor &logical_xor_out_npu_nocheck(const at::Tensor &self, const at::Scalar other, at::Tensor &result)
-{
+at::Tensor &logical_xor_out_npu_nocheck(const at::Tensor &self, const at::Scalar other, at::Tensor &result) {
     auto self_copy = (self.dtype() == at::kBool) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, at::kBool);
     at_npu::native::OpCommand cmd;
     cmd.Name("NotEqual").Input(self_copy).Input(other, self_copy.scalar_type()).Output(result).Run();
     return result;
 }
 
-at::Tensor &logical_xor_out_npu_nocheck(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &logical_xor_out_npu_nocheck(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     if (self.dim() == 0) {
         logical_xor_out_npu_nocheck(other, self.item(), result);
     } else if (other.dim() == 0) {
@@ -49,11 +47,10 @@ at::Tensor &logical_xor_out_npu_nocheck(const at::Tensor &self, const at::Tensor
 }
 } // namespace
 
-at::Tensor &logical_xor_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
-{
+at::Tensor &logical_xor_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
-    npu_preparation::CheckOut({self}, result, npu_preparation::get_tensor_npu_format(self), result.scalar_type(),
-                              outputSize);
+    npu_preparation::CheckOut(
+        {self}, result, npu_preparation::get_tensor_npu_format(self), result.scalar_type(), outputSize);
 
     if (npu_utils::check_match(&result) && (result.dtype() == at::kBool)) {
         logical_xor_out_npu_nocheck(self, other, result);
@@ -66,11 +63,10 @@ at::Tensor &logical_xor_out(const at::Tensor &self, const at::Tensor &other, at:
     return result;
 }
 
-at::Tensor logical_xor(const at::Tensor &self, const at::Tensor &other)
-{
+at::Tensor logical_xor(const at::Tensor &self, const at::Tensor &other) {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kBool),
-                                                                  npu_preparation::get_tensor_npu_format(self));
+    at::Tensor result = npu_preparation::apply_tensor_with_format(
+        output_size, self.options().dtype(at::kBool), npu_preparation::get_tensor_npu_format(self));
     logical_xor_out_npu_nocheck(self, other, result);
     return result;
 }

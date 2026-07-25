@@ -20,10 +20,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor obfuscation_calculate(
-    const at::Tensor &fd, const at::Tensor &x,
-    const at::Tensor &param, c10::optional<double> obf_coefficient
-    )
-{
+    const at::Tensor &fd, const at::Tensor &x, const at::Tensor &param, c10::optional<double> obf_coefficient) {
     int32_t fd_real;
     int32_t param_real;
     if (!fd.defined()) {
@@ -32,7 +29,7 @@ at::Tensor obfuscation_calculate(
     try {
         auto fd_scalar = fd[0].item();
         fd_real = fd_scalar.to<int32_t>();
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         throw std::runtime_error("Failed to process fd: " + std::string(e.what()));
     }
     if (!param.defined()) {
@@ -41,7 +38,7 @@ at::Tensor obfuscation_calculate(
     try {
         auto param_scalar = param[0].item();
         param_real = param_scalar.to<int32_t>();
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         throw std::runtime_error("Failed to process param: " + std::string(e.what()));
     }
     auto cmd_real = static_cast<int32_t>(1);
@@ -53,4 +50,4 @@ at::Tensor obfuscation_calculate(
     EXEC_NPU_CMD(aclnnObfuscationCalculateV2, fd_real, x, param_real, cmd_real, obf_coefficient_real, y);
     return y;
 }
-}
+} // namespace op_api

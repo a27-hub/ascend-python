@@ -17,37 +17,22 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
-    const at::Tensor & x,
-    const at::Tensor & weight,
-    const at::Tensor & group_list,
-    const at::Tensor & weight_scale,
-    const at::Tensor & x_scale,
-    const c10::optional<at::Tensor> & bias,
-    const c10::optional<at::Tensor> & offset)
-{
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(const at::Tensor &x,
+    const at::Tensor &weight, const at::Tensor &group_list, const at::Tensor &weight_scale, const at::Tensor &x_scale,
+    const c10::optional<at::Tensor> &bias, const c10::optional<at::Tensor> &offset) {
     auto x_size = x.sizes();
-    // CANN WeightNZ infers logical N from weightScale, not from packed/NZ weight storage shape.
+    // CANN WeightNZ infers logical N from weightScale, not from packed/NZ weight
+    // storage shape.
     int n = weight_scale.sizes().back();
     int m = x_size[0];
     int k = x_size[1];
 
-    at::Tensor output = npu_preparation::apply_tensor_without_format({m, n/2}, c10::dtype(c10::ScalarType::Char));
+    at::Tensor output = npu_preparation::apply_tensor_without_format({m, n / 2}, c10::dtype(c10::ScalarType::Char));
     at::Tensor output_scale = npu_preparation::apply_tensor_without_format(x_scale, {m});
     at::Tensor output_offset = npu_preparation::apply_tensor_without_format({}, c10::dtype(c10::ScalarType::Float));
 
-    EXEC_NPU_CMD(
-        aclnnGroupedMatmulSwigluQuantWeightNZ,
-        x,
-        weight,
-        bias,
-        offset,
-        weight_scale,
-        x_scale,
-        group_list,
-        output,
-        output_scale,
-        output_offset);
+    EXEC_NPU_CMD(aclnnGroupedMatmulSwigluQuantWeightNZ, x, weight, bias, offset, weight_scale, x_scale, group_list,
+        output, output_scale, output_offset);
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(output, output_scale, output_offset);
 }
-}
+} // namespace op_api

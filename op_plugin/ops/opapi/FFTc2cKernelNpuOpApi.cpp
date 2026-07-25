@@ -22,9 +22,9 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 constexpr size_t SYMMETRY_DIM_SIZE = 2; // 对称
 enum class fft_norm_mode {
-    none,       // No normalization
-    by_root_n,  // Divide by sqrt(signal_size)
-    by_n,       // Divide by signal_size
+    none, // No normalization
+    by_root_n, // Divide by sqrt(signal_size)
+    by_n, // Divide by signal_size
 };
 enum class fft_mode {
     c2c,
@@ -32,8 +32,7 @@ enum class fft_mode {
     c2r,
 };
 
- void conjugate_symmetry(at::Tensor& input, int64_t dim)
- {
+void conjugate_symmetry(at::Tensor &input, int64_t dim) {
     const auto ndim = input.dim();
     if (dim < 0) {
         dim = ndim + dim;
@@ -42,7 +41,7 @@ enum class fft_mode {
 
     const auto nfft_dim_size = input.size(dim);
     if (input.numel() == 0 || nfft_dim_size <= SYMMETRY_DIM_SIZE) {
-        return ;
+        return;
     }
 
     const auto half = (nfft_dim_size + 1) / 2;
@@ -62,8 +61,7 @@ enum class fft_mode {
     at::imag(high_freq).neg_();
 }
 
-double _fft_normalization_scale(int64_t normalization, at::IntArrayRef sizes, at::IntArrayRef dims)
-{
+double _fft_normalization_scale(int64_t normalization, at::IntArrayRef sizes, at::IntArrayRef dims) {
     auto norm = static_cast<fft_norm_mode>(normalization);
     if (norm == fft_norm_mode::none) {
         return 1.0;
@@ -73,20 +71,18 @@ double _fft_normalization_scale(int64_t normalization, at::IntArrayRef sizes, at
     for (auto dim : dims) {
         signal_numel *= sizes[dim];
     }
-    const double scale_denom = (norm == fft_norm_mode::by_root_n) ?
-        std::sqrt(signal_numel) : static_cast<double>(signal_numel);
+    const double scale_denom =
+        (norm == fft_norm_mode::by_root_n) ? std::sqrt(signal_numel) : static_cast<double>(signal_numel);
     return 1.0 / scale_denom;
 }
 
-const at::Tensor &_fft_apply_normalization(const at::Tensor &self, int64_t normalization,
-                                           at::IntArrayRef sizes, at::IntArrayRef dims)
-{
+const at::Tensor &_fft_apply_normalization(
+    const at::Tensor &self, int64_t normalization, at::IntArrayRef sizes, at::IntArrayRef dims) {
     auto scale = _fft_normalization_scale(normalization, sizes, dims);
     return (scale == 1.0) ? self : self.mul_(scale);
 }
 
-static void HackComplexintoFloat(at::Tensor& self)
-{
+static void HackComplexintoFloat(at::Tensor &self) {
     auto old_sizes = self.sym_sizes();
     at::SymDimVector new_sizes(old_sizes.size() + 1);
     std::copy(old_sizes.begin(), old_sizes.end(), new_sizes.begin());
@@ -104,9 +100,7 @@ static void HackComplexintoFloat(at::Tensor& self)
     impl->set_sizes_and_strides(new_sizes, new_strides, self.sym_storage_offset() * 2);
 }
 
-
-static void HackFloatintoComplex(at::Tensor& self)
-{
+static void HackFloatintoComplex(at::Tensor &self) {
     auto old_sizes = self.sym_sizes();
     at::SymDimVector new_sizes(old_sizes.size() - 1);
     std::copy(old_sizes.begin(), old_sizes.end() - 1, new_sizes.begin());
@@ -122,13 +116,13 @@ static void HackFloatintoComplex(at::Tensor& self)
     impl->set_sizes_and_strides(new_sizes, new_strides, self.sym_storage_offset() / 2);
 }
 
-static at::DimVector _sort_dims(const at::Tensor& self, at::IntArrayRef dim, int64_t mode_code = 0)
-{
+static at::DimVector _sort_dims(const at::Tensor &self, at::IntArrayRef dim, int64_t mode_code = 0) {
     auto mode = static_cast<fft_mode>(mode_code);
     at::DimVector sorted_dims(dim.begin(), dim.end() - (mode_code > 0));
     auto self_strides = self.strides();
-    std::sort(sorted_dims.begin(), sorted_dims.end(),
-        [&](int64_t a, int64_t b) { return self_strides[a] > self_strides[b]; });
+    std::sort(sorted_dims.begin(), sorted_dims.end(), [&](int64_t a, int64_t b) {
+        return self_strides[a] > self_strides[b];
+    });
     if (mode == fft_mode::c2r) {
         sorted_dims.push_back(dim.back());
     } else if (mode == fft_mode::r2c) {
@@ -137,31 +131,29 @@ static at::DimVector _sort_dims(const at::Tensor& self, at::IntArrayRef dim, int
     return sorted_dims;
 }
 
-static op_api::PlanMode get_plan_mode(fft_mode mode, int idx, int signal_ndim, bool oneside)
-{
+static op_api::PlanMode get_plan_mode(fft_mode mode, int idx, int signal_ndim, bool oneside) {
     switch (mode) {
-        case fft_mode::c2c:
+    case fft_mode::c2c:
+        return op_api::PlanMode::c2c;
+    case fft_mode::r2c:
+        if (idx != 0) {
             return op_api::PlanMode::c2c;
-        case fft_mode::r2c:
-            if (idx != 0) {
-                return op_api::PlanMode::c2c;
-            }
-            if (oneside) {
-                return op_api::PlanMode::r2c;
-            } else {
-                return op_api::PlanMode::r2c_bothside;
-            }
-        case fft_mode::c2r:
-            if (idx != signal_ndim - 1) {
-                return op_api::PlanMode::c2c;
-            }
-            return op_api::PlanMode::c2r;
+        }
+        if (oneside) {
+            return op_api::PlanMode::r2c;
+        } else {
+            return op_api::PlanMode::r2c_bothside;
+        }
+    case fft_mode::c2r:
+        if (idx != signal_ndim - 1) {
+            return op_api::PlanMode::c2c;
+        }
+        return op_api::PlanMode::c2r;
     }
 }
 
-static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntArrayRef out_sizes,
-    at::IntArrayRef dim, int64_t normalization, bool forward, int64_t mode_code = 0)
-{
+static at::Tensor &_exec_fft(at::Tensor &out_, const at::Tensor &self_, at::IntArrayRef out_sizes, at::IntArrayRef dim,
+    int64_t normalization, bool forward, int64_t mode_code = 0) {
     auto mode = static_cast<fft_mode>(mode_code);
     auto self = self_.view(self_.sizes());
     auto out = out_.view(out_.sizes());
@@ -179,16 +171,18 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
     std::iota(dim_permute.begin(), dim_permute.end(), int64_t{0});
 
     std::vector<bool> is_transformed_dim(ndim);
-    for (const auto& d : dim) {
+    for (const auto &d : dim) {
         is_transformed_dim[d] = true;
     }
-    auto batch_end = std::partition(dim_permute.begin(), dim_permute.end(),
-        [&](int64_t d) {return is_transformed_dim[d]; });
+    auto batch_end = std::partition(dim_permute.begin(), dim_permute.end(), [&](int64_t d) {
+        return is_transformed_dim[d];
+    });
     auto self_strides = self.strides();
     at::DimVector sorted_dims = _sort_dims(self, dim, mode_code);
     std::copy(sorted_dims.begin(), sorted_dims.end(), dim_permute.begin());
-    std::sort(batch_end, dim_permute.end(),
-        [&](int64_t a, int64_t b) { return self_strides[a] > self_strides[b]; });
+    std::sort(batch_end, dim_permute.end(), [&](int64_t a, int64_t b) {
+        return self_strides[a] > self_strides[b];
+    });
 
     if (mode != fft_mode::r2c) {
         dim_permute.insert(dim_permute.begin(), ndim);
@@ -282,8 +276,8 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
             collapsed_sizes[1] = *(self_begin + i);
             collapsed_sizes[2] = -1;
             auto buffer_0 = tmp_pingpong[ping].reshape(collapsed_sizes);
-            auto buffer_1 = at::slice(buffer_0, 1, 1, collapsed_sizes[1]
-                                      - ((out_sizes[dim.back()] == 2 * (collapsed_sizes[1] - 1)) ? 1 : 0), 1);
+            auto buffer_1 = at::slice(buffer_0, 1, 1,
+                collapsed_sizes[1] - ((out_sizes[dim.back()] == 2 * (collapsed_sizes[1] - 1)) ? 1 : 0), 1);
             out.resize_(buffer_1.sizes());
             at::flip_out(out, buffer_1, 1);
             auto imag_buffer = at::select(out, 0, 1);
@@ -297,7 +291,7 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
             pong = 1 - pong;
         }
         // fft iteration
-        for (auto& coefficient_matrix : coefficient_matrix_list) {
+        for (auto &coefficient_matrix : coefficient_matrix_list) {
             collapsed_sizes[0] = coefficient_matrix.size(0);
             collapsed_sizes[1] = coefficient_matrix.size(2);
             collapsed_sizes[2] = -1;
@@ -394,9 +388,8 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
     return out_;
 }
 
-static at::Tensor& _exec_fft_asdsip(at::Tensor& out_, const at::Tensor& self_, at::IntArrayRef out_sizes,
-    at::IntArrayRef dim, int64_t normalization, bool forward, int64_t mode_code = 0)
-{
+static at::Tensor &_exec_fft_asdsip(at::Tensor &out_, const at::Tensor &self_, at::IntArrayRef out_sizes,
+    at::IntArrayRef dim, int64_t normalization, bool forward, int64_t mode_code = 0) {
     auto mode = static_cast<fft_mode>(mode_code);
     auto self = self_.view(self_.sizes());
     auto out = out_.view(out_.sizes());
@@ -409,21 +402,24 @@ static at::Tensor& _exec_fft_asdsip(at::Tensor& out_, const at::Tensor& self_, a
     std::iota(dim_permute.begin(), dim_permute.end(), int64_t{0});
 
     std::vector<bool> is_transformed_dim(ndim);
-    for (const auto& d : dim) {
+    for (const auto &d : dim) {
         is_transformed_dim[d] = true;
     }
-    auto batch_end = std::partition(dim_permute.begin(), dim_permute.end(),
-        [&](int64_t d) {return !is_transformed_dim[d]; });
+    auto batch_end = std::partition(dim_permute.begin(), dim_permute.end(), [&](int64_t d) {
+        return !is_transformed_dim[d];
+    });
     auto self_strides = self.strides();
     at::DimVector sorted_dims(dim.begin(), dim.end() - (mode != fft_mode::c2c));
-    std::sort(sorted_dims.begin(), sorted_dims.end(),
-        [&](int64_t a, int64_t b) { return self_strides[a] > self_strides[b]; });
+    std::sort(sorted_dims.begin(), sorted_dims.end(), [&](int64_t a, int64_t b) {
+        return self_strides[a] > self_strides[b];
+    });
     if (mode != fft_mode::c2c) {
         sorted_dims.push_back(dim.back());
     }
     std::copy(sorted_dims.begin(), sorted_dims.end(), batch_end);
-    std::sort(dim_permute.begin(), batch_end,
-        [&](int64_t a, int64_t b) { return self_strides[a] > self_strides[b]; });
+    std::sort(dim_permute.begin(), batch_end, [&](int64_t a, int64_t b) {
+        return self_strides[a] > self_strides[b];
+    });
 
     at::Tensor asdfft_input;
     if (mode != fft_mode::r2c) {
@@ -458,30 +454,30 @@ static at::Tensor& _exec_fft_asdsip(at::Tensor& out_, const at::Tensor& self_, a
         param.direction = asdFftDirection::ASCEND_FFT_BACKWARD;
     }
     switch (mode) {
-        case fft_mode::c2c:
-            param.fftXSize = asdfft_input.size(1);
-            if (signal_ndim == 2) {
-                param.fftYSize = asdfft_input.size(2);
-            }
-            param.fftType = asdFftType::ASCEND_FFT_C2C;
-            EXEC_ASDSIP_FFT_NPU_CMD(C2C, asdfft_input, out, param);
-            break;
-        case fft_mode::r2c:
-            param.fftXSize = asdfft_input.size(1);
-            if (signal_ndim == 2) {
-                param.fftYSize = asdfft_input.size(2);
-            }
-            param.fftType = asdFftType::ASCEND_FFT_R2C;
-            EXEC_ASDSIP_FFT_NPU_CMD(R2C, asdfft_input, out, param);
-            break;
-        case fft_mode::c2r:
-            param.fftXSize = out.size(1);
-            if (signal_ndim == 2) {
-                param.fftYSize = out.size(2);
-            }
-            param.fftType = asdFftType::ASCEND_FFT_C2R;
-            EXEC_ASDSIP_FFT_NPU_CMD(C2R, asdfft_input, out, param);
-            break;
+    case fft_mode::c2c:
+        param.fftXSize = asdfft_input.size(1);
+        if (signal_ndim == 2) {
+            param.fftYSize = asdfft_input.size(2);
+        }
+        param.fftType = asdFftType::ASCEND_FFT_C2C;
+        EXEC_ASDSIP_FFT_NPU_CMD(C2C, asdfft_input, out, param);
+        break;
+    case fft_mode::r2c:
+        param.fftXSize = asdfft_input.size(1);
+        if (signal_ndim == 2) {
+            param.fftYSize = asdfft_input.size(2);
+        }
+        param.fftType = asdFftType::ASCEND_FFT_R2C;
+        EXEC_ASDSIP_FFT_NPU_CMD(R2C, asdfft_input, out, param);
+        break;
+    case fft_mode::c2r:
+        param.fftXSize = out.size(1);
+        if (signal_ndim == 2) {
+            param.fftYSize = out.size(2);
+        }
+        param.fftType = asdFftType::ASCEND_FFT_C2R;
+        EXEC_ASDSIP_FFT_NPU_CMD(C2R, asdfft_input, out, param);
+        break;
     }
 
     // normalize
@@ -508,8 +504,7 @@ static at::Tensor& _exec_fft_asdsip(at::Tensor& out_, const at::Tensor& self_, a
     return out_;
 }
 
-at::Tensor _fft_c2c(const at::Tensor& self, at::IntArrayRef dim, int64_t normalization, bool forward)
-{
+at::Tensor _fft_c2c(const at::Tensor &self, at::IntArrayRef dim, int64_t normalization, bool forward) {
     TORCH_CHECK(self.is_complex(), OPS_ERROR(ErrCode::PARAM));
     auto output_size = op_infer::input_same_output_size(self);
     auto out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(self.scalar_type()));
@@ -522,9 +517,8 @@ at::Tensor _fft_c2c(const at::Tensor& self, at::IntArrayRef dim, int64_t normali
     return out;
 }
 
-at::Tensor& _fft_c2c_out(const at::Tensor& self, at::IntArrayRef dim, int64_t normalization,
-    bool forward, at::Tensor& out)
-{
+at::Tensor &_fft_c2c_out(
+    const at::Tensor &self, at::IntArrayRef dim, int64_t normalization, bool forward, at::Tensor &out) {
     TORCH_CHECK(self.is_complex(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(out.is_complex(), OPS_ERROR(ErrCode::PARAM));
     DO_ASDSIP_COMPATIBILITY(C2C, _exec_fft(out, self, self.sizes(), dim, normalization, forward, 0));
@@ -536,8 +530,7 @@ at::Tensor& _fft_c2c_out(const at::Tensor& self, at::IntArrayRef dim, int64_t no
     return out;
 }
 
-at::Tensor _fft_r2c(const at::Tensor& self, at::IntArrayRef dim, int64_t normalization, bool onesided)
-{
+at::Tensor _fft_r2c(const at::Tensor &self, at::IntArrayRef dim, int64_t normalization, bool onesided) {
     TORCH_CHECK(self.is_floating_point(), OPS_ERROR(ErrCode::PARAM));
     auto input_sizes = self.sizes();
     at::DimVector out_sizes(input_sizes.begin(), input_sizes.end());
@@ -566,9 +559,8 @@ at::Tensor _fft_r2c(const at::Tensor& self, at::IntArrayRef dim, int64_t normali
     return out;
 }
 
-at::Tensor &_fft_r2c_out(const at::Tensor &self, at::IntArrayRef dim,
-                         int64_t normalization, bool onesided, at::Tensor &out)
-{
+at::Tensor &_fft_r2c_out(
+    const at::Tensor &self, at::IntArrayRef dim, int64_t normalization, bool onesided, at::Tensor &out) {
     TORCH_CHECK(self.is_floating_point(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(out.is_complex(), OPS_ERROR(ErrCode::PARAM));
     auto input_sizes = self.sizes();
@@ -595,8 +587,7 @@ at::Tensor &_fft_r2c_out(const at::Tensor &self, at::IntArrayRef dim,
     return out;
 }
 
-at::Tensor _fft_c2r(const at::Tensor& self, at::IntArrayRef dim, int64_t normalization, int64_t lastdim)
-{
+at::Tensor _fft_c2r(const at::Tensor &self, at::IntArrayRef dim, int64_t normalization, int64_t lastdim) {
     TORCH_CHECK(self.is_complex(), OPS_ERROR(ErrCode::PARAM));
     auto in_sizes = self.sizes();
     at::DimVector out_sizes(in_sizes.begin(), in_sizes.end());
@@ -612,9 +603,8 @@ at::Tensor _fft_c2r(const at::Tensor& self, at::IntArrayRef dim, int64_t normali
     return out;
 }
 
-at::Tensor &_fft_c2r_out(const at::Tensor &self, at::IntArrayRef dim,
-                         int64_t normalization, int64_t lastdim, at::Tensor &out)
-{
+at::Tensor &_fft_c2r_out(
+    const at::Tensor &self, at::IntArrayRef dim, int64_t normalization, int64_t lastdim, at::Tensor &out) {
     TORCH_CHECK(self.is_complex(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(out.is_floating_point(), OPS_ERROR(ErrCode::PARAM));
     auto in_sizes = self.sizes();
@@ -631,4 +621,4 @@ at::Tensor &_fft_c2r_out(const at::Tensor &self, at::IntArrayRef dim,
 
 #endif
 
-}  // namespace op_api
+} // namespace op_api

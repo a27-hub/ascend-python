@@ -24,8 +24,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor &mv_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &vec)
-{
+at::Tensor &mv_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const at::Tensor &vec) {
     bool is_self_t = op_plugin::utils::is_transpose_last_two_dims(self);
     at::Tensor contiguous_self = is_self_t ? self : npu_utils::format_contiguous(self);
     at::Tensor vec_t = at::unsqueeze(vec, 1);
@@ -44,8 +43,7 @@ at::Tensor &mv_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const
 }
 } // namespace
 
-at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &result)
-{
+at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &result) {
     TORCH_CHECK(self.dim() >= 1, "mv(): input tensor must has at least 1 dimension, but got ", self.dim(),
         " dimensions" + OPS_ERROR(ErrCode::PARAM));
     npu_preparation::CheckOut({self}, result, self, {self.size(0)});
@@ -62,8 +60,7 @@ at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &re
     return result;
 }
 
-at::Tensor mv(const at::Tensor &self, const at::Tensor &vec)
-{
+at::Tensor mv(const at::Tensor &self, const at::Tensor &vec) {
     TORCH_CHECK(self.dim() >= 1, "mv(): input tensor must has at least 1 dimension, but got ", self.dim(),
         " dimensions" + OPS_ERROR(ErrCode::PARAM));
     at::Tensor result = npu_preparation::apply_tensor(self, {self.size(0), 1});

@@ -98,4 +98,4 @@ at::Tensor &pow_(at::Tensor &self, const at::Tensor &exponent) {
     at::namedinference::propagate_names_if_nonempty(self, maybe_names);
     return self;
 }
-}
+} // namespace op_api

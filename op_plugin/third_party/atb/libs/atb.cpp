@@ -1,4 +1,5 @@
-// Implementation of the compiled staking function, in order to compile libatb.so
+// Implementation of the compiled staking function, in order to compile
+// libatb.so
 #include "context.h"
 #include "operation.h"
 

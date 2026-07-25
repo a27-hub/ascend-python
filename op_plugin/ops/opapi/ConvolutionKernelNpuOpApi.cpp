@@ -196,7 +196,8 @@ static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &w
 
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
     bool is_allow_internel_format = !at_npu::native::env::CheckForbidInternalFormat();
-    // CheckForbidInternalFormat = False: turn on private format；CheckJitDisable = False: turn on JitCompile
+    // CheckForbidInternalFormat = False: turn on private format；CheckJitDisable
+    // = False: turn on JitCompile
     ASCEND_LOGI("_calc_convolution exec with jit compile: %d, allow internal format: %d", is_jit_enable,
         is_allow_internel_format);
     static auto conv_sc = at_npu::native::env::CheckCompatibleImpl();
@@ -331,9 +332,10 @@ at::Tensor &slow_conv_transpose2d_out(const at::Tensor &input, const at::Tensor 
     int64_t inputK = input.ndimension();
     bool unBatch = false;
 
-    // Groups > 1 and 3D scenes are currently not supported (binary operator problem), and path 3 implementation is
-    // temporarily called
-    // CheckForbidInternalFormat = False: turn on private format; CheckJitDisable = False: turn on JitCompile
+    // Groups > 1 and 3D scenes are currently not supported (binary operator
+    // problem), and path 3 implementation is temporarily called
+    // CheckForbidInternalFormat = False: turn on private format; CheckJitDisable
+    // = False: turn on JitCompile
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
     bool is_allow_internel_format = !at_npu::native::env::CheckForbidInternalFormat();
     ASCEND_LOGI("slow_conv_transpose2d_out exec with jit compile: %d, allow internal format: %d", is_jit_enable,
@@ -428,7 +430,8 @@ at::Tensor &_slow_conv2d_forward_out(const at::Tensor &input, const at::Tensor &
     }
 
     // temporarily called
-    // CheckForbidInternalFormat = False: turn on private format; CheckJitDisable = False: turn on JitCompile
+    // CheckForbidInternalFormat = False: turn on private format; CheckJitDisable
+    // = False: turn on JitCompile
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
     bool is_allow_internel_format = !at_npu::native::env::CheckForbidInternalFormat();
     ASCEND_LOGI("_slow_conv2d_forward_out exec with jit compile: %d, allow internal format: %d", is_jit_enable,

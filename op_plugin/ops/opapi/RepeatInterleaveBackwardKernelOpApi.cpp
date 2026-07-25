@@ -19,9 +19,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor repeat_interleave_backward_one_repeat(const at::Tensor& input_grad, const at::Tensor& self, int64_t repeats,
-    c10::optional<int64_t> dim)
-{
+at::Tensor repeat_interleave_backward_one_repeat(
+    const at::Tensor &input_grad, const at::Tensor &self, int64_t repeats, c10::optional<int64_t> dim) {
     int64_t dim_pos = dim.value_or(-1);
     int64_t grad_dim = input_grad.dim();
     if (dim_pos < 0) {
@@ -42,16 +41,14 @@ at::Tensor repeat_interleave_backward_one_repeat(const at::Tensor& input_grad, c
     return result;
 }
 
-at::Tensor repeat_interleave_backward_int_symint(const at::Tensor& input_grad, const at::Tensor& self, c10::SymInt repeats,
-    c10::optional<int64_t> dim)
-{
+at::Tensor repeat_interleave_backward_int_symint(
+    const at::Tensor &input_grad, const at::Tensor &self, c10::SymInt repeats, c10::optional<int64_t> dim) {
     int64_t repeats_int = repeats.expect_int();
     return repeat_interleave_backward_one_repeat(input_grad, self, repeats_int, dim);
 }
 
-at::Tensor repeat_interleave_backward_tensor(const at::Tensor& grad, const at::Tensor& self, const at::Tensor& repeats,
-    c10::optional<int64_t> dim)
-{
+at::Tensor repeat_interleave_backward_tensor(
+    const at::Tensor &grad, const at::Tensor &self, const at::Tensor &repeats, c10::optional<int64_t> dim) {
     if (repeats.numel() == 1) {
         int64_t repeats_int = repeats.item().toLong();
         return repeat_interleave_backward_one_repeat(grad, self, repeats_int, dim);
@@ -74,4 +71,4 @@ at::Tensor repeat_interleave_backward_tensor(const at::Tensor& grad, const at::T
     result = result.view(self.sizes());
     return result;
 }
-}
+} // namespace op_api

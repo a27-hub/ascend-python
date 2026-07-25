@@ -27,19 +27,19 @@ namespace op_plugin {
 namespace utils {
 enum ForeachTensorDtypeSupport {
     BASE_DTYPE = 0, // support fp, fp16, bf16
-    TO_INT32 = 1,   // support fp, fp16, bf16, int32
-    TO_INT = 2      // support fp, fp16, bf16, int32, int8, int64
+    TO_INT32 = 1, // support fp, fp16, bf16, int32
+    TO_INT = 2 // support fp, fp16, bf16, int32, int8, int64
 };
 
 enum ForeachInputType {
-    TYPE_TENSOR = 0,     // only tensor type
+    TYPE_TENSOR = 0, // only tensor type
     TYPE_SCALARLIST = 1, // inclue scalarlist type
-    TYPE_SCALAR = 2      // inclue scalar type
+    TYPE_SCALAR = 2 // inclue scalar type
 };
 
 enum ForeachMappingType {
-    MAP_SCALAR_DEFAULT = 0,        // mapping between foreach op tensor and scalar
-    MAP_SCALARLIST_DEFAULT = 1,    // mapping between foreach op tensor and scalar_list
+    MAP_SCALAR_DEFAULT = 0, // mapping between foreach op tensor and scalar
+    MAP_SCALARLIST_DEFAULT = 1, // mapping between foreach op tensor and scalar_list
     MAP_POW_SCALAR_AND_TENSOR = 2, // mapping between foreach op PowScalarAndTensor tensor and scalar
 };
 
@@ -67,22 +67,26 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, N> convert_array_to_vector(c10::IntAr
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, N> get_dimlist_for_tensor(const at::Tensor &self);
 OP_PLUGIN_HIDDEN int64_t complete_pad(int64_t s_size, int64_t p_size, int64_t k_size, int64_t stride);
 OP_PLUGIN_HIDDEN c10::optional<double> get_scale_value(c10::optional<c10::ArrayRef<double>> scales, int idx);
-OP_PLUGIN_HIDDEN at::ScalarType get_divide_result_type(const at::Tensor& self, const at::Tensor& other);
-OP_PLUGIN_HIDDEN at::ScalarType get_divide_calculate_type(const at::Tensor& self, const at::Tensor& other);
-OP_PLUGIN_HIDDEN at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type);
+OP_PLUGIN_HIDDEN at::ScalarType get_divide_result_type(const at::Tensor &self, const at::Tensor &other);
+OP_PLUGIN_HIDDEN at::ScalarType get_divide_calculate_type(const at::Tensor &self, const at::Tensor &other);
+OP_PLUGIN_HIDDEN at::Tensor get_cast_input(const at::Tensor &self, at::ScalarType calculate_type);
 OP_PLUGIN_HIDDEN NameVector compute_names_npu(std::vector<at::Tensor> tensor_list);
 OP_PLUGIN_HIDDEN double compute_scale(int64_t input_size, int64_t output_size, double scale);
 OP_PLUGIN_HIDDEN bool check_foreach_tensor_dtype_spport_base(at::ScalarType tensorDtype);
 OP_PLUGIN_HIDDEN bool check_foreach_tensor_dtype_spport_base_and_int(at::ScalarType tensorDtype);
 OP_PLUGIN_HIDDEN bool check_foreach_scalar_dtype_spport(at::ScalarType scalarDtype);
-OP_PLUGIN_HIDDEN bool check_foreach_tensor_dtype_spport(at::ScalarType tensorDtype, ForeachTensorDtypeSupport tensorDtypeCategory);
+OP_PLUGIN_HIDDEN bool check_foreach_tensor_dtype_spport(
+    at::ScalarType tensorDtype, ForeachTensorDtypeSupport tensorDtypeCategory);
 OP_PLUGIN_HIDDEN bool check_dtype_foreach(at::ScalarType tensorDtype, ForeachTensorDtypeSupport tensorDtypeCategory,
-                                          ForeachInputType inputType, c10::optional<at::ScalarType> scalarDtype = c10::nullopt,
-                                          c10::optional<ForeachMappingType> mapping = c10::nullopt);
-OP_PLUGIN_HIDDEN bool check_mapping_between_tensor_and_scalar_list(at::ScalarType tensorDtype, at::ScalarType scalarDtype, ForeachMappingType mapping);
-OP_PLUGIN_HIDDEN bool check_mapping_between_tensor_and_scalar(at::ScalarType tensorDtype, at::ScalarType scalarDtype, ForeachMappingType mapping);
-OP_PLUGIN_HIDDEN void check_input_same_type_as_parameters(const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias);
-OP_PLUGIN_HIDDEN void check_input_same_type_as_parameters(const at::Tensor& input, const at::Tensor& weight);
+    ForeachInputType inputType, c10::optional<at::ScalarType> scalarDtype = c10::nullopt,
+    c10::optional<ForeachMappingType> mapping = c10::nullopt);
+OP_PLUGIN_HIDDEN bool check_mapping_between_tensor_and_scalar_list(
+    at::ScalarType tensorDtype, at::ScalarType scalarDtype, ForeachMappingType mapping);
+OP_PLUGIN_HIDDEN bool check_mapping_between_tensor_and_scalar(
+    at::ScalarType tensorDtype, at::ScalarType scalarDtype, ForeachMappingType mapping);
+OP_PLUGIN_HIDDEN void check_input_same_type_as_parameters(
+    const at::Tensor &input, const at::Tensor &weight, const at::Tensor &bias);
+OP_PLUGIN_HIDDEN void check_input_same_type_as_parameters(const at::Tensor &input, const at::Tensor &weight);
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_810rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_820rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_830rc1();
@@ -94,11 +98,12 @@ OP_PLUGIN_HIDDEN bool is_gte_cann_version_910();
 OP_PLUGIN_HIDDEN int64_t get_rotary_mode(c10::string_view mode);
 OP_PLUGIN_HIDDEN const std::string DTypeToString(int64_t input_type);
 OP_PLUGIN_HIDDEN aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at::Tensor> &scales,
-                                                      c10::optional<int64_t> scales_dtype, int64_t quant_mode);
-OP_PLUGIN_HIDDEN std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, int64_t quant_mode, int64_t a, int64_t h);
+    c10::optional<int64_t> scales_dtype, int64_t quant_mode);
+OP_PLUGIN_HIDDEN std::vector<int64_t> get_dynamic_shape(
+    const c10::optional<at::Tensor> &scales, int64_t quant_mode, int64_t a, int64_t h);
 OP_PLUGIN_HIDDEN int64_t check_and_get_group_size(at::IntArrayRef group_size_list);
 OP_PLUGIN_HIDDEN int8_t get_cube_math_type_with_passthrough();
 
-}  // namespace utils
-}  // namespace op_plugin
-#endif  // OP_PULGIN_UTILS_CALCULATE_OP_UTILS
+} // namespace utils
+} // namespace op_plugin
+#endif // OP_PULGIN_UTILS_CALCULATE_OP_UTILS

@@ -63,4 +63,4 @@ at::Tensor randperm(int64_t n, c10::optional<at::ScalarType> dtype, c10::optiona
         n, static_cast<c10::optional<at::Generator>>(c10::nullopt), dtype, layout, device, pin_memory);
 }
 
-}
+} // namespace op_api

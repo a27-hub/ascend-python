@@ -20,13 +20,12 @@
 
 namespace op_api {
 
-at::Tensor& put_(at::Tensor& self, const at::Tensor& index, const at::Tensor& source,
-                 bool accumulate) {
-  DO_COMPATIBILITY(aclnnInplacePut, acl_op::put_(self, index, source, accumulate));
+at::Tensor &put_(at::Tensor &self, const at::Tensor &index, const at::Tensor &source, bool accumulate) {
+    DO_COMPATIBILITY(aclnnInplacePut, acl_op::put_(self, index, source, accumulate));
 
-  at_npu::native::OpPreparation::check_memory({self, index, source}, {self});
+    at_npu::native::OpPreparation::check_memory({self, index, source}, {self});
 
-  EXEC_NPU_CMD(aclnnInplacePut, self, index, source, accumulate);
-  return self;
+    EXEC_NPU_CMD(aclnnInplacePut, self, index, source, accumulate);
+    return self;
 }
-}
+} // namespace op_api

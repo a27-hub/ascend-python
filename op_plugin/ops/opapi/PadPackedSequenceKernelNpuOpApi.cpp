@@ -7,11 +7,9 @@
 
 namespace op_api {
 std::tuple<at::Tensor, at::Tensor> _pad_packed_sequence(const at::Tensor &input, const at::Tensor &batch_sizes,
-                                                        bool batch_first, const at::Scalar &padding_value,
-                                                        int64_t total_length)
-{
-    TORCH_CHECK(batch_sizes.dim() >= 1, "Input batch_sizes dim number must larger than one."
-    + OPS_ERROR(ErrCode::PARAM));
+    bool batch_first, const at::Scalar &padding_value, int64_t total_length) {
+    TORCH_CHECK(
+        batch_sizes.dim() >= 1, "Input batch_sizes dim number must larger than one." + OPS_ERROR(ErrCode::PARAM));
     if (total_length > 0) {
         TORCH_CHECK(total_length >= batch_sizes.size(0),
             "Expected total_length to be at least the length of the longest "

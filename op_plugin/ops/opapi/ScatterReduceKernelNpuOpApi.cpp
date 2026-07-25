@@ -19,7 +19,6 @@
 
 #include <utility>
 
-
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -46,42 +45,26 @@ const std::pair<c10::string_view, ScatterReduceType> REDUCE_TYPE_MAP[] = {
     {"mean", ScatterReduceType::REDUCE_MEAN},
 };
 
-int64_t get_reduce(c10::string_view reduce, const char* op_name)
-{
-    for (const auto& reduce_pair : REDUCE_TYPE_MAP) {
+int64_t get_reduce(c10::string_view reduce, const char *op_name) {
+    for (const auto &reduce_pair : REDUCE_TYPE_MAP) {
         if (reduce == reduce_pair.first) {
             return static_cast<int64_t>(reduce_pair.second);
         }
     }
-    TORCH_CHECK(
-        false, op_name,
+    TORCH_CHECK(false, op_name,
         ": expected reduce to be one of none, sum, add, amin, min, amax, max, mul, prod or mean, but got ", reduce,
         OPS_ERROR(ErrCode::PARAM));
 }
 
-void exec_scatter_reduce(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& src,
-    c10::string_view reduce,
-    bool include_self,
-    at::Tensor& out,
-    const char* op_name)
-{
+void exec_scatter_reduce(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src,
+    c10::string_view reduce, bool include_self, at::Tensor &out, const char *op_name) {
     int64_t reduction = get_reduce(reduce, op_name);
     EXEC_NPU_CMD(aclnnScatterReduce, self, dim, index, src, reduction, include_self, out);
 }
 } // namespace
 
-at::Tensor scatter_reduce(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& src,
-    c10::string_view reduce,
-    bool include_self)
-{
+at::Tensor scatter_reduce(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src,
+    c10::string_view reduce, bool include_self) {
     if (include_self && (reduce == "sum" || reduce == "add")) {
         DO_COMPATIBILITY(aclnnScatterReduce, acl_op::scatter_add(self, dim, index, src));
     }
@@ -91,28 +74,15 @@ at::Tensor scatter_reduce(
     return result;
 }
 
-at::Tensor& scatter_reduce_out(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& src,
-    c10::string_view reduce,
-    bool include_self,
-    at::Tensor& out)
-{
+at::Tensor &scatter_reduce_out(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src,
+    c10::string_view reduce, bool include_self, at::Tensor &out) {
     npu_preparation::CheckMemory({self, index, src}, {out});
     exec_scatter_reduce(self, dim, index, src, reduce, include_self, out, "scatter_reduce()");
     return out;
 }
 
-at::Tensor& scatter_reduce_(
-    at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    const at::Tensor& src,
-    c10::string_view reduce,
-    bool include_self)
-{
+at::Tensor &scatter_reduce_(at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src,
+    c10::string_view reduce, bool include_self) {
     npu_preparation::CheckMemory({self, index, src}, {self});
     if (include_self && (reduce == "sum" || reduce == "add")) {
         DO_COMPATIBILITY(aclnnInplaceScatterReduce, acl_op::scatter_add_(self, dim, index, src));
@@ -122,5 +92,4 @@ at::Tensor& scatter_reduce_(
     return self;
 }
 
-
-}
+} // namespace op_api

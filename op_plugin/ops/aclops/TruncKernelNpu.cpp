@@ -56,7 +56,9 @@ at::Tensor &trunc_out(const at::Tensor &self, at::Tensor &out) {
     return out;
 }
 
-at::Tensor &trunc_(at::Tensor &self) { return acl_op::trunc_out(self, self); }
+at::Tensor &trunc_(at::Tensor &self) {
+    return acl_op::trunc_out(self, self);
+}
 
 at::Tensor trunc(const at::Tensor &self) {
     if (trunc_integral_identity(self)) {

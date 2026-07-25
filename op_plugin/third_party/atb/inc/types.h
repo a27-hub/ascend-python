@@ -38,34 +38,34 @@ constexpr uint32_t MAX_DIM = 8;
 //! \brief 加速库日志中定义的错误类型
 //!
 enum ErrorType : int {
-    NO_ERROR = 0,                         //!< 正确
-    ERROR_INVALID_PARAM,                  //!< 无效参数
-    ERROR_INVALID_GRAPH,                  //!< 计算图错误
-    ERROR_INTERNAL_ERROR,                 //!< 内部错误
-    ERROR_RT_FAIL,                        //!< 调用Runtime接口失败
-    ERROR_INVALID_IN_TENSOR_NUM,          //!< 算子输入Tensor数量与定义不一致
-    ERROR_INVALID_TENSOR_DTYPE,           //!< Tensor数据类型错误
-    ERROR_INVALID_TENSOR_FORMAT,          //!< Tensor数据格式错误
-    ERROR_INVALID_TENSOR_DIM,             //!< Tensor数据维度错误
-    ERROR_INVALID_TENSOR_SIZE,            //!< Tensor数据size错误
-    ERROR_OPERATION_NULL_RUNNER,          //!< Operation内部错误
-    ERROR_GRAPH_INFERSHAPE_FUNC_FAIL,     //!< 图infershapeFunc错误
-    ERROR_CANN_ERROR,                     //!< 调用CANN接口错误
-    ERROR_INVALID_TENSOR_INI_MATCH,       //!< ini配置文件校验失败
-    ERROR_INVALID_TENSOR_ADDR,            //!< Tensor地址错误
-    ERROR_INVALID_TENSOR_NUM,             //!< Tensor数量错误
-    ERROR_INVALID_TENSOR_DIM_NUM,         //!< Tensor维度数错误
+    NO_ERROR = 0, //!< 正确
+    ERROR_INVALID_PARAM, //!< 无效参数
+    ERROR_INVALID_GRAPH, //!< 计算图错误
+    ERROR_INTERNAL_ERROR, //!< 内部错误
+    ERROR_RT_FAIL, //!< 调用Runtime接口失败
+    ERROR_INVALID_IN_TENSOR_NUM, //!< 算子输入Tensor数量与定义不一致
+    ERROR_INVALID_TENSOR_DTYPE, //!< Tensor数据类型错误
+    ERROR_INVALID_TENSOR_FORMAT, //!< Tensor数据格式错误
+    ERROR_INVALID_TENSOR_DIM, //!< Tensor数据维度错误
+    ERROR_INVALID_TENSOR_SIZE, //!< Tensor数据size错误
+    ERROR_OPERATION_NULL_RUNNER, //!< Operation内部错误
+    ERROR_GRAPH_INFERSHAPE_FUNC_FAIL, //!< 图infershapeFunc错误
+    ERROR_CANN_ERROR, //!< 调用CANN接口错误
+    ERROR_INVALID_TENSOR_INI_MATCH, //!< ini配置文件校验失败
+    ERROR_INVALID_TENSOR_ADDR, //!< Tensor地址错误
+    ERROR_INVALID_TENSOR_NUM, //!< Tensor数量错误
+    ERROR_INVALID_TENSOR_DIM_NUM, //!< Tensor维度数错误
     ERROR_INVALID_SINGLE_OPERATION_PARAM, //!< 单Operation参数错误
-    ERROR_GRAPH_NODE_RESHAPE_FUNC_FAIL,   //!< 图节点reshapeFuncs设置有误
-    ERROR_INVALID_GRAPH_NODE_CHUNK,       //!< 图节点Chunk参数错误
-    ERROR_INVALID_CONTEXT_ADDR,           //!< Context地址错误
-    ERROR_INVALID_STREAM,                 //!< Stream错误
-    ERROR_INVALID_WORKSPACE_SIZE,         //!< Workspace大小有误
-    ERROR_INVALID_WORKSPACE_ADDR,         //!< Workspace地址有误
-    ERROR_INVALID_OPERATION_ADDR,         //!< Operation地址有误
-    ERROR_HCCL_FAIL,                      //!< HCCL接口调用失败
-    ERROR_OUT_OF_DEVICE_MEMORY,           //!< Device内存不足
-    ERROR_OUT_OF_HOST_MEMORY              //!< Host内存不足
+    ERROR_GRAPH_NODE_RESHAPE_FUNC_FAIL, //!< 图节点reshapeFuncs设置有误
+    ERROR_INVALID_GRAPH_NODE_CHUNK, //!< 图节点Chunk参数错误
+    ERROR_INVALID_CONTEXT_ADDR, //!< Context地址错误
+    ERROR_INVALID_STREAM, //!< Stream错误
+    ERROR_INVALID_WORKSPACE_SIZE, //!< Workspace大小有误
+    ERROR_INVALID_WORKSPACE_ADDR, //!< Workspace地址有误
+    ERROR_INVALID_OPERATION_ADDR, //!< Operation地址有误
+    ERROR_HCCL_FAIL, //!< HCCL接口调用失败
+    ERROR_OUT_OF_DEVICE_MEMORY, //!< Device内存不足
+    ERROR_OUT_OF_HOST_MEMORY //!< Host内存不足
 };
 //!
 //! \struct Dims
@@ -82,7 +82,8 @@ struct Dims {
 //!
 //! \struct TensorDesc
 //!
-//! \brief 包含对Tensor的相关描述信息：每个Tensor的数据类型，数据排布格式和形状维度信息。
+//! \brief
+//! 包含对Tensor的相关描述信息：每个Tensor的数据类型，数据排布格式和形状维度信息。
 //!
 //! \warning Atlas 推理系列产品 中不支持ACL_BF16（bf16）类型数据。
 //!
@@ -98,7 +99,8 @@ struct TensorDesc {
 //!
 //! \struct Tensor
 //!
-//! \brief 加速库的Tensor定义，包含每个Tensor的描述信息、NPU内存地址、CPU内存地址和内存大小等。
+//! \brief
+//! 加速库的Tensor定义，包含每个Tensor的描述信息、NPU内存地址、CPU内存地址和内存大小等。
 //!
 //!
 struct Tensor {
@@ -149,9 +151,11 @@ class Operation;
 //!
 //! \struct Node
 //!
-//! \brief 图算子中的Operation节点，每个Node表示一个Operation或者GraphOperation，所有的Node组成一个完整的图算子。
+//! \brief
+//! 图算子中的Operation节点，每个Node表示一个Operation或者GraphOperation，所有的Node组成一个完整的图算子。
 //!
-//! \note inTensorIds、outTensorIds和inTensorReshapeFuncs均为SVector，每个元素的顺序需要和对应Tensor的顺序保持一致。
+//! \note
+//! inTensorIds、outTensorIds和inTensorReshapeFuncs均为SVector，每个元素的顺序需要和对应Tensor的顺序保持一致。
 //!
 struct Node {
     //! \brief Node对应的operation或者graphOperation。
@@ -160,7 +164,8 @@ struct Node {
     SVector<uint32_t> inTensorIds;
     //! \brief Node对应的operation或者graphOperation的输出tensorId SVector。
     SVector<uint32_t> outTensorIds;
-    //! \brief Node对应的operation或者graphOperation的每个输入Tensor的reshape函数SVector。
+    //! \brief
+    //! Node对应的operation或者graphOperation的每个输入Tensor的reshape函数SVector。
     SVector<ReshapeFunc> inTensorReshapeFuncs;
     //! \brief 存放chunk
     SVector<Chunk> inTensorChunks;
@@ -185,7 +190,8 @@ struct GraphParam {
     //!
     //! nodes的长度满足小于1024。
     //! nodes的顺序，需要满足各个node对应operation的执行顺序依赖关系，先执行的在前面，后执行的在后面。
-    //! 如果inTensorNum，outTensorNum与internalTensorNum之和为S，则nodes中各个元素的inTensorIds，outTensorIds中各元素值均要求落在[0, S-1]范围内。
+    //! 如果inTensorNum，outTensorNum与internalTensorNum之和为S，则nodes中各个元素的inTensorIds，outTensorIds中各元素值均要求落在[0,
+    //! S-1]范围内。
     //!
     std::vector<Node> nodes;
     //! \brief inferShape函数指针。

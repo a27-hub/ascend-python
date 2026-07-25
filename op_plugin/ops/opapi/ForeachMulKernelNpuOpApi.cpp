@@ -19,8 +19,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-void _split_and_exec_npu_cmd_mul(at::TensorList &tensors1, at::TensorList &tensors2, at::TensorList &result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_mul(
+    at::TensorList &tensors1, at::TensorList &tensors2, at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
 
@@ -45,12 +45,11 @@ void _split_and_exec_npu_cmd_mul(at::TensorList &tensors1, at::TensorList &tenso
     }
 }
 
-std::vector<at::Tensor> _foreach_mul(at::TensorList tensors1, at::TensorList tensors2)
-{
+std::vector<at::Tensor> _foreach_mul(at::TensorList tensors1, at::TensorList tensors2) {
     DO_COMPATIBILITY(aclnnForeachMulList, at::native::foreach_tensor_mul_list_kernel_slow(tensors1, tensors2));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_mul_list_kernel_slow(tensors1, tensors2);
     }
@@ -64,7 +63,8 @@ std::vector<at::Tensor> _foreach_mul(at::TensorList tensors1, at::TensorList ten
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors1) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 
@@ -72,12 +72,11 @@ std::vector<at::Tensor> _foreach_mul(at::TensorList tensors1, at::TensorList ten
     return result;
 }
 
-void _foreach_mul_(at::TensorList tensors1, at::TensorList tensors2)
-{
+void _foreach_mul_(at::TensorList tensors1, at::TensorList tensors2) {
     DO_COMPATIBILITY(aclnnForeachMulList, at::native::foreach_tensor_mul_list_kernel_slow_(tensors1, tensors2));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_mul_list_kernel_slow_(tensors1, tensors2);
     }
@@ -91,8 +90,8 @@ void _foreach_mul_(at::TensorList tensors1, at::TensorList tensors2)
     return;
 }
 
-void _split_and_exec_npu_cmd_mul_scalarlist(at::TensorList &tensors1, at::ArrayRef<at::Scalar> scalars, at::TensorList &result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_mul_scalarlist(
+    at::TensorList &tensors1, at::ArrayRef<at::Scalar> scalars, at::TensorList &result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 24 : 16;
     size_t loop_time = tensor_count / max_tensor_count;
@@ -117,17 +116,18 @@ void _split_and_exec_npu_cmd_mul_scalarlist(at::TensorList &tensors1, at::ArrayR
     }
 }
 
-std::vector<at::Tensor> _foreach_mul(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
-{
-    DO_COMPATIBILITY(aclnnForeachMulScalarList, at::native::foreach_tensor_mul_scalarlist_kernel_slow(tensors, scalars));
+std::vector<at::Tensor> _foreach_mul(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars) {
+    DO_COMPATIBILITY(
+        aclnnForeachMulScalarList, at::native::foreach_tensor_mul_scalarlist_kernel_slow(tensors, scalars));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_mul_scalarlist_kernel_slow(tensors, scalars);
     }
 
-    // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
+    // default slow path for now, wait for ascendc aclnn framwork support
+    // scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_mul_scalarlist_kernel_slow(tensors, scalars);
@@ -137,26 +137,26 @@ std::vector<at::Tensor> _foreach_mul(at::TensorList tensors, at::ArrayRef<at::Sc
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size,
-            tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_mul_scalarlist(tensors, scalars, result_, false);
     return result;
 }
 
-void _foreach_mul_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
-{
-    DO_COMPATIBILITY(aclnnForeachMulScalarList,
-                     at::native::foreach_tensor_mul_scalarlist_kernel_slow_(tensors, scalars));
+void _foreach_mul_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars) {
+    DO_COMPATIBILITY(
+        aclnnForeachMulScalarList, at::native::foreach_tensor_mul_scalarlist_kernel_slow_(tensors, scalars));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_mul_scalarlist_kernel_slow_(tensors, scalars);
     }
 
-    // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
+    // default slow path for now, wait for ascendc aclnn framwork support
+    // scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         at::native::foreach_tensor_mul_scalarlist_kernel_slow_(tensors, scalars);

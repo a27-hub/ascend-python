@@ -43,11 +43,10 @@ at::Tensor &npu_add_quant_matmul_(at::Tensor &self, const at::Tensor &x1, const 
     const at::Tensor &x2_scale, const c10::optional<at::Tensor> &x1_scale, c10::OptionalIntArrayRef group_sizes,
     c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype, c10::optional<int64_t> x1_scale_dtype,
     c10::optional<int64_t> x2_scale_dtype)
-// func: npu_add_quant_matmul_(Tensor(a!) self, Tensor x1, Tensor x2, Tensor x2_scale, *,
-// Tensor? x1_scale=None, int[]? group_sizes=None, int? x1_dtype=None, int? x2_dtype=None,
-// int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor(a!)
-// op_api: all_version
-// 对应的原地npu实现
+// func: npu_add_quant_matmul_(Tensor(a!) self, Tensor x1, Tensor x2, Tensor
+// x2_scale, *, Tensor? x1_scale=None, int[]? group_sizes=None, int?
+// x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int?
+// x2_scale_dtype=None) -> Tensor(a!) op_api: all_version 对应的原地npu实现
 {
     static const bool is_quant_batch_matmul_inplace_add_available =
         check_aclnn_kernel_available("aclnnQuantBatchMatmulInplaceAdd");
