@@ -1287,6 +1287,20 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
                                  x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None):
     if world_size <= 0:
         raise RuntimeError("world_size must be bigger than zero")
+
+    # mxfp4量化场景下，x1和x2是UINT8打包的FP4数据，需要校验维度和dtype
+    is_mxfp4 = (self.dtype == torch.uint8 and x2.dtype == torch.uint8 and
+                x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2)
+    if is_mxfp4:
+        _mxfp4_dim_checks = [(self, "x1", 2), (x2, "x2", 2), (x1_scale, "x1_scale", 3), (x2_scale, "x2_scale", 3)]
+        for tensor, name, expected_dim in _mxfp4_dim_checks:
+            if tensor is not None:
+                torch._check(
+                    tensor.dim() == expected_dim,
+                    lambda: f"{name} dim should be {expected_dim} in mxfp4 quant scene, "
+                            f"but got {tensor.dim()}D" + ops_error(ErrCode.VALUE),
+                )
+
     # out_gather_mm
     out_x = self.size(0)
     if gather_index == 0:
