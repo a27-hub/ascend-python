@@ -7033,9 +7033,6 @@ custom:
         dtype: self
       exec: aclnnSwiGluGrad
 
-  - func: npu_swiglu_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, int quant_mode=0, int group_list_type=0, ScalarType? dst_type=None) -> (Tensor, Tensor)
-    op_api: all_version
-
   - func: npu_swiglu_group_quant(Tensor x, *, Tensor? weight=None, Tensor? group_index=None, Tensor? scale=None, int dst_type=291, int quant_mode=0, int block_size=0, bool round_scale=False, float clamp_limit=-1.0, float dst_type_max=15.0, bool output_origin=False) -> (Tensor, Tensor, Tensor)
     op_api: all_version
 
