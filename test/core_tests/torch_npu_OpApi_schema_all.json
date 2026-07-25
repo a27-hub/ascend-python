@@ -164,9 +164,6 @@
   "op_api: torch_npu.npu_dynamic_block_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
-  "op_api: torch_npu.npu_gelu_mul(*args, **kwargs)": {
-    "version": ["v2.6", "v2.7"]
-  },
   "op_api: torch_npu.npu_sim_exponential_(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
@@ -174,9 +171,6 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_alltoallv_quant_gmm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
-  "op_api: torch_npu.npu_gelu_mul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_fused_floyd_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -279,9 +273,6 @@
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_advance_step_flashattn(*args, **kwargs)": {
-    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
-  },
-  "op_api: torch_npu.npu_rotate_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_advance_step_flashattn(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -527,9 +518,6 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_moe_update_expert(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
-  "op_api: torch_npu.npu_rotate_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_mhc_post(*args, **kwargs)": {
@@ -2722,9 +2710,6 @@
   },
   "func: gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor": {
     "version": ["all_version"]
-  },
-  "func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor": {
-    "version": ["v2.6", "newest"]
   },
   "func: npu_fused_floyd_attention(Tensor query_ik, Tensor key_ij, Tensor value_ij, Tensor key_jk, Tensor value_jk, *, Tensor? atten_mask=None, float scale_value=1.) -> (Tensor, Tensor, Tensor)": {
     "version": ["v2.6", "newest"]
@@ -5025,9 +5010,6 @@
     "version": ["all_version"]
   },
   "func: npu_dynamic_block_mx_quant(Tensor input, *, str round_mode=\"rint\", int dst_type=296, int scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
-  },
-  "func: npu_rotate_quant(Tensor x, Tensor rotation, *, Tensor? alpha=None, int? dst_dtype=None, int? axis=-1, str? round_mode=\"rint\", int? scale_alg=0, float? dst_type_max=0.0, bool? transpose_y=False) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode=\"rint\", int dst_dtype=291, Tensor? group_list=None) -> (Tensor, Tensor)": {
