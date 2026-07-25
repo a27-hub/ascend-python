@@ -34,4 +34,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_deep_norm_backwar
     return std::make_tuple(dx, dgx, dbeta, dgamma);
 }
 
-}
+} // namespace op_api

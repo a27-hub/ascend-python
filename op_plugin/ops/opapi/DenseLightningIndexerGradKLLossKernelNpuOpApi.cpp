@@ -68,4 +68,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_dense_lightning_i
 
     return std::make_tuple(d_query_index, d_key_index, d_weights, loss);
 }
-}
+} // namespace op_api

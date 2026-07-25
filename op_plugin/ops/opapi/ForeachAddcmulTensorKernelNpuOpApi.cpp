@@ -22,13 +22,8 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
-void _split_and_exec_npu_cmd_addcmul_tensor(const at::TensorList input,
-                                            const at::TensorList tensors1,
-                                            const at::TensorList tensors2,
-                                            at::Tensor scalars,
-                                            at::TensorList result,
-                                            bool is_inplace)
-{
+void _split_and_exec_npu_cmd_addcmul_tensor(const at::TensorList input, const at::TensorList tensors1,
+    const at::TensorList tensors2, at::Tensor scalars, at::TensorList result, bool is_inplace) {
     size_t tensor_count = input.size();
     size_t max_tensor_count = is_inplace ? 16 : 12;
     size_t loop_time = tensor_count / max_tensor_count;
@@ -51,30 +46,26 @@ void _split_and_exec_npu_cmd_addcmul_tensor(const at::TensorList input,
         at::TensorList temp_tensors2(tensors2.data() + i * max_tensor_count, data_count);
         at::Tensor temp_scalars = scalars.slice(0, i * max_tensor_count, data_count + i * max_tensor_count);
         at::TensorList temp_result(result.data() + i * max_tensor_count, data_count);
-        EXEC_NPU_CMD(aclnnForeachAddcmulScalarList, temp_input, temp_tensors1,
-                     temp_tensors2, temp_scalars, temp_result);
+        EXEC_NPU_CMD(
+            aclnnForeachAddcmulScalarList, temp_input, temp_tensors1, temp_tensors2, temp_scalars, temp_result);
     }
 }
 
-std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
-                                         const at::TensorList tensors1,
-                                         const at::TensorList tensors2,
-                                         const at::Tensor &scalars)
-{
+std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input, const at::TensorList tensors1,
+    const at::TensorList tensors2, const at::Tensor &scalars) {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+
     auto scalars_ = at::native::convert_tensor_to_scalar_list(scalars, input.size());
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcmul_scalarlist_slow(input, tensors1, tensors2, scalars_);
     }
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars_);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}) ||
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route({input, tensors1, tensors2}) ||
         at::native::has_integral_tensor(input, true)) {
-            return at::native::foreach_tensor_addcmul_scalarlist_slow(input, tensors1, tensors2, scalars_);
+        return at::native::foreach_tensor_addcmul_scalarlist_slow(input, tensors1, tensors2, scalars_);
     }
 
     auto scalar_type = input[0].scalar_type();
@@ -86,8 +77,8 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
     result.reserve(input.size());
     for (const at::Tensor &tensor : input) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size,
-                                                                      tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     auto scalar_tensor = npu_preparation::copy_tensor_host_to_device(scalars);
@@ -95,25 +86,21 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
     return result;
 }
 
-void _foreach_addcmul_(const at::TensorList input,
-                       const at::TensorList tensors1,
-                       const at::TensorList tensors2,
-                       const at::Tensor &scalars)
-{
+void _foreach_addcmul_(const at::TensorList input, const at::TensorList tensors1, const at::TensorList tensors2,
+    const at::Tensor &scalars) {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+
     auto scalars_ = at::native::convert_tensor_to_scalar_list(scalars, input.size());
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcmul_scalarlist_slow_(input, tensors1, tensors2, scalars_);
     }
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars_);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}) ||
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route({input, tensors1, tensors2}) ||
         at::native::has_integral_tensor(input, true)) {
-            return at::native::foreach_tensor_addcmul_scalarlist_slow_(input, tensors1, tensors2, scalars_);
+        return at::native::foreach_tensor_addcmul_scalarlist_slow_(input, tensors1, tensors2, scalars_);
     }
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
@@ -127,4 +114,4 @@ void _foreach_addcmul_(const at::TensorList input,
     _split_and_exec_npu_cmd_addcmul_tensor(input, tensors1, tensors2, scalar_tensor, input, true);
 }
 #endif
-}  // namespace op_api
+} // namespace op_api

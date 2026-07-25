@@ -128,7 +128,8 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_quant(const at::Tensor &input,
     c10::optional<int64_t> dst_type, c10::string_view quant_mode, double dst_type_max) {
     TORCH_CHECK(
         input.dim() > INPUT_DIM_LOWER_BOUND, "Input shape dim should be greater than 1" + OPS_ERROR(ErrCode::PARAM));
-    // if aclnnDynamicQuantV2 is not implemented, use npu_dynamic_quant_v0(aclnnDynamicQuant)
+    // if aclnnDynamicQuantV2 is not implemented, use
+    // npu_dynamic_quant_v0(aclnnDynamicQuant)
     DO_COMPATIBILITY(aclnnDynamicQuantV2, npu_dynamic_quant_v0(input, smooth_scales, group_index, dst_type));
 
     at::SmallVector<int64_t, op_infer::SIZE> scale_size;
@@ -211,4 +212,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_dynamic_quant_asymmetric(cons
 
     return std::make_tuple(output, scale, offset);
 }
-}
+} // namespace op_api

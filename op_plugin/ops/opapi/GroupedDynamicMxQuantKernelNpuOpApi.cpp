@@ -61,8 +61,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(const at::Tensor
     TORCH_CHECK(scale_alg == 0 || scale_alg == 1 || scale_alg == 2, "Parameter scale_alg must be 0, 1 or 2, got ",
         scale_alg, OPS_ERROR(ErrCode::PARAM));
 
-    // if x shape is [m, n], group_index shape is [g] (without initial 0 and ends with m),
-    // then mxscale shape is [m / (blocksize * 2) + g, n, 2]
+    // if x shape is [m, n], group_index shape is [g] (without initial 0 and ends
+    // with m), then mxscale shape is [m / (blocksize * 2) + g, n, 2]
     auto mxscale_shape = op_infer::array_to_small_vector(x.sizes());
     mxscale_shape.emplace_back(NUM_TWO);
     mxscale_shape[0] = mxscale_shape[0] / blocksize / NUM_TWO + group_index.sizes()[0];

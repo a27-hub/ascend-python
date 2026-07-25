@@ -20,12 +20,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor _cdist_backward(
-    const at::Tensor& grad,
-    const at::Tensor& x1,
-    const at::Tensor& x2,
-    double p,
-    const at::Tensor& cdist)
-{
+    const at::Tensor &grad, const at::Tensor &x1, const at::Tensor &x2, double p, const at::Tensor &cdist) {
     DO_COMPATIBILITY(aclnnCdistBackward, acl_op::_cdist_backward(grad, x1, x2, p, cdist));
 
     float p_cast;
@@ -33,10 +28,9 @@ at::Tensor _cdist_backward(
     if (std::isinf(p)) {
         p_cast = -1;
     } else {
-        TORCH_CHECK(
-            p <= std::numeric_limits<float>::max(),
-            "The value of p (" + std::to_string(p) + ") exceeds the maximum value of float ("
-                + std::to_string(std::numeric_limits<float>::max()) + ")" + OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(p <= std::numeric_limits<float>::max(),
+            "The value of p (" + std::to_string(p) + ") exceeds the maximum value of float (" +
+                std::to_string(std::numeric_limits<float>::max()) + ")" + OPS_ERROR(ErrCode::PARAM));
         p_cast = static_cast<float>(p);
     }
     // The current operator has precision issues when handling integers and infinity.
@@ -51,8 +45,8 @@ at::Tensor _cdist_backward(
     int64_t r2 = x2.size(-2);
     int64_t dim1 = static_cast<int64_t>(x1.dim());
     int64_t dim2 = static_cast<int64_t>(x2.dim());
-    TORCH_CHECK(c1 == c2, "X1 and X2 must have the same number of columns. X1: ", c1, " X2: ", c2,
-        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        c1 == c2, "X1 and X2 must have the same number of columns. X1: ", c1, " X2: ", c2, OPS_ERROR(ErrCode::PARAM));
 
     at::IntArrayRef batch_tensor1(x1.sizes().data(), dim1 - 2);
     at::IntArrayRef batch_tensor2(x2.sizes().data(), dim2 - 2);
@@ -87,8 +81,7 @@ at::Tensor _cdist_backward(
     auto output_size = x1_broadcast.sizes();
     auto output_dtype = x1_broadcast.scalar_type();
     at::Tensor out = at_npu::native::OpPreparation::apply_tensor_without_format(
-        output_size,
-        x1_broadcast.options().dtype(output_dtype));
+        output_size, x1_broadcast.options().dtype(output_dtype));
 
     EXEC_NPU_CMD(aclnnCdistBackward, grad_contiguous, x1_broadcast, x2_broadcast, cdist_contiguous, p_cast, out);
 

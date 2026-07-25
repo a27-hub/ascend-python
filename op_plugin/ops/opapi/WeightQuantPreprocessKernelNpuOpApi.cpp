@@ -217,11 +217,13 @@ static void execute_prepares(const std::vector<PrepareFunc> &prepares, QuantCont
 static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>> SOC_DATA_FLOW_CONFIG_MAP = {
     {c10_npu::SocVersion::Ascend950,
         {{judge_mm_mx_a8w4,
-             {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
+             {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个
+                 // FP4，因此物理存储的 C0 维长度为 16
                  prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
                  prepare_out_weight_scale_mx<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_gmm_mx_a8w4,
-                {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
+                {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个
+                    // FP4，因此物理存储的 C0 维长度为 16
                     prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
                     prepare_out_weight_scale_mx<true>, prepare_out_weight_offset, prepare_out_bias}}}},
 };

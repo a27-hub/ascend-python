@@ -21,8 +21,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-void _split_and_exec_npu_cmd_sinh(at::TensorList tensors1, at::TensorList result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_sinh(at::TensorList tensors1, at::TensorList result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
     size_t loop_time = tensor_count / max_tensor_count;
@@ -44,19 +43,18 @@ void _split_and_exec_npu_cmd_sinh(at::TensorList tensors1, at::TensorList result
     }
 }
 
-void _foreach_sinh_(at::TensorList self)
-{
+void _foreach_sinh_(at::TensorList self) {
     DO_COMPATIBILITY(aclnnForeachSinh, at::native::foreach_tensor_sinh_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_sinh_slow_(self);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(), op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-                                               op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_sinh_slow_(self);
     }
 
@@ -68,23 +66,22 @@ void _foreach_sinh_(at::TensorList self)
     if (self.empty()) {
         return;
     }
-    
+
     _split_and_exec_npu_cmd_sinh(self, self, true);
 }
 
-std::vector<at::Tensor> _foreach_sinh(at::TensorList tensors)
-{
+std::vector<at::Tensor> _foreach_sinh(at::TensorList tensors) {
     DO_COMPATIBILITY(aclnnForeachSinh, at::native::foreach_tensor_sinh_slow(tensors));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_sinh_slow(tensors);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(tensors[0].scalar_type(), op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-                                               op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(tensors[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_sinh_slow(tensors);
     }
 
@@ -106,4 +103,4 @@ std::vector<at::Tensor> _foreach_sinh(at::TensorList tensors)
     _split_and_exec_npu_cmd_sinh(tensors, result_, false);
     return result;
 }
-} // namespace at_npu
+} // namespace op_api

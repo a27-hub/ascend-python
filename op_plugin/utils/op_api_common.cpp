@@ -27,16 +27,12 @@ constexpr uint64_t MIX_STEP1 = 18397679294719823053LLU;
 constexpr uint64_t MIX_STEP2 = 14181476777654086739LLU;
 constexpr int OWNER_ROOT_UID = 0;
 
+typedef void (*AddTensorAddrToCachedList)(void *addr);
 
-typedef void(*AddTensorAddrToCachedList) (void *addr);
+static std::unordered_map<aclFormat, aclFormat> FORMAT_FAKE_TO_REAL{
+    {ACL_FORMAT_FRACTAL_NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_32}, {ACL_FORMAT_FRACTAL_NZ, ACL_FORMAT_FRACTAL_NZ}};
 
-static std::unordered_map<aclFormat, aclFormat> FORMAT_FAKE_TO_REAL {
-    { ACL_FORMAT_FRACTAL_NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_32 },
-    { ACL_FORMAT_FRACTAL_NZ, ACL_FORMAT_FRACTAL_NZ }
-};
-
-bool checkOwner(string cusLibPath)
-{
+bool checkOwner(string cusLibPath) {
     struct stat fileInfo;
     stat(cusLibPath.c_str(), &fileInfo);
     auto cusLibOwnerUid = fileInfo.st_uid;
@@ -45,16 +41,16 @@ bool checkOwner(string cusLibPath)
         TORCH_NPU_WARN_ONCE("A common user is using the files of the root user.");
         return true;
     } else if ((curOwnerUid == OWNER_ROOT_UID && cusLibOwnerUid != OWNER_ROOT_UID) ||
-            (curOwnerUid != OWNER_ROOT_UID && (curOwnerUid != cusLibOwnerUid))) {
+        (curOwnerUid != OWNER_ROOT_UID && (curOwnerUid != cusLibOwnerUid))) {
         TORCH_NPU_WARN_ONCE("The ", cusLibPath,
-            " owner does not match current owner or the root user is using the files of a common user, will skip this file.");
+            " owner does not match current owner or the root user is using the files of a common user, will skip this "
+            "file.");
         return false;
     }
     return true;
 }
 
-static std::vector<std::string> split_str(std::string s, const std::string &del)
-{
+static std::vector<std::string> split_str(std::string s, const std::string &del) {
     size_t end = s.find(del);
     std::vector<std::string> path_list;
     while (end != std::string::npos) {
@@ -66,16 +62,14 @@ static std::vector<std::string> split_str(std::string s, const std::string &del)
     return path_list;
 }
 
-static bool is_file_exist(const std::string &path)
-{
+static bool is_file_exist(const std::string &path) {
     if (path.empty() || path.size() > PATH_MAX) {
         return false;
     }
     return (access(path.c_str(), F_OK) == 0) ? true : false;
 }
 
-std::string real_path(const std::string &path)
-{
+std::string real_path(const std::string &path) {
     if (path.empty() || path.size() > PATH_MAX) {
         return "";
     }
@@ -86,8 +80,7 @@ std::string real_path(const std::string &path)
     return std::string(realPath);
 }
 
-std::vector<std::string> get_custom_lib_path()
-{
+std::vector<std::string> get_custom_lib_path() {
     char *ascend_custom_opppath = std::getenv("ASCEND_CUSTOM_OPP_PATH");
     std::vector<std::string> custom_lib_path_list;
 
@@ -109,8 +102,7 @@ std::vector<std::string> get_custom_lib_path()
     return custom_lib_path_list;
 }
 
-std::vector<std::string> get_default_custom_lib_path()
-{
+std::vector<std::string> get_default_custom_lib_path() {
     char *ascend_opp_path = std::getenv("ASCEND_OPP_PATH");
     std::vector<std::string> default_vendors_list;
 
@@ -157,21 +149,18 @@ std::vector<std::string> get_default_custom_lib_path()
 const std::vector<std::string> g_custom_lib_path = get_custom_lib_path();
 const std::vector<std::string> g_default_custom_lib_path = get_default_custom_lib_path();
 
-bool hasPrefix(const std::string &str, const std::string &prefix)
-{
+bool hasPrefix(const std::string &str, const std::string &prefix) {
     return str.compare(0, prefix.size(), prefix) == 0;
 }
 
-bool hasSuffix(const std::string &str, const std::string &suffix)
-{
+bool hasSuffix(const std::string &str, const std::string &suffix) {
     if (suffix.size() > str.size()) {
         return false;
     }
     return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-std::vector<std::string> GetAllOpApiSoFiles()
-{
+std::vector<std::string> GetAllOpApiSoFiles() {
     std::vector<std::string> opApiSoFiles;
 
     const char *ascendHomePath = std::getenv("ASCEND_HOME_PATH");
@@ -192,7 +181,7 @@ std::vector<std::string> GetAllOpApiSoFiles()
     }
 
     try {
-        for (const auto& entry : std::filesystem::directory_iterator(allOpApiSoRealPath)) {
+        for (const auto &entry : std::filesystem::directory_iterator(allOpApiSoRealPath)) {
             if (!entry.is_regular_file()) {
                 continue;
             }
@@ -202,9 +191,9 @@ std::vector<std::string> GetAllOpApiSoFiles()
                 opApiSoFiles.push_back(fileName);
             }
         }
-    } catch (const std::filesystem::filesystem_error& e) {
+    } catch (const std::filesystem::filesystem_error &e) {
         ASCEND_LOGW("Filesystem error: %s", e.what());
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         ASCEND_LOGW("Error: %s", e.what());
     }
 
@@ -217,11 +206,10 @@ std::vector<std::string> GetAllOpApiSoFiles()
 
 const std::vector<std::string> g_opApiSoFiles = GetAllOpApiSoFiles();
 
-std::vector<void *> GetAllOpApiHandlers()
-{
+std::vector<void *> GetAllOpApiHandlers() {
     std::vector<void *> opApiHandlers;
 
-    for (const auto& opApiSoFile : g_opApiSoFiles) {
+    for (const auto &opApiSoFile : g_opApiSoFiles) {
         auto opApiHandler = GetOpApiLibHandler(opApiSoFile.c_str());
         if (opApiHandler != nullptr) {
             ASCEND_LOGI("%s has got handler.", opApiSoFile.c_str());
@@ -238,8 +226,7 @@ std::vector<void *> GetAllOpApiHandlers()
 
 const std::vector<void *> g_opApiHandlers = GetAllOpApiHandlers();
 
-void add_param_to_buf(const at::Tensor &at_tensor)
-{
+void add_param_to_buf(const at::Tensor &at_tensor) {
     static const auto addTensorAddrToCachedListAddr = GetOpApiFuncAddr("AddTensorAddrToCachedList");
     TORCH_CHECK(addTensorAddrToCachedListAddr != nullptr, "GetOpApiFuncAddr failed.", OPS_ERROR(ErrCode::PTR));
     AddTensorAddrToCachedList addTensorAddrToCachedListFunc =
@@ -269,8 +256,8 @@ void add_param_to_buf(const at::Tensor &at_tensor)
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(st);
     c10::SmallVector<int64_t, 5> storageDims;
     if (acl_data_type != ACL_STRING) {
-        TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
-            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::PARAM));
         storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
     }
     MEMCPY_TO_BUF(storageDims.data(), static_cast<int64_t>(storageDims.size() * sizeof(int64_t)));
@@ -281,64 +268,59 @@ void add_param_to_buf(const at::Tensor &at_tensor)
     }
     MEMCPY_TO_BUF(&npu_format_, sizeof(npu_format_));
 
-    addTensorAddrToCachedListFunc(const_cast<void*>(at_tensor.storage().data()));
+    addTensorAddrToCachedListFunc(const_cast<void *>(at_tensor.storage().data()));
 }
 
-void add_param_to_buf(const at::Scalar &at_scalar)
-{
+void add_param_to_buf(const at::Scalar &at_scalar) {
     at::ScalarType scalar_data_type = at_scalar.type();
     switch (scalar_data_type) {
-        case at::ScalarType::Double: {
-            double value = at_scalar.toDouble();
-            MEMCPY_TO_BUF(&value, sizeof(double));
-            break;
-        }
-        case at::ScalarType::Long: {
-            int64_t value = at_scalar.toLong();
-            MEMCPY_TO_BUF(&value, sizeof(int64_t));
-            break;
-        }
-        case at::ScalarType::Bool: {
-            bool value = at_scalar.toBool();
-            MEMCPY_TO_BUF(&value, sizeof(bool));
-            break;
-        }
-        case at::ScalarType::ComplexDouble: {
-            auto value = at_scalar.toComplexDouble();
-            MEMCPY_TO_BUF(&value, sizeof(value));
-            break;
-        }
-        default: {
-            return;
-        }
+    case at::ScalarType::Double: {
+        double value = at_scalar.toDouble();
+        MEMCPY_TO_BUF(&value, sizeof(double));
+        break;
+    }
+    case at::ScalarType::Long: {
+        int64_t value = at_scalar.toLong();
+        MEMCPY_TO_BUF(&value, sizeof(int64_t));
+        break;
+    }
+    case at::ScalarType::Bool: {
+        bool value = at_scalar.toBool();
+        MEMCPY_TO_BUF(&value, sizeof(bool));
+        break;
+    }
+    case at::ScalarType::ComplexDouble: {
+        auto value = at_scalar.toComplexDouble();
+        MEMCPY_TO_BUF(&value, sizeof(value));
+        break;
+    }
+    default: {
+        return;
+    }
     }
     MEMCPY_TO_BUF(&scalar_data_type, sizeof(at::ScalarType));
 }
 
-void add_param_to_buf(const at::IntArrayRef &at_array)
-{
+void add_param_to_buf(const at::IntArrayRef &at_array) {
     MEMCPY_TO_BUF(at_array.data(), static_cast<int64_t>(at_array.size() * sizeof(int64_t)));
     auto counter = at_array.size();
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf(const at::ArrayRef<c10::SymInt> &int_array)
-{
+void add_param_to_buf(const at::ArrayRef<c10::SymInt> &int_array) {
     auto at_array = c10::asIntArrayRefUnchecked(int_array);
     MEMCPY_TO_BUF(at_array.data(), static_cast<int64_t>(at_array.size() * sizeof(int64_t)));
     auto counter = at_array.size();
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf(const at::ArrayRef<bool> &at_array)
-{
+void add_param_to_buf(const at::ArrayRef<bool> &at_array) {
     MEMCPY_TO_BUF(at_array.data(), static_cast<int64_t>(at_array.size() * sizeof(bool)));
     auto counter = at_array.size();
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf(const at::TensorList &at_tensor_list)
-{
+void add_param_to_buf(const at::TensorList &at_tensor_list) {
     for (size_t i = 0; i < at_tensor_list.size(); i++) {
         add_param_to_buf(at_tensor_list[i]);
     }
@@ -346,8 +328,7 @@ void add_param_to_buf(const at::TensorList &at_tensor_list)
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf(const at::ArrayRef<at::Scalar> &at_scalar_list)
-{
+void add_param_to_buf(const at::ArrayRef<at::Scalar> &at_scalar_list) {
     for (size_t i = 0; i < at_scalar_list.size(); i++) {
         add_param_to_buf(at_scalar_list[i]);
     }
@@ -356,8 +337,7 @@ void add_param_to_buf(const at::ArrayRef<at::Scalar> &at_scalar_list)
     MEMCPY_TO_BUF(",", 1);
 }
 
-void add_param_to_buf(const c10::optional<at::Tensor> &opt_tensor)
-{
+void add_param_to_buf(const c10::optional<at::Tensor> &opt_tensor) {
     if (opt_tensor.has_value() && opt_tensor.value().defined()) {
         add_param_to_buf(opt_tensor.value());
     } else {
@@ -365,8 +345,7 @@ void add_param_to_buf(const c10::optional<at::Tensor> &opt_tensor)
     }
 }
 
-void add_param_to_buf(const c10::optional<at::IntArrayRef> &opt_array)
-{
+void add_param_to_buf(const c10::optional<at::IntArrayRef> &opt_array) {
     if (opt_array.has_value()) {
         add_param_to_buf(opt_array.value());
     } else {
@@ -374,8 +353,7 @@ void add_param_to_buf(const c10::optional<at::IntArrayRef> &opt_array)
     }
 }
 
-void add_param_to_buf(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
-{
+void add_param_to_buf(const c10::OptionalArrayRef<c10::SymInt> &opt_array) {
     if (opt_array.has_value()) {
         add_param_to_buf(opt_array.value());
     } else {
@@ -383,8 +361,7 @@ void add_param_to_buf(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
     }
 }
 
-void add_param_to_buf(const c10::OptionalIntArrayRef &opt_array)
-{
+void add_param_to_buf(const c10::OptionalIntArrayRef &opt_array) {
     if (opt_array.has_value()) {
         add_param_to_buf(opt_array.value());
     } else {
@@ -392,8 +369,7 @@ void add_param_to_buf(const c10::OptionalIntArrayRef &opt_array)
     }
 }
 
-void add_param_to_buf(const c10::optional<at::Scalar> &opt_scalar)
-{
+void add_param_to_buf(const c10::optional<at::Scalar> &opt_scalar) {
     if (opt_scalar.has_value()) {
         add_param_to_buf(opt_scalar.value());
     } else {
@@ -401,32 +377,27 @@ void add_param_to_buf(const c10::optional<at::Scalar> &opt_scalar)
     }
 }
 
-void add_param_to_buf(const at::ScalarType scalar_type)
-{
+void add_param_to_buf(const at::ScalarType scalar_type) {
     MEMCPY_TO_BUF(&scalar_type, sizeof(scalar_type));
 }
 
-void add_param_to_buf(const string& s)
-{
+void add_param_to_buf(const string &s) {
     MEMCPY_TO_BUF(s.c_str(), static_cast<int64_t>(s.size()));
 }
 
-void add_param_to_buf(char *c)
-{
+void add_param_to_buf(char *c) {
     MEMCPY_TO_BUF(c, strlen(c));
     auto counter = strlen(c);
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf(const char *c)
-{
+void add_param_to_buf(const char *c) {
     MEMCPY_TO_BUF(c, strlen(c));
     auto counter = strlen(c);
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf(const TensorWrapper &tensor_r)
-{
+void add_param_to_buf(const TensorWrapper &tensor_r) {
     static const auto addTensorAddrToCachedListAddr = GetOpApiFuncAddr("AddTensorAddrToCachedList");
     TORCH_CHECK(addTensorAddrToCachedListAddr != nullptr, "GetOpApiFuncAddr failed.", OPS_ERROR(ErrCode::PTR));
     AddTensorAddrToCachedList addTensorAddrToCachedListFunc =
@@ -456,8 +427,8 @@ void add_param_to_buf(const TensorWrapper &tensor_r)
     // storage shape
     c10::SmallVector<int64_t, 5> storageDims;
     if (acl_data_type != ACL_STRING) {
-        TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
-            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::PARAM));
         storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
     }
     MEMCPY_TO_BUF(storageDims.data(), static_cast<int64_t>(storageDims.size() * sizeof(int64_t)));
@@ -468,15 +439,13 @@ void add_param_to_buf(const TensorWrapper &tensor_r)
     }
     MEMCPY_TO_BUF(&npu_format_, sizeof(npu_format_));
 
-    addTensorAddrToCachedListFunc(const_cast<void*>(at_tensor.storage().data()));
+    addTensorAddrToCachedListFunc(const_cast<void *>(at_tensor.storage().data()));
 }
 
-void add_param_to_buf(const TensorListWrapper &tensor_list_wrapper)
-{
+void add_param_to_buf(const TensorListWrapper &tensor_list_wrapper) {
     const at::TensorList &at_tensor_list = tensor_list_wrapper.tensor_list_;
     for (size_t i = 0; i < at_tensor_list.size(); i++) {
-        add_param_to_buf(TensorWrapper{
-            tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
+        add_param_to_buf(TensorWrapper{tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
     }
     auto counter = at_tensor_list.size();
     MEMCPY_TO_BUF(&counter, sizeof(counter));
@@ -484,8 +453,7 @@ void add_param_to_buf(const TensorListWrapper &tensor_list_wrapper)
 
 void add_param_to_buf() {}
 
-void add_param_to_buf_v2(TensorStructPtr at_tensor)
-{
+void add_param_to_buf_v2(TensorStructPtr at_tensor) {
     static const auto addTensorAddrToCachedListAddr = GetOpApiFuncAddr("AddTensorAddrToCachedList");
     TORCH_CHECK(addTensorAddrToCachedListAddr != nullptr, "GetOpApiFuncAddr failed.", OPS_ERROR(ErrCode::PTR));
     AddTensorAddrToCachedList addTensorAddrToCachedListFunc =
@@ -509,8 +477,8 @@ void add_param_to_buf_v2(TensorStructPtr at_tensor)
     // storage shape
     c10::SmallVector<int64_t, 5> storageDims;
     if (acl_data_type != ACL_STRING) {
-        TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
-                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            (*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::PARAM));
         storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize);
     }
     MEMCPY_TO_BUF(storageDims.data(), static_cast<int64_t>(storageDims.size() * sizeof(int64_t)));
@@ -520,46 +488,43 @@ void add_param_to_buf_v2(TensorStructPtr at_tensor)
     addTensorAddrToCachedListFunc((*at_tensor).data_ptr);
 }
 
-void add_param_to_buf_v2(const at::Scalar &at_scalar)
-{
+void add_param_to_buf_v2(const at::Scalar &at_scalar) {
     at::ScalarType scalar_data_type = at_scalar.type();
     switch (scalar_data_type) {
-        case at::ScalarType::Double: {
-            double value = at_scalar.toDouble();
-            MEMCPY_TO_BUF(&value, sizeof(double));
-            break;
-        }
-        case at::ScalarType::Long: {
-            int64_t value = at_scalar.toLong();
-            MEMCPY_TO_BUF(&value, sizeof(int64_t));
-            break;
-        }
-        case at::ScalarType::Bool: {
-            bool value = at_scalar.toBool();
-            MEMCPY_TO_BUF(&value, sizeof(bool));
-            break;
-        }
-        case at::ScalarType::ComplexDouble: {
-            auto value = at_scalar.toComplexDouble();
-            MEMCPY_TO_BUF(&value, sizeof(value));
-            break;
-        }
-        default: {
-            return;
-        }
+    case at::ScalarType::Double: {
+        double value = at_scalar.toDouble();
+        MEMCPY_TO_BUF(&value, sizeof(double));
+        break;
+    }
+    case at::ScalarType::Long: {
+        int64_t value = at_scalar.toLong();
+        MEMCPY_TO_BUF(&value, sizeof(int64_t));
+        break;
+    }
+    case at::ScalarType::Bool: {
+        bool value = at_scalar.toBool();
+        MEMCPY_TO_BUF(&value, sizeof(bool));
+        break;
+    }
+    case at::ScalarType::ComplexDouble: {
+        auto value = at_scalar.toComplexDouble();
+        MEMCPY_TO_BUF(&value, sizeof(value));
+        break;
+    }
+    default: {
+        return;
+    }
     }
     MEMCPY_TO_BUF(&scalar_data_type, sizeof(at::ScalarType));
 }
 
-void add_param_to_buf_v2(const std::vector<int64_t> &at_array)
-{
+void add_param_to_buf_v2(const std::vector<int64_t> &at_array) {
     MEMCPY_TO_BUF(at_array.data(), static_cast<int64_t>(at_array.size() * sizeof(int64_t)));
     auto counter = at_array.size();
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf_v2(const std::vector<bool> &at_array)
-{
+void add_param_to_buf_v2(const std::vector<bool> &at_array) {
     bool *value_ptr = reinterpret_cast<bool *>(malloc(at_array.size() * sizeof(bool)));
     for (size_t i = 0; i < at_array.size(); i++) {
         value_ptr[i] = at_array[i];
@@ -571,8 +536,7 @@ void add_param_to_buf_v2(const std::vector<bool> &at_array)
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf_v2(const std::vector<TensorStructPtr> &at_tensor_list)
-{
+void add_param_to_buf_v2(const std::vector<TensorStructPtr> &at_tensor_list) {
     for (size_t i = 0; i < at_tensor_list.size(); i++) {
         add_param_to_buf_v2(at_tensor_list[i]);
     }
@@ -580,8 +544,7 @@ void add_param_to_buf_v2(const std::vector<TensorStructPtr> &at_tensor_list)
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf_v2(const std::vector<at::Scalar> &at_scalar_list)
-{
+void add_param_to_buf_v2(const std::vector<at::Scalar> &at_scalar_list) {
     for (size_t i = 0; i < at_scalar_list.size(); i++) {
         add_param_to_buf_v2(at_scalar_list[i]);
     }
@@ -590,8 +553,7 @@ void add_param_to_buf_v2(const std::vector<at::Scalar> &at_scalar_list)
     MEMCPY_TO_BUF(",", 1);
 }
 
-void add_param_to_buf_v2(const c10::optional<std::vector<int64_t>> &opt_array)
-{
+void add_param_to_buf_v2(const c10::optional<std::vector<int64_t>> &opt_array) {
     if (opt_array.has_value()) {
         add_param_to_buf_v2(opt_array.value());
     } else {
@@ -599,8 +561,7 @@ void add_param_to_buf_v2(const c10::optional<std::vector<int64_t>> &opt_array)
     }
 }
 
-void add_param_to_buf_v2(const c10::optional<at::Scalar> &opt_scalar)
-{
+void add_param_to_buf_v2(const c10::optional<at::Scalar> &opt_scalar) {
     if (opt_scalar.has_value()) {
         add_param_to_buf_v2(opt_scalar.value());
     } else {
@@ -608,43 +569,36 @@ void add_param_to_buf_v2(const c10::optional<at::Scalar> &opt_scalar)
     }
 }
 
-void add_param_to_buf_v2(const at::ScalarType scalar_type)
-{
+void add_param_to_buf_v2(const at::ScalarType scalar_type) {
     MEMCPY_TO_BUF(&scalar_type, sizeof(scalar_type));
 }
 
-void add_param_to_buf_v2(const string& s)
-{
+void add_param_to_buf_v2(const string &s) {
     MEMCPY_TO_BUF(s.c_str(), static_cast<int64_t>(s.size()));
 }
 
-void add_param_to_buf_v2(char *c)
-{
+void add_param_to_buf_v2(char *c) {
     MEMCPY_TO_BUF(c, strlen(c));
     auto counter = strlen(c);
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf_v2(const char *c)
-{
+void add_param_to_buf_v2(const char *c) {
     MEMCPY_TO_BUF(c, strlen(c));
     auto counter = strlen(c);
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf_v2()
-{
-}
+void add_param_to_buf_v2() {}
 
-inline uint64_t rotating_left(uint64_t x, uint8_t n)
-{
+inline uint64_t rotating_left(uint64_t x, uint8_t n) {
     return (x << n) | (x >> (64 - n));
 }
 
-inline uint64_t mixture(uint64_t x)
-{
-    // constants step1(18397679294719823053) and step2(14181476777654086739) are used to allow
-    // hash values to be more evenly distributed after multiplication.
+inline uint64_t mixture(uint64_t x) {
+    // constants step1(18397679294719823053) and step2(14181476777654086739) are
+    // used to allow hash values to be more evenly distributed after
+    // multiplication.
     x ^= x >> g_rShift33Bits;
     x *= MIX_STEP1;
     x ^= x >> g_rShift33Bits;
@@ -656,16 +610,17 @@ inline uint64_t mixture(uint64_t x)
 
 // MurmurHash3 was written by Austin Appleby, and is placed in the public
 // domain. The author hereby disclaims copyright to this source code.
-uint64_t gen_hash(const void *key, const int len, const uint32_t seed = 0xdeadb0d7)
-{
+uint64_t gen_hash(const void *key, const int len, const uint32_t seed = 0xdeadb0d7) {
     const uint8_t *data = (const uint8_t *)key;
     // the length of each block is 16 bytes
     const int block_num = len / 16;
-    // has and hax are literal appromix to hash, and hax is the return value of this function.
+    // has and hax are literal appromix to hash, and hax is the return value of
+    // this function.
     uint64_t has = seed;
     uint64_t hax = seed;
 
-    // use 9782798678568883157 and 5545529020109919103 for blocking and obfuscation of input data
+    // use 9782798678568883157 and 5545529020109919103 for blocking and
+    // obfuscation of input data
     const uint64_t c1 = 9782798678568883157LLU;
     const uint64_t c2 = 5545529020109919103LLU;
 
@@ -678,7 +633,7 @@ uint64_t gen_hash(const void *key, const int len, const uint32_t seed = 0xdeadb0
 
         int8_t bits_31 = 31;
         tmp1 *= c1;
-        tmp1  = rotating_left(tmp1, bits_31);
+        tmp1 = rotating_left(tmp1, bits_31);
         tmp1 *= c2;
         has ^= tmp1;
 
@@ -690,7 +645,7 @@ uint64_t gen_hash(const void *key, const int len, const uint32_t seed = 0xdeadb0
 
         int8_t bits_33 = 33;
         tmp2 *= c2;
-        tmp2  = rotating_left(tmp2, bits_33);
+        tmp2 = rotating_left(tmp2, bits_33);
         tmp2 *= c1;
         hax ^= tmp2;
 
@@ -701,67 +656,82 @@ uint64_t gen_hash(const void *key, const int len, const uint32_t seed = 0xdeadb0
     }
 
     // the length of each block is 16 bytes
-    const uint8_t *tail = (const uint8_t*)(data + block_num * 16);
+    const uint8_t *tail = (const uint8_t *)(data + block_num * 16);
     uint64_t t1 = 0;
     uint64_t t2 = 0;
-    // because the size of a block is 16, different offsets are calculated for tail blocks
-    // for different sizes
+    // because the size of a block is 16, different offsets are calculated for
+    // tail blocks for different sizes
     switch (static_cast<uint64_t>(len) & 15) {
-        case 15:
-            t2 ^= ((uint64_t)tail[14]) << 48;
-            [[fallthrough]];;
-        case 14:
-            t2 ^= ((uint64_t)tail[13]) << 40;
-            [[fallthrough]];;
-        case 13:
-            t2 ^= ((uint64_t)tail[12]) << 32;
-            [[fallthrough]];;
-        case 12:
-            t2 ^= ((uint64_t)tail[11]) << 24;
-            [[fallthrough]];;
-        case 11:
-            t2 ^= ((uint64_t)tail[10]) << 16;
-            [[fallthrough]];;
-        case 10:
-            t2 ^= ((uint64_t)tail[9]) << 8;
-            [[fallthrough]];;
-        case 9:
-            t2 ^= ((uint64_t)tail[8]) << 0;
-            t2 *= c2;
-            t2 = rotating_left(t2, 33);
-            t2 *= c1;
-            hax ^= t2;
-            [[fallthrough]];;
-        case 8:
-            t1 ^= ((uint64_t)tail[7]) << 56;
-            [[fallthrough]];;
-        case 7:
-            t1 ^= ((uint64_t)tail[6]) << 48;
-            [[fallthrough]];;
-        case 6:
-            t1 ^= ((uint64_t)tail[5]) << 40;
-            [[fallthrough]];;
-        case 5:
-            t1 ^= ((uint64_t)tail[4]) << 32;
-            [[fallthrough]];;
-        case 4:
-            t1 ^= ((uint64_t)tail[3]) << 24;
-            [[fallthrough]];;
-        case 3:
-            t1 ^= ((uint64_t)tail[2]) << 16;
-            [[fallthrough]];;
-        case 2:
-            t1 ^= ((uint64_t)tail[1]) << 8;
-            [[fallthrough]];;
-        case 1:
-            t1 ^= ((uint64_t)tail[0]) << 0;
-            t1 *= c1;
-            t1 = rotating_left(t1, 31);
-            t1 *= c2;
-            has ^= t1;
-            [[fallthrough]];;
-        default:
-            break;
+    case 15:
+        t2 ^= ((uint64_t)tail[14]) << 48;
+        [[fallthrough]];
+        ;
+    case 14:
+        t2 ^= ((uint64_t)tail[13]) << 40;
+        [[fallthrough]];
+        ;
+    case 13:
+        t2 ^= ((uint64_t)tail[12]) << 32;
+        [[fallthrough]];
+        ;
+    case 12:
+        t2 ^= ((uint64_t)tail[11]) << 24;
+        [[fallthrough]];
+        ;
+    case 11:
+        t2 ^= ((uint64_t)tail[10]) << 16;
+        [[fallthrough]];
+        ;
+    case 10:
+        t2 ^= ((uint64_t)tail[9]) << 8;
+        [[fallthrough]];
+        ;
+    case 9:
+        t2 ^= ((uint64_t)tail[8]) << 0;
+        t2 *= c2;
+        t2 = rotating_left(t2, 33);
+        t2 *= c1;
+        hax ^= t2;
+        [[fallthrough]];
+        ;
+    case 8:
+        t1 ^= ((uint64_t)tail[7]) << 56;
+        [[fallthrough]];
+        ;
+    case 7:
+        t1 ^= ((uint64_t)tail[6]) << 48;
+        [[fallthrough]];
+        ;
+    case 6:
+        t1 ^= ((uint64_t)tail[5]) << 40;
+        [[fallthrough]];
+        ;
+    case 5:
+        t1 ^= ((uint64_t)tail[4]) << 32;
+        [[fallthrough]];
+        ;
+    case 4:
+        t1 ^= ((uint64_t)tail[3]) << 24;
+        [[fallthrough]];
+        ;
+    case 3:
+        t1 ^= ((uint64_t)tail[2]) << 16;
+        [[fallthrough]];
+        ;
+    case 2:
+        t1 ^= ((uint64_t)tail[1]) << 8;
+        [[fallthrough]];
+        ;
+    case 1:
+        t1 ^= ((uint64_t)tail[0]) << 0;
+        t1 *= c1;
+        t1 = rotating_left(t1, 31);
+        t1 *= c2;
+        has ^= t1;
+        [[fallthrough]];
+        ;
+    default:
+        break;
     };
 
     has ^= static_cast<uint64_t>(len);
@@ -778,8 +748,7 @@ uint64_t gen_hash(const void *key, const int len, const uint32_t seed = 0xdeadb0
     return hax;
 }
 
-uint64_t calc_hash_id()
-{
+uint64_t calc_hash_id() {
     if (g_hash_offset == g_hash_buf_max_size) {
         return 0;
     }
@@ -787,8 +756,7 @@ uint64_t calc_hash_id()
     return hash_id;
 }
 
-void *GetOpApiFuncAddrFromFeatureLib(const char *api_name)
-{
+void *GetOpApiFuncAddrFromFeatureLib(const char *api_name) {
     GET_OP_API_FUNC_FROM_FEATURE_LIB(ops_infer_handler, "libaclnn_ops_infer.so", api_name);
     GET_OP_API_FUNC_FROM_FEATURE_LIB(ops_train_handler, "libaclnn_ops_train.so", api_name);
     GET_OP_API_FUNC_FROM_FEATURE_LIB(math_handler, "libaclnn_math.so", api_name);
@@ -798,8 +766,7 @@ void *GetOpApiFuncAddrFromFeatureLib(const char *api_name)
     return nullptr;
 }
 
-bool check_aclnn_kernel_available(std::string aclnn_name)
-{
+bool check_aclnn_kernel_available(std::string aclnn_name) {
     std::string workspace_name = aclnn_name + "GetWorkspaceSize";
     if (GetOpApiFuncAddr(aclnn_name.c_str()) == nullptr || GetOpApiFuncAddr(workspace_name.c_str()) == nullptr) {
         return false;
@@ -807,10 +774,8 @@ bool check_aclnn_kernel_available(std::string aclnn_name)
     return true;
 }
 
-inline void CollectB4ShapeInfo(int64_t nDim,
-                               c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperStride,
-                               c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperShape)
-{
+inline void CollectB4ShapeInfo(int64_t nDim, c10::SmallVector<int64_t, MAX_DIM_NUM> &wrapperStride,
+    c10::SmallVector<int64_t, MAX_DIM_NUM> &wrapperShape) {
     if (nDim == 1) {
         wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
     } else if (nDim > 1) {
@@ -823,14 +788,11 @@ inline void CollectB4ShapeInfo(int64_t nDim,
                 wrapperShape[nDim - PENULTIMATE_DIM] = wrapperShape[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
             }
         } else if (wrapperStride[nDim - 1] == 1) {
-            wrapperStride[nDim - PENULTIMATE_DIM] =
-                wrapperStride[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            wrapperStride[nDim - PENULTIMATE_DIM] = wrapperStride[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
             wrapperShape[nDim - 1] = wrapperShape[nDim - 1] * FP4_IN_INT8;
         } else if (wrapperStride[nDim - PENULTIMATE_DIM] == 1) {
-            wrapperStride[nDim - 1] =
-                wrapperStride[nDim - 1] * FP4_IN_INT8;
-            wrapperShape[nDim - PENULTIMATE_DIM] =
-                wrapperShape[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            wrapperStride[nDim - 1] = wrapperStride[nDim - 1] * FP4_IN_INT8;
+            wrapperShape[nDim - PENULTIMATE_DIM] = wrapperShape[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
         }
 
         for (auto i = 0; i < nDim - PENULTIMATE_DIM; i++) {
@@ -841,20 +803,16 @@ inline void CollectB4ShapeInfo(int64_t nDim,
     }
 }
 
-inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
-                               c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperStride,
-                               c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperShape)
-{
+inline void CollectB4ShapeInfo(const at::Tensor &at_tensor, c10::SmallVector<int64_t, MAX_DIM_NUM> &wrapperStride,
+    c10::SmallVector<int64_t, MAX_DIM_NUM> &wrapperShape) {
     CollectB4ShapeInfo(static_cast<int64_t>(at_tensor.sizes().size()), wrapperStride, wrapperShape);
 }
 
-inline bool Is4BitDtype(const aclDataType acl_data_type)
-{
+inline bool Is4BitDtype(const aclDataType acl_data_type) {
     return acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4;
 }
 
-void *GetOpApiFuncAddr(const char *apiName)
-{
+void *GetOpApiFuncAddr(const char *apiName) {
     if (!g_custom_lib_path.empty()) {
         for (auto &it : g_custom_lib_path) {
             auto cust_opapi_lib = real_path(it + "/" + GetCustOpApiLibName());
@@ -863,8 +821,7 @@ void *GetOpApiFuncAddr(const char *apiName)
             }
             auto custOpApiHandler = GetOpApiLibHandler(cust_opapi_lib.c_str());
             if (custOpApiHandler != nullptr) {
-                auto funcAddr =
-                    GetOpApiFuncAddrInLib(custOpApiHandler, GetCustOpApiLibName(), apiName);
+                auto funcAddr = GetOpApiFuncAddrInLib(custOpApiHandler, GetCustOpApiLibName(), apiName);
                 if (funcAddr != nullptr) {
                     // check owner
                     if (!checkOwner(cust_opapi_lib)) {
@@ -886,8 +843,7 @@ void *GetOpApiFuncAddr(const char *apiName)
             }
             auto custOpApiHandler = GetOpApiLibHandler(default_cust_opapi_lib.c_str());
             if (custOpApiHandler != nullptr) {
-                auto funcAddr =
-                    GetOpApiFuncAddrInLib(custOpApiHandler, GetCustOpApiLibName(), apiName);
+                auto funcAddr = GetOpApiFuncAddrInLib(custOpApiHandler, GetCustOpApiLibName(), apiName);
                 if (funcAddr != nullptr) {
                     // check owner
                     if (!checkOwner(default_cust_opapi_lib)) {
@@ -923,8 +879,7 @@ void *GetOpApiFuncAddr(const char *apiName)
     return GetOpApiFuncAddrFromFeatureLib(apiName);
 }
 
-aclTensor *ConvertType(const at::Tensor &at_tensor)
-{
+aclTensor *ConvertType(const at::Tensor &at_tensor) {
     static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
     if (aclCreateTensor == nullptr) {
         return nullptr;
@@ -946,8 +901,8 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
         format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
-            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
-                        OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
             storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.back() *= FP4_IN_INT8;
@@ -960,22 +915,22 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
         }
     } else {
         switch (dimNum) {
-            case NCL_DIM_NUM:
-                format = ACL_FORMAT_NCL;
-                break;
-            case NCHW_DIM_NUM:
-                format = ACL_FORMAT_NCHW;
-                break;
-            case NCDHW_DIM_NUM:
-                format = ACL_FORMAT_NCDHW;
-                break;
-            default:
-                format = ACL_FORMAT_ND;
+        case NCL_DIM_NUM:
+            format = ACL_FORMAT_NCL;
+            break;
+        case NCHW_DIM_NUM:
+            format = ACL_FORMAT_NCHW;
+            break;
+        case NCDHW_DIM_NUM:
+            format = ACL_FORMAT_NCDHW;
+            break;
+        default:
+            format = ACL_FORMAT_ND;
         }
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
-            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
-                        OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
                 CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
@@ -989,19 +944,17 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
         c10::Scalar expScalar = at_tensor.item();
         at::Tensor aclInput = at_npu::native::OpPreparation::copy_scalar_to_device(expScalar, scalar_data_type);
         return aclCreateTensor(aclInput.sizes().data(), aclInput.sizes().size(), acl_data_type,
-                               aclInput.strides().data(), aclInput.storage_offset(), format, storageDims.data(),
-                               storageDims.size(), const_cast<void *>(aclInput.storage().data()));
+            aclInput.strides().data(), aclInput.storage_offset(), format, storageDims.data(), storageDims.size(),
+            const_cast<void *>(aclInput.storage().data()));
     }
 
-    auto acl_tensor =
-        aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
-                        at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
-                        const_cast<void *>(at_tensor.storage().data()));
+    auto acl_tensor = aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type,
+        wrapperStride.data(), at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+        const_cast<void *>(at_tensor.storage().data()));
     return acl_tensor;
 }
 
-aclScalar *ConvertType(const at::Scalar &at_scalar)
-{
+aclScalar *ConvertType(const at::Scalar &at_scalar) {
     static const auto aclCreateScalar = GET_OP_API_FUNC(aclCreateScalar);
     if (aclCreateScalar == nullptr) {
         return nullptr;
@@ -1011,40 +964,35 @@ aclScalar *ConvertType(const at::Scalar &at_scalar)
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
     aclScalar *acl_scalar = nullptr;
     switch (scalar_data_type) {
-        case at::ScalarType::Double:
-            {
-                double value = at_scalar.toDouble();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        case at::ScalarType::Long:
-            {
-                int64_t value = at_scalar.toLong();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        case at::ScalarType::Bool:
-            {
-                bool value = at_scalar.toBool();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        case at::ScalarType::ComplexDouble:
-            {
-                auto value = at_scalar.toComplexDouble();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        default:
-            acl_scalar = nullptr;
-            break;
+    case at::ScalarType::Double: {
+        double value = at_scalar.toDouble();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    case at::ScalarType::Long: {
+        int64_t value = at_scalar.toLong();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    case at::ScalarType::Bool: {
+        bool value = at_scalar.toBool();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    case at::ScalarType::ComplexDouble: {
+        auto value = at_scalar.toComplexDouble();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    default:
+        acl_scalar = nullptr;
+        break;
     }
 
     return acl_scalar;
 }
 
-aclIntArray *ConvertType(const at::IntArrayRef &at_array)
-{
+aclIntArray *ConvertType(const at::IntArrayRef &at_array) {
     static const auto aclCreateIntArray = GET_OP_API_FUNC(aclCreateIntArray);
     if (aclCreateIntArray == nullptr) {
         return nullptr;
@@ -1053,8 +1001,7 @@ aclIntArray *ConvertType(const at::IntArrayRef &at_array)
     return array;
 }
 
-aclIntArray *ConvertType(const at::ArrayRef<c10::SymInt> &at_array)
-{
+aclIntArray *ConvertType(const at::ArrayRef<c10::SymInt> &at_array) {
     static const auto aclCreateIntArray = GET_OP_API_FUNC(aclCreateIntArray);
     if (aclCreateIntArray == nullptr) {
         return nullptr;
@@ -1064,8 +1011,7 @@ aclIntArray *ConvertType(const at::ArrayRef<c10::SymInt> &at_array)
     return array;
 }
 
-aclBoolArray *ConvertType(const at::ArrayRef<bool> &value)
-{
+aclBoolArray *ConvertType(const at::ArrayRef<bool> &value) {
     static const auto aclCreateBoolArray = GET_OP_API_FUNC(aclCreateBoolArray);
     if (aclCreateBoolArray == nullptr) {
         return nullptr;
@@ -1075,8 +1021,7 @@ aclBoolArray *ConvertType(const at::ArrayRef<bool> &value)
     return array;
 }
 
-aclTensorList *ConvertType(const at::TensorList &at_tensor_list)
-{
+aclTensorList *ConvertType(const at::TensorList &at_tensor_list) {
     if (at_tensor_list.size() == 0) {
         return nullptr;
     }
@@ -1093,8 +1038,7 @@ aclTensorList *ConvertType(const at::TensorList &at_tensor_list)
     return acl_tensor_list;
 }
 
-aclScalarList *ConvertType(const at::ArrayRef<at::Scalar> &at_scalar_list)
-{
+aclScalarList *ConvertType(const at::ArrayRef<at::Scalar> &at_scalar_list) {
     static const auto aclCreateScalarList = GET_OP_API_FUNC(aclCreateScalarList);
     if (aclCreateScalarList == nullptr) {
         return nullptr;
@@ -1108,8 +1052,7 @@ aclScalarList *ConvertType(const at::ArrayRef<at::Scalar> &at_scalar_list)
     return acl_scalar_list;
 }
 
-aclTensor *ConvertType(const c10::optional<at::Tensor> &opt_tensor)
-{
+aclTensor *ConvertType(const c10::optional<at::Tensor> &opt_tensor) {
     if (opt_tensor.has_value() && opt_tensor.value().defined()) {
         return ConvertType(opt_tensor.value());
     }
@@ -1117,8 +1060,7 @@ aclTensor *ConvertType(const c10::optional<at::Tensor> &opt_tensor)
     return nullptr;
 }
 
-aclIntArray *ConvertType(const c10::optional<at::IntArrayRef> &opt_array)
-{
+aclIntArray *ConvertType(const c10::optional<at::IntArrayRef> &opt_array) {
     if (opt_array.has_value()) {
         return ConvertType(opt_array.value());
     }
@@ -1126,8 +1068,7 @@ aclIntArray *ConvertType(const c10::optional<at::IntArrayRef> &opt_array)
     return nullptr;
 }
 
-aclIntArray *ConvertType(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
-{
+aclIntArray *ConvertType(const c10::OptionalArrayRef<c10::SymInt> &opt_array) {
     if (opt_array.has_value()) {
         return ConvertType(opt_array.value());
     }
@@ -1135,8 +1076,7 @@ aclIntArray *ConvertType(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
     return nullptr;
 }
 
-aclIntArray *ConvertType(const c10::OptionalIntArrayRef &opt_array)
-{
+aclIntArray *ConvertType(const c10::OptionalIntArrayRef &opt_array) {
     if (opt_array.has_value()) {
         return ConvertType(opt_array.value());
     }
@@ -1144,8 +1084,7 @@ aclIntArray *ConvertType(const c10::OptionalIntArrayRef &opt_array)
     return nullptr;
 }
 
-aclScalar *ConvertType(const c10::optional<at::Scalar> &opt_scalar)
-{
+aclScalar *ConvertType(const c10::optional<at::Scalar> &opt_scalar) {
     if (opt_scalar.has_value()) {
         return ConvertType(opt_scalar.value());
     }
@@ -1153,13 +1092,11 @@ aclScalar *ConvertType(const c10::optional<at::Scalar> &opt_scalar)
     return nullptr;
 }
 
-aclDataType ConvertType(const at::ScalarType scalarType)
-{
+aclDataType ConvertType(const at::ScalarType scalarType) {
     return at_npu::native::OpPreparation::convert_to_acl_data_type(scalarType);
 }
 
-aclTensor *ConvertType(const TensorWrapper &tensor_r)
-{
+aclTensor *ConvertType(const TensorWrapper &tensor_r) {
     static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
     if (aclCreateTensor == nullptr) {
         return nullptr;
@@ -1183,8 +1120,8 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
         format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
-            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
-                OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
             storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.back() *= FP4_IN_INT8;
@@ -1197,22 +1134,22 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
         }
     } else {
         switch (dimNum) {
-            case NCL_DIM_NUM:
-                format = ACL_FORMAT_NCL;
-                break;
-            case NCHW_DIM_NUM:
-                format = ACL_FORMAT_NCHW;
-                break;
-            case NCDHW_DIM_NUM:
-                format = ACL_FORMAT_NCDHW;
-                break;
-            default:
-                format = ACL_FORMAT_ND;
+        case NCL_DIM_NUM:
+            format = ACL_FORMAT_NCL;
+            break;
+        case NCHW_DIM_NUM:
+            format = ACL_FORMAT_NCHW;
+            break;
+        case NCDHW_DIM_NUM:
+            format = ACL_FORMAT_NCDHW;
+            break;
+        default:
+            format = ACL_FORMAT_ND;
         }
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
-            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
-                        OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
                 CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
@@ -1222,15 +1159,13 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
         }
     }
 
-    auto acl_tensor =
-        aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
-                        at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
-                        const_cast<void *>(at_tensor.storage().data()));
+    auto acl_tensor = aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type,
+        wrapperStride.data(), at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+        const_cast<void *>(at_tensor.storage().data()));
     return acl_tensor;
 }
 
-aclTensorList *ConvertType(const TensorListWrapper &tensor_list_wrapper)
-{
+aclTensorList *ConvertType(const TensorListWrapper &tensor_list_wrapper) {
     if (tensor_list_wrapper.tensor_list_.size() == 0) {
         return nullptr;
     }
@@ -1241,15 +1176,13 @@ aclTensorList *ConvertType(const TensorListWrapper &tensor_list_wrapper)
 
     std::vector<const aclTensor *> tensor_list(tensor_list_wrapper.tensor_list_.size());
     for (size_t i = 0; i < tensor_list.size(); i++) {
-        tensor_list[i] = ConvertType(TensorWrapper{
-            tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
+        tensor_list[i] = ConvertType(TensorWrapper{tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
     }
     auto acl_tensor_list = aclCreateTensorList(tensor_list.data(), tensor_list.size());
     return acl_tensor_list;
 }
 
-aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
-{
+aclTensor *ConvertTypeV2(TensorStructPtr at_tensor) {
     static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
     if (aclCreateTensor == nullptr) {
         return nullptr;
@@ -1269,8 +1202,8 @@ aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
         format = (*at_tensor).acl_format;
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
-            TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
-                        OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                (*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
             storageDims = (*at_tensor).storage_sizes;
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.back() *= FP4_IN_INT8;
@@ -1283,22 +1216,22 @@ aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
         }
     } else {
         switch (dimNum) {
-            case NCL_DIM_NUM:
-                format = ACL_FORMAT_NCL;
-                break;
-            case NCHW_DIM_NUM:
-                format = ACL_FORMAT_NCHW;
-                break;
-            case NCDHW_DIM_NUM:
-                format = ACL_FORMAT_NCDHW;
-                break;
-            default:
-                format = ACL_FORMAT_ND;
+        case NCL_DIM_NUM:
+            format = ACL_FORMAT_NCL;
+            break;
+        case NCHW_DIM_NUM:
+            format = ACL_FORMAT_NCHW;
+            break;
+        case NCDHW_DIM_NUM:
+            format = ACL_FORMAT_NCDHW;
+            break;
+        default:
+            format = ACL_FORMAT_ND;
         }
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {
-            TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
-                        OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(
+                (*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize * FP4_IN_INT8);
                 if ((*at_tensor).sizes.size() == 1) {
@@ -1312,7 +1245,7 @@ aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
                     wrapperShape[(*at_tensor).sizes.size() - 1] =
                         wrapperShape[(*at_tensor).sizes.size() - 1] * FP4_IN_INT8;
                 } else if ((*at_tensor).sizes.size() > 1 &&
-                           wrapperStride[(*at_tensor).sizes.size() - PENULTIMATE_DIM] == 1) {
+                    wrapperStride[(*at_tensor).sizes.size() - PENULTIMATE_DIM] == 1) {
                     wrapperStride[(*at_tensor).sizes.size() - 1] =
                         wrapperStride[(*at_tensor).sizes.size() - 1] * FP4_IN_INT8;
                     for (auto i = 0; i < (*at_tensor).sizes.size() - PENULTIMATE_DIM; i++) {
@@ -1329,14 +1262,13 @@ aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
         }
     }
 
-    auto acl_tensor = aclCreateTensor(
-        wrapperShape.data(), (*at_tensor).sizes.size(), acl_data_type, wrapperStride.data(),
-        (*at_tensor).storage_offset, format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
+    auto acl_tensor =
+        aclCreateTensor(wrapperShape.data(), (*at_tensor).sizes.size(), acl_data_type, wrapperStride.data(),
+            (*at_tensor).storage_offset, format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
     return acl_tensor;
 }
 
-TensorStructPtr CopyTypeV2(const at::Tensor &at_tensor)
-{
+TensorStructPtr CopyTypeV2(const at::Tensor &at_tensor) {
     if (!at_tensor.defined()) {
         return nullptr;
     }
@@ -1350,20 +1282,12 @@ TensorStructPtr CopyTypeV2(const at::Tensor &at_tensor)
         storage_sizes = npu_desc.storage_sizes_;
     }
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(at_tensor.scalar_type());
-    return std::make_shared<TensorStruct>(
-        const_cast<void *>(at_tensor.storage().data()),
-        acl_data_type,
-        npu_fmt,
-        at_tensor.storage().nbytes(),
-        at_tensor.itemsize(),
-        at_tensor.storage_offset(),
-        at_tensor.sizes(),
-        at_tensor.strides(),
-        at::IntArrayRef(storage_sizes));
+    return std::make_shared<TensorStruct>(const_cast<void *>(at_tensor.storage().data()), acl_data_type, npu_fmt,
+        at_tensor.storage().nbytes(), at_tensor.itemsize(), at_tensor.storage_offset(), at_tensor.sizes(),
+        at_tensor.strides(), at::IntArrayRef(storage_sizes));
 }
 
-TensorStructPtr CopyTypeV2(const TensorWrapper &tensor_r)
-{
+TensorStructPtr CopyTypeV2(const TensorWrapper &tensor_r) {
     const at::Tensor &at_tensor = tensor_r.tensor_;
     if (!at_tensor.defined()) {
         return nullptr;
@@ -1377,20 +1301,12 @@ TensorStructPtr CopyTypeV2(const TensorWrapper &tensor_r)
         npu_fmt = npu_desc.npu_format_;
         storage_sizes = npu_desc.storage_sizes_;
     }
-    return std::make_shared<TensorStruct>(
-        const_cast<void *>(at_tensor.storage().data()),
-        tensor_r.dtype,
-        npu_fmt,
-        at_tensor.storage().nbytes(),
-        at_tensor.itemsize(),
-        at_tensor.storage_offset(),
-        at_tensor.sizes(),
-        at_tensor.strides(),
-        at::IntArrayRef(storage_sizes));
+    return std::make_shared<TensorStruct>(const_cast<void *>(at_tensor.storage().data()), tensor_r.dtype, npu_fmt,
+        at_tensor.storage().nbytes(), at_tensor.itemsize(), at_tensor.storage_offset(), at_tensor.sizes(),
+        at_tensor.strides(), at::IntArrayRef(storage_sizes));
 }
 
-aclScalar *ConvertTypeV2(const at::Scalar &at_scalar)
-{
+aclScalar *ConvertTypeV2(const at::Scalar &at_scalar) {
     static const auto aclCreateScalar = GET_OP_API_FUNC(aclCreateScalar);
     if (aclCreateScalar == nullptr) {
         return nullptr;
@@ -1400,40 +1316,35 @@ aclScalar *ConvertTypeV2(const at::Scalar &at_scalar)
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
     aclScalar *acl_scalar = nullptr;
     switch (scalar_data_type) {
-        case at::ScalarType::Double:
-            {
-                double value = at_scalar.toDouble();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        case at::ScalarType::Long:
-            {
-                int64_t value = at_scalar.toLong();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        case at::ScalarType::Bool:
-            {
-                bool value = at_scalar.toBool();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        case at::ScalarType::ComplexDouble:
-            {
-                auto value = at_scalar.toComplexDouble();
-                acl_scalar = aclCreateScalar(&value, acl_data_type);
-                break;
-            }
-        default:
-            acl_scalar = nullptr;
-            break;
+    case at::ScalarType::Double: {
+        double value = at_scalar.toDouble();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    case at::ScalarType::Long: {
+        int64_t value = at_scalar.toLong();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    case at::ScalarType::Bool: {
+        bool value = at_scalar.toBool();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    case at::ScalarType::ComplexDouble: {
+        auto value = at_scalar.toComplexDouble();
+        acl_scalar = aclCreateScalar(&value, acl_data_type);
+        break;
+    }
+    default:
+        acl_scalar = nullptr;
+        break;
     }
 
     return acl_scalar;
 }
 
-aclIntArray *ConvertTypeV2(const std::vector<int64_t> &int_list)
-{
+aclIntArray *ConvertTypeV2(const std::vector<int64_t> &int_list) {
     static const auto aclCreateIntArray = GET_OP_API_FUNC(aclCreateIntArray);
     if (aclCreateIntArray == nullptr) {
         return nullptr;
@@ -1442,19 +1353,16 @@ aclIntArray *ConvertTypeV2(const std::vector<int64_t> &int_list)
     return array;
 }
 
-std::vector<int64_t> CopyTypeV2(const at::IntArrayRef &at_array)
-{
+std::vector<int64_t> CopyTypeV2(const at::IntArrayRef &at_array) {
     return at_array.vec();
 }
 
-std::vector<int64_t> CopyTypeV2(const at::ArrayRef<c10::SymInt> &at_array)
-{
+std::vector<int64_t> CopyTypeV2(const at::ArrayRef<c10::SymInt> &at_array) {
     auto int_array = c10::asIntArrayRefUnchecked(at_array);
     return int_array.vec();
 }
 
-aclBoolArray *ConvertTypeV2(const std::vector<bool> &value)
-{
+aclBoolArray *ConvertTypeV2(const std::vector<bool> &value) {
     static const auto aclCreateBoolArray = GET_OP_API_FUNC(aclCreateBoolArray);
     if (aclCreateBoolArray == nullptr) {
         return nullptr;
@@ -1469,13 +1377,11 @@ aclBoolArray *ConvertTypeV2(const std::vector<bool> &value)
     return array;
 }
 
-std::vector<bool> CopyTypeV2(const at::ArrayRef<bool> &value)
-{
+std::vector<bool> CopyTypeV2(const at::ArrayRef<bool> &value) {
     return value.vec();
 }
 
-aclTensorList *ConvertTypeV2(const std::vector<TensorStructPtr> &at_tensor_list)
-{
+aclTensorList *ConvertTypeV2(const std::vector<TensorStructPtr> &at_tensor_list) {
     static const auto aclCreateTensorList = GET_OP_API_FUNC(aclCreateTensorList);
     if (aclCreateTensorList == nullptr) {
         return nullptr;
@@ -1489,8 +1395,7 @@ aclTensorList *ConvertTypeV2(const std::vector<TensorStructPtr> &at_tensor_list)
     return acl_tensor_list;
 }
 
-std::vector<TensorStructPtr> CopyTypeV2(const at::TensorList &at_tensor_list)
-{
+std::vector<TensorStructPtr> CopyTypeV2(const at::TensorList &at_tensor_list) {
     std::vector<TensorStructPtr> tensor_list(at_tensor_list.size());
     for (size_t i = 0; i < at_tensor_list.size(); i++) {
         tensor_list[i] = CopyTypeV2(at_tensor_list[i]);
@@ -1498,18 +1403,15 @@ std::vector<TensorStructPtr> CopyTypeV2(const at::TensorList &at_tensor_list)
     return tensor_list;
 }
 
-std::vector<TensorStructPtr> CopyTypeV2(const TensorListWrapper &tensor_list_wrapper)
-{
+std::vector<TensorStructPtr> CopyTypeV2(const TensorListWrapper &tensor_list_wrapper) {
     std::vector<TensorStructPtr> tensor_list(tensor_list_wrapper.tensor_list_.size());
     for (size_t i = 0; i < tensor_list.size(); i++) {
-        tensor_list[i] = CopyTypeV2(TensorWrapper{
-            tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
+        tensor_list[i] = CopyTypeV2(TensorWrapper{tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
     }
     return tensor_list;
 }
 
-aclScalarList *ConvertTypeV2(const std::vector<at::Scalar> &at_scalar_list)
-{
+aclScalarList *ConvertTypeV2(const std::vector<at::Scalar> &at_scalar_list) {
     static const auto aclCreateScalarList = GET_OP_API_FUNC(aclCreateScalarList);
     if (aclCreateScalarList == nullptr) {
         return nullptr;
@@ -1523,13 +1425,11 @@ aclScalarList *ConvertTypeV2(const std::vector<at::Scalar> &at_scalar_list)
     return acl_scalar_list;
 }
 
-std::vector<at::Scalar> CopyTypeV2(const at::ArrayRef<at::Scalar> &at_scalar_list)
-{
+std::vector<at::Scalar> CopyTypeV2(const at::ArrayRef<at::Scalar> &at_scalar_list) {
     return at_scalar_list.vec();
 }
 
-TensorStructPtr CopyTypeV2(const c10::optional<at::Tensor> &opt_tensor)
-{
+TensorStructPtr CopyTypeV2(const c10::optional<at::Tensor> &opt_tensor) {
     if (opt_tensor.has_value() && opt_tensor.value().defined()) {
         return CopyTypeV2(opt_tensor.value());
     }
@@ -1537,8 +1437,7 @@ TensorStructPtr CopyTypeV2(const c10::optional<at::Tensor> &opt_tensor)
     return nullptr;
 }
 
-aclIntArray *ConvertTypeV2(const c10::optional<std::vector<int64_t>> &opt_array)
-{
+aclIntArray *ConvertTypeV2(const c10::optional<std::vector<int64_t>> &opt_array) {
     if (opt_array.has_value()) {
         return ConvertTypeV2(opt_array.value());
     }
@@ -1546,8 +1445,7 @@ aclIntArray *ConvertTypeV2(const c10::optional<std::vector<int64_t>> &opt_array)
     return nullptr;
 }
 
-c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::optional<at::IntArrayRef> &opt_array)
-{
+c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::optional<at::IntArrayRef> &opt_array) {
     if (opt_array.has_value()) {
         return CopyTypeV2(opt_array.value());
     }
@@ -1555,8 +1453,7 @@ c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::optional<at::IntArrayR
     return c10::nullopt;
 }
 
-c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
-{
+c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalArrayRef<c10::SymInt> &opt_array) {
     if (opt_array.has_value()) {
         return CopyTypeV2(opt_array.value());
     }
@@ -1564,8 +1461,7 @@ c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalArrayRef<c10::
     return c10::nullopt;
 }
 
-c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalIntArrayRef &opt_array)
-{
+c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalIntArrayRef &opt_array) {
     if (opt_array.has_value()) {
         return CopyTypeV2(opt_array.value());
     }
@@ -1573,8 +1469,7 @@ c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalIntArrayRef &o
     return c10::nullopt;
 }
 
-aclScalar *ConvertTypeV2(const c10::optional<at::Scalar> &opt_scalar)
-{
+aclScalar *ConvertTypeV2(const c10::optional<at::Scalar> &opt_scalar) {
     if (opt_scalar.has_value()) {
         return ConvertTypeV2(opt_scalar.value());
     }
@@ -1582,25 +1477,21 @@ aclScalar *ConvertTypeV2(const c10::optional<at::Scalar> &opt_scalar)
     return nullptr;
 }
 
-aclDataType ConvertTypeV2(const at::ScalarType scalarType)
-{
+aclDataType ConvertTypeV2(const at::ScalarType scalarType) {
     return at_npu::native::OpPreparation::convert_to_acl_data_type(scalarType);
 }
 
-char* ConvertTypeV2(const std::string &str)
-{
-    char* string_ptr = const_cast<char *>(str.c_str());
+char *ConvertTypeV2(const std::string &str) {
+    char *string_ptr = const_cast<char *>(str.c_str());
     return string_ptr;
 }
 
-std::string CopyTypeV2(char* str)
-{
+std::string CopyTypeV2(char *str) {
     std::string result = str;
     return result;
 }
 
-void MemcpyToBufImpl(const void* data, size_t size)
-{
+void MemcpyToBufImpl(const void *data, size_t size) {
     if (g_hash_offset + size > g_hash_buf_size) {
         g_hash_offset = g_hash_buf_max_size;
         return;
@@ -1609,18 +1500,15 @@ void MemcpyToBufImpl(const void* data, size_t size)
     g_hash_offset += size;
 }
 
-uint32_t CacheParams::GetAicNum() const
-{
+uint32_t CacheParams::GetAicNum() const {
     return aic_num_;
 }
 
-uint32_t CacheParams::GetAivNum() const
-{
+uint32_t CacheParams::GetAivNum() const {
     return aiv_num_;
 }
 
-CacheParams GetCacheParams()
-{
+CacheParams GetCacheParams() {
     CacheParams params;
 
     if (c10_npu::is_core_control_enabled()) {
@@ -1632,24 +1520,16 @@ CacheParams GetCacheParams()
 }
 
 void GetApiFunc(
-    const char* api_name,
-    const char* workspace_api_name,
-    void*& opApiFuncAddr,
-    void*& getWorkspaceSizeFuncAddr
-)
-{
+    const char *api_name, const char *workspace_api_name, void *&opApiFuncAddr, void *&getWorkspaceSizeFuncAddr) {
     opApiFuncAddr = GetOpApiFuncAddr(api_name);
     getWorkspaceSizeFuncAddr = GetOpApiFuncAddr(workspace_api_name);
 
-    TORCH_CHECK(opApiFuncAddr != nullptr && getWorkspaceSizeFuncAddr != nullptr,
-        api_name, " or ", workspace_api_name, " not in ", GetOpApiLibName(),
-        ", or ", GetOpApiLibName(), " not found.",
-        OPS_ERROR(ErrCode::PTR));
+    TORCH_CHECK(opApiFuncAddr != nullptr && getWorkspaceSizeFuncAddr != nullptr, api_name, " or ", workspace_api_name,
+        " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(), " not found.", OPS_ERROR(ErrCode::PTR));
 }
 
-void InitExecCommonCtx()
-{
-    void* initMemAddr = GetOpApiFuncAddr("InitHugeMemThreadLocal");
+void InitExecCommonCtx() {
+    void *initMemAddr = GetOpApiFuncAddr("InitHugeMemThreadLocal");
 
     InitHugeMemThreadLocal initMemFunc = initMemAddr ? reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr) : nullptr;
 
@@ -1658,18 +1538,17 @@ void InitExecCommonCtx()
     }
 }
 
-void InitExecSubTheadCtx(aclrtStream acl_stream)
-{
+void InitExecSubTheadCtx(aclrtStream acl_stream) {
     if (c10_npu::check_dequeue_need_use(acl_stream)) {
         c10_npu::UseStreamResInCurrentThread(acl_stream);
     }
 }
 
-void UnInitExecCommonCtx()
-{
-    void* unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");
+void UnInitExecCommonCtx() {
+    void *unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");
 
-    UnInitHugeMemThreadLocal unInitMemFunc = unInitMemAddr ? reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr) : nullptr;
+    UnInitHugeMemThreadLocal unInitMemFunc =
+        unInitMemAddr ? reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr) : nullptr;
 
     if (unInitMemFunc) {
         unInitMemFunc(nullptr, false);
@@ -1678,19 +1557,16 @@ void UnInitExecCommonCtx()
     UnInitCacheThreadLocal();
 }
 
-void ReleaseExecCommonCtx()
-{
-    void* releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");
+void ReleaseExecCommonCtx() {
+    void *releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");
 
     if (releaseMemAddr) {
         ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);
         releaseMemFunc(nullptr, false);
     }
-
 }
 
-aclrtStream GetAclStream()
-{
+aclrtStream GetAclStream() {
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
     if (c10_npu::check_enqueue_need_use(acl_stream)) {
         c10_npu::UseStreamResInCurrentThread(acl_stream);
@@ -1698,58 +1574,42 @@ aclrtStream GetAclStream()
     return acl_stream;
 }
 
-void* GetWorkSpaceAddr(
-    uint64_t workspace_size)
-{
-    void* workspace_addr = nullptr;
+void *GetWorkSpaceAddr(uint64_t workspace_size) {
+    void *workspace_addr = nullptr;
     if (workspace_size != 0) {
         auto workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size);
-        workspace_addr = const_cast<void*>(workspace_tensor.storage().data());
+        workspace_addr = const_cast<void *>(workspace_tensor.storage().data());
     }
     return workspace_addr;
 }
 
-int ExecuteApiFunc(
-    const void* opApiFuncAddr,
-    aclrtStream acl_stream,
-    void* workspace_addr,
-    uint64_t workspace_size,
-    aclOpExecutor* executor
-)
-{
-    OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(const_cast<void*>(opApiFuncAddr));
+int ExecuteApiFunc(const void *opApiFuncAddr, aclrtStream acl_stream, void *workspace_addr, uint64_t workspace_size,
+    aclOpExecutor *executor) {
+    OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(const_cast<void *>(opApiFuncAddr));
     auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
 
     return api_ret;
 }
 
-void* GetWorkSpaceAddrV2(
-    uint64_t workspace_size, aclrtStream acl_stream)
-{
-    void* workspace_addr = nullptr;
+void *GetWorkSpaceAddrV2(uint64_t workspace_size, aclrtStream acl_stream) {
+    void *workspace_addr = nullptr;
     if (workspace_size != 0) {
         auto workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size, acl_stream);
-        workspace_addr = const_cast<void*>(workspace_tensor.storage().data());
+        workspace_addr = const_cast<void *>(workspace_tensor.storage().data());
     }
     return workspace_addr;
 }
 
 int ExecuteApiFuncV2(
-    const void* opApiFuncAddr,
-    aclrtStream acl_stream,
-    uint64_t workspace_size,
-    aclOpExecutor* executor
-)
-{
+    const void *opApiFuncAddr, aclrtStream acl_stream, uint64_t workspace_size, aclOpExecutor *executor) {
     auto workspace_addr = GetWorkSpaceAddrV2(workspace_size, acl_stream);
-    OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(const_cast<void*>(opApiFuncAddr));
+    OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(const_cast<void *>(opApiFuncAddr));
     auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
 
     return api_ret;
 }
 
-bool CheckAndInitFunc(const char* aclnn_api)
-{
+bool CheckAndInitFunc(const char *aclnn_api) {
     static const auto ptaGetExecCacheAddr = GetOpApiFuncAddr("PTAGetExecCache");
     static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
     static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");
@@ -1761,9 +1621,8 @@ bool CheckAndInitFunc(const char* aclnn_api)
     SetPTAHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTAHashKey>(setPTAHashKeyAddr);
     CanUsePTACache canUsePTACacheFunc = reinterpret_cast<CanUsePTACache>(canUsePTACacheAddr);
 
-    bool has_valid_funcs = (ptaGetExecCacheFunc != nullptr) &&
-                           (initPTACacheThreadLocalFunc != nullptr) &&
-                           (setPTAHashKeyFunc != nullptr);
+    bool has_valid_funcs =
+        (ptaGetExecCacheFunc != nullptr) && (initPTACacheThreadLocalFunc != nullptr) && (setPTAHashKeyFunc != nullptr);
     bool can_use_cache = (canUsePTACacheFunc != nullptr) && canUsePTACacheFunc(aclnn_api);
 
     bool check_result = has_valid_funcs && can_use_cache;
@@ -1778,8 +1637,7 @@ bool CheckAndInitFunc(const char* aclnn_api)
     return true;
 }
 
-bool CheckAndInitFuncV2(const char* aclnn_api)
-{
+bool CheckAndInitFuncV2(const char *aclnn_api) {
     static const auto ptaFindExecCacheAddr = GetOpApiFuncAddr("PTAFindExecCache");
     static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
     static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");
@@ -1791,9 +1649,8 @@ bool CheckAndInitFuncV2(const char* aclnn_api)
     SetPTACacheHashKey setPTACacheHashKeyFunc = reinterpret_cast<SetPTACacheHashKey>(setPTACacheHashKeyAddr);
     CanUsePTACache canUsePTACacheFunc = reinterpret_cast<CanUsePTACache>(canUsePTACacheAddr);
 
-    bool has_valid_funcs = (ptaFindExecCacheFunc != nullptr) &&
-                           (initPTACacheThreadLocalFunc != nullptr) &&
-                           (setPTACacheHashKeyFunc != nullptr);
+    bool has_valid_funcs = (ptaFindExecCacheFunc != nullptr) && (initPTACacheThreadLocalFunc != nullptr) &&
+        (setPTACacheHashKeyFunc != nullptr);
     bool can_use_cache = (canUsePTACacheFunc != nullptr) && canUsePTACacheFunc(aclnn_api);
 
     bool check_result = has_valid_funcs && can_use_cache;
@@ -1808,8 +1665,7 @@ bool CheckAndInitFuncV2(const char* aclnn_api)
     return true;
 }
 
-void AddCacheConfigParams(aclrtStream acl_stream, const CacheParams& cache_params)
-{
+void AddCacheConfigParams(aclrtStream acl_stream, const CacheParams &cache_params) {
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
 
@@ -1822,8 +1678,7 @@ void AddCacheConfigParams(aclrtStream acl_stream, const CacheParams& cache_param
     add_param_to_buf(reinterpret_cast<uintptr_t>(acl_stream));
 }
 
-void AddCacheConfigParamsV2(aclrtStream acl_stream, const CacheParams& cache_params, const char* aclnn_api)
-{
+void AddCacheConfigParamsV2(aclrtStream acl_stream, const CacheParams &cache_params, const char *aclnn_api) {
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
 
@@ -1835,8 +1690,7 @@ void AddCacheConfigParamsV2(aclrtStream acl_stream, const CacheParams& cache_par
     add_param_to_buf_v2(reinterpret_cast<uintptr_t>(acl_stream));
 }
 
-aclOpExecutor* GetCacheExecutorV2(uint64_t* workspace_size)
-{
+aclOpExecutor *GetCacheExecutorV2(uint64_t *workspace_size) {
     static const auto ptaFindExecCacheAddr = GetOpApiFuncAddr("PTAFindExecCache");
     static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");
 
@@ -1848,12 +1702,10 @@ aclOpExecutor* GetCacheExecutorV2(uint64_t* workspace_size)
     } else {
         setPTACacheHashKeyFunc(reinterpret_cast<uint8_t *>(g_hash_buf), g_hash_offset);
     }
-    return ptaFindExecCacheFunc(reinterpret_cast<uint8_t *>(g_hash_buf),
-        g_hash_offset, workspace_size);
+    return ptaFindExecCacheFunc(reinterpret_cast<uint8_t *>(g_hash_buf), g_hash_offset, workspace_size);
 }
 
-aclOpExecutor* GetCacheExecutor(uint64_t* workspace_size)
-{
+aclOpExecutor *GetCacheExecutor(uint64_t *workspace_size) {
     uint64_t hashId = calc_hash_id();
 
     static const auto ptaGetExecCacheAddr = GetOpApiFuncAddr("PTAGetExecCache");
@@ -1867,23 +1719,23 @@ aclOpExecutor* GetCacheExecutor(uint64_t* workspace_size)
     return ptaGetExecCacheFunc(hashId, workspace_size);
 }
 
-bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, const c10_npu::DeterministicSnapshot& snapshot)
-{
+bool ExecuteCachedOp(
+    aclrtStream acl_stream, const char *aclnn_api, void *phrase2, const c10_npu::DeterministicSnapshot &snapshot) {
     uint64_t workspace_size = 0;
-    aclOpExecutor* executor = GetCacheExecutor(&workspace_size);
+    aclOpExecutor *executor = GetCacheExecutor(&workspace_size);
     if (executor == nullptr) {
         return false;
     }
 
     at_npu::native::ApplyDeterministicSnapshot(snapshot, true);
-    void* workspace_addr = nullptr;
+    void *workspace_addr = nullptr;
     at::Tensor workspace_tensor;
     if (workspace_size != 0) {
         workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size);
-        workspace_addr = const_cast<void*>(workspace_tensor.storage().data());
+        workspace_addr = const_cast<void *>(workspace_tensor.storage().data());
     }
 
-    auto acl_call = [workspace_addr, workspace_size, acl_stream, executor, phrase2]()->int {
+    auto acl_call = [workspace_addr, workspace_size, acl_stream, executor, phrase2]() -> int {
         OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(phrase2);
         auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
         NPU_CHECK_ERROR(api_ret, "call failed");
@@ -1895,10 +1747,10 @@ bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase
     return true;
 }
 
-bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, int* api_ret, const c10_npu::DeterministicSnapshot& snapshot)
-{
+bool ExecuteCachedOpV2(aclrtStream acl_stream, const char *aclnn_api, void *phrase2, int *api_ret,
+    const c10_npu::DeterministicSnapshot &snapshot) {
     uint64_t workspace_size = 0;
-    aclOpExecutor* executor = GetCacheExecutorV2(&workspace_size);
+    aclOpExecutor *executor = GetCacheExecutorV2(&workspace_size);
     if (executor == nullptr) {
         return false;
     }
@@ -1918,12 +1770,10 @@ bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phra
     return true;
 }
 
-void RunAclCall(const string &op_name, const PROC_FUNC &func)
-{
+void RunAclCall(const string &op_name, const PROC_FUNC &func) {
     at_npu::native::OpCommand::RunOpApiV2(op_name, func);
 }
 
-TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable()
-{
+TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable() {
     return c10_npu::option::OptionsManager::GetTaskQueueEnable();
 }

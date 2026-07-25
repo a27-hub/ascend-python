@@ -21,22 +21,21 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor linspace(const at::Scalar& start, const at::Scalar& end, int64_t steps,
-                    c10::optional<at::ScalarType> dtype_opt, c10::optional<at::Layout> layout_opt,
-                    c10::optional<at::Device> device_opt, c10::optional<bool> pin_memory_opt)
-{
-    DO_COMPATIBILITY(aclnnLinspace, acl_op::linspace(start, end, steps, dtype_opt, layout_opt, device_opt, pin_memory_opt));
+at::Tensor linspace(const at::Scalar &start, const at::Scalar &end, int64_t steps,
+    c10::optional<at::ScalarType> dtype_opt, c10::optional<at::Layout> layout_opt, c10::optional<at::Device> device_opt,
+    c10::optional<bool> pin_memory_opt) {
+    DO_COMPATIBILITY(
+        aclnnLinspace, acl_op::linspace(start, end, steps, dtype_opt, layout_opt, device_opt, pin_memory_opt));
     TORCH_CHECK(steps >= 0, "number of steps must be non-negative", OPS_ERROR(ErrCode::VALUE));
     c10::TensorOptions option =
-      c10::TensorOptions().dtype(dtype_opt).device(device_opt).layout(layout_opt).pinned_memory(pin_memory_opt);
+        c10::TensorOptions().dtype(dtype_opt).device(device_opt).layout(layout_opt).pinned_memory(pin_memory_opt);
     at::SmallVector<int64_t, op_infer::SIZE> output_size = {steps};
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, option);
     EXEC_NPU_CMD(aclnnLinspace, start, end, steps, result);
     return result;
 }
 
-at::Tensor& linspace_out(const at::Scalar& start, const at::Scalar& end, int64_t steps, at::Tensor& result)
-{
+at::Tensor &linspace_out(const at::Scalar &start, const at::Scalar &end, int64_t steps, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnLinspace, acl_op::linspace_out(start, end, steps, result));
     TORCH_CHECK(steps >= 0, "number of steps must be non-negative", OPS_ERROR(ErrCode::VALUE));
 
@@ -48,4 +47,4 @@ at::Tensor& linspace_out(const at::Scalar& start, const at::Scalar& end, int64_t
     return result;
 }
 
-}
+} // namespace op_api

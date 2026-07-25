@@ -19,11 +19,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
-    const at::Tensor& A,
-    bool full_matrices,
-    bool compute_uv,
-    c10::optional<c10::string_view> driver)
-{
+    const at::Tensor &A, bool full_matrices, bool compute_uv, c10::optional<c10::string_view> driver) {
     int64_t MIN_DIM = 2;
     TORCH_CHECK(A.dtype() == at::kFloat, "svd_npu only supported Float, but get", A.dtype(), OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(A.dim() >= MIN_DIM, "The dim of input tensor must larger than two.", OPS_ERROR(ErrCode::VALUE));
@@ -73,4 +69,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
 
     return op_api::_linalg_svd_out(A, full_matrices, compute_uv, driver, U, S, Vh);
 }
-}
+} // namespace op_api

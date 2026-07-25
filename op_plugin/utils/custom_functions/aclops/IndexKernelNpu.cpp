@@ -28,8 +28,7 @@ const std::string indexed_strides_str = "indexed_strides";
 const std::string aicore_str = "AiCore";
 
 // Limitations of the aicore branch
-bool check_index_aicore(const at::TensorList &indices, const at::IntArrayRef masks)
-{
+bool check_index_aicore(const at::TensorList &indices, const at::IntArrayRef masks) {
     // indices must have same shape
     for (uint64_t idx = 1; idx < indices.size(); idx++) {
         if (indices[idx].sizes() != indices[idx - 1].sizes()) {
@@ -47,8 +46,7 @@ bool check_index_aicore(const at::TensorList &indices, const at::IntArrayRef mas
 }
 
 at::Tensor &index_out_nocheck(const at::Tensor &self, const at::IntArrayRef masks, const at::TensorList &indices,
-                              at::Tensor &result, bool is_aicore)
-{
+    at::Tensor &result, bool is_aicore) {
     at::IntArrayRef indexed_strides = result.sizes();
     at_npu::native::OpCommand cmd;
     cmd.Name("Index")
@@ -67,8 +65,7 @@ at::Tensor &index_out_nocheck(const at::Tensor &self, const at::IntArrayRef mask
     return result;
 }
 
-at::Tensor index_high_dims(const at::Tensor &self, std::vector<at::Tensor> indices)
-{
+at::Tensor index_high_dims(const at::Tensor &self, std::vector<at::Tensor> indices) {
     // masks corresponds to indices. 0 indicates undefined tensor.
     at::SmallVector<int64_t, N> masks;
     std::vector<at::Tensor> all_defined_indices;
@@ -82,9 +79,9 @@ at::Tensor index_high_dims(const at::Tensor &self, std::vector<at::Tensor> indic
     }
 
     /**
-     * When input.size(0) = 1, if the dtype of indices is int64,
-     * and indices only for 0 dimension, can broadcast to output.
-     */
+   * When input.size(0) = 1, if the dtype of indices is int64,
+   * and indices only for 0 dimension, can broadcast to output.
+   */
     if (self.size(0) == 1 && masks.size() == 1 && masks[0] == 1 && all_defined_indices[0].scalar_type() == at::kLong &&
         all_defined_indices[0].dim() == 1) {
         c10::SmallVector<int64_t, N> output_size = op_infer::array_to_small_vector(self.sizes());
@@ -117,8 +114,7 @@ at::Tensor index_high_dims(const at::Tensor &self, std::vector<at::Tensor> indic
 }
 } // namespace
 
-at::Tensor index_common(const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &orig)
-{
+at::Tensor index_common(const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &orig) {
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(orig);
     auto indices = op_plugin::AdvanceIndex::npu_expand_tensors(self, orig, needCast);
     auto broadcast_indices = op_plugin::AdvanceIndex::npu_broadcast_tensors(indices);

@@ -20,24 +20,24 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::vector<at::Tensor> _foreach_mul_v1(const at::TensorList self, const at::Scalar& scalar)
-{
+std::vector<at::Tensor> _foreach_mul_v1(const at::TensorList self, const at::Scalar &scalar) {
     at::native::check_foreach_api_restrictions(self);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, false)) {
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_mul_scalar_kernel_slow(self, scalar);
     }
 
     auto scalar_type = self[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float && scalar_type != at::ScalarType::Int) {
+    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Int) {
         TORCH_CHECK(false, "input must be half, float or int32", OPS_ERROR(ErrCode::TYPE));
     }
-    
+
     std::vector<at::Tensor> result;
     result.reserve(self.size());
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     at::Tensor scalar_tensor = npu_preparation::copy_scalar_to_device(scalar, self[0].scalar_type(), self[0].device());
@@ -47,11 +47,9 @@ std::vector<at::Tensor> _foreach_mul_v1(const at::TensorList self, const at::Sca
     return result;
 }
 
-void _foreach_mul_v1_(const at::TensorList self, const at::Scalar& scalar)
-{
+void _foreach_mul_v1_(const at::TensorList self, const at::Scalar &scalar) {
     at::native::check_foreach_api_restrictions(self);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, false)) {
+    if (!at_npu::native::env::CheckJitDisable() || !at::native::can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_mul_scalar_kernel_slow_(self, scalar);
     }
 
@@ -64,8 +62,8 @@ void _foreach_mul_v1_(const at::TensorList self, const at::Scalar& scalar)
     EXEC_NPU_CMD(aclnnForeachMulScalar, self, scalar_tensor, self);
 }
 
-void _split_and_exec_npu_cmd_mul(const at::TensorList tensors1, const at::Scalar &scalar, at::TensorList result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_mul(
+    const at::TensorList tensors1, const at::Scalar &scalar, at::TensorList result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
     size_t loop_time = tensor_count / max_tensor_count;
@@ -90,11 +88,10 @@ void _split_and_exec_npu_cmd_mul(const at::TensorList tensors1, const at::Scalar
     }
 }
 
-std::vector<at::Tensor> _foreach_mul(const at::TensorList self, const at::Scalar& scalar)
-{
+std::vector<at::Tensor> _foreach_mul(const at::TensorList self, const at::Scalar &scalar) {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_mul_scalar_kernel_slow(self, scalar);
     }
@@ -105,12 +102,13 @@ std::vector<at::Tensor> _foreach_mul(const at::TensorList self, const at::Scalar
     }
 
     auto scalar_type = self[0].scalar_type();
-    
+
     std::vector<at::Tensor> result;
     result.reserve(self.size());
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_mul(self, scalar, result_, false);
@@ -118,11 +116,10 @@ std::vector<at::Tensor> _foreach_mul(const at::TensorList self, const at::Scalar
     return result;
 }
 
-void _foreach_mul_(const at::TensorList self, const at::Scalar& scalar)
-{
+void _foreach_mul_(const at::TensorList self, const at::Scalar &scalar) {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_mul_scalar_kernel_slow_(self, scalar);
     }
@@ -134,4 +131,4 @@ void _foreach_mul_(const at::TensorList self, const at::Scalar& scalar)
 
     _split_and_exec_npu_cmd_mul(self, scalar, self, true);
 }
-}
+} // namespace op_api

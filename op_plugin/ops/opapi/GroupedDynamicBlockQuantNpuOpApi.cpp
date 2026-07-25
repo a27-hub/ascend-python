@@ -76,4 +76,4 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_block_quant(const at::Ten
 
     return std::tie(y, scale);
 }
-}
+} // namespace op_api

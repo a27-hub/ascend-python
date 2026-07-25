@@ -20,52 +20,38 @@
 #include <ATen/ops/quantize_per_tensor.h>
 
 namespace acl_op {
-double q_scale(const at::Tensor& self)
-{
+double q_scale(const at::Tensor &self) {
     return at::native::q_scale_quant(self);
 }
 
-at::Tensor q_per_channel_scales(const at::Tensor& self)
-{
+at::Tensor q_per_channel_scales(const at::Tensor &self) {
     return at::native::q_per_channel_scales(self);
 }
 
-int64_t q_zero_point(const at::Tensor& self)
-{
+int64_t q_zero_point(const at::Tensor &self) {
     return at::native::q_zero_point_quant(self);
 }
 
-at::Tensor q_per_channel_zero_points(const at::Tensor& self)
-{
+at::Tensor q_per_channel_zero_points(const at::Tensor &self) {
     at::Tensor result = at::native::q_per_channel_zero_points(self);
     return result.to(at::Device(at::kPrivateUse1));
 }
 
-int64_t q_per_channel_axis(const at::Tensor& self)
-{
+int64_t q_per_channel_axis(const at::Tensor &self) {
     return at::native::q_per_channel_axis(self);
 }
 
-at::QScheme qscheme(const at::Tensor& self)
-{
+at::QScheme qscheme(const at::Tensor &self) {
     return at::native::qscheme_quant(self);
 }
 
-at::Tensor dequantize(const at::Tensor& self)
-{
+at::Tensor dequantize(const at::Tensor &self) {
     return at::native::dequantize_quantized(self);
 }
 
-at::Tensor _empty_affine_quantized(
-    at::IntArrayRef size,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory,
-    double scale,
-    int64_t zero_point,
-    c10::optional<c10::MemoryFormat> memory_format)
-{
+at::Tensor _empty_affine_quantized(at::IntArrayRef size, c10::optional<at::ScalarType> dtype,
+    c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory, double scale,
+    int64_t zero_point, c10::optional<c10::MemoryFormat> memory_format) {
     return at::native::empty_affine_quantized(
         size, dtype, layout, device, pin_memory, scale, zero_point, memory_format);
 }

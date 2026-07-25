@@ -23,22 +23,18 @@
 #include "SparseTensorUtils.h"
 
 namespace sparse {
-at::Tensor& add_out_dense_sparse_npu(
-    at::Tensor& r_,
-    const at::Tensor& dense,
-    const at::sparse::SparseTensor& sparse,
-    const at::Scalar& value)
-{
-    TORCH_CHECK(torch_npu::utils::is_npu(dense), "sparse add: expected 'self' to be a NPU tensor",
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(torch_npu::utils::is_npu(sparse), "sparse add: expected 'other' to be a NPU tensor",
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(torch_npu::utils::is_npu(r_), "sparse add: expected 'out' to be a NPU tensor",
-        OPS_ERROR(ErrCode::VALUE));
+at::Tensor &add_out_dense_sparse_npu(
+    at::Tensor &r_, const at::Tensor &dense, const at::sparse::SparseTensor &sparse, const at::Scalar &value) {
+    TORCH_CHECK(
+        torch_npu::utils::is_npu(dense), "sparse add: expected 'self' to be a NPU tensor", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(
+        torch_npu::utils::is_npu(sparse), "sparse add: expected 'other' to be a NPU tensor", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(
+        torch_npu::utils::is_npu(r_), "sparse add: expected 'out' to be a NPU tensor", OPS_ERROR(ErrCode::VALUE));
 
     TORCH_CHECK(dense.sizes().equals(sparse.sizes()),
-        "add: expected 'self' and 'other' to have same size, but self has size ",
-        dense.sizes(), " while other has size ", sparse.sizes(),
+        "add: expected 'self' and 'other' to have same size, but self has size ", dense.sizes(),
+        " while other has size ", sparse.sizes(),
         " (FYI: dense-sparse addition does not currently support broadcasting)", OPS_ERROR(ErrCode::VALUE));
 
     const int64_t nnz = sparse._nnz();
@@ -49,8 +45,8 @@ at::Tensor& add_out_dense_sparse_npu(
     }
 
     auto common_dtype = at::result_type(dense, sparse);
-    TORCH_CHECK(c10::canCast(common_dtype, r_.scalar_type()), "Can't convert result type ", common_dtype,
-        " to output ", r_.scalar_type(), OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(c10::canCast(common_dtype, r_.scalar_type()), "Can't convert result type ", common_dtype, " to output ",
+        r_.scalar_type(), OPS_ERROR(ErrCode::TYPE));
 
     at::Tensor r = r_;
     if (r_.scalar_type() != common_dtype) {
@@ -96,13 +92,8 @@ at::Tensor& add_out_dense_sparse_npu(
     return r_;
 }
 
-
-at::sparse::SparseTensor& add_out_sparse(
-    const at::sparse::SparseTensor& t,
-    const at::sparse::SparseTensor& src,
-    const at::Scalar& value,
-    at::sparse::SparseTensor& r_)
-{
+at::sparse::SparseTensor &add_out_sparse(const at::sparse::SparseTensor &t, const at::sparse::SparseTensor &src,
+    const at::Scalar &value, at::sparse::SparseTensor &r_) {
     if (!t.is_sparse()) {
         return add_out_dense_sparse_npu(r_, t, src, value);
     }
@@ -110,19 +101,19 @@ at::sparse::SparseTensor& add_out_sparse(
     TORCH_CHECK(src.is_sparse(), "add(sparse, dense) is not supported. Use add(dense, sparse) instead.",
         OPS_ERROR(ErrCode::VALUE));
 
-    TORCH_CHECK(torch_npu::utils::is_npu(t), "add: expected 'self' to be NPU, but got ", t.device(),
-        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(
+        torch_npu::utils::is_npu(t), "add: expected 'self' to be NPU, but got ", t.device(), OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(torch_npu::utils::is_npu(src), "add: expected 'other' to be NPU, but got ", src.device(),
         OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(torch_npu::utils::is_npu(r_), "add: expected 'out' to be NPU, but got ", r_.device(),
         OPS_ERROR(ErrCode::VALUE));
 
     auto common_dtype = at::result_type(t, src);
-    TORCH_CHECK(c10::canCast(common_dtype, r_.scalar_type()), "Can't convert result type ",
-        common_dtype, " to output ", r_.scalar_type(), OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(c10::canCast(common_dtype, r_.scalar_type()), "Can't convert result type ", common_dtype, " to output ",
+        r_.scalar_type(), OPS_ERROR(ErrCode::TYPE));
 
-    TORCH_CHECK(t.sizes().equals(src.sizes()), "add: expected 'self' and 'other' to have same size, but ",
-        t.sizes(), " != ", src.sizes(), OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(t.sizes().equals(src.sizes()), "add: expected 'self' and 'other' to have same size, but ", t.sizes(),
+        " != ", src.sizes(), OPS_ERROR(ErrCode::VALUE));
 
     if (src._nnz() == 0) {
         return at::copy_sparse_to_sparse_(r_, t);
@@ -132,9 +123,8 @@ at::sparse::SparseTensor& add_out_sparse(
     }
 
     TORCH_CHECK(at::sparse::is_same_density(t, src),
-        "add: expected 'self' and 'other' to have same density, but 'self' has ",
-        t.sparse_dim(), " sparse dimensions while 'other' has ", src.sparse_dim(), " sparse dimensions",
-        OPS_ERROR(ErrCode::VALUE));
+        "add: expected 'self' and 'other' to have same density, but 'self' has ", t.sparse_dim(),
+        " sparse dimensions while 'other' has ", src.sparse_dim(), " sparse dimensions", OPS_ERROR(ErrCode::VALUE));
 
     // We deliberately choose to simply concat the indices and values tensors
     // rather than merging them. This removes the need to synchronously fetch nnz

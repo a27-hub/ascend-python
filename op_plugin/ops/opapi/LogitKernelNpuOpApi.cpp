@@ -8,23 +8,21 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-inline bool _logit_fallback_condition()
-{
+inline bool _logit_fallback_condition() {
     static const bool is_aclnn_kernel_available = check_aclnn_kernel_available("aclnnLogit");
     static const bool is_support_soc = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                       c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                       (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_aclnn_kernel_available || !is_support_soc) {
         TORCH_NPU_WARN_ONCE("CAUTION: The operator aten::logit, aten::logit_ and aten::logit.out is currently "
-            "not supported on the NPU backend. Now this operator will fallback to run on the CPU "
-            "and may have performance implications.");
+                            "not supported on the NPU backend. Now this operator will fallback to run on the CPU "
+                            "and may have performance implications.");
         return true;
     }
     return false;
 }
 
-at::Tensor logit(const at::Tensor &self, c10::optional<double> eps)
-{
+at::Tensor logit(const at::Tensor &self, c10::optional<double> eps) {
     if (_logit_fallback_condition()) {
         at::Tensor self_cpu = self.cpu();
         at::Tensor out_cpu = at::native::logit(self_cpu, eps);
@@ -38,13 +36,11 @@ at::Tensor logit(const at::Tensor &self, c10::optional<double> eps)
     return out;
 }
 
-at::Tensor &logit_(at::Tensor &self, c10::optional<double> eps)
-{
+at::Tensor &logit_(at::Tensor &self, c10::optional<double> eps) {
     return at::native::logit_(self, eps);
 }
 
-at::Tensor &logit_out(const at::Tensor &self, c10::optional<double> eps, at::Tensor &out)
-{
+at::Tensor &logit_out(const at::Tensor &self, c10::optional<double> eps, at::Tensor &out) {
     if (_logit_fallback_condition()) {
         at::Tensor self_cpu = self.cpu();
         at::Tensor out_cpu = out.cpu();
@@ -60,4 +56,4 @@ at::Tensor &logit_out(const at::Tensor &self, c10::optional<double> eps, at::Ten
     return out;
 }
 
-}
+} // namespace op_api

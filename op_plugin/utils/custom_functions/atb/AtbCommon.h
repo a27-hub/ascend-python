@@ -83,8 +83,8 @@ inline void *GetApiFuncAddr(const char *apiName) {
 }
 
 struct TensorMaintainer {
-    c10::SmallVector<at::Tensor, N>
-        contiguous_tensors; // npu tensor's life should maintain when uncontiguous to contiguous.
+    c10::SmallVector<at::Tensor, N> contiguous_tensors; // npu tensor's life should maintain when uncontiguous
+        // to contiguous.
     c10::SmallVector<at::Tensor, N> cpu_tensors; // cpu tensor's life should maintain in taskqueue.
 };
 

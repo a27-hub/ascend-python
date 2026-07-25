@@ -27,4 +27,4 @@ void _cummin_helper(const at::Tensor &self, at::Tensor &values, at::Tensor &indi
     EXEC_NPU_CMD(aclnnCummin, self, dim, values, indices);
 }
 
-}
+} // namespace op_api

@@ -7,8 +7,9 @@
 //
 // https://opensource.org/licenses/BSD-3-Clause
 //
-// Mirrors aten/src/ATen/native/BucketizationUtils.h searchsorted_pre_check so NPU raises
-// the same RuntimeError messages as CPU/CUDA (not CANN parameter errors).
+// Mirrors aten/src/ATen/native/BucketizationUtils.h searchsorted_pre_check so
+// NPU raises the same RuntimeError messages as CPU/CUDA (not CANN parameter
+// errors).
 
 #ifndef OP_PLUGIN_UTILS_SEARCHSORTED_VALIDATE_UTIL_H_
 #define OP_PLUGIN_UTILS_SEARCHSORTED_VALIDATE_UTIL_H_
@@ -39,7 +40,8 @@ inline bool searchsorted_dims_matched_before_last_dim(const at::Tensor &boundari
     return true;
 }
 
-/// Full searchsorted pre_check for Tensor values; `output` may be null to skip out-dtype checks (scalar path).
+/// Full searchsorted pre_check for Tensor values; `output` may be null to skip
+/// out-dtype checks (scalar path).
 inline void searchsorted_pre_check_npu(const at::Tensor &boundaries, const at::Tensor &input, const at::Tensor *output,
     bool out_int32, bool right, const c10::optional<c10::string_view> &side_opt,
     const c10::optional<at::Tensor> &sorter_opt) {
@@ -88,8 +90,9 @@ inline void searchsorted_pre_check_npu(const at::Tensor &boundaries, const at::T
         "got boundaries tensor dim(",
         boundaries.dim(), ") and input value's dim(", input.dim(), ") numel(", input.numel(), ")");
 
-    // Python `searchsorted(boundaries, 1)` may bind as a Tensor overload with shape [1] instead of a true
-    // rank-0 scalar; CPU raises the scalar/boundaries-dim error, not "first N-1 dimensions...".
+    // Python `searchsorted(boundaries, 1)` may bind as a Tensor overload with
+    // shape [1] instead of a true rank-0 scalar; CPU raises the
+    // scalar/boundaries-dim error, not "first N-1 dimensions...".
     if (boundaries.dim() != 1 && input.numel() == 1 && input.dim() != boundaries.dim()) {
         TORCH_CHECK(false,
             "torch.searchsorted(): input value can be a scalar only when boundaries tensor dimension is 1, but we "
@@ -121,8 +124,9 @@ inline void searchsorted_pre_check_npu(const at::Tensor &boundaries, const at::T
     }
 }
 
-/// Functional Tensor overload: `out` is created after new_params in generated op_api, so validate everything
-/// except output dtype here (matches CPU before aclnn). Tensor_out uses searchsorted_validate_tensor_out_op.
+/// Functional Tensor overload: `out` is created after new_params in generated
+/// op_api, so validate everything except output dtype here (matches CPU before
+/// aclnn). Tensor_out uses searchsorted_validate_tensor_out_op.
 inline int searchsorted_validate_core_no_output(const at::Tensor &sorted_sequence, const at::Tensor &self,
     bool out_int32, bool right, const c10::optional<c10::string_view> &side_opt,
     const c10::optional<at::Tensor> &sorter_opt) {
@@ -130,7 +134,8 @@ inline int searchsorted_validate_core_no_output(const at::Tensor &sorted_sequenc
     return 0;
 }
 
-/// Tensor_out / same shapes as aclnnSearchSorted. Returns 0 for use in yaml new_params.
+/// Tensor_out / same shapes as aclnnSearchSorted. Returns 0 for use in yaml
+/// new_params.
 inline int searchsorted_validate_tensor_out_op(const at::Tensor &sorted_sequence, const at::Tensor &self,
     const at::Tensor &out, bool out_int32, bool right, const c10::optional<c10::string_view> &side_opt,
     const c10::optional<at::Tensor> &sorter_opt) {
@@ -138,7 +143,8 @@ inline int searchsorted_validate_tensor_out_op(const at::Tensor &sorted_sequence
     return 0;
 }
 
-/// Scalar value: materialize wrapped-number tensor like aten (no output-dtype check; out is created by kernel).
+/// Scalar value: materialize wrapped-number tensor like aten (no output-dtype
+/// check; out is created by kernel).
 inline int searchsorted_validate_scalar_op(const at::Tensor &sorted_sequence, const c10::Scalar &self, bool out_int32,
     bool right, const c10::optional<c10::string_view> &side_opt, const c10::optional<at::Tensor> &sorter_opt) {
     at::Tensor input_t = at::empty({}, sorted_sequence.options());

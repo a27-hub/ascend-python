@@ -25,28 +25,21 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 void max_pool3d_with_indices_parameter_check(const at::Tensor &self, at::IntArrayRef kernel_size,
-                                             at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation)
-{
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation) {
     TORCH_CHECK(kernel_size.size() == 1 || kernel_size.size() == 3,
-                "max_pool3d: kernel_size must either be a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM))
+        "max_pool3d: kernel_size must either be a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM))
     TORCH_CHECK(stride.size() == 0 || stride.size() == 1 || stride.size() == 3,
-                "max_pool3d: stride must either be omitted, a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM))
+        "max_pool3d: stride must either be omitted, a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM))
     TORCH_CHECK(padding.size() == 1 || padding.size() == 3,
-                "max_pool3d: padding must be either be a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: padding must be either be a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(dilation.size() == 1 || dilation.size() == 3,
-                "max_pool3d: dilation must be either a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM));
+        "max_pool3d: dilation must be either a single int, or a tuple of three ints", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((self.ndimension() == 4 || self.ndimension() == 5),
-                "non-empty 4D or 5D (batch mode) tensor expected for input", OPS_ERROR(ErrCode::PARAM));
+        "non-empty 4D or 5D (batch mode) tensor expected for input", OPS_ERROR(ErrCode::PARAM));
 }
 
-std::tuple<at::Tensor, at::Tensor> exec_max_pool3d_with_indices(
-    const at::Tensor& self,
-    at::IntArrayRef kernel_size,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef dilation,
-    bool ceil_mode)
-{
+std::tuple<at::Tensor, at::Tensor> exec_max_pool3d_with_indices(const at::Tensor &self, at::IntArrayRef kernel_size,
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
     max_pool3d_with_indices_parameter_check(self, kernel_size, stride, padding, dilation);
 
     const int k_D = at::native::safe_downcast<int, int64_t>(kernel_size[0]);
@@ -56,12 +49,12 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool3d_with_indices(
     // NB: stride default is not expressible as an integer constant, so we accept
     // empty stride for this case
     const int d_D = stride.empty() ? k_D : at::native::safe_downcast<int, int64_t>(stride[0]);
-    const int d_H = stride.empty() ? k_H :
-                    stride.size() == 1 ? d_D :
-                                         at::native::safe_downcast<int, int64_t>(stride[1]);
-    const int d_W = stride.empty() ? k_W :
-                    stride.size() == 1 ? d_D :
-                                         at::native::safe_downcast<int, int64_t>(stride[2]);
+    const int d_H = stride.empty() ? k_H
+        : stride.size() == 1       ? d_D
+                                   : at::native::safe_downcast<int, int64_t>(stride[1]);
+    const int d_W = stride.empty() ? k_W
+        : stride.size() == 1       ? d_D
+                                   : at::native::safe_downcast<int, int64_t>(stride[2]);
 
     const int pad_D = at::native::safe_downcast<int, int64_t>(padding[0]);
     const int pad_H = padding.size() == 1 ? pad_D : at::native::safe_downcast<int, int64_t>(padding[1]);
@@ -78,52 +71,38 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool3d_with_indices(
     const int64_t input_width = self.size(-1);
 
     const int64_t output_time =
-                  at::native::pooling_output_shape<int64_t>(input_time, k_D, pad_D, d_D, dilation_D, ceil_mode);
+        at::native::pooling_output_shape<int64_t>(input_time, k_D, pad_D, d_D, dilation_D, ceil_mode);
     const int64_t output_height =
-                  at::native::pooling_output_shape<int64_t>(input_height, k_H, pad_H, d_H, dilation_H, ceil_mode);
+        at::native::pooling_output_shape<int64_t>(input_height, k_H, pad_H, d_H, dilation_H, ceil_mode);
     const int64_t output_width =
-                  at::native::pooling_output_shape<int64_t>(input_width, k_W, pad_W, d_W, dilation_W, ceil_mode);
+        at::native::pooling_output_shape<int64_t>(input_width, k_W, pad_W, d_W, dilation_W, ceil_mode);
 
-    at::native::pool3d_shape_check(self,
-                                   n_slices,
-                                   k_D, k_H, k_W,
-                                   d_D, d_H, d_W,
-                                   pad_D, pad_H, pad_W,
-                                   dilation_D, dilation_H, dilation_W,
-                                   input_time, input_height, input_width,
-                                   output_time, output_height, output_width,
-                                   "max_pool3d_with_indices");
+    at::native::pool3d_shape_check(self, n_slices, k_D, k_H, k_W, d_D, d_H, d_W, pad_D, pad_H, pad_W, dilation_D,
+        dilation_H, dilation_W, input_time, input_height, input_width, output_time, output_height, output_width,
+        "max_pool3d_with_indices");
 
-    c10::SmallVector<int64_t, SIZE> output_size =
-         self.ndimension() == 5 ?
-                            c10::SmallVector<int64_t, SIZE>({n_batch, n_slices, output_time, output_height, output_width}) :
-                            c10::SmallVector<int64_t, SIZE>({n_slices, output_time, output_height, output_width});
+    c10::SmallVector<int64_t, SIZE> output_size = self.ndimension() == 5
+        ? c10::SmallVector<int64_t, SIZE>({n_batch, n_slices, output_time, output_height, output_width})
+        : c10::SmallVector<int64_t, SIZE>({n_slices, output_time, output_height, output_width});
 
     at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, self.options());
 
     // The indices tensor can only be of int32 type
     at::Tensor indices = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kInt));
 
-    EXEC_NPU_CMD(aclnnMaxPool3dWithArgmax, self, kernel_size,
-                 stride, padding, dilation, ceil_mode, output, indices);
+    EXEC_NPU_CMD(aclnnMaxPool3dWithArgmax, self, kernel_size, stride, padding, dilation, ceil_mode, output, indices);
 
     return std::tuple<at::Tensor, at::Tensor>(output, indices);
 }
 
-std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
-    const at::Tensor& self,
-    at::IntArrayRef kernel_size,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef dilation,
-    bool ceil_mode)
-{
-    DO_COMPATIBILITY(aclnnMaxPool3dWithArgmax, acl_op::max_pool3d_with_indices(self, kernel_size, stride,
-                                                                               padding, dilation, ceil_mode));
+std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(const at::Tensor &self, at::IntArrayRef kernel_size,
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
+    DO_COMPATIBILITY(aclnnMaxPool3dWithArgmax,
+        acl_op::max_pool3d_with_indices(self, kernel_size, stride, padding, dilation, ceil_mode));
 
     static const bool is_supported = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                      c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4;
+                                         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4;
     if (!is_supported) {
         return acl_op::max_pool3d_with_indices(self, kernel_size, stride, padding, dilation, ceil_mode);
     }
@@ -131,27 +110,21 @@ std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
     return op_api::exec_max_pool3d_with_indices(self, kernel_size, stride, padding, dilation, ceil_mode);
 }
 
-std::tuple<at::Tensor&, at::Tensor&> max_pool3d_with_indices_out(
-    const at::Tensor& self,
-    at::IntArrayRef kernel_size,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef dilation,
-    bool ceil_mode,
-    at::Tensor& output,
-    at::Tensor& indices)
-{
-    DO_COMPATIBILITY(aclnnMaxPool3dWithArgmax, acl_op::max_pool3d_with_indices_out(self, kernel_size, stride, padding,
-                                                                                   dilation, ceil_mode, output, indices));
+std::tuple<at::Tensor &, at::Tensor &> max_pool3d_with_indices_out(const at::Tensor &self, at::IntArrayRef kernel_size,
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode, at::Tensor &output,
+    at::Tensor &indices) {
+    DO_COMPATIBILITY(aclnnMaxPool3dWithArgmax,
+        acl_op::max_pool3d_with_indices_out(self, kernel_size, stride, padding, dilation, ceil_mode, output, indices));
 
     static const bool is_supported = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                      c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4;
+                                         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4;
     if (!is_supported) {
-        return acl_op::max_pool3d_with_indices_out(self, kernel_size, stride, padding, dilation, ceil_mode, output, indices);
+        return acl_op::max_pool3d_with_indices_out(
+            self, kernel_size, stride, padding, dilation, ceil_mode, output, indices);
     }
 
     EXEC_NPU_CMD(aclnnMaxPool3dWithArgmax, self, kernel_size, stride, padding, dilation, ceil_mode, output, indices);
-    return std::tuple<at::Tensor&, at::Tensor&>(output, indices);
+    return std::tuple<at::Tensor &, at::Tensor &>(output, indices);
 }
 }

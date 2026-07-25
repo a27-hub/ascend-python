@@ -30,4 +30,4 @@ at::Tensor count_nonzero(const at::Tensor &self, c10::optional<int64_t> dim) {
     return op_api::count_nonzero(self, at::IntArrayRef{});
 }
 
-}
+} // namespace op_api

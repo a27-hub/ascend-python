@@ -40,8 +40,7 @@ struct StridedSliceParams {
     bool real_end_valid = true;
     std::vector<int64_t> dy_shape;
 
-    [[nodiscard]] std::string to_string() const
-    {
+    [[nodiscard]] std::string to_string() const {
         std::string result = "input_shape:" + op_plugin::utils::get_vector_str(input_shape);
         result += " begin:" + op_plugin::utils::get_vector_str(begin);
         result += " end:" + op_plugin::utils::get_vector_str(end);
@@ -66,8 +65,7 @@ struct ProcessingData {
     std::vector<int64_t> processing_end;
     std::vector<int64_t> processing_strides;
 
-    [[nodiscard]] std::string to_string() const
-    {
+    [[nodiscard]] std::string to_string() const {
         std::string result = "processing_shape:" + op_plugin::utils::get_vector_str(processing_shape);
         result += " processing_begin:" + op_plugin::utils::get_vector_str(processing_begin);
         result += " processing_end:" + op_plugin::utils::get_vector_str(processing_end);
@@ -121,8 +119,7 @@ struct StridedSliceDenseSpec {
     // dense_shrink_axis_mask of 0x9, yielding a final shape (10,10).
     uint64_t shrink_axis_mask;
 
-    [[nodiscard]] std::string to_string() const
-    {
+    [[nodiscard]] std::string to_string() const {
         std::string result = "dims:" + std::to_string(dims);
         result += " begin_mask:" + std::to_string(begin_mask);
         result += " end_mask:" + std::to_string(end_mask);
@@ -138,27 +135,23 @@ struct StridedSliceDenseSpec {
 };
 
 /// 计算第i位的bit值（2^i）
-static inline uint64_t bit_1_value(int i)
-{
+static inline uint64_t bit_1_value(int i) {
     const uint64_t bit_i = static_cast<uint64_t>(1) << static_cast<uint64_t>(i);
     return bit_i;
 }
 
 /// 规范化索引，将负索引转换为正索引
-static inline int64_t normalize_index(int64_t x, int64_t dim)
-{
+static inline int64_t normalize_index(int64_t x, int64_t dim) {
     return x < 0 ? dim + x : x;
 }
 
 /// 检查索引是否越界
-static inline bool fwd_out_of_bound(int64_t fwd, int64_t lower, int64_t upper)
-{
+static inline bool fwd_out_of_bound(int64_t fwd, int64_t lower, int64_t upper) {
     return (fwd < lower) || (fwd >= upper);
 }
 
 /// 构建稀疏规格，处理省略号(ellipsis)和省略号后的新轴数量
-static void build_sparse_spec(const StridedSliceParams& params, StridedSliceSparseSpec& sparse_spec)
-{
+static void build_sparse_spec(const StridedSliceParams &params, StridedSliceSparseSpec &sparse_spec) {
     sparse_spec.dims = static_cast<int64_t>(params.strides.size());
     bool ellipsis_seen = false;
     for (int32_t i = 0; i < sparse_spec.dims; i++) {
@@ -178,8 +171,7 @@ static void build_sparse_spec(const StridedSliceParams& params, StridedSliceSpar
 }
 
 /// 构建密集规格，将稀疏规格转换为完整的索引规格（展开省略号）
-static void build_dense_spec(const StridedSliceSparseSpec& sparse, StridedSliceDenseSpec& dense)
-{
+static void build_dense_spec(const StridedSliceSparseSpec &sparse, StridedSliceDenseSpec &dense) {
     // Build expanded begin, end, strides, begin_mask, end_mask
     // to remove any ellipsis
     dense.begin.resize(dense.dims);
@@ -210,9 +202,8 @@ static void build_dense_spec(const StridedSliceSparseSpec& sparse, StridedSliceD
         } else if ((bit_i & sparse.new_axis_mask) != 0) {
             dense.final_shape_gather_indices.push_back(K_STRIDED_SLICE_NEW_AXIS);
         } else {
-            TORCH_CHECK_INDEX(
-                static_cast<size_t>(full_index) < dense.begin.size(), "Index out of range using input dim ", full_index,
-                "; input has only ", dense.dims, " dims.");
+            TORCH_CHECK_INDEX(static_cast<size_t>(full_index) < dense.begin.size(),
+                "Index out of range using input dim ", full_index, "; input has only ", dense.dims, " dims.");
 
             // Gather slicing spec into appropriate index
             dense.begin[full_index] = sparse.begin[i];
@@ -241,10 +232,8 @@ static void build_dense_spec(const StridedSliceSparseSpec& sparse, StridedSliceD
 }
 
 /// 构建处理形状，计算中间张量在各维度的形状大小
-static void build_processing_shape(
-    const StridedSliceDenseSpec& dense_spec, const InputParamUnit& input_param_unit, bool begin_and_end_masked,
-    std::vector<int64_t>& processing_shape)
-{
+static void build_processing_shape(const StridedSliceDenseSpec &dense_spec, const InputParamUnit &input_param_unit,
+    bool begin_and_end_masked, std::vector<int64_t> &processing_shape) {
     int64_t interval_length;
     bool known_interval = false;
     if (dense_spec.begin_valid && dense_spec.end_valid) {
@@ -286,15 +275,14 @@ static void build_processing_shape(
 
 /// 构建处理数据，规范化begin/end/strides并进行边界检查
 static void build_processing_data(
-    const StridedSliceDenseSpec& dense_spec, StridedSliceParams& params, ProcessingData& processing_data)
-{
+    const StridedSliceDenseSpec &dense_spec, StridedSliceParams &params, ProcessingData &processing_data) {
     bool is_identity = true;
     bool slice_dim0 = true;
     bool is_simple_slice = true;
     for (int i = 0; i < static_cast<int>(params.input_shape.size()); ++i) {
-        auto& begin_i = params.begin[i];
-        auto& end_i = params.end[i];
-        auto& stride_i = params.strides[i];
+        auto &begin_i = params.begin[i];
+        auto &end_i = params.end[i];
+        auto &stride_i = params.strides[i];
         auto dim_i = params.input_shape[i];
         TORCH_CHECK_VALUE(stride_i != 0, "strides[", i, "] must be non-zero");
 
@@ -315,8 +303,8 @@ static void build_processing_data(
 
         auto canonical = [stride_i, dim_i, masks, valid_range, real_valid](int64_t x, int c) {
             if (masks[c]) {
-                return stride_i > 0 ? valid_range[c] :
-                                      valid_range[static_cast<uint64_t>(c + 1) & static_cast<uint64_t>(1)];
+                return stride_i > 0 ? valid_range[c]
+                                    : valid_range[static_cast<uint64_t>(c + 1) & static_cast<uint64_t>(1)];
             } else {
                 if (!real_valid[c]) {
                     return INVALID_IDX; // -3 invalid, diff from valid_range
@@ -341,8 +329,7 @@ static void build_processing_data(
                     int64_t x_fwd = normalize_index(begin_i, dim_i);
                     begin_i = x_fwd;
                     end_i = begin_i + 1;
-                    TORCH_CHECK_INDEX(
-                        !fwd_out_of_bound(x_fwd, 0, dim_i), "slice index ", begin_i, " of dimension ", i,
+                    TORCH_CHECK_INDEX(!fwd_out_of_bound(x_fwd, 0, dim_i), "slice index ", begin_i, " of dimension ", i,
                         " out of bounds.");
                 } else {
                     begin_i = -2; // -2 valid, diff from valid_range
@@ -354,8 +341,7 @@ static void build_processing_data(
             }
 
             // -3 invalid, diff from valid_range
-            TORCH_CHECK_VALUE(
-                !((!real_valid[0] || !real_valid[1]) && (begin_i == INVALID_IDX || end_i == INVALID_IDX)),
+            TORCH_CHECK_VALUE(!((!real_valid[0] || !real_valid[1]) && (begin_i == INVALID_IDX || end_i == INVALID_IDX)),
                 "begin_i:", begin_i, " end_i:", end_i, " is invalid while unconst begin or end, shrink_i:", shrink_i,
                 " masks:", masks[0], masks[1]);
 
@@ -383,8 +369,7 @@ static void build_processing_data(
 
 /// 构建最终形状，应用new_axis和shrink操作后计算输出形状
 static std::vector<int64_t> build_final_shape(
-    const ProcessingData& processing_data, const StridedSliceDenseSpec& dense_spec, StridedSliceParams& params)
-{
+    const ProcessingData &processing_data, const StridedSliceDenseSpec &dense_spec, StridedSliceParams &params) {
     params.begin.clear();
     params.end.clear();
     params.strides.clear();
@@ -423,36 +408,25 @@ static std::vector<int64_t> build_final_shape(
     return out_shape;
 }
 
-/// 内部推断输出形状的核心函数，分四步处理：1)构建稀疏规格 2)构建密集规格 3)构建处理数据 4)构建最终形状
-static inline c10::SmallVector<int64_t, SIZE> infer_shape_internal(StridedSliceParams& params)
-{
+/// 内部推断输出形状的核心函数，分四步处理：1)构建稀疏规格 2)构建密集规格
+/// 3)构建处理数据 4)构建最终形状
+static inline c10::SmallVector<int64_t, SIZE> infer_shape_internal(StridedSliceParams &params) {
     ASCEND_LOGD("input params: %s", params.to_string().c_str());
-    TORCH_CHECK_VALUE(
-        params.begin.size() == params.end.size() && params.end.size() == params.strides.size(),
+    TORCH_CHECK_VALUE(params.begin.size() == params.end.size() && params.end.size() == params.strides.size(),
         "Expected begin, end, and strides to be 1D equal size tensors, but got shapes [", params.begin.size(), "], [",
         params.end.size(), "], [", params.strides.size(), "] instead.");
 
     // Use bit compares to ensure ellipsis_mask is 0 or a power of 2
     // i.e. there exists only no more than one ellipsis
-    auto& ellipsis_mask = params.ellipsis_mask;
-    TORCH_CHECK_VALUE(
-        !(ellipsis_mask != 0 && ((ellipsis_mask & (ellipsis_mask - 1)) != 0)),
+    auto &ellipsis_mask = params.ellipsis_mask;
+    TORCH_CHECK_VALUE(!(ellipsis_mask != 0 && ((ellipsis_mask & (ellipsis_mask - 1)) != 0)),
         "Multiple ellipses in slice spec not allowed.");
 
     // Step 1: Account for ellipsis and new axis
     //
     // Check for ellipses and count how many non-newaxis' there are after
-    StridedSliceSparseSpec sparse_spec{
-        0,
-        0,
-        params.begin,
-        params.end,
-        params.strides,
-        params.begin_mask,
-        params.end_mask,
-        params.ellipsis_mask,
-        params.new_axis_mask,
-        params.shrink_axis_mask};
+    StridedSliceSparseSpec sparse_spec{0, 0, params.begin, params.end, params.strides, params.begin_mask,
+        params.end_mask, params.ellipsis_mask, params.new_axis_mask, params.shrink_axis_mask};
     build_sparse_spec(params, sparse_spec);
 
     // Step 2: Make a sparse spec into a full index spec
@@ -464,17 +438,8 @@ static inline c10::SmallVector<int64_t, SIZE> infer_shape_internal(StridedSliceP
     // we need to produce the missing begin_mask for the first two
     // dimensions i.e. from begin_mask_spec=0, end_mask_spec=2
     // we achieve begin_mask=6, end_mask=7
-    StridedSliceDenseSpec dense_spec{
-        static_cast<int64_t>(params.input_shape.size()),
-        0,
-        0,
-        params.begin_valid,
-        params.end_valid,
-        params.begin,
-        params.end,
-        params.strides,
-        {},
-        0};
+    StridedSliceDenseSpec dense_spec{static_cast<int64_t>(params.input_shape.size()), 0, 0, params.begin_valid,
+        params.end_valid, params.begin, params.end, params.strides, {}, 0};
     build_dense_spec(sparse_spec, dense_spec);
 
     ASCEND_LOGD("dense spec: %s", dense_spec.to_string().c_str());
@@ -504,10 +469,9 @@ static inline c10::SmallVector<int64_t, SIZE> infer_shape_internal(StridedSliceP
 }
 
 /// 计算NPU索引操作的输出大小
-static c10::SmallVector<int64_t, SIZE> npu_indexing_output_size(
-    const at::Tensor& self, at::IntArrayRef begin, at::IntArrayRef end, at::IntArrayRef strides, int64_t begin_mask,
-    int64_t end_mask, int64_t ellipsis_mask, int64_t new_axis_mask, int64_t shrink_axis_mask)
-{
+static c10::SmallVector<int64_t, SIZE> npu_indexing_output_size(const at::Tensor &self, at::IntArrayRef begin,
+    at::IntArrayRef end, at::IntArrayRef strides, int64_t begin_mask, int64_t end_mask, int64_t ellipsis_mask,
+    int64_t new_axis_mask, int64_t shrink_axis_mask) {
     StridedSliceParams params;
 
     params.input_shape = self.sizes().vec();
@@ -532,46 +496,39 @@ static c10::SmallVector<int64_t, SIZE> npu_indexing_output_size(
 }
 } // namespace
 
-at::Tensor& npu_indexing_out(
-    const at::Tensor& self, at::IntArrayRef begin, at::IntArrayRef end, at::IntArrayRef strides, int64_t begin_mask,
-    int64_t end_mask, int64_t ellipsis_mask, int64_t new_axis_mask, int64_t shrink_axis_mask, at::Tensor& out)
-{
+at::Tensor &npu_indexing_out(const at::Tensor &self, at::IntArrayRef begin, at::IntArrayRef end,
+    at::IntArrayRef strides, int64_t begin_mask, int64_t end_mask, int64_t ellipsis_mask, int64_t new_axis_mask,
+    int64_t shrink_axis_mask, at::Tensor &out) {
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
         return acl_op::npu_indexing_out(
             self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask, out);
     }
 
-    DO_COMPATIBILITY(
-        aclnnStridedSlice,
+    DO_COMPATIBILITY(aclnnStridedSlice,
         acl_op::npu_indexing_out(
             self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask, out));
     auto out_size = npu_indexing_output_size(
         self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
     npu_preparation::check_tensor({self}, out, out.scalar_type(), out_size);
-    EXEC_NPU_CMD(
-        aclnnStridedSlice, self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask,
+    EXEC_NPU_CMD(aclnnStridedSlice, self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask,
         shrink_axis_mask, out);
     return out;
 }
 
-at::Tensor npu_indexing(
-    const at::Tensor& self, at::IntArrayRef begin, at::IntArrayRef end, at::IntArrayRef strides, int64_t begin_mask,
-    int64_t end_mask, int64_t ellipsis_mask, int64_t new_axis_mask, int64_t shrink_axis_mask)
-{
+at::Tensor npu_indexing(const at::Tensor &self, at::IntArrayRef begin, at::IntArrayRef end, at::IntArrayRef strides,
+    int64_t begin_mask, int64_t end_mask, int64_t ellipsis_mask, int64_t new_axis_mask, int64_t shrink_axis_mask) {
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
         return acl_op::npu_indexing(
             self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
     }
 
-    DO_COMPATIBILITY(
-        aclnnStridedSlice,
+    DO_COMPATIBILITY(aclnnStridedSlice,
         acl_op::npu_indexing(
             self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask));
     auto out_size = npu_indexing_output_size(
         self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
     at::Tensor out = npu_preparation::apply_tensor_without_format(out_size, self.options());
-    EXEC_NPU_CMD(
-        aclnnStridedSlice, self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask,
+    EXEC_NPU_CMD(aclnnStridedSlice, self, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask,
         shrink_axis_mask, out);
     return out;
 }

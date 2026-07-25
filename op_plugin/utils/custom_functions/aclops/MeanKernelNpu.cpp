@@ -21,14 +21,10 @@ using npu_utils = at_npu::native::NpuUtils;
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor& mean_out_no_dtype_nocheck(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef dim,
-    bool keepdim)
-{
+at::Tensor &mean_out_no_dtype_nocheck(at::Tensor &result, const at::Tensor &self, at::IntArrayRef dim, bool keepdim) {
     if (self.numel() == 0 && dim.size() == 0) {
-        // In this scenario, needs to return nan. And the nan of the NPU can only be fp32.
+        // In this scenario, needs to return nan. And the nan of the NPU can only be
+        // fp32.
         result = acl_op::_npu_dtype_cast(result, at::kFloat).fill_(NAN);
         return result;
     }
@@ -41,33 +37,18 @@ at::Tensor& mean_out_no_dtype_nocheck(
     }
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("ReduceMean")
-        .Input(self)
-        .Input(dim_vec, at::kLong)
-        .Output(result)
-        .Attr("keep_dims", keepdim)
-        .Run();
+    cmd.Name("ReduceMean").Input(self).Input(dim_vec, at::kLong).Output(result).Attr("keep_dims", keepdim).Run();
     return result;
 }
 
-at::Tensor& mean_out_no_dtype(
-    at::Tensor& result,
-    const at::Tensor& self,
-    at::IntArrayRef dim,
-    bool keepdim)
-{
+at::Tensor &mean_out_no_dtype(at::Tensor &result, const at::Tensor &self, at::IntArrayRef dim, bool keepdim) {
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
     int64_t npu_format = npu_preparation::get_tensor_npu_format(result);
     // scalar scene and rank=1 scene do not support NZ
     if (output_size.size() < 2) {
         npu_format = ACL_FORMAT_NCHW;
     }
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        npu_format,
-        self.scalar_type(),
-        output_size);
+    npu_preparation::CheckOut({self}, result, npu_format, self.scalar_type(), output_size);
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
         mean_out_no_dtype_nocheck(contiguous_result, self, dim, keepdim);
@@ -79,13 +60,8 @@ at::Tensor& mean_out_no_dtype(
 }
 } // namespace
 
-at::Tensor& mean_out_common_nocheck(
-    const at::Tensor& self,
-    at::IntArrayRef dim,
-    bool keepdim,
-    c10::optional<c10::ScalarType> dtype,
-    at::Tensor& result)
-{
+at::Tensor &mean_out_common_nocheck(const at::Tensor &self, at::IntArrayRef dim, bool keepdim,
+    c10::optional<c10::ScalarType> dtype, at::Tensor &result) {
     c10::ScalarType dst_type;
     if (dtype.has_value()) {
         dst_type = dtype.value();
@@ -105,11 +81,7 @@ at::Tensor& mean_out_common_nocheck(
 }
 
 at::Tensor mean_common_nocheck(
-    const at::Tensor& self,
-    at::IntArrayRef dim,
-    bool keepdim,
-    c10::optional<c10::ScalarType> dtype)
-{
+    const at::Tensor &self, at::IntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype) {
     c10::ScalarType dst_type = dtype.has_value() ? dtype.value() : self.scalar_type();
 
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
@@ -119,8 +91,8 @@ at::Tensor mean_common_nocheck(
         npu_format = ACL_FORMAT_NCHW;
     }
 
-    at::Tensor result = npu_preparation::apply_tensor_with_format(
-        output_size, self.options().dtype(dst_type), npu_format);
+    at::Tensor result =
+        npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(dst_type), npu_format);
 
     mean_out(self, dim, keepdim, dtype, result);
     return result;

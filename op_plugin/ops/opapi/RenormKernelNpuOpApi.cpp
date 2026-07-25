@@ -20,12 +20,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& renorm_out(const at::Tensor& self,
-                       const at::Scalar& p,
-                       int64_t dim,
-                       const at::Scalar& maxnorm,
-                       at::Tensor& out)
-{
+at::Tensor &renorm_out(
+    const at::Tensor &self, const at::Scalar &p, int64_t dim, const at::Scalar &maxnorm, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnRenorm, acl_op::renorm_out(self, p, dim, maxnorm, out));
 
     auto dim_post_expr = self.dim();
@@ -36,21 +32,13 @@ at::Tensor& renorm_out(const at::Tensor& self,
         dim += dim_post_expr;
     }
     auto output_size = op_infer::input_same_output_size(self);
-    npu_preparation::check_tensor(
-        {self},
-        out,
-        out.scalar_type(),
-        output_size);
+    npu_preparation::check_tensor({self}, out, out.scalar_type(), output_size);
 
     EXEC_NPU_CMD(aclnnRenorm, self, p, dim, maxnorm, out);
     return out;
 }
 
-at::Tensor renorm(const at::Tensor& self,
-                  const at::Scalar& p,
-                  int64_t dim,
-                  const at::Scalar& maxnorm)
-{
+at::Tensor renorm(const at::Tensor &self, const at::Scalar &p, int64_t dim, const at::Scalar &maxnorm) {
     DO_COMPATIBILITY(aclnnRenorm, acl_op::renorm(self, p, dim, maxnorm));
 
     auto dim_post_expr = self.dim();
@@ -71,8 +59,7 @@ at::Tensor renorm(const at::Tensor& self,
     return result;
 }
 
-at::Tensor& renorm_(at::Tensor& self, const at::Scalar& p, int64_t dim, const at::Scalar& maxnorm)
-{
+at::Tensor &renorm_(at::Tensor &self, const at::Scalar &p, int64_t dim, const at::Scalar &maxnorm) {
     DO_COMPATIBILITY(aclnnInplaceRenorm, acl_op::renorm_(self, p, dim, maxnorm));
 
     auto dim_post_expr = self.dim();
@@ -86,4 +73,4 @@ at::Tensor& renorm_(at::Tensor& self, const at::Scalar& p, int64_t dim, const at
     return self;
 }
 
-}
+} // namespace op_api

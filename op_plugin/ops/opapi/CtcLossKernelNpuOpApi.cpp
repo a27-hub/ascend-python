@@ -48,4 +48,4 @@ std::tuple<at::Tensor, at::Tensor> _ctc_loss(const at::Tensor &log_probs, const 
     return std::tuple<at::Tensor, at::Tensor>(neg_log_likelihood, log_alpha);
 }
 
-}
+} // namespace op_api

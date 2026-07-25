@@ -19,8 +19,7 @@
 
 namespace op_api {
 
-at::Tensor& logsumexp_out(const at::Tensor& self, at::IntArrayRef dims, bool keepdim, at::Tensor& result)
-{
+at::Tensor &logsumexp_out(const at::Tensor &self, at::IntArrayRef dims, bool keepdim, at::Tensor &result) {
     DO_COMPATIBILITY(aclnnLogSumExp, acl_op::logsumexp_out(self, dims, keepdim, result));
     auto outputSize = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
     at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
@@ -29,14 +28,12 @@ at::Tensor& logsumexp_out(const at::Tensor& self, at::IntArrayRef dims, bool kee
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor& logsumexp_out(const at::Tensor& self, at::DimnameList dims, bool keepdim, at::Tensor& result)
-{
+at::Tensor &logsumexp_out(const at::Tensor &self, at::DimnameList dims, bool keepdim, at::Tensor &result) {
     return op_api::logsumexp_out(self, dimnames_to_positions(self, dims), keepdim, result);
 }
 #endif
 
-at::Tensor logsumexp(const at::Tensor& self, at::IntArrayRef dims, bool keepdim)
-{
+at::Tensor logsumexp(const at::Tensor &self, at::IntArrayRef dims, bool keepdim) {
     DO_COMPATIBILITY(aclnnLogSumExp, acl_op::logsumexp(self, dims, keepdim));
     auto outputSize = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
     at::ScalarType dst_type = self.scalar_type();
@@ -51,10 +48,9 @@ at::Tensor logsumexp(const at::Tensor& self, at::IntArrayRef dims, bool keepdim)
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor logsumexp(const at::Tensor& self, at::DimnameList dims, bool keepdim)
-{
+at::Tensor logsumexp(const at::Tensor &self, at::DimnameList dims, bool keepdim) {
     return op_api::logsumexp(self, dimnames_to_positions(self, dims), keepdim);
 }
 #endif
 
-}
+} // namespace op_api

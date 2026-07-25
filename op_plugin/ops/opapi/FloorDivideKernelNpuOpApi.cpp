@@ -21,11 +21,10 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 /**
- * Different from Pytorch1.11 for torch.floor_divide() using truncation division,
- * hostapi are corrected to use floor division.
+ * Different from Pytorch1.11 for torch.floor_divide() using truncation
+ * division, hostapi are corrected to use floor division.
  */
-static at::Tensor& floor_divide_out_npu_opapi(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
-{
+static at::Tensor &floor_divide_out_npu_opapi(const at::Tensor &self, const at::Tensor &other, at::Tensor &result) {
     // executing the NPU operator
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         c10::Scalar others = other.item();
@@ -36,9 +35,8 @@ static at::Tensor& floor_divide_out_npu_opapi(const at::Tensor& self, const at::
     return result;
 }
 
-static at::Tensor self_tensor_to_device(const at::Tensor& tensor, const at::ScalarType result_type,
-                                        const c10::Device device)
-{
+static at::Tensor self_tensor_to_device(
+    const at::Tensor &tensor, const at::ScalarType result_type, const c10::Device device) {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor)) {
         at::Scalar scalar = tensor.item();
         return npu_preparation::copy_scalar_to_device(scalar, result_type, device);
@@ -46,8 +44,7 @@ static at::Tensor self_tensor_to_device(const at::Tensor& tensor, const at::Scal
     return tensor;
 }
 
-static at::Tensor& inplace_floor_divide_out_npu_opapi(at::Tensor& self, const at::Tensor& other)
-{
+static at::Tensor &inplace_floor_divide_out_npu_opapi(at::Tensor &self, const at::Tensor &other) {
     // executing the NPU operator
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         c10::Scalar others = other.item();
@@ -58,8 +55,7 @@ static at::Tensor& inplace_floor_divide_out_npu_opapi(at::Tensor& self, const at
     return self;
 }
 
-at::Tensor& floor_divide_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& out)
-{
+at::Tensor &floor_divide_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &out) {
     DO_COMPATIBILITY(aclnnFloorDivides, acl_op::floor_divide_out(self, other, out));
     DO_COMPATIBILITY(aclnnFloorDivide, acl_op::floor_divide_out(self, other, out));
     std::vector<at::Tensor> tensor_list = {self, other};
@@ -76,8 +72,7 @@ at::Tensor& floor_divide_out(const at::Tensor& self, const at::Tensor& other, at
     return out;
 }
 
-at::Tensor floor_divide(const at::Tensor& self, const at::Tensor& other)
-{
+at::Tensor floor_divide(const at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnFloorDivides, acl_op::floor_divide(self, other));
     DO_COMPATIBILITY(aclnnFloorDivide, acl_op::floor_divide(self, other));
     std::vector<at::Tensor> tensor_list = {self, other};
@@ -90,7 +85,8 @@ at::Tensor floor_divide(const at::Tensor& self, const at::Tensor& other)
     at::Tensor self_cp = self_tensor_to_device(self, high_type, outputTensor.device());
 
     // construct the output tensor of the NPU
-    at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(high_type));
+    at::Tensor result =
+        npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(high_type));
 
     // calculate the output result of the NPU
     floor_divide_out_npu_opapi(self_cp, other, result);
@@ -98,8 +94,7 @@ at::Tensor floor_divide(const at::Tensor& self, const at::Tensor& other)
     return result;
 }
 
-at::Tensor floor_divide(const at::Tensor& self, const at::Scalar& other)
-{
+at::Tensor floor_divide(const at::Tensor &self, const at::Scalar &other) {
     DO_COMPATIBILITY(aclnnFloorDivides, acl_op::floor_divide(self, other));
     auto outputSize = op_infer::input_same_output_size(self);
     at::ScalarType high_type = at::native::result_type(self, other);
@@ -109,8 +104,7 @@ at::Tensor floor_divide(const at::Tensor& self, const at::Scalar& other)
     return result;
 }
 
-at::Tensor& floor_divide_(at::Tensor& self, const at::Tensor& other)
-{
+at::Tensor &floor_divide_(at::Tensor &self, const at::Tensor &other) {
     DO_COMPATIBILITY(aclnnInplaceFloorDivides, acl_op::floor_divide_(self, other));
     DO_COMPATIBILITY(aclnnInplaceFloorDivide, acl_op::floor_divide_(self, other));
     std::vector<at::Tensor> tensor_list = {self, other};
@@ -122,11 +116,10 @@ at::Tensor& floor_divide_(at::Tensor& self, const at::Tensor& other)
     return self;
 }
 
-at::Tensor& floor_divide_(at::Tensor& self, const at::Scalar& other)
-{
+at::Tensor &floor_divide_(at::Tensor &self, const at::Scalar &other) {
     DO_COMPATIBILITY(aclnnInplaceFloorDivides, acl_op::floor_divide_(self, other));
     EXEC_NPU_CMD(aclnnInplaceFloorDivides, self, other);
     return self;
 }
 
-}
+} // namespace op_api

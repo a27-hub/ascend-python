@@ -20,8 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-void _split_and_exec_npu_cmd_erfc(at::TensorList tensors1, at::TensorList result_list, bool is_inplace)
-{
+void _split_and_exec_npu_cmd_erfc(at::TensorList tensors1, at::TensorList result_list, bool is_inplace) {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
 
@@ -44,19 +43,18 @@ void _split_and_exec_npu_cmd_erfc(at::TensorList tensors1, at::TensorList result
     }
 }
 
-void _foreach_erfc_(const at::TensorList self)
-{
+void _foreach_erfc_(const at::TensorList self) {
     DO_COMPATIBILITY(aclnnForeachErfc, at::native::foreach_tensor_erfc_slow_(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_erfc_slow_(self);
     }
 
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(), op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-                                               op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_erfc_slow_(self);
     }
 
@@ -68,19 +66,18 @@ void _foreach_erfc_(const at::TensorList self)
     _split_and_exec_npu_cmd_erfc(self, self, true);
 }
 
-std::vector<at::Tensor> _foreach_erfc(const at::TensorList self)
-{
+std::vector<at::Tensor> _foreach_erfc(const at::TensorList self) {
     DO_COMPATIBILITY(aclnnForeachErfc, at::native::foreach_tensor_erfc_slow(self));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_erfc_slow(self);
     }
-    
+
     // datatype check
-    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(), op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
-                                               op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
+    if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(),
+            op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE, op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_erfc_slow(self);
     }
 
@@ -95,10 +92,11 @@ std::vector<at::Tensor> _foreach_erfc(const at::TensorList self)
     result.reserve(self.size());
     for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(
+            npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_erfc(self, result_, false);
     return result;
 }
-}
+} // namespace op_api

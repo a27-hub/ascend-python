@@ -41,4 +41,4 @@ at::Tensor _npu_distribute_barrier(const at::Tensor &x_ref, c10::string_view gro
     }
     return x_ref;
 }
-}
+} // namespace op_api

@@ -72,4 +72,4 @@ at::Tensor prod(const at::Tensor &self, c10::optional<at::ScalarType> dtype) {
 
     return result;
 }
-}
+} // namespace op_api

@@ -20,8 +20,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 const int64_t INT4_IN_INT32_NUM = 8;
 
-c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self)
-{
+c10::SmallVector<int64_t, SIZE> get_rstd_shape(const at::Tensor &self) {
     c10::SmallVector<int64_t, SIZE> rstd_shape;
     for (int64_t i = 0; i < self.dim() - 1; i++) {
         rstd_shape.emplace_back(self.size(i));
@@ -79,4 +78,4 @@ std::tuple<at::Tensor, at::Tensor> npu_rms_norm_quant_v2(const at::Tensor &x, co
     EXEC_NPU_CMD(aclnnRmsNormQuantV3, x, gamma, scale, offset, beta, epsilon, div_mode, output_rstd, y_wrapper, rstd);
     return std::tuple<at::Tensor, at::Tensor>(y, rstd);
 }
-}
+} // namespace op_api
