@@ -1,7 +1,0 @@
-interface:
-  display_name: "远程 NPU SSH 接入"
-  short_description: "从 Mac 读取配置并通过 SSH 接入远端 NPU 服务器（可选容器 shell）"
-  default_prompt: "Use $manual-connect-npu-server to read remote-config.yaml and establish SSH access to the remote NPU host; optional container shell only. No sync/build workflows."
-
-policy:
-  allow_implicit_invocation: true

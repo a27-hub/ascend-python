@@ -1,7 +1,0 @@
-nodes:
-   - backend: pyaclnn
-     task: ['accuracy']
-     devices: [0]
-     name: vector
-   - backend: cpu
-     task: ['accuracy']
