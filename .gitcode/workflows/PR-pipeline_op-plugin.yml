@@ -39,7 +39,7 @@ stages:
       PREHEAT_master_x86:
         name: PREHEAT_master_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
+        runs-on: [ dedicate-hosted, x64, large ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -48,9 +48,9 @@ stages:
             uses: dedicate-preheat-plugin
             with:
               namespace_id: '13965860'
-              resource_pool_name: Computation-Ascend-GitCode-arm64
-              arch: arm64
-              image_name: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_arm }}
+              resource_pool_name: Computation-Ascend-GitCode-x64
+              arch: x64
+              image_name: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_x86 }}
               timeout: '3600'
 
   stage_1:
