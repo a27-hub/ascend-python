@@ -1305,7 +1305,11 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
     out_x = self.size(0)
     if gather_index == 0:
         out_x = self.size(0) * world_size
-    out_y = x2.size(1)
+    x2_trans = (self.stride(0) == 1 and x2.stride(1) == x2.size(0))
+    if x2_trans:
+        out_y = x2.size(1)
+    else:
+        out_y = x2.size(1) * 2
     # out_gather
     out_gather_x = x2.size(0) * world_size
     out_gather_y = x2.size(1)
