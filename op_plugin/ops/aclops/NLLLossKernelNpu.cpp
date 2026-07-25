@@ -25,12 +25,12 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 void nll_loss_forward_check(const at::Tensor& self, const at::Tensor& target) {
   TORCH_CHECK(
-      self.dim() > 0 && self.dim() <= 2, "input tensor should be 1D or 2D"
-      + OPS_ERROR(ErrCode::PARAM));
+      self.dim() > 0 && self.dim() <= 2,
+      "input tensor should be 1D or 2D" + OPS_ERROR(ErrCode::PARAM));
   TORCH_CHECK(
       target.dim() <= 1,
-      "0D or 1D target tensor expected, multi-target not supported"
-      + OPS_ERROR(ErrCode::PARAM));
+      "0D or 1D target tensor expected, multi-target not supported" +
+          OPS_ERROR(ErrCode::PARAM));
   auto no_batch_dim = self.dim() == 1 && target.dim() == 0;
   TORCH_CHECK(
       no_batch_dim || self.size(0) == target.size(0),
@@ -38,8 +38,7 @@ void nll_loss_forward_check(const at::Tensor& self, const at::Tensor& target) {
       self.sizes(),
       ", target: ",
       target.sizes(),
-      ")"
-      + OPS_ERROR(ErrCode::PARAM));
+      ")" + OPS_ERROR(ErrCode::PARAM));
 }
 
 std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_out_nocheck(
@@ -49,42 +48,53 @@ std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_out_nocheck(
     const at::Tensor& target,
     const at::Tensor& weight,
     int64_t reduction,
-    int64_t ignore_index)
-{
-    at::Tensor weight_tensor;
-    if (weight.defined()) {
-        weight_tensor = npu_utils::format_contiguous(weight);
-    } else {
-        weight_tensor = at::ones(self.size(1), self.options());
-    }
+    int64_t ignore_index) {
+  at::Tensor weight_tensor;
+  if (weight.defined()) {
+    weight_tensor = npu_utils::format_contiguous(weight);
+  } else {
+    weight_tensor = at::ones(self.size(1), self.options());
+  }
 
-    if (ignore_index >= 0 && ignore_index < self.size(-1)) {
-        at::Tensor zero = at::zeros(1, self.options());
-        calcu_op_util::AclrtMemcpyAsync({weight_tensor, ignore_index}, weight_tensor.itemsize(),
-            {zero, 0}, weight_tensor.itemsize(), ACL_MEMCPY_DEVICE_TO_DEVICE);
-    }
+  if (ignore_index >= 0 && ignore_index < self.size(-1)) {
+    at::Tensor zero = at::zeros(1, self.options());
+    calcu_op_util::AclrtMemcpyAsync(
+        {weight_tensor, ignore_index},
+        weight_tensor.itemsize(),
+        {zero, 0},
+        weight_tensor.itemsize(),
+        ACL_MEMCPY_DEVICE_TO_DEVICE);
+  }
 
-    string reduction_str = op_plugin::utils::get_reduction_str(reduction);
+  string reduction_str = op_plugin::utils::get_reduction_str(reduction);
 
-    auto scalar_type = target.scalar_type();
-    TORCH_CHECK((scalar_type == at::kLong || scalar_type == at::kInt),
-        "Expected object of scalar type ", at::kLong, " or ", at::kInt,
-        " but got scalar type ", scalar_type, " for argument 'target' in call to nll_loss_forward"
-        + OPS_ERROR(ErrCode::TYPE));
-    at::Tensor target_cast = (scalar_type == at::kLong) ? at_npu::native::custom_ops::_npu_dtype_cast(target, at::kInt) : target;
+  auto scalar_type = target.scalar_type();
+  TORCH_CHECK(
+      (scalar_type == at::kLong || scalar_type == at::kInt),
+      "Expected object of scalar type ",
+      at::kLong,
+      " or ",
+      at::kInt,
+      " but got scalar type ",
+      scalar_type,
+      " for argument 'target' in call to nll_loss_forward" +
+          OPS_ERROR(ErrCode::TYPE));
+  at::Tensor target_cast = (scalar_type == at::kLong)
+      ? at_npu::native::custom_ops::_npu_dtype_cast(target, at::kInt)
+      : target;
 
-    at_npu::native::OpCommand cmd;
-    cmd.Name("NLLLoss")
-        .Input(self)
-        .Input(target_cast)
-        .Input(weight_tensor)
-        .Output(result)
-        .Output(total_weight)
-        .Attr("reduction", reduction_str)
-        .Attr("ignore_index", ignore_index)
-        .Run();
+  at_npu::native::OpCommand cmd;
+  cmd.Name("NLLLoss")
+      .Input(self)
+      .Input(target_cast)
+      .Input(weight_tensor)
+      .Output(result)
+      .Output(total_weight)
+      .Attr("reduction", reduction_str)
+      .Attr("ignore_index", ignore_index)
+      .Run();
 
-    return std::tuple<at::Tensor&, at::Tensor&>(result, total_weight);
+  return std::tuple<at::Tensor&, at::Tensor&>(result, total_weight);
 }
 } // namespace
 
@@ -98,7 +108,8 @@ std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_out(
     at::Tensor& total_weight) {
   nll_loss_forward_check(self, target);
   at::Tensor self_cp = self.dim() == 1 ? self.unsqueeze(0) : self;
-  const at::Tensor& weight = c10::value_or_else(weight_opt, [] {return at::Tensor();});
+  const at::Tensor& weight =
+      c10::value_or_else(weight_opt, [] { return at::Tensor(); });
 
   at::Tensor weight_tensor;
   if (weight.defined()) {
@@ -135,12 +146,20 @@ std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_out(
   bool result_match = npu_utils::check_match(&result);
   bool total_weight_match = npu_utils::check_match(&total_weight);
   if (!(result_match && total_weight_match)) {
-    at::Tensor contiguous_result = result_match ? result : npu_utils::format_contiguous(result);
-    at::Tensor contiguous_total_weight =
-        total_weight_match ? total_weight : npu_utils::format_contiguous(total_weight);
+    at::Tensor contiguous_result =
+        result_match ? result : npu_utils::format_contiguous(result);
+    at::Tensor contiguous_total_weight = total_weight_match
+        ? total_weight
+        : npu_utils::format_contiguous(total_weight);
 
-    nll_loss_forward_out_nocheck(contiguous_result, contiguous_total_weight, self_cp,
-        target, weight, reduction, ignore_index);
+    nll_loss_forward_out_nocheck(
+        contiguous_result,
+        contiguous_total_weight,
+        self_cp,
+        target,
+        weight,
+        reduction,
+        ignore_index);
 
     if (!result_match) {
       npu_utils::format_fresh_view(result, contiguous_result);
@@ -149,7 +168,8 @@ std::tuple<at::Tensor&, at::Tensor&> nll_loss_forward_out(
       npu_utils::format_fresh_view(total_weight, contiguous_total_weight);
     }
   } else {
-    nll_loss_forward_out_nocheck(result, total_weight, self_cp, target, weight, reduction, ignore_index);
+    nll_loss_forward_out_nocheck(
+        result, total_weight, self_cp, target, weight, reduction, ignore_index);
   }
 
   if (self.dim() == 1 && reduction == at::Reduction::None) {
@@ -169,7 +189,8 @@ std::tuple<at::Tensor, at::Tensor> nll_loss_forward(
   at::Tensor self_cp = self.dim() == 1 ? self.unsqueeze(0) : self;
   c10::SmallVector<int64_t, SIZE> output_size = {};
   c10::SmallVector<int64_t, SIZE> total_weight_size = {};
-  const at::Tensor& weight = c10::value_or_else(weight_opt, [] {return at::Tensor();});
+  const at::Tensor& weight =
+      c10::value_or_else(weight_opt, [] { return at::Tensor(); });
 
   if (reduction == at::Reduction::None) {
     output_size = {self_cp.size(0)};
@@ -181,8 +202,8 @@ std::tuple<at::Tensor, at::Tensor> nll_loss_forward(
   at::Tensor total_weight = npu_preparation::apply_tensor_with_format(
       self_cp, total_weight_size, ACL_FORMAT_ND);
 
-  nll_loss_forward_out_nocheck(result, total_weight, self_cp,
-      target, weight, reduction, ignore_index);
+  nll_loss_forward_out_nocheck(
+      result, total_weight, self_cp, target, weight, reduction, ignore_index);
   if (self.dim() == 1 && reduction == at::Reduction::None) {
     result.squeeze_(0);
   }

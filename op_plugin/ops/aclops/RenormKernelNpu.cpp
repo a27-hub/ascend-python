@@ -62,52 +62,50 @@ at::Tensor& renorm_out_nocheck(
     at::Scalar p,
     int64_t dim,
     at::Scalar maxnorm) {
-    auto ori_type = self.scalar_type();
-    if (ori_type != c10::ScalarType::Half && ori_type != c10::ScalarType::Float) {
-        TORCH_CHECK(false, "Renorm only support float16 or float32 type." + OPS_ERROR(ErrCode::TYPE));
-    }
+  auto ori_type = self.scalar_type();
+  if (ori_type != c10::ScalarType::Half && ori_type != c10::ScalarType::Float) {
+    TORCH_CHECK(
+        false,
+        "Renorm only support float16 or float32 type." +
+            OPS_ERROR(ErrCode::TYPE));
+  }
 
-    TORCH_CHECK(result.scalar_type() == ori_type, "result's type must be equal to input's."
-        + OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(
+      result.scalar_type() == ori_type,
+      "result's type must be equal to input's." + OPS_ERROR(ErrCode::TYPE));
 
-    dim = op_plugin::utils::make_warp_dim(dim, self.dim());
-    auto output_size = renorm_npu_output_size(self, dim);
-    at::Tensor result_bak = npu_preparation::apply_tensor_with_format(
-        output_size,
-        self.options().dtype(at::kFloat),
-        npu_preparation::get_tensor_npu_format(self));
-    if (ori_type == c10::ScalarType::Half) {
+  dim = op_plugin::utils::make_warp_dim(dim, self.dim());
+  auto output_size = renorm_npu_output_size(self, dim);
+  at::Tensor result_bak = npu_preparation::apply_tensor_with_format(
+      output_size,
+      self.options().dtype(at::kFloat),
+      npu_preparation::get_tensor_npu_format(self));
+  if (ori_type == c10::ScalarType::Half) {
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-        at::Tensor self_no_name = self.rename(c10::nullopt);
-        at::Tensor result_no_name = result.rename(c10::nullopt);
+    at::Tensor self_no_name = self.rename(c10::nullopt);
+    at::Tensor result_no_name = result.rename(c10::nullopt);
 #else
-        at::Tensor self_no_name = self;
-        at::Tensor result_no_name = result;
+    at::Tensor self_no_name = self;
+    at::Tensor result_no_name = result;
 #endif
-        self_no_name = at_npu::native::custom_ops::_npu_dtype_cast(self_no_name, c10::ScalarType::Float);
-        result_no_name = at_npu::native::custom_ops::_npu_dtype_cast(result_no_name, c10::ScalarType::Float);
-        renorm_compute(
-            result_bak,
-            self_no_name,
-            p,
-            dim,
-            maxnorm);
+    self_no_name = at_npu::native::custom_ops::_npu_dtype_cast(
+        self_no_name, c10::ScalarType::Float);
+    result_no_name = at_npu::native::custom_ops::_npu_dtype_cast(
+        result_no_name, c10::ScalarType::Float);
+    renorm_compute(result_bak, self_no_name, p, dim, maxnorm);
 
-        at::Tensor result_broadcast = acl_op::npu_broadcast(result_bak, self.sizes());
-        at::mul_out(result_no_name, result_broadcast, self_no_name);
-        acl_op::npu_dtype_cast_(result, result_no_name);
-    } else {
-        renorm_compute(
-            result_bak,
-            self,
-            p,
-            dim,
-            maxnorm);
+    at::Tensor result_broadcast =
+        acl_op::npu_broadcast(result_bak, self.sizes());
+    at::mul_out(result_no_name, result_broadcast, self_no_name);
+    acl_op::npu_dtype_cast_(result, result_no_name);
+  } else {
+    renorm_compute(result_bak, self, p, dim, maxnorm);
 
-        at::Tensor result_broadcast = acl_op::npu_broadcast(result_bak, self.sizes());
-        at::mul_out(result, result_broadcast, self);
-    }
-    return result;
+    at::Tensor result_broadcast =
+        acl_op::npu_broadcast(result_bak, self.sizes());
+    at::mul_out(result, result_broadcast, self);
+  }
+  return result;
 }
 } // namespace
 
@@ -117,10 +115,7 @@ at::Tensor& renorm_out(
     int64_t dim,
     const at::Scalar& maxnorm,
     at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+  npu_preparation::CheckOut({self}, result, self);
 
   if (!npu_utils::check_match(&self)) {
     at::Tensor contiguous_self = npu_utils::format_contiguous(self);
@@ -133,13 +128,21 @@ at::Tensor& renorm_out(
   return result;
 }
 
-at::Tensor renorm(const at::Tensor& self, const at::Scalar& p, int64_t dim, const at::Scalar& maxnorm) {
+at::Tensor renorm(
+    const at::Tensor& self,
+    const at::Scalar& p,
+    int64_t dim,
+    const at::Scalar& maxnorm) {
   at::Tensor result = npu_preparation::apply_tensor(self);
   renorm_out_nocheck(result, self, p, dim, maxnorm);
   return result;
 }
 
-at::Tensor& renorm_(at::Tensor& self, const at::Scalar& p, int64_t dim, const at::Scalar& maxnorm) {
-    return acl_op::renorm_out(self, p, dim, maxnorm, self);
+at::Tensor& renorm_(
+    at::Tensor& self,
+    const at::Scalar& p,
+    int64_t dim,
+    const at::Scalar& maxnorm) {
+  return acl_op::renorm_out(self, p, dim, maxnorm, self);
 }
 } // namespace acl_op

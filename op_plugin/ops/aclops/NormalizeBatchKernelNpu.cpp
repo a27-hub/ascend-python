@@ -43,7 +43,8 @@ at::Tensor npu_normalize_batch(
       OPS_ERROR(ErrCode::VALUE));
 
   at::Tensor result = npu_preparation::apply_tensor(self);
-  string normalize_type_str = normalize_type == 0 ? "per_feature" : "all_features";
+  string normalize_type_str =
+      normalize_type == 0 ? "per_feature" : "all_features";
 
   constexpr float_t EPSILON = 1e-5;
   at_npu::native::OpCommand cmd;
