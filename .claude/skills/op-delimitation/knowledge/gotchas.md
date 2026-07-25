@@ -84,3 +84,11 @@
 **正确做法**：在 [`references/atk-tuning-cases.md`](../references/atk-tuning-cases.md) 纪律下，尝试 **去掉 `-p` 重跑 ATK**（保留 `-c/-n` 等不可改字段）；仍 Fail 再读源码 / Dump。结单记录是否做过「去 `-p` 对照」。
 
 ---
+
+## 9. Async aclnn fault poisons the worker — batch cascade of false FAILs
+
+**Symptom**: In one ATK batch many cases FAIL or report precision=false, but each failing case PASSES when re-run standalone (exact match, 0.0 diff).
+
+**Trap**: A single invalid input earlier in the batch raises an async aicore fault (e.g. aclnn 107000/507057). The latched error state corrupts the whole celery worker, so every later case fails at its first device op — lookalike precision/regression that is really collateral damage.
+
+**Right action**: Before attributing failures, isolate. Re-run the FAILED / 精度=false rows **without** the suspected poisoning case (or one per fresh process). If they then pass exactly, classify as **process poisoning** (known kernel behavior), not a real precision defect — and root-cause the one invalid input that started it (often a generator emitting bad shapes). Single-op gate (`TORCH_NPU_LOGS=op_plugin`) confirms only the intended aclnn kind ran.

@@ -61,8 +61,16 @@ DTYPE_MAP = {
     30: torch.float8_e4m3fn,
     31: torch.float8_e5m2,
 }
+```
 
-# INT4 packed: last_dim / 8
+> **INT4 has TWO packing conventions — never assume.** Match the C++ adaptation exactly, and confirm which one by grepping a sibling quant op:
+> - **8-per-int32**: `dtype=torch.int32`, last dim `// 8` (the `quint4x2` example below).
+> - **2-per-byte**: `dtype=torch.uint8`, last dim `// 2` (see `MoeInitRoutingV2`, `INT4_NUMS_IN_INT8=2`; `aclnnSwiGluQuantV2` uses this).
+>
+> Wrong convention → silent shape/dtype divergence between meta and C++ → wrong graph-mode results.
+
+```python
+# Example: 8-per-int32 packing (quint4x2)
 if dst_type == 13:
     output_shape[-1] = output_shape[-1] // 8
     output = torch.empty(output_shape, dtype=torch.int32, device='meta')

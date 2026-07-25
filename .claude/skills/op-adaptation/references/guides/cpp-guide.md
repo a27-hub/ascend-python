@@ -366,3 +366,6 @@ Mark the "C++ (C-cpp)" column and the "Constraint Coverage Self-Check" table in 
 ## Best Practices
 
 - Find similar operators in `op_plugin/ops/opapi/` before implementing — reuse patterns instead of inventing new ones.
+
+- **Fail-fast before `EXEC_NPU_CMD`**: add `TORCH_CHECK` dtype/shape guards *before* the aclnn call. A bad input that reaches `EXEC_NPU_CMD` typically raises (e.g. aclnn 107000) but leaves a **latched aclnn error state** that corrupts the *next* unrelated call in the same process. Surface invalid input as a clean sync `PARAM`/`TYPE` error instead.
+- **INT4 output packing is NOT unique — verify against a sibling.** Two conventions coexist in the repo: (a) 2-per-byte → dtype `at::kByte` (`uint8`), physical last dim halved (see `MoeInitRoutingV2KernelNpuOpApi.cpp`, `INT4_NUMS_IN_INT8=2`); (b) 8-per-int32 → dtype `at::kInt` (`int32`), last dim `/8`. Wrap with `TensorWrapper{y, ACL_INT4}` either way. Never assume which — grep the aclnn header + a sibling quant op for the packing rule and mirror it in both C++ and meta.
