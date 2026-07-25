@@ -32,26 +32,26 @@ env:
   img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260518"
 
 stages:
-  # stage_0:
-  #   name: stage_0
-  #   select: selected_by_default
-  #   jobs:
-  #     PREHEAT_master_x86:
-  #       name: PREHEAT_master_x86
-  #       select: selected_by_default
-  #       runs-on: [ dedicate-hosted, x64, large ]
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: preheat_master_x86
-  #           uses: dedicate-preheat-plugin
-  #           with:
-  #             namespace_id: '13965860'
-  #             resource_pool_name: Computation-Ascend-GitCode-x64
-  #             arch: x64
-  #             image_name: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_x86 }}
-  #             timeout: '3600'
+  stage_0:
+    name: stage_0
+    select: selected_by_default
+    jobs:
+      PREHEAT_master_x86:
+        name: PREHEAT_master_x86
+        select: selected_by_default
+        runs-on: [ dedicate-hosted, arm64, 2xlarge ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: preheat_master_x86
+            uses: dedicate-preheat-plugin
+            with:
+              namespace_id: '13965860'
+              resource_pool_name: Computation-Ascend-GitCode-arm64
+              arch: arm64
+              image_name: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_arm }}
+              timeout: '3600'
 
   stage_1:
     name: stage_1
@@ -282,7 +282,7 @@ stages:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_7_1_ARM:
         name: Build_v2_7_1_ARM
@@ -295,7 +295,7 @@ stages:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_9_0_ARM:
         name: Build_v2_9_0_ARM
@@ -308,7 +308,7 @@ stages:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_10_0_ARM:
         name: Build_v2_10_0_ARM
@@ -321,7 +321,7 @@ stages:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_11_0_ARM:
         name: Build_v2_11_0_ARM
@@ -334,7 +334,7 @@ stages:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       Build_v2_12_0_ARM:
         name: Build_v2_12_0_ARM
@@ -347,7 +347,7 @@ stages:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
 
   stage_3:
@@ -361,7 +361,7 @@ stages:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
           TEST_RANK: "1"
           TSET_WORD_SIZE: "2"
 
@@ -373,7 +373,7 @@ stages:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
           TEST_RANK: "2"
           TSET_WORD_SIZE: "2"
 
@@ -385,7 +385,7 @@ stages:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_9_0_ARM:
         name: UT_v2_9_0_ARM
@@ -395,7 +395,7 @@ stages:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_10_0_ARM:
         name: UT_v2_10_0_ARM
@@ -405,7 +405,7 @@ stages:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_11_0_ARM:
         name: UT_v2_11_0_ARM
@@ -415,7 +415,7 @@ stages:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
 
       UT_v2_12_0_ARM:
         name: UT_v2_12_0_ARM
@@ -425,4 +425,4 @@ stages:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
           runs_on_arch: "arm64"
-          runs_on_spec: "large"
+          runs_on_spec: "2xlarge"
