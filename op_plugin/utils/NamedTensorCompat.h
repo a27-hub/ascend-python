@@ -15,12 +15,12 @@
 #pragma once
 
 // PyTorch 2.13 removed named-tensor support entirely (at::Dimname /
-// at::DimnameList / the at::namedinference namespace / ATen/NamedTensorUtils.h).
-// op-plugin still supports older PyTorch (v2.1..v2.12) where named tensors
-// exist, so its named-tensor operator overloads are gated out of registration
-// for v2.13+, but the now-dead code still references these symbols and must keep
-// compiling. Forward to the real ATen header on < v2.13 and provide minimal
-// stand-ins on >= v2.13.
+// at::DimnameList / the at::namedinference namespace /
+// ATen/NamedTensorUtils.h). op-plugin still supports older PyTorch
+// (v2.1..v2.12) where named tensors exist, so its named-tensor operator
+// overloads are gated out of registration for v2.13+, but the now-dead code
+// still references these symbols and must keep compiling. Forward to the real
+// ATen header on < v2.13 and provide minimal stand-ins on >= v2.13.
 //
 // Include this instead of <ATen/NamedTensorUtils.h>.
 // CAN REMOVE the >= v2.13 branch (and this header) when the minimum supported
@@ -58,30 +58,48 @@ struct NoNamesGuard {};
 // no-ops on v2.13+ to let those files compile.
 namespace namedinference {
 template <class... Args>
-inline void propagate_names(Args &&...) {}
+inline void propagate_names(Args&&...) {}
 template <class... Args>
-inline void propagate_names_if_nonempty(Args &&...) {}
+inline void propagate_names_if_nonempty(Args&&...) {}
 template <class... Args>
-inline void propagate_names_for_reduction(Args &&...) {}
+inline void propagate_names_for_reduction(Args&&...) {}
 template <class... Args>
-inline ::std::vector<at::Dimname> propagate_names_for_addmv(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> propagate_names_for_addmv(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline ::std::vector<at::Dimname> propagate_names_for_addmm(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> propagate_names_for_addmm(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline ::std::vector<at::Dimname> compute_matmul_outnames(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> compute_matmul_outnames(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline ::std::vector<at::Dimname> compute_bmm_outnames(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> compute_bmm_outnames(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline ::std::vector<at::Dimname> compute_broadcast_outnames(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> compute_broadcast_outnames(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline ::std::vector<at::Dimname> compute_cdist_outnames(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> compute_cdist_outnames(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline ::std::vector<at::Dimname> compute_cat_outnames(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> compute_cat_outnames(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline ::std::vector<at::Dimname> broadcast_to_outnames(Args &&...) { return {}; }
+inline ::std::vector<at::Dimname> broadcast_to_outnames(Args&&...) {
+  return {};
+}
 template <class... Args>
-inline bool are_names_equal(Args &&...) { return true; }
-}  // namespace namedinference
-}  // namespace at
+inline bool are_names_equal(Args&&...) {
+  return true;
+}
+} // namespace namedinference
+} // namespace at
 
-#endif  // !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
+#endif // !VERSION_BETWEEN(V2R13, VERSION_NEWEST)

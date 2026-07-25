@@ -29,9 +29,8 @@ int64_t _fused_sdp_choice(
     double dropout_p,
     bool is_causal,
     c10::optional<double> scale,
-    bool enable_gqa)
-{
-    return SDP_BACKEND_OVERRIDEABLE;
+    bool enable_gqa) {
+  return SDP_BACKEND_OVERRIDEABLE;
 }
 
 } // namespace op_api

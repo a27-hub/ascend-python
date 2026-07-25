@@ -52,10 +52,7 @@ at::Tensor& diag_out_npu_nocheck(
   } else {
     cmd.Name("DiagPart");
   }
-  cmd.Input(self)
-      .Output(result)
-      .Attr("diagonal", diagonal)
-      .Run();
+  cmd.Input(self).Output(result).Attr("diagonal", diagonal).Run();
   return result;
 }
 } // namespace
@@ -64,20 +61,22 @@ at::Tensor& diag_out(
     const at::Tensor& self,
     int64_t diagonal,
     at::Tensor& result) {
-  TORCH_CHECK((self.dim() == 1) || (self.dim() == 2),
-      "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ", self.dim(),
+  TORCH_CHECK(
+      (self.dim() == 1) || (self.dim() == 2),
+      "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ",
+      self.dim(),
       OPS_ERROR(ErrCode::PARAM));
   diagonal = op_infer::make_wrap_dim(diagonal, self.dim());
-  TORCH_CHECK((self.dim() == 1) || (self.dim() == 2 && diagonal <= self.size(0) && diagonal <= self.size(1)),
-      "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ", diagonal,
+  TORCH_CHECK(
+      (self.dim() == 1) ||
+          (self.dim() == 2 && diagonal <= self.size(0) &&
+           diagonal <= self.size(1)),
+      "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ",
+      diagonal,
       OPS_ERROR(ErrCode::PARAM));
 
   auto output_size = diag_npu_output_size(self, diagonal);
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self,
-      output_size);
+  npu_preparation::CheckOut({self}, result, self, output_size);
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
     diag_out_npu_nocheck(contiguous_result, self, diagonal);
@@ -88,15 +87,19 @@ at::Tensor& diag_out(
   return result;
 }
 
-at::Tensor diag(
-    const at::Tensor& self,
-    int64_t diagonal) {
-  TORCH_CHECK((self.dim() == 1) || (self.dim() == 2),
-      "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ", self.dim(),
+at::Tensor diag(const at::Tensor& self, int64_t diagonal) {
+  TORCH_CHECK(
+      (self.dim() == 1) || (self.dim() == 2),
+      "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ",
+      self.dim(),
       OPS_ERROR(ErrCode::PARAM));
   diagonal = op_infer::make_wrap_dim(diagonal, self.dim());
-  TORCH_CHECK((self.dim() == 1) || (self.dim() == 2 && diagonal <= self.size(0) && diagonal <= self.size(1)),
-      "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ", diagonal,
+  TORCH_CHECK(
+      (self.dim() == 1) ||
+          (self.dim() == 2 && diagonal <= self.size(0) &&
+           diagonal <= self.size(1)),
+      "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ",
+      diagonal,
       OPS_ERROR(ErrCode::PARAM));
 
   auto output_size = diag_npu_output_size(self, diagonal);

@@ -23,19 +23,13 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 at::Tensor& atanh_out_npu_nocheck(at::Tensor& result, const at::Tensor& self) {
   at_npu::native::OpCommand cmd;
-  cmd.Name("Atanh")
-      .Input(self)
-      .Output(result)
-      .Run();
+  cmd.Name("Atanh").Input(self).Output(result).Run();
   return result;
 }
 } // namespace
 
 at::Tensor& atanh_out(const at::Tensor& self, at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+  npu_preparation::CheckOut({self}, result, self);
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
     atanh_out_npu_nocheck(contiguous_result, self);

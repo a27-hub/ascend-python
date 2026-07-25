@@ -26,16 +26,15 @@ at::Tensor& softplus_out_nocheck(
     at::Tensor& result,
     const at::Tensor& self,
     at::Scalar beta,
-    at::Scalar threshold)
-{
-    at_npu::native::OpCommand cmd;
-    cmd.Name("SoftplusV2")
-        .Input(self)
-        .Output(result)
-        .Attr("beta", beta)
-        .Attr("threshold", threshold)
-        .Run();
-    return result;
+    at::Scalar threshold) {
+  at_npu::native::OpCommand cmd;
+  cmd.Name("SoftplusV2")
+      .Input(self)
+      .Output(result)
+      .Attr("beta", beta)
+      .Attr("threshold", threshold)
+      .Run();
+  return result;
 }
 } // namespace
 
@@ -43,30 +42,25 @@ at::Tensor& softplus_out(
     const at::Tensor& self,
     const at::Scalar& beta,
     const at::Scalar& threshold,
-    at::Tensor& out)
-{
-    npu_preparation::CheckOut(
-        {self},
-        out,
-        self);
-    if (!npu_utils::check_match(&out)) {
-        at::Tensor contiguous_result = npu_utils::format_contiguous(out);
-        softplus_out_nocheck(contiguous_result, self, beta, threshold);
-        npu_utils::format_fresh_view(out, contiguous_result);
-    } else {
-        softplus_out_nocheck(out, self, beta, threshold);
-    }
-    return out;
+    at::Tensor& out) {
+  npu_preparation::CheckOut({self}, out, self);
+  if (!npu_utils::check_match(&out)) {
+    at::Tensor contiguous_result = npu_utils::format_contiguous(out);
+    softplus_out_nocheck(contiguous_result, self, beta, threshold);
+    npu_utils::format_fresh_view(out, contiguous_result);
+  } else {
+    softplus_out_nocheck(out, self, beta, threshold);
+  }
+  return out;
 }
 
 at::Tensor softplus(
     const at::Tensor& self,
     const at::Scalar& beta,
-    const at::Scalar& threshold)
-{
-    at::Tensor result = npu_preparation::apply_tensor(self);
-    softplus_out_nocheck(result, self, beta, threshold);
-    return result;
+    const at::Scalar& threshold) {
+  at::Tensor result = npu_preparation::apply_tensor(self);
+  softplus_out_nocheck(result, self, beta, threshold);
+  return result;
 }
 
 } // namespace acl_op

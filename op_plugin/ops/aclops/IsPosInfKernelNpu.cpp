@@ -19,25 +19,23 @@
 
 namespace acl_op {
 
-at::Tensor isposinf(const at::Tensor &self)
-{
-    // convert args to cpu in order to use at kernel
-    TORCH_NPU_WARN_ONCE(
-        "Warning: kernel [isposinf] is not supported by NPU currently. Now this kernel is running on CPU.");
-    const auto self_cpu = self.cpu();
-    auto result = at::isposinf(self_cpu);
-    return result.to(self.device());
+at::Tensor isposinf(const at::Tensor& self) {
+  // convert args to cpu in order to use at kernel
+  TORCH_NPU_WARN_ONCE(
+      "Warning: kernel [isposinf] is not supported by NPU currently. Now this kernel is running on CPU.");
+  const auto self_cpu = self.cpu();
+  auto result = at::isposinf(self_cpu);
+  return result.to(self.device());
 }
 
-at::Tensor& isposinf_out(const at::Tensor &self, at::Tensor &out)
-{
-    // convert args to cpu in order to use at::native kernel
-    TORCH_NPU_WARN_ONCE(
-        "Warning: kernel [isposinf.out] is not supported by NPU currently. Now this kernel is running on CPU.");
-    const auto self_cpu = self.cpu();
-    auto out_cpu = out.cpu();
-    out_cpu = at::isposinf_out(out_cpu, self_cpu);
-    out.copy_(out_cpu);
-    return out;
+at::Tensor& isposinf_out(const at::Tensor& self, at::Tensor& out) {
+  // convert args to cpu in order to use at::native kernel
+  TORCH_NPU_WARN_ONCE(
+      "Warning: kernel [isposinf.out] is not supported by NPU currently. Now this kernel is running on CPU.");
+  const auto self_cpu = self.cpu();
+  auto out_cpu = out.cpu();
+  out_cpu = at::isposinf_out(out_cpu, self_cpu);
+  out.copy_(out_cpu);
+  return out;
 }
-}  // acl_op
+} // namespace acl_op

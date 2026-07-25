@@ -38,11 +38,18 @@ std::tuple<at::Tensor&, at::Tensor&> max_v1_out_nocheck(
 }
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor> npu_max(const at::Tensor& self, int64_t dim, bool keepdim) {
+std::tuple<at::Tensor, at::Tensor> npu_max(
+    const at::Tensor& self,
+    int64_t dim,
+    bool keepdim) {
   c10::SmallVector<int64_t, SIZE> dims = {dim};
-  c10::SmallVector<int64_t, SIZE> output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
-  c10::SmallVector<int64_t, SIZE> indices_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
-  int64_t npu_format = output_size.empty() ? ACL_FORMAT_NCHW : npu_preparation::get_tensor_npu_format(self);
+  c10::SmallVector<int64_t, SIZE> output_size =
+      op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
+  c10::SmallVector<int64_t, SIZE> indices_size =
+      op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
+  int64_t npu_format = output_size.empty()
+      ? ACL_FORMAT_NCHW
+      : npu_preparation::get_tensor_npu_format(self);
 
   at::Tensor outputs = npu_preparation::apply_tensor_with_format(
       output_size, self.options(), npu_format);
@@ -53,25 +60,33 @@ std::tuple<at::Tensor, at::Tensor> npu_max(const at::Tensor& self, int64_t dim, 
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-std::tuple<at::Tensor, at::Tensor> npu_max(const at::Tensor& self, at::Dimname dim, bool keepdim) {
+std::tuple<at::Tensor, at::Tensor> npu_max(
+    const at::Tensor& self,
+    at::Dimname dim,
+    bool keepdim) {
   return acl_op::npu_max(self, dimname_to_position(self, dim), keepdim);
 }
 #endif
 
-at::Tensor npu_max_backward_symint(const at::Tensor &grad, int64_t dim, const at::Tensor &indices,
-                                   c10::SymIntArrayRef sizes_symint, bool keepdim)
-{
-    at::IntArrayRef sizes = c10::asIntArrayRefUnchecked(sizes_symint);
-    at::Tensor new_grad = grad;
-    at::Tensor new_indices = indices;
-    if (keepdim && sizes.size() > 0) {
-        new_grad = grad.squeeze(dim);
-        new_indices = indices.squeeze(dim);
-    }
-    if (new_indices.dtype() == at::kLong) {
-        new_indices = at_npu::native::custom_ops::_npu_dtype_cast(new_indices, at::kInt);
-    }
-    auto grad_input = acl_op::npu_scatter(at::zeros(sizes, new_grad.options()), new_indices, new_grad, dim);
-    return grad_input;
+at::Tensor npu_max_backward_symint(
+    const at::Tensor& grad,
+    int64_t dim,
+    const at::Tensor& indices,
+    c10::SymIntArrayRef sizes_symint,
+    bool keepdim) {
+  at::IntArrayRef sizes = c10::asIntArrayRefUnchecked(sizes_symint);
+  at::Tensor new_grad = grad;
+  at::Tensor new_indices = indices;
+  if (keepdim && sizes.size() > 0) {
+    new_grad = grad.squeeze(dim);
+    new_indices = indices.squeeze(dim);
+  }
+  if (new_indices.dtype() == at::kLong) {
+    new_indices =
+        at_npu::native::custom_ops::_npu_dtype_cast(new_indices, at::kInt);
+  }
+  auto grad_input = acl_op::npu_scatter(
+      at::zeros(sizes, new_grad.options()), new_indices, new_grad, dim);
+  return grad_input;
 }
 } // namespace acl_op

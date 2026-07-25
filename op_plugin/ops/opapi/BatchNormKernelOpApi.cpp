@@ -24,9 +24,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
     at::Tensor& running_var,
     bool training,
     double momentum,
-    double eps)
-{
-    return at::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps);
+    double eps) {
+  return at::native_batch_norm(
+      input, weight, bias, running_mean, running_var, training, momentum, eps);
 }
 
-}  // namespace op_api
+} // namespace op_api

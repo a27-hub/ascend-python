@@ -24,19 +24,17 @@ at::Tensor& _amp_update_scale_(
     const at::Tensor& found_inf,
     double growth_factor,
     double backoff_factor,
-    int64_t growth_interval
-)
-{
-    EXEC_NPU_CMD(
-        aclnnAmpUpdateScale,
-        current_scale,
-        growth_tracker,
-        found_inf,
-        growth_factor,
-        backoff_factor,
-        growth_interval,
-        current_scale,
-        growth_tracker);
-    return current_scale;
+    int64_t growth_interval) {
+  EXEC_NPU_CMD(
+      aclnnAmpUpdateScale,
+      current_scale,
+      growth_tracker,
+      found_inf,
+      growth_factor,
+      backoff_factor,
+      growth_interval,
+      current_scale,
+      growth_tracker);
+  return current_scale;
 }
-}  // namespace op_api
+} // namespace op_api

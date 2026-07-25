@@ -14,8 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-${includes_block}
+$ {
+  includes_block
+}
 
-namespace ${namespace} {
-${declarations}
-}  // namespace acl_op
+namespace $ {namespace}
+{
+  $ {
+    declarations
+  }
+} // namespace }

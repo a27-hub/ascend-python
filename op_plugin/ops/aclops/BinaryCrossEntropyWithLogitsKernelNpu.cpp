@@ -37,12 +37,15 @@ at::Tensor binary_cross_entropy_with_logits_nocheck(
     result_format = ACL_FORMAT_ND;
   }
 
-  at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options(), result_format);
+  at::Tensor result = npu_preparation::apply_tensor_with_format(
+      output_size, self.options(), result_format);
   at::Tensor weight_tensor;
   if (weight.defined()) {
     weight_tensor = npu_utils::format_contiguous(weight);
-    weight_tensor = (weight.scalar_type() != self.scalar_type()) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(weight_tensor, self.scalar_type()) : weight_tensor;
+    weight_tensor = (weight.scalar_type() != self.scalar_type())
+        ? at_npu::native::custom_ops::_npu_dtype_cast(
+              weight_tensor, self.scalar_type())
+        : weight_tensor;
   } else {
     weight_tensor = at::ones(self.sizes(), self.options());
   }
@@ -50,8 +53,10 @@ at::Tensor binary_cross_entropy_with_logits_nocheck(
   at::Tensor pos_weight_tensor;
   if (pos_weight.defined()) {
     pos_weight_tensor = npu_utils::format_contiguous(pos_weight);
-    pos_weight_tensor = (pos_weight_tensor.scalar_type() != self.scalar_type()) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(pos_weight_tensor, self.scalar_type()) : pos_weight_tensor;
+    pos_weight_tensor = (pos_weight_tensor.scalar_type() != self.scalar_type())
+        ? at_npu::native::custom_ops::_npu_dtype_cast(
+              pos_weight_tensor, self.scalar_type())
+        : pos_weight_tensor;
   } else {
     pos_weight_tensor = at::ones(self.sizes(), self.options());
   }
@@ -79,13 +84,17 @@ at::Tensor npu_binary_cross_entropy_with_logits_backward(
     const c10::optional<at::Tensor>& pos_weight_opt,
     int64_t reduction) {
   at::Tensor grad_input = npu_preparation::apply_tensor(self);
-  const at::Tensor& weight = c10::value_or_else(weight_opt, [] {return at::Tensor();});
-  const at::Tensor& pos_weight = c10::value_or_else(pos_weight_opt, [] {return at::Tensor();});
+  const at::Tensor& weight =
+      c10::value_or_else(weight_opt, [] { return at::Tensor(); });
+  const at::Tensor& pos_weight =
+      c10::value_or_else(pos_weight_opt, [] { return at::Tensor(); });
   at::Tensor weight_tensor;
   if (weight.defined()) {
     weight_tensor = npu_utils::format_contiguous(weight);
-    weight_tensor = (weight_tensor.scalar_type() != self.scalar_type()) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(weight_tensor, self.scalar_type()) : weight_tensor;
+    weight_tensor = (weight_tensor.scalar_type() != self.scalar_type())
+        ? at_npu::native::custom_ops::_npu_dtype_cast(
+              weight_tensor, self.scalar_type())
+        : weight_tensor;
   } else {
     weight_tensor = at::ones(self.sizes(), self.options());
   }
@@ -93,8 +102,10 @@ at::Tensor npu_binary_cross_entropy_with_logits_backward(
   at::Tensor pos_weight_tensor;
   if (pos_weight.defined()) {
     pos_weight_tensor = npu_utils::format_contiguous(pos_weight);
-    pos_weight_tensor = (pos_weight_tensor.scalar_type() != self.scalar_type()) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(pos_weight_tensor, self.scalar_type()) : pos_weight_tensor;
+    pos_weight_tensor = (pos_weight_tensor.scalar_type() != self.scalar_type())
+        ? at_npu::native::custom_ops::_npu_dtype_cast(
+              pos_weight_tensor, self.scalar_type())
+        : pos_weight_tensor;
   } else {
     pos_weight_tensor = at::ones(self.sizes(), self.options());
   }
@@ -121,8 +132,11 @@ at::Tensor binary_cross_entropy_with_logits(
     const c10::optional<at::Tensor>& weight_opt,
     const c10::optional<at::Tensor>& pos_weight_opt,
     int64_t reduction) {
-  const at::Tensor& weight = c10::value_or_else(weight_opt, [] {return at::Tensor();});
-  const at::Tensor& pos_weight = c10::value_or_else(pos_weight_opt, [] {return at::Tensor();});
-  return binary_cross_entropy_with_logits_nocheck(self, target, weight, pos_weight, reduction);
+  const at::Tensor& weight =
+      c10::value_or_else(weight_opt, [] { return at::Tensor(); });
+  const at::Tensor& pos_weight =
+      c10::value_or_else(pos_weight_opt, [] { return at::Tensor(); });
+  return binary_cross_entropy_with_logits_nocheck(
+      self, target, weight, pos_weight, reduction);
 }
 } // namespace acl_op

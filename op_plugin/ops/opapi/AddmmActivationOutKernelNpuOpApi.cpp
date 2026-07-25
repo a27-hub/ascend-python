@@ -23,15 +23,14 @@ at::Tensor& _addmm_activation_out(
     const at::Scalar& beta,
     const at::Scalar& alpha,
     bool use_gelu,
-    at::Tensor& result)
-    {
-    op_api::addmm_out(self, mat1, mat2, beta, alpha, result);
-    if (use_gelu) {
-        at::gelu_(result);
-    } else {
-        at::relu_(result);
-    }
-    return result;
+    at::Tensor& result) {
+  op_api::addmm_out(self, mat1, mat2, beta, alpha, result);
+  if (use_gelu) {
+    at::gelu_(result);
+  } else {
+    at::relu_(result);
+  }
+  return result;
 }
 
-}  // namespace op_api
+} // namespace op_api

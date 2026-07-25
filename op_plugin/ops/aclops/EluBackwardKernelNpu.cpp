@@ -22,9 +22,9 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 at::Tensor& elu_backward_out_nocheck(
-    at::Tensor & result,
-    const at::Tensor & grad_output,
-    const at::Tensor & self_or_result,
+    at::Tensor& result,
+    const at::Tensor& grad_output,
+    const at::Tensor& self_or_result,
     at::Scalar alpha,
     at::Scalar scale,
     at::Scalar input_scale,
@@ -34,10 +34,12 @@ at::Tensor& elu_backward_out_nocheck(
   float inputScaleValue = op_plugin::utils::get_scalar_float_value(input_scale);
 
   if (is_result) {
-    TORCH_CHECK((alphaValue >= 0),
+    TORCH_CHECK(
+        (alphaValue >= 0),
         "In-place elu backward calculation is triggered with a negative slope which is not supported. "
         "This is caused by calling in-place forward function with a negative slope, "
-        "please call out-of-place version instead." + OPS_ERROR(ErrCode::VALUE));
+        "please call out-of-place version instead." +
+            OPS_ERROR(ErrCode::VALUE));
   }
 
   at_npu::native::OpCommand cmd;
@@ -61,8 +63,15 @@ at::Tensor& elu_backward_out(
     const at::Scalar& input_scale,
     bool is_result,
     const at::Tensor& self_or_result,
-    at::Tensor & grad_input) {
-  elu_backward_out_nocheck(grad_input, grad_output, self_or_result, alpha, scale, input_scale, is_result);
+    at::Tensor& grad_input) {
+  elu_backward_out_nocheck(
+      grad_input,
+      grad_output,
+      self_or_result,
+      alpha,
+      scale,
+      input_scale,
+      is_result);
   return grad_input;
 }
 
@@ -74,7 +83,14 @@ at::Tensor elu_backward(
     bool is_result,
     const at::Tensor& self_or_result) {
   at::Tensor result = npu_preparation::apply_tensor(grad_output);
-  result = elu_backward_out_nocheck(result, grad_output, self_or_result, alpha, scale, input_scale, is_result);
+  result = elu_backward_out_nocheck(
+      result,
+      grad_output,
+      self_or_result,
+      alpha,
+      scale,
+      input_scale,
+      is_result);
   return result;
 }
 } // namespace acl_op
