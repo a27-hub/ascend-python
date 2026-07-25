@@ -68,7 +68,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
         x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1))) {
         is_mxfp4 = true;
     }
-    bool x2_trans = is_transpose_last_two_dims(x2.value_or(at::Tensor()));
+    bool x2_trans = op_plugin::utils::is_transpose_last_two_dims(x2);
     c10::SmallVector<int64_t, op_infer::SIZE> y_size = get_y_size(self, x2, world_size, gather_index, x2_trans, is_mxfp4);
     auto gather_out_size = gather_output ? get_gather_out_size(self, x2, world_size, gather_index)
                                          : c10::SmallVector<int64_t, op_infer::SIZE>{0};
