@@ -76,14 +76,15 @@ class TestNpuMhcPre(TestCase):
 
         return (h_in, h_post, inv_rms[:, 0], h_mix, h_pre)
 
-    def custom_op_exec(self, x, phi, alpha, bias, gamma, out_flag):
+    def custom_op_exec(self, x, phi, alpha, bias, gamma, out_flag, inner_precise=0):
         return torch_npu.npu_mhc_pre(
             x,
             phi,
             alpha,
             bias,
             gamma=gamma,
-            out_flag=out_flag
+            out_flag=out_flag,
+            inner_precise=inner_precise
         )
 
     def build_input_tensors(self, T, n, D):
@@ -111,13 +112,14 @@ class TestNpuMhcPre(TestCase):
 
         return x, phi, alpha, bias, gamma
 
-    def run_and_check(self, T, n, D, out_flag, output_names, tol_map):
+    def run_and_check(self, T, n, D, out_flag, output_names, tol_map, inner_precise=0):
         with torch.no_grad():
             x, phi, alpha, bias, gamma = self.build_input_tensors(T, n, D)
 
             expected_output = self.cpu_op_exec(x, phi, alpha, bias, gamma)[:len(output_names)]
             actual_output = self.custom_op_exec(
-                x.npu(), phi.npu(), alpha.npu(), bias.npu(), gamma.npu(), out_flag=out_flag
+                x.npu(), phi.npu(), alpha.npu(), bias.npu(), gamma.npu(), out_flag=out_flag,
+                inner_precise=inner_precise
             )[:len(output_names)]
 
             for name, exp, act in zip(output_names, expected_output, actual_output):
@@ -197,7 +199,8 @@ class TestNpuMhcPre(TestCase):
             "h_post": 1e-3,
             "h_res": 1e-3,
         }
-        self.run_and_check(T, n, D, out_flag, output_names, tol_map)
+        for inner_precise in (0, 1):
+            self.run_and_check(T, n, D, out_flag, output_names, tol_map, inner_precise=inner_precise)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_prefill_hy(self, device="npu"):
