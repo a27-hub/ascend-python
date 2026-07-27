@@ -11619,6 +11619,81 @@ out = torch_npu.npu_group_norm_swish(input, num_groups, weight, bias, eps=eps, s
 )
 
 _add_torch_npu_docstr(
+    "npu_swi_glu_quant_v2",
+    """
+功能描述:
+-   在 SwiGlu 激活后添加 quant 操作，支持 MoE/非MoE场景及 int8/int4 量化输出。
+计算公式:
+-   动态量化: Act = SwiGlu(x) = Swish(A)*B; Y_tmp = Act * smooth_scales; scale = dstTypeScale/row_max(abs(Y_tmp)); Y = Cast(Mul(Y_tmp, scale))。int8 时 dstTypeScale=127，int4 时 dstTypeScale=7。
+-   静态量化: Y_tmp = Act * smooth_scales + offsets; Y = Cast(Y_tmp)。
+-   activate_left=True 对前半部分A做Swish，False 对后半部分B做Swish。
+
+接口原型:
+torch_npu.npu_swi_glu_quant_v2(x, *, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode="dynamic", group_list_type=0, dst_type=2) -> (Tensor, Tensor)
+
+参数说明:
+x: Tensor类型, 必选参数, 输入待处理数据, 数据类型支持float16/bfloat16/float32, 数据格式支持ND, 不支持非连续Tensor.
+*: 位置与关键字参数分隔符.
+smooth_scales: Tensor类型, 可选参数, 量化的smooth_scales, 不支持空Tensor, shape支持[G,N]或[G,](G为group_index分组数,N为x最后一维/2), 数据类型支持float32, 默认None.
+offsets: Tensor类型, 可选参数, 动态量化不生效(传空), 静态量化数据类型支持float32, per_channel shape[G,N], per_tensor shape[G,]需与smooth_scales一致, 默认None.
+group_index: Tensor类型, 可选参数, MoE分组group_index, shape[G,], 元素非递减且最大值与G均不超过x除最后一维外维度之积, 数据类型支持int32, None表示非MoE, 默认None.
+activate_left: bool类型, 可选参数, 左矩阵是否参与SwiGlu运算, 默认False.
+quant_mode: str类型, 可选参数, 量化模式, 支持"dynamic"/"static"(static仅per_tensor/per_channel), 默认"dynamic".
+group_list_type: int类型, 可选参数, group_index解析模式, 0=cumsum累计边界/1=count每组元素数, 默认0.
+dst_type: int类型, 可选参数, 量化输出类型(ge约定), 2=int8/29=int4(int4为2-per-byte打包,dtype uint8,物理末维=x末维/4), 默认2.
+
+输出说明:
+y: Tensor类型, 量化输出张量. shape除末维为x末维/2外其余同x; int4(dst_type=29)因2-per-byte打包物理末维为x末维/4. dtype: int8(dst_type=2)或uint8(dst_type=29).
+scale: Tensor类型, 量化scale张量. shape为x去掉末维的形状, dtype为float32.
+
+约束说明:
+该接口支持推理、训练场景下使用.
+该接口支持图模式.
+x维数需大于1维; x末维需为2的倍数且不超过8192; dst_type=29时x末维需为4的倍数.
+quant_mode仅支持dynamic/static; group_list_type仅支持0/1; dst_type仅支持2/29.
+
+支持的PyTorch版本:
+PyTorch 2.10.0
+
+支持的型号:
+Ascend 950PR/950DT, Atlas A3 训练/推理系列, Atlas A2 训练/推理系列
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+x = torch.randn((3, 32), dtype=torch.float16, device='npu')
+smooth_scales = torch.ones((2, 16), dtype=torch.float32, device='npu')
+group_index = torch.tensor([1, 3], dtype=torch.int32, device='npu')
+y, scale = torch_npu.npu_swi_glu_quant_v2(x, smooth_scales=smooth_scales, group_index=group_index, dst_type=2)
+print(y.shape, scale.shape)
+
+图模式调用
+import torch
+import torch_npu
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+config = CompilerConfig()
+npu_backend = tng.get_npu_backend(compiler_config=config)
+
+x = torch.randn((3, 32), dtype=torch.float16, device='npu')
+smooth_scales = torch.ones((2, 16), dtype=torch.float32, device='npu')
+group_index = torch.tensor([1, 3], dtype=torch.int32, device='npu')
+
+class Model(torch.nn.Module):
+    def forward(self, x, smooth_scales, group_index):
+        return torch_npu.npu_swi_glu_quant_v2(x, smooth_scales=smooth_scales, group_index=group_index, dst_type=2)
+
+model = Model().npu()
+model = torch.compile(model, backend=npu_backend, dynamic=False)
+y, scale = model(x, smooth_scales, group_index)
+print(y, scale)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_dequant_swiglu_quant",
     """
 功能描述:
@@ -12721,81 +12796,6 @@ _add_torch_npu_docstr(
         master_ip = "127.0.0.1"
         master_port = "50001"
         mp.spawn(run_npu_alltoallv_quant_gmm, args=(world_size, master_ip, master_port), nprocs=world_size, join=True)
-"""
-)
-
-_add_torch_npu_docstr(
-    "npu_swiglu_quant",
-    """
-torch_npu.npu_swiglu_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, int quant_mode=0, int group_list_type=0, ScalarType? dst_type=None) -> (Tensor, Tensor)
-功能描述
-在swiglu激活函数后添加quant操作。
-
-参数说明
-x (Tensor)：必选参数，表示目标张量。数据类型支持float16、bfloat16、float32，支持非连续的Tensor，数据格式为ND，x的维数必须大于1维，尾轴为偶数且长度不超过8192，当dst_type传入值为29(输出为int4量化)时，x的最后一维需要为4的倍数。
-smooth_scales (Tensor)：可选参数，表示smooth量化系数。数据类型支持float32，支持非连续的Tensor，数据格式为ND。shape支持[G, N]，[G, ]。
-offsets (Tensor)：可选参数，表示量化中的偏移项，该参数在动态量化场景下不生效，传入None即可。静态量化场景下：数据类型支持FLOAT，支持非连续的Tensor，数据格式为ND。per_channel模式下shape支持[G, N]，per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smooth_scales保持一致。
-group_index (Tensor)：可选参数，当前支持cumsum和count两种模式，要求为1维张量，数据类型支持int32，数据格式ND，shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积。
-activate_left (bool)：可选参数，Swiglu流程中是否进行左激活，默认False。
-quant_mode (int)：可选参数，表示量化类型，默认值为0。0表示静态量化，1表示动态量化。
-group_list_type (int)：可选参数，表示group_index类型，默认值为0。0表示cumsum模式，1表示count模式。
-dst_type (ScalarType): 可选参数，指定量化输出的类型, 传None时当做torch.int8处理。
-
-输出说明
-out (Tensor)：表示量化后的输出tensor。数据类型支持int8和int4，支持非连续的Tensor，数据格式为ND。
-scale (Tensor)：表示量化的scale参数，计算输出scale的shape与计算输入x相比，无最后一维，其余维度与计算输入x保持一致，数据类型支持float32，数据格式为ND。
-
-支持的型号
-A2训练、推理系列产品
-A3训练、推理系列产品
-
-调用示例
-import os
-import shutil
-import unittest
-
-import numpy as np
-import torch
-import torch_npu
-from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import SupportedDevices
-
-
-class TestNPUSwigluQuant(TestCase):
-    def test_npu_swiglu_quant(self, device="npu"):
-        batch_size = 4608
-        hidden_size = 2048
-        x_shape = (batch_size, hidden_size)
-        input_data = np.random.randn(*x_shape).astype(np.float32)
-
-        quant_mode = 1
-        group_list_type = 0
-        dst_type = torch.int8
-        activate_left = False
-        offsets = None
-        num_groups = 8
-        group_sizes = batch_size // num_groups
-        group_index = [(i + 1) * group_sizes for i in range(num_groups)]
-        smooth_scales = np.random.randn(num_groups, hidden_size // 2).astype(np.float32)
-
-        device = "npu"
-        npu_x = torch.from_numpy(input_data).to(device)
-        npu_group_index = torch.from_numpy(np.array(group_index)).to(device)
-        npu_smooth_scales = torch.from_numpy(smooth_scales).to(device)
-        result = torch_npu.npu_swiglu_quant(
-            npu_x,
-            smooth_scales=npu_smooth_scales,
-            offsets=offsets,
-            group_index=npu_group_index,
-            activate_left=False,
-            quant_mode=quant_mode,
-            group_list_type=group_list_type,
-            dst_type=dst_type
-        )
-
-if __name__ == "__main__":
-    run_tests()
-
 """
 )
 

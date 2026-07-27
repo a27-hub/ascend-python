@@ -1,0 +1,133 @@
+[
+  {
+    "param": "x",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "mutex": []
+  },
+  {
+    "param": "smooth_scales",
+    "optional": true,
+    "supports_empty": true,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [
+      "float32"
+    ],
+    "mutex": []
+  },
+  {
+    "param": "offsets",
+    "optional": true,
+    "supports_empty": false,
+    "dtype_link": "smoothScalesOptional",
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [
+      "float32"
+    ],
+    "mutex": []
+  },
+  {
+    "param": "group_index",
+    "optional": true,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [
+      "int32"
+    ],
+    "mutex": []
+  },
+  {
+    "param": "activate_left",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "quant_mode_optional",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "group_list_type",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "dst_type",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "y",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": {
+      "ref": "x",
+      "rule": "same_except_last"
+    },
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [
+      "int8",
+      "quint4x2"
+    ],
+    "mutex": []
+  },
+  {
+    "param": "scale",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": {
+      "ref": "x",
+      "rule": "same"
+    },
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [
+      "float32"
+    ],
+    "mutex": []
+  }
+]

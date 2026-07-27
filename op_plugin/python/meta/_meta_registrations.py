@@ -5861,19 +5861,6 @@ def rope_quant_kvcache(x, cos, k_cache, v_cache, size_splits, kv_output=False):
             k_cache, v_cache)
 
 
-@impl(m, "npu_swiglu_quant")
-def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode=0,
-                          group_list_type=0, dst_type=torch.int8):
-    y_size = []
-    scale_size = []
-    for i in range(x.dim() - 1):
-        y_size.append(x.size(i))
-        scale_size.append(x.size(i))
-    y_size.append(math.floor(x.size(x.dim() - 1) / 2))
-    return (torch.empty(y_size, dtype=dst_type, device=x.device),
-            torch.empty(scale_size, dtype=torch.float32, device=x.device))
-
-
 @impl(m, "npu_swiglu_group_quant")
 def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, scale=None,
                                 dst_type=296, quant_mode=0, block_size=0, round_scale=False,
@@ -5918,6 +5905,63 @@ def npu_swiglu_group_quant_backward_meta(grad_y, x, *, weight=None, y_origin=Non
         grad_weight = x.new_empty([0], dtype=torch.float32)
 
     return (grad_x, grad_weight)
+
+
+@impl(m, "npu_swi_glu_quant_v2")
+def npu_swi_glu_quant_v2_meta(x, *, smooth_scales=None, offsets=None, group_index=None,
+                              activate_left=False, quant_mode="dynamic", group_list_type=0, dst_type=2):
+    x_last_dim = x.size(x.dim() - 1)
+    torch._check(
+        x.dim() > 1,
+        lambda: "x dim should be larger than 1." + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        x_last_dim % 2 == 0,
+        lambda: "x last dim should be even." + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        x_last_dim <= 8192,
+        lambda: "x last dim should not exceed 8192." + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        dst_type == 2 or dst_type == 29,
+        lambda: "dst_type only supports 2 (int8) or 29 (int4), but got " + str(dst_type) + "."
+        + ops_error(ErrCode.PARAM),
+    )
+    if dst_type == 29:
+        torch._check(
+            x_last_dim % 4 == 0,
+            lambda: "x last dim should be multiple of 4 when dst_type is int4." + ops_error(ErrCode.PARAM),
+        )
+    torch._check(
+        quant_mode == "dynamic" or quant_mode == "static",
+        lambda: "quant_mode only supports dynamic or static, but got " + str(quant_mode) + "."
+        + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        group_list_type == 0 or group_list_type == 1,
+        lambda: "group_list_type only supports 0 (cumsum) or 1 (count), but got " + str(group_list_type) + "."
+        + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        x.dtype == torch.float16 or x.dtype == torch.bfloat16 or x.dtype == torch.float32,
+        lambda: "x dtype only supports float16, bfloat16 or float32, but got " + str(x.dtype) + "."
+        + ops_error(ErrCode.PARAM),
+    )
+
+    y_shape = list(x.shape)
+    y_shape[-1] = x_last_dim // 2
+    if dst_type == 29:
+        # INT4, 2-per-byte packing (aclnnSwiGluQuantV2 uses this convention, see MoeInitRoutingV2)
+        y_shape[-1] = y_shape[-1] // 2
+        y_dtype = torch.uint8
+    else:
+        y_dtype = torch.int8
+
+    scale_shape = list(x.shape)[:-1]
+    y = x.new_empty(y_shape, dtype=y_dtype)
+    scale = x.new_empty(scale_shape, dtype=torch.float32)
+    return (y, scale)
 
 
 @impl(m, "npu_dequant_swiglu_quant")
