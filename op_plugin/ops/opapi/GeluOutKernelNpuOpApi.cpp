@@ -18,16 +18,18 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-at::Tensor& gelu_out(const at::Tensor & self, c10::string_view approximate, at::Tensor& out)
-{
-    static auto gelu_sc = at_npu::native::env::CheckCompatibleImpl();
-    if (!c10_npu::IsAclnnOnly() && !gelu_sc) {
-        DO_COMPATIBILITY(aclnnGelu, acl_op::gelu_out(self, approximate, out));
-        EXEC_NPU_CMD(aclnnGelu, self, out);
-    } else {
-        auto approximate_mode = op_infer::npu_gelu_approximate_mode(approximate);
-        EXEC_NPU_CMD(aclnnGeluV2, self, approximate_mode, out);
-    }
-    return out;
+at::Tensor& gelu_out(
+    const at::Tensor& self,
+    c10::string_view approximate,
+    at::Tensor& out) {
+  static auto gelu_sc = at_npu::native::env::CheckCompatibleImpl();
+  if (!c10_npu::IsAclnnOnly() && !gelu_sc) {
+    DO_COMPATIBILITY(aclnnGelu, acl_op::gelu_out(self, approximate, out));
+    EXEC_NPU_CMD(aclnnGelu, self, out);
+  } else {
+    auto approximate_mode = op_infer::npu_gelu_approximate_mode(approximate);
+    EXEC_NPU_CMD(aclnnGeluV2, self, approximate_mode, out);
+  }
+  return out;
 }
-}
+} // namespace op_api

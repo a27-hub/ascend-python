@@ -114,7 +114,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(const at::Tensor 
         quant_scale_real, block_size, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, group_size, comm_mode_ptr,
         result, amax_output_result);
 
-    FLOP_COUNT(FlopCounter::mm_flop, self, x2);
-    return std::tie(result, amax_output_result);
+  FLOP_COUNT(FlopCounter::mm_flop, self, x2);
+  return std::tie(result, amax_output_result);
 }
 } // namespace op_api
