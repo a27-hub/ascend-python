@@ -23,10 +23,12 @@
 namespace lazy_fusion {
 namespace {
 constexpr auto kLogValidFlag =
-  "Valid flag format is \"key=value\", flags are separated by spaces(e.g. \"key1=value1 key2=value2\"). bool "
-  "flag's value can be implicit, the \"key\" means \"key=true\".";
+    "Valid flag format is \"key=value\", flags are separated by spaces(e.g. \"key1=value1 key2=value2\"). bool "
+    "flag's value can be implicit, the \"key\" means \"key=true\".";
 
-std::vector<std::string> GetTokens(const std::string &str, const std::string &delim) {
+std::vector<std::string> GetTokens(
+    const std::string& str,
+    const std::string& delim) {
   std::vector<std::string> tokens;
   size_t start = 0;
   while (start < str.size()) {
@@ -43,7 +45,7 @@ std::vector<std::string> GetTokens(const std::string &str, const std::string &de
   return tokens;
 }
 
-std::pair<std::string, std::string> ParseFlag(const std::string &flag) {
+std::pair<std::string, std::string> ParseFlag(const std::string& flag) {
   // Format: "key" (bare boolean flag) or "key=value".
   if (flag.empty() || flag.rfind("--", 0) == 0) {
     return std::pair<std::string, std::string>();
@@ -58,10 +60,10 @@ std::pair<std::string, std::string> ParseFlag(const std::string &flag) {
   return std::pair<std::string, std::string>();
 }
 
-std::map<std::string, std::string> ParseFlags(const std::string &flags) {
+std::map<std::string, std::string> ParseFlags(const std::string& flags) {
   std::map<std::string, std::string> flag_map;
   auto tokens = GetTokens(flags, " ");
-  for (const auto &token : tokens) {
+  for (const auto& token : tokens) {
     auto flag = ParseFlag(token);
     if (!flag.first.empty()) {
       if (!flag_map.insert(flag).second) {
@@ -76,17 +78,19 @@ std::map<std::string, std::string> ParseFlags(const std::string &flags) {
 
 class FlagRegister {
  public:
-  explicit FlagRegister(std::map<std::string, std::string> *flag_map) : flag_map_(*flag_map) {}
+  explicit FlagRegister(std::map<std::string, std::string>* flag_map)
+      : flag_map_(*flag_map) {}
   ~FlagRegister() = default;
 
   template <typename T>
-  void AddFlag(const std::string &flag_name, T *flag_var, T default_value) const {
+  void AddFlag(const std::string& flag_name, T* flag_var, T default_value)
+      const {
     *flag_var = std::move(default_value);
     AddFlag(flag_name, flag_var);
   }
 
   template <typename T>
-  void AddFlag(const std::string &flag_name, T *flag_var) const {
+  void AddFlag(const std::string& flag_name, T* flag_var) const {
     const auto iter = flag_map_.find(flag_name);
     if (iter != flag_map_.end()) {
       T var;
@@ -95,9 +99,16 @@ class FlagRegister {
         *flag_var = std::move(var);
       } else {
         if (iter->second.empty()) {
-          ASCEND_LOGW("Warning: The flag '%s' is invalid. %s", iter->first.c_str(), kLogValidFlag);
+          ASCEND_LOGW(
+              "Warning: The flag '%s' is invalid. %s",
+              iter->first.c_str(),
+              kLogValidFlag);
         } else {
-          ASCEND_LOGW("Warning: The flag '%s=%s' is invalid. %s", iter->first.c_str(), iter->second.c_str(), kLogValidFlag);
+          ASCEND_LOGW(
+              "Warning: The flag '%s=%s' is invalid. %s",
+              iter->first.c_str(),
+              iter->second.c_str(),
+              kLogValidFlag);
         }
       }
       (void)flag_map_.erase(iter);
@@ -105,18 +116,20 @@ class FlagRegister {
   }
 
  private:
-  bool ParseValue(const std::string &s, std::vector<std::string> *result) const {
+  bool ParseValue(const std::string& s, std::vector<std::string>* result)
+      const {
     *result = GetTokens(s, ",");
     return !result->empty();
   }
 
-  bool ParseValue(const std::string &s, bool *result) const {
-    *result = (s.empty() || s == "true" || s == "True" || s == "on" || s == "1");
+  bool ParseValue(const std::string& s, bool* result) const {
+    *result =
+        (s.empty() || s == "true" || s == "True" || s == "on" || s == "1");
     return *result || s == "false" || s == "False" || s == "off" || s == "0";
   }
 
   template <typename T>
-  bool ParseValue(const std::string &s, T *result) const {
+  bool ParseValue(const std::string& s, T* result) const {
     if (s.empty()) {
       return false;
     }
@@ -126,13 +139,13 @@ class FlagRegister {
   }
 
   template <typename T>
-  bool ParseValue(const std::string &s, std::vector<T> *result) const {
+  bool ParseValue(const std::string& s, std::vector<T>* result) const {
     result->clear();
     auto tokens = GetTokens(s, ",");
     if (tokens.empty()) {
       return false;
     }
-    for (const auto &tok : tokens) {
+    for (const auto& tok : tokens) {
       T temp;
       if (!ParseValue(tok, &temp)) {
         result->clear();
@@ -143,10 +156,10 @@ class FlagRegister {
     return true;
   }
 
-  std::map<std::string, std::string> &flag_map_;
+  std::map<std::string, std::string>& flag_map_;
 };
 
-bool ParseLevel(const std::string &s, Level *out) {
+bool ParseLevel(const std::string& s, Level* out) {
   if (s == "O1" || s == "o1") {
     *out = Level::kO1;
     return true;
@@ -158,18 +171,22 @@ bool ParseLevel(const std::string &s, Level *out) {
   return false;
 }
 
-void RegisterFlags(std::map<std::string, std::string> *flag_map, LazyFusionFlags *flags) {
+void RegisterFlags(
+    std::map<std::string, std::string>* flag_map,
+    LazyFusionFlags* flags) {
   FlagRegister reg(flag_map);
 
-  // `level` is internal-debug; default (kO2, enable everything) stays if absent.
+  // `level` is internal-debug; default (kO2, enable everything) stays if
+  // absent.
   auto level_it = flag_map->find("level");
   if (level_it != flag_map->end()) {
     Level parsed;
     if (ParseLevel(level_it->second, &parsed)) {
       flags->level = parsed;
     } else {
-      ASCEND_LOGW("Warning: level='%s' is invalid; valid values are O1, O2.",
-                  level_it->second.c_str());
+      ASCEND_LOGW(
+          "Warning: level='%s' is invalid; valid values are O1, O2.",
+          level_it->second.c_str());
     }
     flag_map->erase(level_it);
   }
@@ -183,14 +200,14 @@ void RegisterFlags(std::map<std::string, std::string> *flag_map, LazyFusionFlags
   reg.AddFlag("enable_ops_only", &flags->enable_ops_only);
   reg.AddFlag("foreach_max_tensors", &flags->foreach_max_tensors);
   reg.AddFlag("foreach_min_numel", &flags->foreach_min_numel);
-  for (const auto &item : *flag_map) {
+  for (const auto& item : *flag_map) {
     ASCEND_LOGW("Unknown flag: %s", item.first.c_str());
   }
 }
-}  // namespace
+} // namespace
 
 namespace {
-bool ParseBoolToken(const std::string &s, bool *out) {
+bool ParseBoolToken(const std::string& s, bool* out) {
   if (s == "True" || s == "true" || s == "1" || s == "on" || s == "TRUE") {
     *out = true;
     return true;
@@ -201,25 +218,27 @@ bool ParseBoolToken(const std::string &s, bool *out) {
   }
   return false;
 }
-}  // namespace
+} // namespace
 
 LazyFusionFlags::LazyFusionFlags() {
   // Master switch + optional flags via TORCH_NPU_LAZY_FUSION.
   //
   // Public usage:
-  //   export TORCH_NPU_LAZY_FUSION=True              # enable, default level O2 (all ops)
-  //   export TORCH_NPU_LAZY_FUSION=1                 # same as above
+  //   export TORCH_NPU_LAZY_FUSION=True              # enable, default level O2
+  //   (all ops) export TORCH_NPU_LAZY_FUSION=1                 # same as above
   //   export TORCH_NPU_LAZY_FUSION=False             # disable
   //   (unset)                                        # disable
   //
-  // Internal debug (must use the level=... key form, bare "O1"/"O2" is rejected):
-  //   export TORCH_NPU_LAZY_FUSION="level=O1"        # enable, only the L1 op set
-  //   export TORCH_NPU_LAZY_FUSION="level=O2"        # enable, explicit L2 (same as True)
-  //   export TORCH_NPU_LAZY_FUSION="True dump_as_text dump_dir=/tmp/dvm"
-  //   export TORCH_NPU_LAZY_FUSION="True disable_ops=where,sum"
+  // Internal debug (must use the level=... key form, bare "O1"/"O2" is
+  // rejected):
+  //   export TORCH_NPU_LAZY_FUSION="level=O1"        # enable, only the L1 op
+  //   set export TORCH_NPU_LAZY_FUSION="level=O2"        # enable, explicit L2
+  //   (same as True) export TORCH_NPU_LAZY_FUSION="True dump_as_text
+  //   dump_dir=/tmp/dvm" export TORCH_NPU_LAZY_FUSION="True
+  //   disable_ops=where,sum"
   //
   // Flag tokens use bare "key" (boolean true) or "key=value". No "--" prefix.
-  char *env = std::getenv("TORCH_NPU_LAZY_FUSION");
+  char* env = std::getenv("TORCH_NPU_LAZY_FUSION");
   if (env == nullptr) {
     enabled = false;
     return;
@@ -231,7 +250,8 @@ LazyFusionFlags::LazyFusionFlags() {
     return;
   }
   size_t j = str.find_first_of(" \t", i);
-  std::string head = (j == std::string::npos) ? str.substr(i) : str.substr(i, j - i);
+  std::string head =
+      (j == std::string::npos) ? str.substr(i) : str.substr(i, j - i);
   std::string rest;
   if (ParseBoolToken(head, &enabled)) {
     if (!enabled) {
@@ -239,11 +259,12 @@ LazyFusionFlags::LazyFusionFlags() {
     }
     rest = (j == std::string::npos) ? "" : str.substr(j + 1);
   } else {
-    // No leading bool token — env value is a flag list. Presence alone enables DVM.
+    // No leading bool token — env value is a flag list. Presence alone enables
+    // DVM.
     enabled = true;
     rest = str.substr(i);
   }
   std::map<std::string, std::string> flag_map = ParseFlags(rest);
   RegisterFlags(&flag_map, this);
 }
-}  // namespace lazy_fusion
+} // namespace lazy_fusion
