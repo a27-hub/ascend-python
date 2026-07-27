@@ -1,0 +1,7 @@
+nodes:
+   - backend: npu
+     task: ['accuracy']
+     devices: [0]
+     name: vector
+   - backend: cpu
+     task: ['accuracy']

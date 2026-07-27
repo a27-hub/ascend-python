@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# 运行产物（不随版本追踪）
+运行日志/
+分析结论.md
+复现记录.md
+
+# 内部参考，不上传远程（与个人仓 PTA 仓口径一致）
+补充信息.txt
+伪代码.txt
+功能性分析.txt
