@@ -15875,3 +15875,37 @@ input与weight数据类型必须一致。softmax为None时logits_max和sum_exp_l
     ...     grad, input_tensor, weight_tensor, target_mask, masked_target, softmax=softmax)
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_swi_glu_quant_v2",
+    """
+torch_npu.npu_swi_glu_quant_v2(x, *, smooth_scales=None, offsets=None, group_index=None,
+                               activate_left=False, quant_mode="dynamic", group_list_type=0, dst_type=2)
+                               -> (Tensor, Tensor)
+功能描述
+在SwiGlu激活函数后添加量化操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出，支持MoE与非MoE场景。
+参数说明
+x (Tensor) - 必选参数，输入待处理数据。数据类型支持float16、bfloat16、float32。
+smooth_scales (Tensor, 可选) - 量化的smooth_scales，数据类型支持float32。默认值为None。
+offsets (Tensor, 可选) - 静态量化场景的offsets，数据类型支持float32。默认值为None。
+group_index (Tensor, 可选) - MoE分组group_index，数据类型支持int32。默认值为None。
+activate_left (bool, 可选) - 左矩阵是否参与运算，默认值为False。
+quant_mode (str, 可选) - 量化模式，"dynamic"或"static"，默认值为"dynamic"。
+group_list_type (int, 可选) - group_index解释模式，0=cumsum，1=count，默认值为0。
+dst_type (int, 可选) - 量化输出类型，2=int8，29=int4，默认值为2。
+返回值
+y (Tensor) - 量化输出，dst_type=2时为int8（末维=x末维/2）；dst_type=29时为uint8（int4 2-per-byte打包，末维=x末维/4）。
+scale (Tensor) - 量化scale，数据类型为float32，shape为x去掉最后一维。
+示例
+>>> import torch
+>>> import torch_npu
+>>> x = torch.randn((32, 256), dtype=torch.float32, device='npu')
+>>> smooth_scales = torch.ones((1, 128), dtype=torch.float32, device='npu')
+>>> y, scale = torch_npu.npu_swi_glu_quant_v2(x, smooth_scales=smooth_scales, dst_type=2)
+>>> y.shape
+torch.Size([32, 128])
+>>> scale.shape
+torch.Size([32])
+"""
+)
