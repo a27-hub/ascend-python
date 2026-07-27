@@ -27,10 +27,7 @@ std::tuple<at::Tensor&, at::Tensor&> log_sigmoid_forward_out_nocheck(
     at::Tensor& buffer,
     const at::Tensor& self) {
   at_npu::native::OpCommand cmd;
-  cmd.Name("LogSigmoid")
-      .Input(self)
-      .Output(output)
-      .Run();
+  cmd.Name("LogSigmoid").Input(self).Output(output).Run();
   return std::tie(output, buffer);
 }
 } // namespace
@@ -53,13 +50,15 @@ std::tuple<at::Tensor&, at::Tensor&> log_sigmoid_forward_out(
 
 std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(const at::Tensor& self) {
   at::Tensor output = npu_preparation::apply_tensor(self);
-  at::Tensor buffer = npu_preparation::ApplyTensorWithSizes({0}, self.options());
+  at::Tensor buffer =
+      npu_preparation::ApplyTensorWithSizes({0}, self.options());
   log_sigmoid_forward_out_nocheck(output, buffer, self);
   return std::tie(output, buffer);
 }
 
 at::Tensor& log_sigmoid_out(const at::Tensor& self, at::Tensor& result) {
-  at::Tensor buffer = npu_preparation::ApplyTensorWithSizes({0}, self.options());
+  at::Tensor buffer =
+      npu_preparation::ApplyTensorWithSizes({0}, self.options());
   return std::get<0>(at::log_sigmoid_forward_out(result, buffer, self));
 }
 

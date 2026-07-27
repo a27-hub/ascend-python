@@ -46,11 +46,15 @@ at::Tensor& norm_out_npu_nocheck(
     at::ScalarType dtype) {
   at::Tensor fp32_self(self);
   if (self.scalar_type() != at::ScalarType::Float) {
-    fp32_self = at_npu::native::custom_ops::_npu_dtype_cast(fp32_self, at::ScalarType::Float);
+    fp32_self = at_npu::native::custom_ops::_npu_dtype_cast(
+        fp32_self, at::ScalarType::Float);
   }
-  auto output_size = op_infer::reduce_ops_npu_output_size(fp32_self, dim, keepdim);
-  at::Tensor result_temp = npu_preparation::ApplyTensorWithSizes(output_size, fp32_self.options());
-  at::Tensor result = npu_preparation::ApplyTensorWithSizes(output_size, fp32_self.options());
+  auto output_size =
+      op_infer::reduce_ops_npu_output_size(fp32_self, dim, keepdim);
+  at::Tensor result_temp =
+      npu_preparation::ApplyTensorWithSizes(output_size, fp32_self.options());
+  at::Tensor result =
+      npu_preparation::ApplyTensorWithSizes(output_size, fp32_self.options());
   auto pvalue = calculate_p(p);
   at_npu::native::OpCommand cmd1;
   cmd1.Name("LpNormReduceV2")
@@ -87,15 +91,12 @@ at::Tensor& norm_out(
     at::Tensor& result) {
   auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
   npu_preparation::CheckOut(
-      {self},
-      result,
-      ACL_FORMAT_ND,
-      self.scalar_type(),
-      output_size);
+      {self}, result, ACL_FORMAT_ND, self.scalar_type(), output_size);
 
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-    norm_out_npu_nocheck(contiguous_result, self, p, dim, keepdim, self.scalar_type());
+    norm_out_npu_nocheck(
+        contiguous_result, self, p, dim, keepdim, self.scalar_type());
     npu_utils::format_fresh_view(result, contiguous_result);
   } else {
     norm_out_npu_nocheck(result, self, p, dim, keepdim, self.scalar_type());
@@ -111,12 +112,7 @@ at::Tensor& norm_out(
     at::ScalarType dtype,
     at::Tensor& result) {
   auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      ACL_FORMAT_ND,
-      dtype,
-      output_size);
+  npu_preparation::CheckOut({self}, result, ACL_FORMAT_ND, dtype, output_size);
 
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -136,7 +132,8 @@ at::Tensor norm(
     bool keepdim,
     at::ScalarType dtype) {
   auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-  at::Tensor out = npu_preparation::ApplyTensorWithSizes(output_size, self.options().dtype(dtype));
+  at::Tensor out = npu_preparation::ApplyTensorWithSizes(
+      output_size, self.options().dtype(dtype));
   norm_out_npu_nocheck(out, self, p, dim, keepdim, dtype);
   return out;
 }
@@ -148,9 +145,7 @@ at::Tensor norm(
   return acl_op::norm(self, p, {}, false, dtype);
 }
 
-at::Tensor norm(
-    const at::Tensor& self,
-    const at::Scalar& p) {
+at::Tensor norm(const at::Tensor& self, const at::Scalar& p) {
   return acl_op::norm(self, p, {}, false, self.scalar_type());
 }
 

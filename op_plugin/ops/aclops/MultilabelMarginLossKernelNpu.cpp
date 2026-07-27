@@ -57,22 +57,18 @@ std::tuple<at::Tensor&, at::Tensor&> multilabel_margin_loss_forward_out(
   if (reduction == at::Reduction::None) {
     output_size = {nframe};
   }
-  npu_preparation::CheckOut(
-      {self, target},
-      output,
-      self,
-      output_size);
-  npu_preparation::CheckOut(
-      {self, target},
-      is_target,
-      target);
+  npu_preparation::CheckOut({self, target}, output, self, output_size);
+  npu_preparation::CheckOut({self, target}, is_target, target);
 
   bool output_match = npu_utils::check_match(&output);
   bool is_target_match = npu_utils::check_match(&is_target);
   if (!(output_match && is_target_match)) {
-    at::Tensor contiguous_output = output_match ? output : npu_utils::format_contiguous(output);
-    at::Tensor contiguous_is_target = is_target_match ? is_target : npu_utils::format_contiguous(is_target);
-    multilabel_margin_loss_forward_out_nocheck(contiguous_output, contiguous_is_target, self, target, reduction);
+    at::Tensor contiguous_output =
+        output_match ? output : npu_utils::format_contiguous(output);
+    at::Tensor contiguous_is_target =
+        is_target_match ? is_target : npu_utils::format_contiguous(is_target);
+    multilabel_margin_loss_forward_out_nocheck(
+        contiguous_output, contiguous_is_target, self, target, reduction);
     if (!output_match) {
       npu_utils::format_fresh_view(output, contiguous_output);
     }
@@ -80,7 +76,8 @@ std::tuple<at::Tensor&, at::Tensor&> multilabel_margin_loss_forward_out(
       npu_utils::format_fresh_view(is_target, contiguous_is_target);
     }
   } else {
-    multilabel_margin_loss_forward_out_nocheck(output, is_target, self, target, reduction);
+    multilabel_margin_loss_forward_out_nocheck(
+        output, is_target, self, target, reduction);
   }
   return std::tuple<at::Tensor&, at::Tensor&>(output, is_target);
 }
@@ -103,11 +100,7 @@ std::tuple<at::Tensor, at::Tensor> multilabel_margin_loss_forward(
   auto is_target = npu_preparation::apply_tensor(target);
 
   acl_op::multilabel_margin_loss_forward_out(
-      self,
-      target,
-      reduction,
-      output,
-      is_target);
+      self, target, reduction, output, is_target);
   return std::make_tuple(output, is_target);
 }
 } // namespace acl_op

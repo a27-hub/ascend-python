@@ -46,13 +46,11 @@ at::Tensor& _softmax_backward_data_out(
     int64_t dim,
     at::ScalarType input_dtype,
     at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {grad_output, output},
-      result,
-      grad_output);
+  npu_preparation::CheckOut({grad_output, output}, result, grad_output);
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-    softmax_backward_out_nocheck(contiguous_result, grad_output, output, dim, input_dtype);
+    softmax_backward_out_nocheck(
+        contiguous_result, grad_output, output, dim, input_dtype);
     npu_utils::format_fresh_view(result, contiguous_result);
   } else {
     softmax_backward_out_nocheck(result, grad_output, output, dim, input_dtype);
@@ -67,11 +65,15 @@ at::Tensor _softmax_backward_data(
     at::ScalarType input_dtype) {
   auto output_size = op_infer::input_same_output_size(grad_output);
   at::Tensor temp_output = output;
-  if (npu_preparation::get_tensor_npu_format(temp_output) == ACL_FORMAT_NC1HWC0) {
-    at_npu::native::custom_ops::npu_format_cast_(temp_output, npu_preparation::get_tensor_npu_format(grad_output));
+  if (npu_preparation::get_tensor_npu_format(temp_output) ==
+      ACL_FORMAT_NC1HWC0) {
+    at_npu::native::custom_ops::npu_format_cast_(
+        temp_output, npu_preparation::get_tensor_npu_format(grad_output));
   }
-  at::Tensor grad_input = npu_preparation::apply_tensor(temp_output, output_size);
-  softmax_backward_out_nocheck(grad_input, grad_output, temp_output, dim, input_dtype);
+  at::Tensor grad_input =
+      npu_preparation::apply_tensor(temp_output, output_size);
+  softmax_backward_out_nocheck(
+      grad_input, grad_output, temp_output, dim, input_dtype);
 
   return grad_input;
 }
