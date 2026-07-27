@@ -104,13 +104,30 @@ C-verify can't catch this (type is correct, only value category is wrong) — it
 
 ### Custom Output Dtypes (Quantization)
 
+> ⚠️ **First decide which enum convention the `dst_type` attr follows — this picks the conversion, and getting it wrong silently maps to a different dtype (no compile/verify error, only a wrong output dtype or a kernel "not supported" at runtime).** Check `_def.cpp` / the aclnn header for how the attr is documented:
+>
+> | `dst_type` value convention | Example values | Correct conversion |
+> |---|---|---|
+> | **`ge::DataType`** (numerically == `aclDataType`) | `DT_INT8=2`, `DT_INT4=29` | `static_cast<aclDataType>(dst_type)` |
+> | **aten `ScalarType` ordinal** | `kChar=1`, `kByte=0`… | `c10_npu::GetAclDataType(dst_type)` |
+> | **`c10_npu::DType`** (custom, offset-encoded fp8/hifloat8…) | `FLOAT8_E4M3FN`… | `c10_npu::GetAclDataType(dst_type)` |
+>
+> `c10_npu::GetAclDataType(int64_t)` (`custom_dtype/Init.h`) treats any value **below** the custom-dtype offset as an **aten `ScalarType` ordinal**, not a ge/acl value. So feeding it a ge-convention `dst_type=2` yields `ScalarType(2)=Short → ACL_INT16` — the classic silent mis-map. Only route through `GetAclDataType` when the attr is genuinely an aten ordinal (sibling pattern: `static_cast<int64_t>(tensor.scalar_type())`) or a `c10_npu::DType`.
+
 ```cpp
-aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
+// Case A — dst_type follows the ge::DataType convention (2=int8, 29=int4):
+aclDataType y_acltype = static_cast<aclDataType>(dst_type);   // NOT GetAclDataType(dst_type)
+
+// Case B — dst_type is an aten ScalarType ordinal or a c10_npu::DType:
+// aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
+
 at::ScalarType y_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
 at::Tensor y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(y_dtype));
 TensorWrapper y_wrapper = {y, y_acltype};
 EXEC_NPU_CMD(aclnnOperator, input, y_wrapper, output);
 ```
+
+> INT4 special case: see the INT4-packing Best Practice below for the allocation/packing convention to mirror.
 
 ### Workspace Management
 
@@ -195,7 +212,7 @@ Constraints：
 - **No new meta registration** for `.out` / `_get_max_workspace` — see `aclgraph-attention-guide.md` §Meta 与 Derivatives。
 - 不实现 `_infer_output`（不在手工 update 范围）。
 
-TODO 清单（与 `gen-aclgraph` 骨架一致，固定 5 项）：① aclnn API 名核对（脚本从 functional C++ 提取，LLM 确认）；② 版本/SoC 分派复制；③ helper 函数体；④ host 序列参数转换（见下"host 序列参数处理细则"）；⑤ 预处理限制转 `TORCH_CHECK`（见上 Constraints 预处理审查）。
+TODO 清单（与 `gen-aclgraph` 骨架一致，固定 5 项）：① aclnn API 名核对（脚本从 functional C++ 提取 aclnn 名 + EXEC 实参对照材料，LLM 确认）；② 版本/SoC 分派复制（脚本可附 functional 判据原文作对照，最终仍需逐分支人工复制）；③ helper 函数体；④ host 序列参数转换（见下"host 序列参数处理细则"；脚本只能提供 functional 对照材料，不能替代 layout/API 语义判断）；⑤ 预处理限制转 `TORCH_CHECK`（见上 Constraints 预处理审查）。
 
 #### host 序列参数处理细则
 
@@ -365,7 +382,6 @@ Mark the "C++ (C-cpp)" column and the "Constraint Coverage Self-Check" table in 
 
 ## Best Practices
 
-- Find similar operators in `op_plugin/ops/opapi/` before implementing — reuse patterns instead of inventing new ones.
-
-- **Fail-fast before `EXEC_NPU_CMD`**: add `TORCH_CHECK` dtype/shape guards *before* the aclnn call. A bad input that reaches `EXEC_NPU_CMD` typically raises (e.g. aclnn 107000) but leaves a **latched aclnn error state** that corrupts the *next* unrelated call in the same process. Surface invalid input as a clean sync `PARAM`/`TYPE` error instead.
+- For `dst_type` / custom output dtype mapping, follow `### Custom Output Dtypes (Quantization)` — choose the conversion by the attr's enum convention (`ge::DataType` vs aten `ScalarType` ordinal vs `c10_npu::DType`), do not guess from the integer value alone.
+- **Fail-fast before `EXEC_NPU_CMD`**: add `TORCH_CHECK` dtype/shape guards *before* the aclnn call. A bad input that reaches `EXEC_NPU_CMD` typically raises (e.g. aclnn 107000) but leaves a **latched aclnn error state** that corrupts the *next* unrelated call in the same process. Surface invalid input as a clean sync `PARAM`/`TYPE` error instead. Symptom to recognize: negative-dtype tests that **pass individually but fail in-suite** — the poison lands on the following test, not the culprit.
 - **INT4 output packing is NOT unique — verify against a sibling.** Two conventions coexist in the repo: (a) 2-per-byte → dtype `at::kByte` (`uint8`), physical last dim halved (see `MoeInitRoutingV2KernelNpuOpApi.cpp`, `INT4_NUMS_IN_INT8=2`); (b) 8-per-int32 → dtype `at::kInt` (`int32`), last dim `/8`. Wrap with `TensorWrapper{y, ACL_INT4}` either way. Never assume which — grep the aclnn header + a sibling quant op for the packing rule and mirror it in both C++ and meta.
