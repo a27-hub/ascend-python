@@ -193,3 +193,4 @@ TAGS
 
 # bazel symlinks
 bazel-*
+*.log
