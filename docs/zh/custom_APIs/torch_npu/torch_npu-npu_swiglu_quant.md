@@ -1,105 +1,116 @@
-# torch\_npu.npu\_swiglu\_quant
+# torch_npu.npu_swiglu_quant
 
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-| <term>Ascend 950DT</term>                        |    √    |
-|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
+|<term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    √     |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>      |    √     |
 
 ## 功能说明
 
-- API功能：在swiglu激活函数后添加quant操作，实现输入`x`的`SwiGluQuant`计算，支持`int8`或`int4`量化输出，支持MoE场景和非MoE场景（`group_index`为空），支持分组量化，支持动态/静态量化。
-- 计算公式：
-    - swiglu激活：对`x`做swiglu（通过`activate_left`控制左右激活），以左激活为例:
-        $$
-        swiglu(x)=swish(x[:,0:N])*x[:,N:2N]
-        $$
+- API功能：在SwiGlu激活函数后添加quant操作，实现输入`x`的SwiGluQuant融合计算，支持int8或int4量化输出。支持MoE场景（传入`group_index`）与非MoE场景（`group_index`传空），支持动态量化与静态量化（per_tensor/per_channel）。
+- 计算公式（MoE场景动态量化，其中A表示输入`x`的前半部分，B表示后半部分，g表示`group_index`，G为分组数量；int8量化时 $dstTypeScale=127$，int4量化时 $dstTypeScale=7$）：
 
-    - group分组（支持`cumsum`和`count`两种模式）：
+  $$
+  Act = SwiGlu(x) = Swish(A) * B
+  $$
 
-        对输入`x`经过swiglu计算后的结果进行分组计算，`group_index`用于定义分组边界或每组tokens数（具体取决于`group_list_type`模式），每组使用不同的量化`smooth_scales`。
+  $$
+  scale = dstTypeScale / row\_max(abs(Y_{tmp})),\quad Y = Cast(Mul(Y_{tmp}, scale))
+  $$
 
-        举例说明：假设x.shape=\[6, 2N\]，在`cumsum`模式下，`group_index`的shape为\[2, 4, 6\]，表示有3个group，对应的`smooth_scales`维度为\[3, H\]。每个group数据使用不同的`smooth_scales`分别做quant量化操作。
-
-        - group0=x\[0:2, :\]，scale0=smooth_scales\[0, :\]
-        - group1=x\[2:4, :\]，scale1=smooth_scales\[1, :\]
-        - group2=x\[4:6, :\]，scale2=smooth_scales\[2, :\]
-
-        如果是在`count`模式下，`group_index`需要设置成\[2, 2, 2\]，表示每个group都是2个tokens。
-
-    - quant量化：
-        1. 先进行smooth量化，其中out为上一步swiglu激活的输出。
-            $$
-            out=out*smooth\_scales
-            $$
-
-        2. 动态/静态量化操作：对激活后的结果进行量化，以动态量化（dynamic_quant）为例，详细数学公式请参考[aclnnSwiGluQuantV2](https://www.hiascend.com/document/detail/zh/canncommercial/900/API/aolapi/context/ops-nn/aclnnSwiGluQuantV2.md)。
-            $$
-            out,scale=dynamic\_quant(out)
-            $$
+> [!NOTE]
+> - 量化场景说明：`x`的输入来自GroupedMatMul算子和MoeInitRouting的输出，通过`group_index`实现MoE分组动态量化、静态per_tensor量化、静态per_channel量化。
+> - `dst_type`控制量化输出数据类型：`2`表示int8量化输出，`29`表示int4量化输出。int4量化时`x`的最后一维需为4的倍数。
+> - `offsets`仅在静态量化场景生效；动态量化场景下传`None`即可。
 
 ## 函数原型
 
-```python
-torch_npu.npu_swiglu_quant(x, *, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode=0, group_list_type=0, dst_type=None) -> (Tensor, Tensor)
+```
+torch_npu.npu_swiglu_quant(x, *, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode="dynamic", group_list_type=0, dst_type=2) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
 
-> [!NOTE]  
-> Tensor中shape使用的变量说明：
->
-> - G：表示group_index分组数量，取值\>0。
-> - N：计算输入`x`的最后一维大小的二分之一，取值\>0。
+- **x** (`Tensor`)：必选参数，输入待处理的数据，公式中的x，数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$。`x`的维数必须大于1维，最后一维需为2的倍数且长度不超过8192；当`dst_type`为`29`（int4量化）时，最后一维还需为4的倍数。
+- <strong>*</strong>：位置参数与关键字参数的分隔符。其之前的参数为位置参数，需按顺序传入；其之后的参数为关键字参数，需通过键值对方式传入，未赋值时使用默认值。
+- **smooth_scales** (`Tensor`)：可选参数，量化的smooth_scales，公式中的smooth_scales，数据类型支持`float32`，数据格式支持$ND$。不支持空Tensor；shape支持`[G, N]`或`[G, ]`，其中G为`group_index`分组数量，N为`x`最后一维大小的二分之一。默认值为`None`。
+- **offsets** (`Tensor`)：可选参数，公式中的offsets，数据类型支持`float32`，数据格式支持$ND$。该参数在动态量化场景下不生效；静态量化场景下，per_channel模式shape支持`[G, N]`，per_tensor模式shape支持`[G, ]`且数据类型与shape需与`smooth_scales`保持一致。默认值为`None`。
+- **group_index** (`Tensor`)：可选参数，MoE分组需要的group_index，公式中的group_index，数据类型支持`int32`，数据格式支持$ND$。shape支持`[G, ]`，元素要求非递减，且最大值不超过`x`除最后一维之外所有维度大小之积。默认值为`None`（非MoE场景）。
+- **activate_left** (`bool`)：可选参数，表示左矩阵是否参与运算。默认值为`False`。
+- **quant_mode** (`str`)：可选参数，量化模式。当前支持取值：
+  - `"dynamic"`：动态量化（默认）。
+  - `"static"`：静态量化，仅支持per_tensor量化和per_channel量化。
 
-- **x** (`Tensor`)：必选参数，表示目标张量。数据类型支持`float16`、`bfloat16`、`float32`，支持非连续的`Tensor`，数据格式为$ND$，`x`的维数必须大于1维，尾轴为偶数且长度不超过8192，当`dst_type`为`int4`量化时，`x`的最后一维需要为4的倍数。
-- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **smooth\_scales** (`Tensor`)：可选参数，表示smooth量化系数。数据类型支持`float32`，支持非连续的`Tensor`，数据格式为$ND$。shape支持[G, N]，[G, ]。
-- **offsets** (`Tensor`)：可选参数，表示量化中的偏移项，该参数在动态量化场景下不生效，传入`None`即可。静态量化场景下：数据类型支持`float`，支持非连续的`Tensor`，数据格式为$ND$。per_channel模式下shape支持[G, N]，per_tensor模式下shape支持[G, ]，且数据类型和shape需要与`smooth_scales`保持一致。
-- **group\_index** (`Tensor`)：可选参数，当前支持`cumsum`和`count`两种模式，要求为1维张量，数据类型支持`int32`，数据格式$ND$，shape支持[G, ]，`group_index`内元素要求为非递减，且最大值不得超过输入`x`的除最后一维之外的所有维度大小之积。
-- **activate\_left** (`bool`)：可选参数，swiglu流程中是否进行左激活，默认值为`False`。
-- **quant\_mode** (`int`)：可选参数，表示量化类型，默认值为`0`。`0`表示静态量化，`1`表示动态量化。
-- **group\_list\_type** (`int`)：可选参数，表示`group_index`类型，默认值为`0`。`0`表示`cumsum`模式，`1`表示`count`模式。
-- **dst\_type** (`ScalarType`)：可选参数，表示输出量化类型，支持`int8`和`int4`，传`None`时视为`int8`处理，默认值为`None`。
+  默认值为`"dynamic"`。
+- **group_list_type** (`int`)：可选参数，`group_index`的组织模式。取值：
+  - `0`：cumsum模式（累计边界，默认）。
+  - `1`：count模式（每组计数）。
+
+  默认值为`0`。
+- **dst_type** (`int`)：可选参数，量化输出数据类型。取值：
+  - `2`：`y`输出为int8量化（默认）。
+  - `29`：`y`输出为int4量化。
+
+  默认值为`2`。
 
 ## 返回值说明
 
-- **out** (`Tensor`)：表示量化后的输出tensor。数据类型支持`int8`和`int4`，支持非连续的`Tensor`，数据格式为$ND$。
-- **scale** (`Tensor`)：表示量化的scale参数，计算输出scale的shape与计算输入`x`相比，无最后一维，其余维度与计算输入`x`保持一致，数据类型支持`float32`，数据格式为$ND$。
+- **y** (`Tensor`)：量化输出张量，shape最后一维为`x`最后一维的二分之一，其余维度与`x`保持一致。数据类型由`dst_type`决定：`dst_type=2`时为`int8`，`dst_type=29`时为int4量化输出。
+- **scale** (`Tensor`)：量化scale输出张量，数据类型为`float32`，shape与`x`相比无最后一维，其余维度与`x`保持一致。
+
+## 约束说明
+
+- 该接口支持推理、训练场景下使用。
+- 该接口支持图模式。
+- `x`维数必须大于1维，最后一维需为2的倍数且不超过8192。
+- 当`dst_type`为`29`（int4量化）时，`x`的最后一维需为4的倍数。
+- `smooth_scales`不支持空Tensor。
+- `group_index`内元素要求非递减。
 
 ## 调用示例
 
-```python
-import torch
-import torch_npu
-from torch_npu.testing.testcase import TestCase, run_tests
+- 单算子模式调用
 
+    ```python
+    >>> import torch
+    >>> import torch_npu
+    >>>
+    >>> x = torch.randn((3, 32), dtype=torch.bfloat16, device='npu')
+    >>> smooth_scales = torch.ones((2, 16), dtype=torch.float32, device='npu')
+    >>> group_index = torch.tensor([1, 3], dtype=torch.int32, device='npu')
+    >>> y, scale = torch_npu.npu_swiglu_quant(x, smooth_scales=smooth_scales, group_index=group_index)
+    >>> y.shape
+    torch.Size([3, 16])
+    >>> scale.shape
+    torch.Size([3])
+    >>> y.dtype
+    torch.int8
+    ```
 
-class TestNPUSwigluQuant(TestCase):
-    def test_npu_swiglu_quant(self, device="npu"):
-        batch_size, hidden_size = 4608, 2048
-        num_groups = 8
-        group_size = batch_size // num_groups
-        
-        npu_x = torch.randn(batch_size, hidden_size, dtype=torch.float32, device=device)
-        g_index = torch.tensor([(i + 1) * group_size for i in range(num_groups)], dtype=torch.int32, device=device)
-        s_scales = torch.randn(num_groups, hidden_size // 2, dtype=torch.float32, device=device)
-        offsets = torch.randn(num_groups, hidden_size // 2, dtype=torch.float32, device=device)
+- 图模式调用
 
-        result = torch_npu.npu_swiglu_quant(
-            npu_x,
-            smooth_scales=s_scales,
-            offsets=offsets,
-            group_index=g_index,
-            activate_left=False,
-            quant_mode=1,
-            group_list_type=0,
-            dst_type=torch.int8
-        )
+    ```python
+    import torch
+    import torch_npu
+    import torchair as tng
+    from torchair.configs.compiler_config import CompilerConfig
 
+    config = CompilerConfig()
+    npu_backend = tng.get_npu_backend(compiler_config=config)
 
-if __name__ == "__main__":
-    run_tests()
-```
+    class Model(torch.nn.Module):
+        def forward(self, x, smooth_scales, group_index):
+            return torch_npu.npu_swiglu_quant(x, smooth_scales=smooth_scales, group_index=group_index)
+
+    x = torch.randn((3, 32), dtype=torch.bfloat16, device='npu')
+    smooth_scales = torch.ones((2, 16), dtype=torch.float32, device='npu')
+    group_index = torch.tensor([1, 3], dtype=torch.int32, device='npu')
+
+    model = Model().npu()
+    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+    y, scale = model(x, smooth_scales, group_index)
+    print(y, scale)
+    ```

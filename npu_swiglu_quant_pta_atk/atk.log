@@ -1,0 +1,7 @@
+[2026-07-25 05:05:26,078] [INFO] [MainProcess] [124795] [decorators.py:34]  ascend_generator_npu_swiglu_quant is already registered, repeated registration will coverage it, new module path is generator_npu_swiglu_quant
+[2026-07-25 05:06:05,693] [INFO] [MainProcess] [124795] [decorators.py:34]  Extra cases with amount: {'scalar': 0, 'lower_border': 0, 'upper_border': 0, 'empty': 0, 'infnan': 0}
+[2026-07-25 05:06:05,797] [INFO] [MainProcess] [124795] [decorators.py:34]  Generate Case cost time: 39.6153 s
+[2026-07-25 05:06:05,798] [INFO] [MainProcess] [124795] [decorators.py:34]  Case Metrics: {'oversize_case': False, 'shape_intervals': [[560790380, 0.0], [56079038, 0.0], [5607904, 0.04428571428571428]], 'case_repetition_rate': 0.002857142857142857, 'result': False}
+[2026-07-25 05:06:06,264] [INFO] [MainProcess] [124795] [decorators.py:34]  save case json file: result/atk_swiglu_quant/json/all_atk_swiglu_quant.json
+[2026-07-25 05:06:09,343] [INFO] [MainProcess] [124795] [decorators.py:34]  save case excel file: result/atk_swiglu_quant/excel/atk_swiglu_quant20260725050526.xlsx
+[2026-07-25 05:06:09,567] [INFO] [MainProcess] [124795] [decorators.py:34]  save case csv file: result/atk_swiglu_quant/csv/atk_swiglu_quant.csv

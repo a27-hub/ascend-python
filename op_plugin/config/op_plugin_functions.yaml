@@ -7033,9 +7033,6 @@ custom:
         dtype: self
       exec: aclnnSwiGluGrad
 
-  - func: npu_swiglu_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, int quant_mode=0, int group_list_type=0, ScalarType? dst_type=None) -> (Tensor, Tensor)
-    op_api: all_version
-
   - func: npu_swiglu_group_quant(Tensor x, *, Tensor? weight=None, Tensor? group_index=None, Tensor? scale=None, int dst_type=291, int quant_mode=0, int block_size=0, bool round_scale=False, float clamp_limit=-1.0, float dst_type_max=15.0, bool output_origin=False) -> (Tensor, Tensor, Tensor)
     op_api: all_version
 
@@ -7062,6 +7059,10 @@ custom:
 
   - func: _npu_swiglu_backward_mx_quant_with_dual_axis(Tensor x, Tensor y_grad, *, Tensor? group_index=None, bool activate_left=True, str round_mode="rint", int scale_alg=1, int dst_type=24, float dst_type_max=0) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
+
+  - func: npu_swiglu_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, str quant_mode="dynamic", int group_list_type=0, int dst_type=2) -> (Tensor, Tensor)
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
 
   - func: npu_dequant_rope_quant_kvcache(Tensor x, Tensor cos, Tensor sin, Tensor k_cache, Tensor v_cache, Tensor indices, Tensor scale_k, Tensor scale_v, int[3] size_splits, *, Tensor? offset_k=None, Tensor? offset_v=None, Tensor? weight_scale=None, Tensor? activation_scale=None, Tensor? bias=None, int quant_mode=0, str input_layout="BSND", bool kv_output=False, str cache_mode="contiguous") -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version

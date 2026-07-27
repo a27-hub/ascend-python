@@ -1,0 +1,2 @@
+case_id,atk_task_命令,单跑结果,aclnn业务算子(去重),剥离黑名单,备注
+13,"atk task -c result/atk_swiglu_quant/json/all_atk_swiglu_quant.json -p executor_swiglu_quant.py -n nodes_accuracy.yaml -wl '[13]' (TORCH_NPU_LOGS=op_plugin)",SUCCESS+精度PASS(修复后),aclnnSwiGluQuantV2,aclnnInplaceCopy,int4(dst_type=29)/static/per_tensor 场景；修复前 shape/数值 mismatch
