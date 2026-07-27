@@ -47,10 +47,7 @@ at::Tensor& soft_margin_loss_backward_out(
     const at::Tensor& target,
     int64_t reduction,
     at::Tensor& grad_input) {
-  npu_preparation::CheckOut(
-      {grad_output, input, target},
-      grad_input,
-      input);
+  npu_preparation::CheckOut({grad_output, input, target}, grad_input, input);
 
   if (!npu_utils::check_match(&grad_input)) {
     at::Tensor contiguous_grad_input = npu_utils::format_contiguous(grad_input);

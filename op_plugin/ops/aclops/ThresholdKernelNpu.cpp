@@ -54,13 +54,19 @@ at::Tensor& threshold_out(
   return result;
 }
 
-at::Tensor threshold(const at::Tensor& self, const at::Scalar& threshold, const at::Scalar& value) {
+at::Tensor threshold(
+    const at::Tensor& self,
+    const at::Scalar& threshold,
+    const at::Scalar& value) {
   at::Tensor result = npu_preparation::apply_tensor(self);
   threshold_out_nocheck(result, self, threshold, value);
   return result;
 }
 
-at::Tensor& threshold_(at::Tensor& self, const at::Scalar& threshold, const at::Scalar& value) {
+at::Tensor& threshold_(
+    at::Tensor& self,
+    const at::Scalar& threshold,
+    const at::Scalar& value) {
   return acl_op::threshold_out(self, threshold, value, self);
 }
 } // namespace acl_op

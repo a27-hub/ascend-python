@@ -22,7 +22,9 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& nonzero_out_npu_nocheck(at::Tensor& result, const at::Tensor& self) {
+at::Tensor& nonzero_out_npu_nocheck(
+    at::Tensor& result,
+    const at::Tensor& self) {
   c10::SmallVector<int64_t, N> output_sync_idx = {0};
   at_npu::native::OpCommand cmd;
   cmd.Sync(output_sync_idx)
@@ -72,7 +74,8 @@ at::Tensor nonzero(const at::Tensor& self) {
     }
   }
 
-  at::Tensor result = npu_preparation::apply_tensor(output_size, self.options().dtype(at::kLong), self);
+  at::Tensor result = npu_preparation::apply_tensor(
+      output_size, self.options().dtype(at::kLong), self);
   nonzero_out_npu_nocheck(result, self);
   return result;
 }

@@ -24,48 +24,42 @@ namespace {
 at::Tensor& softshrink_out_nocheck(
     at::Tensor& result,
     const at::Tensor& self,
-    at::Scalar lambd)
-{
-    at_npu::native::OpCommand cmd;
-    cmd.Name("SoftShrink")
-        .Input(self)
-        .Output(result)
-        .Attr("lambd", lambd)
-        .Run();
+    at::Scalar lambd) {
+  at_npu::native::OpCommand cmd;
+  cmd.Name("SoftShrink").Input(self).Output(result).Attr("lambd", lambd).Run();
 
-    return result;
+  return result;
 }
 } // namespace
 
 at::Tensor& softshrink_out(
     const at::Tensor& self,
     const at::Scalar& lambd,
-    at::Tensor& result)
-{
-    TORCH_CHECK(lambd.toFloat() >= 0, "lambd should be greater or equal to 0" + OPS_ERROR(ErrCode::VALUE));
-    npu_preparation::CheckOut(
-        {self},
-        result,
-        self);
+    at::Tensor& result) {
+  TORCH_CHECK(
+      lambd.toFloat() >= 0,
+      "lambd should be greater or equal to 0" + OPS_ERROR(ErrCode::VALUE));
+  npu_preparation::CheckOut({self}, result, self);
 
-    if (!npu_utils::check_match(&result)) {
-        at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-        softshrink_out_nocheck(contiguous_result, self, lambd);
-        npu_utils::format_fresh_view(result, contiguous_result);
-    } else {
-        softshrink_out_nocheck(result, self, lambd);
-    }
+  if (!npu_utils::check_match(&result)) {
+    at::Tensor contiguous_result = npu_utils::format_contiguous(result);
+    softshrink_out_nocheck(contiguous_result, self, lambd);
+    npu_utils::format_fresh_view(result, contiguous_result);
+  } else {
+    softshrink_out_nocheck(result, self, lambd);
+  }
 
-    return result;
+  return result;
 }
 
-at::Tensor softshrink(const at::Tensor& self, const at::Scalar& lambd)
-{
-    TORCH_CHECK(lambd.toFloat() >= 0, "lambd should be greater or equal to 0" + OPS_ERROR(ErrCode::VALUE));
-    at::Tensor result = npu_preparation::apply_tensor(self);
+at::Tensor softshrink(const at::Tensor& self, const at::Scalar& lambd) {
+  TORCH_CHECK(
+      lambd.toFloat() >= 0,
+      "lambd should be greater or equal to 0" + OPS_ERROR(ErrCode::VALUE));
+  at::Tensor result = npu_preparation::apply_tensor(self);
 
-    softshrink_out_nocheck(result, self, lambd);
+  softshrink_out_nocheck(result, self, lambd);
 
-    return result;
+  return result;
 }
 } // namespace acl_op

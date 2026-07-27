@@ -51,19 +51,18 @@ at::Tensor& mse_loss_backward_out(
     return grad_input;
   }
 
-  npu_preparation::CheckOut(
-      {grad_output, self, target},
-      grad_input,
-      self);
+  npu_preparation::CheckOut({grad_output, self, target}, grad_input, self);
 
   string reduction_str(op_plugin::utils::get_reduction_str(reduction));
 
   if (!npu_utils::check_match(&grad_input)) {
     at::Tensor contiguous_grad_input = npu_utils::format_contiguous(grad_input);
-    mse_loss_backward_out_npu_nocheck(contiguous_grad_input, grad_output, self, target, reduction_str);
+    mse_loss_backward_out_npu_nocheck(
+        contiguous_grad_input, grad_output, self, target, reduction_str);
     npu_utils::format_fresh_view(grad_input, contiguous_grad_input);
   } else {
-    mse_loss_backward_out_npu_nocheck(grad_input, grad_output, self, target, reduction_str);
+    mse_loss_backward_out_npu_nocheck(
+        grad_input, grad_output, self, target, reduction_str);
   }
 
   return grad_input;
@@ -79,12 +78,7 @@ at::Tensor mse_loss_backward(
     grad_out.view(1);
   }
   at::Tensor grad_input = npu_preparation::apply_tensor(self);
-  acl_op::mse_loss_backward_out(
-      grad_out,
-      self,
-      target,
-      reduction,
-      grad_input);
+  acl_op::mse_loss_backward_out(grad_out, self, target, reduction, grad_input);
   return grad_input;
 }
 } // namespace acl_op
