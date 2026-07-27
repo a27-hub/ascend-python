@@ -22,8 +22,12 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-at::Tensor& ge_out_nocheck(at::Tensor& result, const at::Tensor& self, const at::Tensor& other) {
-  auto unified_result = npu_preparation::comparison_op_check(result, self, other, true);
+at::Tensor& ge_out_nocheck(
+    at::Tensor& result,
+    const at::Tensor& self,
+    const at::Tensor& other) {
+  auto unified_result =
+      npu_preparation::comparison_op_check(result, self, other, true);
   at_npu::native::OpCommand cmd;
   cmd.Name("GreaterEqual")
       .Expect(unified_result)
@@ -34,7 +38,10 @@ at::Tensor& ge_out_nocheck(at::Tensor& result, const at::Tensor& self, const at:
   return result;
 }
 
-at::Tensor& ge_out_nocheck(at::Tensor& result, const at::Tensor& self, at::Scalar other) {
+at::Tensor& ge_out_nocheck(
+    at::Tensor& result,
+    const at::Tensor& self,
+    at::Scalar other) {
   at_npu::native::OpCommand cmd;
   cmd.Name("GreaterEqual")
       .Input(self)
@@ -44,7 +51,9 @@ at::Tensor& ge_out_nocheck(at::Tensor& result, const at::Tensor& self, at::Scala
   return result;
 }
 
-at::ScalarType get_ge_calculate_type(const at::Tensor& self, const at::Tensor& other) {
+at::ScalarType get_ge_calculate_type(
+    const at::Tensor& self,
+    const at::Tensor& other) {
   at::ScalarType calculate_type = at::native::result_type(self, other);
   if (calculate_type == at::kInt || calculate_type == at::kBool) {
     calculate_type = at::kFloat;
@@ -52,7 +61,9 @@ at::ScalarType get_ge_calculate_type(const at::Tensor& self, const at::Tensor& o
   return calculate_type;
 }
 
-at::ScalarType get_ge_calculate_type(const at::Tensor& self, const at::Scalar& other) {
+at::ScalarType get_ge_calculate_type(
+    const at::Tensor& self,
+    const at::Scalar& other) {
   at::ScalarType calculate_type = at::native::result_type(self, other);
   if (calculate_type == at::kInt || calculate_type == at::kBool) {
     calculate_type = at::kFloat;
@@ -61,22 +72,24 @@ at::ScalarType get_ge_calculate_type(const at::Tensor& self, const at::Scalar& o
 }
 } // namespace
 
-at::Tensor& ge_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
+at::Tensor& ge_out(
+    const at::Tensor& self,
+    const at::Tensor& other,
+    at::Tensor& result) {
   if (npu_preparation::IsCPUScalar(other)) {
     return acl_op::ge_out(self, other.item(), result);
   } else if (npu_preparation::IsCPUScalar(self)) {
     return acl_op::le_out(other, self.item(), result);
   } else {
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    npu_preparation::CheckOut(
-        {self, other},
-        result,
-        result,
-        output_size);
+    npu_preparation::CheckOut({self, other}, result, result, output_size);
 
-    TORCH_CHECK(self.device() == other.device(),
+    TORCH_CHECK(
+        self.device() == other.device(),
         "Expected all tensors to be on the same device, but found at least two devices, ",
-        self.device(), " and ", other.device(),
+        self.device(),
+        " and ",
+        other.device(),
         OPS_ERROR(ErrCode::PARAM));
 
     auto calculate_type = get_ge_calculate_type(self, other);
@@ -84,36 +97,38 @@ at::Tensor& ge_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
     auto other_cast = op_plugin::utils::get_cast_input(other, calculate_type);
 
     auto result_type = result.scalar_type();
-    at::Tensor result_cast = (result_type != at::kBool) ?
-        at_npu::native::custom_ops::_npu_dtype_cast(result, at::kBool) : result;
+    at::Tensor result_cast = (result_type != at::kBool)
+        ? at_npu::native::custom_ops::_npu_dtype_cast(result, at::kBool)
+        : result;
     if (!npu_utils::check_match(&result_cast)) {
-        at::Tensor contiguous_result = npu_utils::format_contiguous(result_cast);
-        ge_out_nocheck(contiguous_result, self_cast, other_cast);
-        npu_utils::format_fresh_view(result_cast, contiguous_result);
+      at::Tensor contiguous_result = npu_utils::format_contiguous(result_cast);
+      ge_out_nocheck(contiguous_result, self_cast, other_cast);
+      npu_utils::format_fresh_view(result_cast, contiguous_result);
     } else {
-        ge_out_nocheck(result_cast, self_cast, other_cast);
+      ge_out_nocheck(result_cast, self_cast, other_cast);
     }
 
     if (result_type != at::kBool) {
-        result_cast = at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
-        result.copy_(result_cast);
+      result_cast =
+          at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
+      result.copy_(result_cast);
     }
     return result;
   }
 }
 
-at::Tensor& ge_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& result) {
+at::Tensor& ge_out(
+    const at::Tensor& self,
+    const at::Scalar& other,
+    at::Tensor& result) {
   auto calculate_type = get_ge_calculate_type(self, other);
   auto self_cast = op_plugin::utils::get_cast_input(self, calculate_type);
-  npu_preparation::CheckOut(
-      {self_cast},
-      result,
-      result,
-      self.sizes());
+  npu_preparation::CheckOut({self_cast}, result, result, self.sizes());
 
   auto result_type = result.scalar_type();
-  at::Tensor result_cast = (result_type != at::kBool) ?
-      at_npu::native::custom_ops::_npu_dtype_cast(result, at::kBool) : result;
+  at::Tensor result_cast = (result_type != at::kBool)
+      ? at_npu::native::custom_ops::_npu_dtype_cast(result, at::kBool)
+      : result;
   if (!npu_utils::check_match(&result_cast)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result_cast);
     ge_out_nocheck(contiguous_result, self_cast, other);
@@ -123,7 +138,8 @@ at::Tensor& ge_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& 
   }
 
   if (result_type != at::kBool) {
-    result_cast = at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
+    result_cast =
+        at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
     result.copy_(result_cast);
   }
   return result;
@@ -135,17 +151,22 @@ at::Tensor ge(const at::Tensor& self, const at::Tensor& other) {
   } else if (npu_preparation::IsCPUScalar(self)) {
     return acl_op::le(other, self.item());
   } else {
-    TORCH_CHECK(self.device() == other.device(),
+    TORCH_CHECK(
+        self.device() == other.device(),
         "Expected all tensors to be on the same device, but found at least two devices, ",
-        self.device(), " and ", other.device(),
+        self.device(),
+        " and ",
+        other.device(),
         OPS_ERROR(ErrCode::PARAM));
 
     auto calculate_type = get_ge_calculate_type(self, other);
     auto self_cast = op_plugin::utils::get_cast_input(self, calculate_type);
     auto other_cast = op_plugin::utils::get_cast_input(other, calculate_type);
 
-    auto output_size = op_infer::broadcast_ops_npu_output_size(self_cast, other_cast);
-    at::Tensor result = npu_preparation::apply_tensor(output_size, self_cast.options().dtype(at::kBool), self_cast);
+    auto output_size =
+        op_infer::broadcast_ops_npu_output_size(self_cast, other_cast);
+    at::Tensor result = npu_preparation::apply_tensor(
+        output_size, self_cast.options().dtype(at::kBool), self_cast);
     ge_out_nocheck(result, self_cast, other_cast);
     return result;
   }
@@ -154,7 +175,8 @@ at::Tensor ge(const at::Tensor& self, const at::Tensor& other) {
 at::Tensor ge(const at::Tensor& self, const at::Scalar& other) {
   auto calculate_type = get_ge_calculate_type(self, other);
   auto self_cast = op_plugin::utils::get_cast_input(self, calculate_type);
-  at::Tensor result = npu_preparation::apply_tensor(self, self.options().dtype(at::kBool));
+  at::Tensor result =
+      npu_preparation::apply_tensor(self, self.options().dtype(at::kBool));
   ge_out_nocheck(result, self_cast, other);
   return result;
 }
