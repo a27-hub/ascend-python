@@ -47,7 +47,7 @@ torch_npu.npu_format_cast(input, acl_format) -> Tensor
     > 数据排布格式具体可参考《CANN Ascend C算子开发》中的“数据排布格式”章节。
     <!-- “<a href="https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_10_0099.html">数据排布格式</a>” -->
 
-## 约束说明S
+## 约束说明
 
 <term>Ascend 950DT</term>场景下，将张量转为FRACTAL_NZ格式时，当前不支持以下特殊场景：
 
