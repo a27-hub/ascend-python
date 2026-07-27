@@ -21,7 +21,6 @@ namespace acl_op {
 void abs_workflow_test()
 {
     int a = 1;int b = 2;int c = a + b;
-    int d = c / 0;
     return;
 }
 
