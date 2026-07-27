@@ -4,74 +4,105 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-| <term>Ascend 950DT</term>                        |    √    |
-|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>            |    √     |
-|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>               | √   |
-|<term>Atlas 推理系列产品</term>                                       |    √     |
-|<term>Atlas 训练系列产品</term>                                       |    √     |
+|<term>Ascend 950PR/Ascend 950DT</term>                        |    √     |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    √     |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>      |    √     |
 
 ## 功能说明
 
-- API功能：当输入tensor的尾轴为32B对齐场景时，使用该API可对输入tensor进行GELU与MUL结合的复合计算操作以提高算子性能，若尾轴为非32B对齐场景时，建议走小算子拼接逻辑，即按照下述公式分步拼接计算。
+- API功能：将输入Tensor按最后一个维度切分为左右两部分`x1`和`x2`，对左半部分`x1`做GELU激活后，再与右半部分`x2`相乘。
 - 计算公式：
 
-    给定输入张量`input`（最后一维长度为$2d$，$d$为正整数），函数$\text{GELUMUL}$计算流程如下：
+    给定输入张量`input`，最后一维长度为`2d`，首先将其切分为两部分：
+    $$
+    x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
+    $$
 
-    1. 拆分输入张量：
-    
-       沿最后一维将`input`拆分为两个形状相同的张量$x_1$和$x_2$。
-         $$x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]$$
-                 
-         其中$x_1$、$x_2$形状与$\text{input}$除最后一维外一致，最后一维长度均为$d$。
+    对`x1`应用GELU激活函数。当`approximate="none"`时（erf模式）：
+    $$
+    \text{GELU}(x) = 0.5 \cdot x \left( 1 + \text{erf}\left( \frac{x}{\sqrt{2}} \right) \right)
+    $$
 
-    2. 应用GELU激活函数：
+    当`approximate="tanh"`时：
+    $$
+    \text{GELU}(x) = 0.5 \cdot x \cdot \left( 1 + \tanh\left( \sqrt{\frac{2}{\pi}} \cdot \left( x + 0.044715 x^3 \right) \right) \right)
+    $$
 
-       对$x_1$应用GELU激活函数（模式由`approximate`控制），即$x_1 = \text{GELU}(x_1)$。
-        - 若`approximate`为"tanh"（近似模式，计算效率高）：
-        $$\text{GELU}(x) = 0.5 \cdot x \cdot \left[ 1 + \tanh\left( \sqrt{\frac{2}{\pi}} \cdot \left( x + 0.044715 \cdot x^3 \right) \right) \right]$$
-        
-        - 若`approximate`为"none"（高精度模式）：
-        $$\text{GELU}(x) = 0.5 \cdot x \cdot \left[ 1 + \text{erf}\left( \frac{x}{\sqrt{2}} \right) \right]$$
-
-    3. 逐元素乘积输出：
-
-       将激活后的$x_1$与$x_2$逐元素相乘，得到最终输出张量。
-        $$\text{out} = x_1 \cdot x_2$$
-                 
-        其中$\text{out}$形状与原始输入`input`除最后一维外一致，最后一维长度为输入最后一维长度的一半。
+    最终输出为`x1`与`x2`的逐元素乘积：
+    $$
+    \text{out} = \text{GELU}(x_1) \times x_2
+    $$
 
 ## 函数原型
 
 ```python
-torch_npu.npu_gelu_mul(input, *, approximate="none") -> Tensor
+torch_npu.npu_gelu_mul(input, *, approximate='none') -> Tensor
 ```
 
 ## 参数说明
 
-- **input** (`Tensor`)：必选参数，输入张量，数据类型支持`bfloat16`、`float16`、`float`。支持非连续的Tensor，数据格式支持$ND$，shape维度2至8维，且shape需满足最后一维值为偶数且小于等于1024。其他维度的乘积小于等于200000。
-- **approximate** (`String`)：可选参数，指定GELU激活函数的计算模式。默认值为 "none"。支持以下选项：
-  - "none"：使用误差函数（erf）模式，计算精度高，适用于对精度要求严格的场景。
-  - "tanh"：使用双曲正切（tanh）近似模式，计算效率高，适用于大规模训练或推理加速场景。
+- **input** (`Tensor`)：必选参数，对应公式中的`input`，待进行`npu_gelu_mul`计算的入参，数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$，支持非连续的Tensor。维度支持范围为2-8维，最后一维必须为偶数且小于等于1024，其他维度的乘积需小于等于200000。支持空Tensor。
+
+- <strong>*</strong>：位置参数与关键字参数的分隔符。其之前的参数为位置参数，需按顺序传入；其之后的参数为关键字参数，需通过键值对方式传入，未赋值时使用默认值。
+
+- **approximate** (`str`)：可选参数，字符串类型，GELU计算使用的激活函数模式，可配置为`none`或者`tanh`。其中`none`代表使用erf模式，`tanh`代表使用tanh模式。默认值为`'none'`。
 
 ## 返回值说明
 
 `Tensor`
 
-输出张量，对应公式中的$out$，数据类型支持bfloat16、float16、float。shape维度2至8维。支持非连续的Tensor，数据格式支持$ND$，输出的数据类型与输入`input`保持一致。输出的最后一维长度为输入的一半，其余维度保持不变。例如：若 `input.shape = [100, 400]`，则 `output.shape = [100, 200]`。
+输出张量，数据类型与`input`保持一致，数据格式支持$ND$。输出的shape在`input`其他维度上保持一致，最后一维的值为`input`最后一维值的二分之一，支持非连续的Tensor。
+
+## 约束说明
+
+- 该接口支持推理、训练场景下使用。
+- 该接口支持图模式。
+- `input`的数据类型仅支持`float16`、`bfloat16`、`float32`。
+- `input`的维度范围为2-8维，最后一维必须为偶数且小于等于1024。
+- `input`除最后一维外，其他维度的乘积需小于等于200000。
+- `approximate`仅支持`none`或`tanh`，输入为空时按`none`处理。
 
 ## 调用示例
 
-```python
->>> import torch, torch_npu
->>> shape = [100, 400]
->>> input = torch.rand(shape, dtype=torch.float16).npu()
+- 单算子模式调用
 
-# 高精度模式（approximate="none"）：使用误差函数（erf）模式，计算精度高，
-# 适用于对精度要求严格的场景。
->>> output_high_precision = torch_npu.npu_gelu_mul(input, approximate="none")
+    ```python
+    >>> import torch
+    >>> import torch_npu
+    >>>
+    >>> input_tensor = torch.randn(2, 8, dtype=torch.float16, device='npu')
+    >>> output_tensor = torch_npu.npu_gelu_mul(input_tensor, approximate='tanh')
+    >>>
+    >>> print(output_tensor.shape)
+    torch.Size([2, 4])
+    >>> print(output_tensor.dtype)
+    torch.float16
+    ```
 
-# 高效率模式（approximate="tanh"）：使用双曲正切（tanh）近似模式，计算效率高，
-# 适用于大规模训练或推理加速场景。
->>> output_high_efficiency = torch_npu.npu_gelu_mul(input, approximate="tanh")
+- 图模式调用
 
-```
+    ```python
+    import torch
+    import torch_npu
+    import torchair as tng
+    from torchair.configs.compiler_config import CompilerConfig
+
+    torch_npu.npu.set_compile_mode(jit_compile=True)
+
+    class Net(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+        def forward(self, x):
+            return torch_npu.npu_gelu_mul(x, approximate="tanh")
+
+    x = torch.randn(2, 8, dtype=torch.float16).npu()
+    model = Net()
+    config = CompilerConfig()
+    npu_backend = tng.get_npu_backend(compiler_config=config)
+    model = torch.compile(model, fullgraph=True, backend=npu_backend, dynamic=False)
+    npu_out = model(x)
+    print(npu_out.shape, npu_out.dtype)
+
+    # 执行上述代码的输出类似如下
+    torch.Size([2, 4]) torch.float16
+    ```

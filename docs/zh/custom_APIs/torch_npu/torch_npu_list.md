@@ -452,9 +452,9 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p9269284217"><a name="p9269284217"></a><a name="p9269284217"></a>计算高斯误差线性单元（GELU）激活函数。</p>
 </td>
 </tr>
-<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p1720095217417"></a><a name="p1720095217417"></a><a href="torch_npu-npu_gelu_mul.md">torch_npu.npu_gelu_mul</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p1720095217418"></a><a name="p1720095217418"></a><a href="torch_npu-npu_gelu_mul.md">torch_npu.npu_gelu_mul</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p9269284217"><a name="p9269284217"></a><a name="p9269284217"></a>当输入tensor的尾轴为32B对齐场景时，使用该API可对输入tensor进行GELU与MUL结合的复合计算操作以提高算子性能，若尾轴为非32B对齐场景时，建议走小算子拼接逻辑，即按照下述公式分步拼接计算。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p9269284217418"><a name="p9269284217418"></a><a name="p9269284217418"></a>对输入最后一维切分后的左半部分做GELU激活，再与右半部分相乘。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p5338134195811"></a><a name="p5338134195811"></a><a href="torch_npu-npu_group_norm_silu.md">torch_npu.npu_group_norm_silu</a></p>
@@ -825,11 +825,6 @@
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_clipped_swiglu.md">torch_npu.npu_clipped_swiglu</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>带截断的Swish门控线性单元激活函数，实现x的变体SwiGlu计算。</p>
-</td>
-</tr>
-<tr id="row_rotate_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_rotate_quant"><a name="p_rotate_quant"></a><a name="p_rotate_quant"></a><a href="torch_npu-npu_rotate_quant.md">torch_npu.npu_rotate_quant</a></p>
-</td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_rotate_quant_desc"><a name="p_rotate_quant_desc"></a><a name="p_rotate_quant_desc"></a><span>npu_rotate_quant是一种融合旋转（Rotate）和量化（Quant）的计算方法，用于模型性能优化。</span></p>
 </td>
 </tr>
 <tr id="save_npugraph_tensor"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_save_npugraph_tensor"><a name="p_save_npugraph_tensor"></a><a name="p_save_npugraph_tensor"></a><a href="torch_npu-save_npugraph_tensor.md">torch_npu.save_npugraph_tensor</a></p>
