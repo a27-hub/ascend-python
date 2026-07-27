@@ -1,0 +1,182 @@
+{
+  "op_name": "npu_rotate_quant",
+  "yaml": {
+    "op_name": "npu_rotate_quant",
+    "return_type": "(Tensor, Tensor)",
+    "params": [
+      {
+        "name": "x",
+        "type": "Tensor",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "rot",
+        "type": "Tensor",
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "alpha",
+        "type": "Tensor?",
+        "required": false,
+        "default": "None"
+      },
+      {
+        "name": "y_dtype",
+        "type": "int?",
+        "required": false,
+        "default": "None"
+      },
+      {
+        "name": "axis",
+        "type": "int",
+        "required": false,
+        "default": "-1"
+      },
+      {
+        "name": "round_mode",
+        "type": "str",
+        "required": false,
+        "default": "\"rint\""
+      },
+      {
+        "name": "scale_alg",
+        "type": "int",
+        "required": false,
+        "default": "0"
+      },
+      {
+        "name": "dst_type_max",
+        "type": "float",
+        "required": false,
+        "default": "0.0"
+      },
+      {
+        "name": "trans",
+        "type": "bool",
+        "required": false,
+        "default": "False"
+      }
+    ]
+  },
+  "cpp": {
+    "op_name": "npu_rotate_quant",
+    "return_type": "namespace\n\nstd::tuple<at::Tensor, at::Tensor>",
+    "params": [
+      {
+        "name": "x",
+        "type": "const at::Tensor&",
+        "default": null
+      },
+      {
+        "name": "rot",
+        "type": "const at::Tensor&",
+        "default": null
+      },
+      {
+        "name": "alpha",
+        "type": "const c10::optional<at::Tensor>&",
+        "default": null
+      },
+      {
+        "name": "y_dtype",
+        "type": "c10::optional<int64_t>",
+        "default": null
+      },
+      {
+        "name": "axis",
+        "type": "int64_t",
+        "default": null
+      },
+      {
+        "name": "round_mode",
+        "type": "c10::string_view",
+        "default": null
+      },
+      {
+        "name": "scale_alg",
+        "type": "int64_t",
+        "default": null
+      },
+      {
+        "name": "dst_type_max",
+        "type": "double",
+        "default": null
+      },
+      {
+        "name": "trans",
+        "type": "bool",
+        "default": null
+      }
+    ],
+    "parse_confidence": "low"
+  },
+  "meta": {
+    "op_name": "npu_rotate_quant",
+    "meta_func_name": "npu_rotate_quant_meta",
+    "params": [
+      {
+        "name": "x",
+        "type": null,
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "rot",
+        "type": null,
+        "required": true,
+        "default": null
+      },
+      {
+        "name": "alpha",
+        "type": null,
+        "required": false,
+        "default": "None"
+      },
+      {
+        "name": "y_dtype",
+        "type": null,
+        "required": false,
+        "default": "None"
+      },
+      {
+        "name": "axis",
+        "type": null,
+        "required": false,
+        "default": "-1"
+      },
+      {
+        "name": "round_mode",
+        "type": null,
+        "required": false,
+        "default": "\"rint\""
+      },
+      {
+        "name": "scale_alg",
+        "type": null,
+        "required": false,
+        "default": "0"
+      },
+      {
+        "name": "dst_type_max",
+        "type": null,
+        "required": false,
+        "default": "0.0"
+      },
+      {
+        "name": "trans",
+        "type": null,
+        "required": false,
+        "default": "False"
+      }
+    ]
+  },
+  "derivatives": null,
+  "mismatches": [],
+  "passed": true,
+  "cpp_file": "/home/skill_lxy_02/op-plugin/op_plugin/ops/opapi/RotateQuantKernelNpuOpApi.cpp",
+  "known_inconsistent": false,
+  "warning_count": 0,
+  "known_count": 0
+}

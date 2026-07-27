@@ -1,0 +1,583 @@
+{
+  "aclnn_name": "aclnnRotateQuant",
+  "npu_name": "rotate_quant",
+  "op_type": "Forward",
+  "has_existing_derivative": null,
+  "parameters": [
+    {
+      "name": "x",
+      "source": "both",
+      "type": "Tensor",
+      "category": "input",
+      "attr_type": null,
+      "optionality": "REQUIRED",
+      "confidence": "high"
+    },
+    {
+      "name": "rot",
+      "source": "_def.cpp only",
+      "conflict": "missing_in_md",
+      "type": "Tensor",
+      "category": "input",
+      "attr_type": null,
+      "optionality": "REQUIRED",
+      "confidence": "high"
+    },
+    {
+      "name": "alpha",
+      "source": "both",
+      "type": "Tensor",
+      "category": "input",
+      "attr_type": null,
+      "optionality": "OPTIONAL",
+      "confidence": "high"
+    },
+    {
+      "name": "y_dtype",
+      "source": "_def.cpp only",
+      "conflict": "missing_in_md",
+      "type": "int",
+      "category": "attr",
+      "default_raw": "ge::DT_INT8",
+      "type_hint": "Int",
+      "attr_type": "OPTIONAL",
+      "optionality": "OPTIONAL",
+      "confidence": "high"
+    },
+    {
+      "name": "axis",
+      "source": "both",
+      "type": "int",
+      "category": "attr",
+      "default_raw": "-1",
+      "type_hint": "Int",
+      "attr_type": "OPTIONAL",
+      "optionality": "OPTIONAL",
+      "confidence": "high"
+    },
+    {
+      "name": "round_mode",
+      "source": "both",
+      "type": "str",
+      "category": "attr",
+      "default_raw": "rint",
+      "type_hint": "String",
+      "attr_type": "OPTIONAL",
+      "optionality": "OPTIONAL",
+      "confidence": "high"
+    },
+    {
+      "name": "scale_alg",
+      "source": "both",
+      "type": "int",
+      "category": "attr",
+      "default_raw": "0",
+      "type_hint": "Int",
+      "attr_type": "OPTIONAL",
+      "optionality": "OPTIONAL",
+      "confidence": "high"
+    },
+    {
+      "name": "dst_type_max",
+      "source": "both",
+      "type": "float",
+      "category": "attr",
+      "default_raw": "0.0",
+      "type_hint": "Float",
+      "attr_type": "OPTIONAL",
+      "optionality": "OPTIONAL",
+      "confidence": "high"
+    },
+    {
+      "name": "trans",
+      "source": "both",
+      "type": "bool",
+      "category": "attr",
+      "default_raw": "false",
+      "type_hint": "Bool",
+      "attr_type": "OPTIONAL",
+      "optionality": "OPTIONAL",
+      "confidence": "high"
+    },
+    {
+      "name": "rotation",
+      "source": ".md only",
+      "conflict": "missing_in_def",
+      "type": "unknown",
+      "category": "md_only",
+      "type_raw": "const aclTensor   *",
+      "confidence": "high"
+    },
+    {
+      "name": "y",
+      "source": "both",
+      "category": "output",
+      "type": "Tensor",
+      "confidence": "high"
+    },
+    {
+      "name": "scale",
+      "source": "both",
+      "category": "output",
+      "type": "Tensor",
+      "confidence": "high"
+    }
+  ],
+  "conflicts": [
+    {
+      "param": "rot",
+      "type": "missing_in_md",
+      "desc": "_def.cpp has parameter 'rot' but .md does not mention it",
+      "resolution": "awaiting_user_confirmation"
+    },
+    {
+      "param": "y_dtype",
+      "type": "missing_in_md",
+      "desc": "_def.cpp has parameter 'y_dtype' but .md does not mention it",
+      "resolution": "awaiting_user_confirmation"
+    },
+    {
+      "param": "rotation",
+      "type": "missing_in_def",
+      "desc": ".md has parameter 'rotation' but _def.cpp does not define it",
+      "resolution": "exclude_def_cpp_is_authoritative"
+    }
+  ],
+  "constraints_logic": [
+    {
+      "rule": "x(aclTensor*) | 输入 | 待旋转量化的输入张量 | 不支持空Tensor。 | BFLOAT16、FLOAT16 | ND | 1-7 | √",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "rotation(aclTensor*) | 输入 | 旋转矩阵 | 不支持空Tensor。 | BFLOAT16、FLOAT16 | ND | 2或3 | √",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "alpha(aclTensor*) | 输入 | clamp需要限制的范围的缩放系数 | 可选参数。shape为(1,)，数据类型为BFLOAT16，有效取值范围(0.0, 1.0)，不在有效取值范围内不做clamp处理。 | BFLOAT16 | ND | 1 | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "axis(int64_t) | 输入 | 表示量化发生的轴（reduce轴） | 目前只支持-1或最后一维的正索引。 | INT64 | - | - | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "roundMode(char*) | 输入 | 表示数据转换的模式 | 支持\"rint\"、\"round\"、\"floor\"，传入空指针时，采用\"rint\"模式。 | STRING | - | - | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "scaleAlg(int64_t) | 输入 | 表示scale的计算算法 | 支持取值0、1、2。 | INT64 | - | - | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "dstTypeMax(double) | 输入 | 表示量化目标类型的最大值 | 支持取值0.0或者[6.0, 12.0]范围内（表示Amax为传入值）。 | DOUBLE | - | - | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "trans(bool) | 输入 | 表示输出y是否转置 | 目前只支持false。 | BOOL | - | - | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "yOut(aclTensor*) | 输出 | 量化后的输出张量 | 输出Tensor需预先分配。yOut的数据类型即为量化输出类型（y_dtype），torch单算子调用时通过参数传入，aclnn调用时无需单独传入y_dtype参数，通过yOut获取dtype即可。 | FLOAT4_E2M1、FLOAT8_E4M3FN、FLOAT8_E5M2、INT8、INT32 | ND | 1-7 | √",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "scaleOut(aclTensor*) | 输出 | 动态量化计算出的缩放系数 | 输出Tensor需预先分配。 | FLOAT8_E8M0、FLOAT | ND | 1-8 | √",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "workspaceSize(uint64_t) | 输出 | 返回需要在Device侧申请的workspace大小 | - | - | - | - | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "executor(aclOpExecutor*) | 输出 | 返回op执行器，包含算子计算流程 | - | - | - | - | -",
+      "md_line": 172,
+      "confidence": "medium",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "ACLNN_ERR_PARAM_NULLPTR | 161001 | 入参存在空指针。",
+      "md_line": 323,
+      "confidence": "low",
+      "source": "html_table",
+      "table_type": "error_code",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "ACLNN_ERR_PARAM_INVALID | 161002 | 入参的数据类型、维度、shape或参数取值不符合约束。",
+      "md_line": 323,
+      "confidence": "low",
+      "source": "html_table",
+      "table_type": "error_code",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "workspace | 输入 | 在Device侧申请的workspace内存地址。",
+      "md_line": 353,
+      "confidence": "low",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "workspaceSize | 输入 | 在Device侧申请的workspace大小，由第一段接口aclnnRotateQuantGetWorkspaceSize获取。",
+      "md_line": 353,
+      "confidence": "low",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "executor | 输入 | op执行器，包含了算子计算流程。",
+      "md_line": 353,
+      "confidence": "low",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "stream | 输入 | 指定执行任务的Stream。",
+      "md_line": 353,
+      "confidence": "low",
+      "source": "html_table",
+      "table_type": "param_desc",
+      "is_likely_constraint": false
+    },
+    {
+      "rule": "2. 当alpha在有效取值范围(0.0, 1.0)内，执行clamp计算",
+      "md_line": 28,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "其中：$s_i$ 是第 $i$ 行的缩放因子；$C_{\\text{MAX}}$ 是量化范围最大值，int8取127，quint4x2取7。",
+      "md_line": 46,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- 将FP32映射到目标数据类型FP8可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值",
+      "md_line": 82,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：",
+      "md_line": 90,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- 将FP32映射到目标数据类型可表示的范围内，其中当dst_max_value=0时，$Amax(DType)$是目标精度能表示的最大值；当dst_max_value!=0时，$Amax(DType)$是dst_max_value传入值。",
+      "md_line": 121,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- 为保证量化时不溢出，对指数进行向上取整，且在FP4_E2M1可表示的范围内：",
+      "md_line": 129,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnRotateQuantGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnRotateQuant”接口执行计算。",
+      "md_line": 142,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- x的shape为(*, N)，维度范围[1, 7]；rotation的shape为(K, K)或(N/K, K, K)，维度范围[2, 3], K当前版本仅支持取32，64，128。",
+      "md_line": 395,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- x最后一维的长度(N)必须是K的整数倍。",
+      "md_line": 396,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- x和rotation的数据类型必须相同，必须同时为BFLOAT16或FLOAT16。",
+      "md_line": 398,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- rotation最后两维的长度必须一致。",
+      "md_line": 399,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- scaleOut的shape必须是(*, CeilDiv(N,64), 2)，shape的维度支持2-8，数据类型为FLOAT8_E8M0。",
+      "md_line": 400,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- yOut的数据类型必须在[FLOAT4_E2M1,FLOAT8_E4M3FN,FLOAT8_E5M2],yOut的shape必须和x的shape保持一致。",
+      "md_line": 401,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- alpha为可选输入，不为空指针时，shape为(1,)，数据类型为BFLOAT16，有效取值范围(0.0, 1.0)。传入空指针或者不在有效取值范围内不做clamp处理。",
+      "md_line": 402,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- roundMode支持\"rint\"、\"round\"、\"floor\"，传入空指针时，采用\"rint\"模式。当yOut的数据类型为FLOAT8_E4M3FN或FLOAT8_E5M2时，roundMode仅支持\"rint\"。",
+      "md_line": 404,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- scaleAlg支持取值0、1、2，当yOut的数据类型为FLOAT8_E4M3FN或FLOAT8_E5M2时只支持0和1，当yOut的数据类型为FLOAT4_E2M1时只支持0和2。",
+      "md_line": 405,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- dstTypeMax：当scaleAlg=2时dstTypeMax必须在[6.0, 12.0]范围内，其余场景仅支持0.0。",
+      "md_line": 406,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- rotation的shape必须是方阵(K, K)。",
+      "md_line": 411,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- x第二维的长度(N)必须是K的整数倍，N必须可以整除8。",
+      "md_line": 412,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- 当yOut的输出类型为int8时，y的shape必须和x相同(M, N)。",
+      "md_line": 413,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- 当yOut的输出类型为int32时，y的shape必须为(M, N//8)。",
+      "md_line": 414,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- x和rotation的数据类型必须相同。",
+      "md_line": 415,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- scaleOut的shape必须是(M)，数据类型为FLOAT。",
+      "md_line": 416,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- alpha为可选输入，当前版本仅支持传入空指针。",
+      "md_line": 417,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- N的范围为[128, 16000]。",
+      "md_line": 423,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- K的范围为[16, 1024]。",
+      "md_line": 424,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "- scaleOut的shape仅支持1维。",
+      "md_line": 425,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "// Constraints: rot must be square, N % K == 0, N % 8 == 0",
+      "md_line": 532,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    },
+    {
+      "rule": "// 创建rot aclTensor (BF16,必须为方阵)",
+      "md_line": 551,
+      "confidence": "low",
+      "source": "freetext",
+      "table_type": null,
+      "is_likely_constraint": true
+    }
+  ],
+  "version_markers": [],
+  "def_outputs": [
+    {
+      "name": "y"
+    },
+    {
+      "name": "scale"
+    },
+    {
+      "name": "y"
+    },
+    {
+      "name": "scale"
+    }
+  ],
+  "def_dtypes_seen": [
+    "DT_BF16",
+    "DT_FLOAT16",
+    "DT_INT4",
+    "DT_INT8",
+    "DT_FLOAT",
+    "DT_FLOAT4_E2M1",
+    "DT_FLOAT8_E4M3FN",
+    "DT_FLOAT8_E5M2",
+    "DT_FLOAT8_E8M0"
+  ],
+  "pitfall_alerts": [
+    {
+      "id": "conditional_output_allocation",
+      "severity": "high",
+      "trigger": "bool attr(s) ['trans'] + 4 outputs",
+      "risk": "A bool flag may gate a conditional output. Allocating that output as {0}/zero-sized on flag=False can trip kernel tiling CheckOutShape (rank mismatch, err 561002). The flag usually controls WHETHER valid data is written, NOT whether/what-shape the tensor is allocated.",
+      "must_read_case": "references/examples/create-mode/npu_moe_gating_top_k-create.md",
+      "applies_to_steps": [
+        "C-cpp",
+        "C-meta"
+      ],
+      "action": "BEFORE writing C++ and meta for any flag-gated output: read the case. Decide allocation shape from THIS operator's aclnn header (required/optional) + .md param-table dims — never copy a sibling's {0}. C++ and meta must use the identical shape rule."
+    }
+  ],
+  "parse_meta": {
+    "md_path": "/home/skill_lxy_02/aclnn_input/aclnnRotateQuant.md",
+    "def_path": "/home/skill_lxy_02/aclnn_input/rotate_quant_def.cpp",
+    "def_input_count": 6,
+    "def_attr_count": 6,
+    "md_param_count": 10,
+    "constraint_count": 47,
+    "constraint_confidence_breakdown": {
+      "high": 0,
+      "medium": 12,
+      "low": 35
+    },
+    "constraint_source_breakdown": {
+      "markdown_table": 0,
+      "html_table": 18,
+      "freetext": 29
+    },
+    "constraint_likely_count": 34
+  }
+}

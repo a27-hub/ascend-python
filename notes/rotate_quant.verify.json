@@ -1,0 +1,26 @@
+{
+  "op_name": "rotate_quant",
+  "yaml": null,
+  "cpp": null,
+  "meta": null,
+  "derivatives": null,
+  "mismatches": [
+    {
+      "check": "yaml",
+      "error": "Operator 'rotate_quant' not found in op_plugin_functions.yaml"
+    },
+    {
+      "check": "cpp",
+      "error": "C++ file not found for 'rotate_quant' in /home/skill_lxy_02/op-plugin/op_plugin/ops/opapi (may be a gen_opapi operator)",
+      "severity": "warning"
+    },
+    {
+      "check": "meta",
+      "error": "Meta registration not found for 'rotate_quant' in _meta_registrations.py"
+    }
+  ],
+  "passed": false,
+  "known_inconsistent": false,
+  "warning_count": 1,
+  "known_count": 0
+}

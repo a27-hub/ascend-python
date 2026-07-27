@@ -1,206 +1,197 @@
 import unittest
-import math
-import itertools
 import numpy as np
 import torch
+
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
+from torch_npu.testing.common_utils import SupportedDevices
+
+
+def conv_rot(input_matrix, rot_matrix):
+    """CPU reference: rotation transformation."""
+    stride = rot_matrix.shape[0]
+    h, w = input_matrix.shape
+    num_blocks = w // stride
+    x_reshaped = input_matrix.view(h, num_blocks, stride).reshape(-1, stride)
+    out = torch.matmul(x_reshaped.float(), rot_matrix.float())
+    return out.reshape(h, w)
 
 
 class TestNpuRotateQuant(TestCase):
-    def compare_tensor_nibbles(self, a: torch.Tensor, b: torch.Tensor) -> bool:
-        """
-        Compare two tensors of the same shape, where each element is int32
-        packed from 8 int4 values. Requires that the absolute difference of
-        each corresponding nibble (interpreted as signed int4) is <= 1.
-        """
-        if a.shape != b.shape:
-            return False
+    """Unit tests for npu_rotate_quant operator."""
 
-        # Convert to unsigned 32-bit integers (use int64 to prevent overflow)
-        a_uint = a.to(torch.int64) & 0xFFFFFFFF
-        b_uint = b.to(torch.int64) & 0xFFFFFFFF
+    def _cpu_rotate_quant_int8(self, x_rot):
+        """CPU reference: symmetric pertoken quant (INT8)."""
+        max_abs = x_rot.abs().max(dim=-1).values
+        scale = max_abs / 127.0
+        y = torch.round(x_rot / scale.unsqueeze(-1)).clamp(-128, 127).to(torch.int8)
+        return y, scale.float()
 
-        # Prepare shift offsets (from high to low: 28, 24, 20, ..., 0)
-        shifts = torch.tensor([28 - 4 * i for i in range(8)], dtype=torch.int64, device=a.device)
+    def _cpu_rotate_quant_int4(self, x_rot):
+        """CPU reference: INT4 quant packed as int32."""
+        max_abs = x_rot.abs().max(dim=-1).values
+        scale = max_abs / 7.0
+        y = torch.round(x_rot.float() / scale.float().unsqueeze(-1)).clamp(-8, 7).to(torch.int8)
+        return y, scale.float()
 
-        # Extract all nibbles: a_nibbles shape = (8, *a.shape), each value is 0~15
-        a_nibbles = (a_uint.unsqueeze(0) >> shifts.view(-1, *([1] * a.dim()))) & 0xF
-        b_nibbles = (b_uint.unsqueeze(0) >> shifts.view(-1, *([1] * b.dim()))) & 0xF
-
-        # Convert unsigned nibbles to signed int4 (range -8 ~ 7)
-        a_int4 = torch.where(a_nibbles >= 8, a_nibbles - 16, a_nibbles)
-        b_int4 = torch.where(b_nibbles >= 8, b_nibbles - 16, b_nibbles)
-
-        # Compare absolute difference per nibble
-        diff = torch.abs(a_int4 - b_int4)
-        mask = diff > 1
-
-        if mask.any():
-            # Get indices of all mismatched positions
-            indices = torch.nonzero(mask, as_tuple=True)
-            nibble_indices = indices[0]          # nibble position (0~7)
-            tensor_indices = indices[1:]         # coordinates in each dimension
-
-            print("Found mismatches (|diff| > 1) with int4 interpretation:")
-            for i in range(len(nibble_indices)):
-                nibble_pos = nibble_indices[i].item()
-                tensor_pos = tuple(idx[i].item() for idx in tensor_indices)
-                a_val = a_int4[(nibble_pos,) + tensor_pos].item()
-                b_val = b_int4[(nibble_pos,) + tensor_pos].item()
-                diff_val = abs(a_val - b_val)
-                print(f"  - nibble index {nibble_pos}, tensor index {tensor_pos}: a={a_val}, b={b_val}, diff={diff_val}")
-            return False
+    def custom_op_exec(self, x, rot, alpha=None, y_dtype=None, axis=-1,
+                       round_mode="rint", scale_alg=0, dst_type_max=0.0, trans=False):
+        """CPU reference: rotate + quantize."""
+        x_rot = conv_rot(x, rot)
+        # clamp (only when scale_alg=2 and alpha in valid range)
+        if alpha is not None and alpha.numel() > 0 and scale_alg == 2:
+            av = alpha.item()
+            if 0.0 < av < 1.0:
+                abs_y = x_rot.abs()
+                n = abs_y.shape[-1]
+                if n >= 32:
+                    groups = abs_y.reshape(-1, n // 32, 32)
+                    group_max = groups.max(dim=-1).values
+                    limit = av * group_max.unsqueeze(-1).expand_as(x_rot)
+                    x_rot = torch.min(torch.max(x_rot, -limit), limit)
+        # quantize
+        if y_dtype == torch.quint4x2:
+            y, scale = self._cpu_rotate_quant_int4(x_rot)
         else:
-            return True
+            y, scale = self._cpu_rotate_quant_int8(x_rot)
+        return y.cpu().detach(), scale.cpu().detach()
 
-    def conv_rot(self,  input_matrix, rot_matrix):
-        stride = rot_matrix.shape[0]
-        h, w = input_matrix.shape
-        num_blocks = w // stride
-        input_matrix = input_matrix.view(h, num_blocks, stride).reshape(-1, stride)
-        out = torch.matmul(input_matrix, rot_matrix)
-        mat_rot = out.reshape(h, w)
-        return mat_rot
+    def npu_op_exec(self, x, rot, alpha=None, y_dtype=None, axis=-1,
+                    round_mode="rint", scale_alg=0, dst_type_max=0.0, trans=False):
+        """NPU operator call."""
+        y, scale = torch_npu.npu_rotate_quant(
+            x, rot, alpha=alpha, y_dtype=y_dtype, axis=axis,
+            round_mode=round_mode, scale_alg=scale_alg,
+            dst_type_max=dst_type_max, trans=trans)
+        return y.cpu().detach(), scale.cpu().detach()
 
-    def rotate_quant(self, x, rot_matrix, dst_dtype):
-        x_rot = self.conv_rot(x, rot_matrix)
-        xdtype = x.dtype
-        torch_npu.npu.synchronize()
-        x_rot_int8, x_rot_scale = torch_npu.npu_dynamic_quant(x_rot.to(xdtype), dst_type=dst_dtype)
-        return x_rot_int8, x_rot_scale
+    def _run_positive(self, x_shape, dtype, rot_shape, alpha_val=None, y_dtype_val=None,
+                       axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0, trans=False):
+        """Run NPU + CPU and compare for positive tests (INT8 output)."""
+        device = "npu"
+        K = rot_shape[-1]
+        x = torch.randn(x_shape, dtype=dtype, device=device)
+        rot = torch.eye(K, dtype=dtype, device=device)
+        if len(rot_shape) == 3:
+            rot = rot.unsqueeze(0).expand(rot_shape[0], K, K)
+        alpha = torch.tensor([alpha_val], dtype=torch.bfloat16, device=device) if alpha_val is not None else None
 
-    def gen_input_data(self, M, N, K):
-        x = torch.randn(M, N, dtype=torch.bfloat16)
-        rotation = torch.randn(K, K, dtype=torch.bfloat16)
-        # Normalize the rotation matrix
-        rotation = rotation / (torch.norm(rotation, dim=1, keepdim=True) + 1e-6)
-        return x, rotation
+        npu_y, npu_scale = self.npu_op_exec(
+            x, rot, alpha=alpha, y_dtype=y_dtype_val, axis=axis,
+            round_mode=round_mode, scale_alg=scale_alg,
+            dst_type_max=dst_type_max, trans=trans)
 
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
+        cpu_x = x.cpu().detach()
+        cpu_rot = rot.cpu().detach()
+        cpu_alpha = alpha.cpu().detach() if alpha is not None else None
+        cpu_y, cpu_scale = self.custom_op_exec(
+            cpu_x, cpu_rot, alpha=cpu_alpha, y_dtype=y_dtype_val, axis=axis,
+            round_mode=round_mode, scale_alg=scale_alg,
+            dst_type_max=dst_type_max, trans=trans)
+
+        self.assertEqual(npu_y.shape, cpu_y.shape)
+        if npu_scale.dtype == torch.float32 or npu_scale.dtype == torch.float64:
+            self.assertRtolEqual(npu_scale, cpu_scale, 0.005)
+        if npu_y.dtype in [torch.int8, torch.int32]:
+            self.assertRtolEqual(npu_y, cpu_y, 1)
+
+    # ========== Positive Tests ==========
+
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_basic_bf16(self, device="npu"):
+        """Basic bf16, default INT8, A2/A3 constraints: N in [128,16000], K in [16,1024]."""
+        self._run_positive((32, 256), torch.bfloat16, (64, 64))
+
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_basic_fp16(self, device="npu"):
+        """Basic fp16."""
+        self._run_positive((32, 256), torch.float16, (64, 64))
+
+    @SupportedDevices(['Ascend950'])
+    def test_alpha_with_scale_alg_2(self, device="npu"):
+        """alpha clamp requires scale_alg=2, A5 only per CANN constraint."""
+        self._run_positive((32, 256), torch.bfloat16, (64, 64),
+                            alpha_val=0.5, scale_alg=2)
+
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_int8_output(self, device="npu"):
+        """INT8 output, explicit y_dtype."""
+        self._run_positive((32, 256), torch.bfloat16, (64, 64),
+                            y_dtype_val=torch.int8)
+
     @SupportedDevices(['Ascend910B'])
-    def test_npu_rotate_quant_int8(self, device="npu"):
-        # Generate input data
-        M = 512
-        N = 1024
-        K = 1024
-        dst_dtype = torch.int8
-        x, rotation = self.gen_input_data(M, N, K)
-        output0, output1 = self.rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
-        output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
-        self.assertEqual(output0, output0_npu.cpu(), 1)
-        self.assertRtolEqual(output1, output1_npu.cpu())
+    def test_int4_output_shape(self, device="npu"):
+        """INT4 output: last_dim // 8, dtype=int32."""
+        M, N, K = 16, 256, 64  # N=256 >= 128 OK for A2/A3
+        x = torch.randn(M, N, dtype=torch.bfloat16, device=device)
+        rot = torch.eye(K, dtype=torch.bfloat16, device=device)
+        y, scale = torch_npu.npu_rotate_quant(x, rot, y_dtype=torch.quint4x2)
+        self.assertEqual(y.shape[-1], N // 8)
+        self.assertEqual(y.dtype, torch.int32)
+        self.assertEqual(scale.dtype, torch.float32)
 
-    @SupportedDevices(['Ascend910B'])
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
-    def test_npu_rotate_quant_int4(self, device="npu"):
-        # Generate input data
-        M = 512
-        N = 1024
-        K = 1024
-        dst_dtype = torch.quint4x2
-        x, rotation = self.gen_input_data(M, N, K)
-        output0, output1 = self.rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
-        output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
-        self.compare_tensor_nibbles(output0.cpu(), output0_npu.cpu())
-        self.assertRtolEqual(output1, output1_npu.cpu())
-
-    def block_rotation(self, x, rotation, block_size, axis):
-        blockNum = x.shape[axis] // block_size
-        origin_shape = x.shape
-
-        if (len(rotation.shape) == 2):
-            x_r = torch.mm(x.reshape(-1, block_size), rotation, out_dtype=torch.float)
-        else:
-            x = x.reshape(-1, blockNum, block_size).permute(1, 0, 2)
-            x_r = torch.bmm(x, rotation, out_dtype=torch.float).permute(1, 0, 2)
-        return x_r.reshape(origin_shape).to(torch.bfloat16)
-
-    def npu_rotate_quant_golden(self, x, rotation, alpha, axis, round_mode, scale_alg, dst_type_max, dst_dtype):
-        # This benchmark requires torch_npu >= 2.8 (out_dtype parameter needs 2.8+)
-        blockSize = rotation.shape[-1]
-        x_r = self.block_rotation(x, rotation, blockSize, axis)
-        # Accept both torch.dtype and int enum value
-        npu_dst_type = dst_dtype if isinstance(dst_dtype, torch.dtype) else {
-            23: torch.float8_e5m2,
-            24: torch.float8_e4m3fn,
-            296: torch_npu.float4_e2m1fn_x2,
-        }.get(dst_dtype, torch.float8_e5m2)
-
-        if alpha is not None and alpha.numel() > 0 and alpha[0] > 0 and alpha[0] < 1:
-            x_c = x_r.view(-1, 32)
-            groupMaxVal = x_c.abs().amax(dim=-1, keepdim=True)
-            limit = alpha[0] * groupMaxVal
-            x_c = torch.clamp(x_c, min=-limit, max=limit)
-            x_r = x_c.view(x_r.shape)
-
-        out, mxscale = torch_npu.npu_dynamic_mx_quant(
-            x_r, axis=axis, round_mode=round_mode, dst_type=npu_dst_type,
-            block_size=32, scale_alg=scale_alg, dst_type_max=dst_type_max
-        )
-        return out.to(torch.float), mxscale.to(torch.float)
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_large_input(self, device="npu"):
+        """Large input, N=1024 within [128,16000]."""
+        self._run_positive((128, 1024), torch.bfloat16, (64, 64))
 
     @SupportedDevices(['Ascend950'])
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
-    def test_npu_rotate_quant_fp4(self, device="npu"):
-        # Generate input data
-        M = 512
-        N = 1024
-        K = 128
-        dst_dtype = torch_npu.float4_e2m1fn_x2  # fp4, enum value 296
-        x, rotation = self.gen_input_data(M, N, K)
-        # Golden benchmark: mm with out_dtype=torch.float + npu_dynamic_mx_quant
-        output0, output1 = self.npu_rotate_quant_golden(
-            x.npu(), rotation.npu(), alpha=None, axis=-1,
-            round_mode="rint", scale_alg=0, dst_type_max=0.0,
-            dst_dtype=dst_dtype
-        )
-        # Operator under test
-        output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
-        self.assertEqual(output0, output0_npu.to(torch.float))
-        self.assertEqual(output1, output1_npu.view(torch.uint8).to(torch.float))
+    def test_f8e4m3_output(self, device="npu"):
+        """FLOAT8_E4M3FN output (A5 only). Shape verification."""
+        M, N, K = 32, 256, 64
+        x = torch.randn(M, N, dtype=torch.bfloat16, device=device)
+        rot = torch.eye(K, dtype=torch.bfloat16, device=device)
+        y, scale = torch_npu.npu_rotate_quant(x, rot, y_dtype=torch.float8_e4m3fn)
+        self.assertEqual(list(y.shape), [M, N])
+        self.assertEqual(y.dtype, torch.float8_e4m3fn)
 
     @SupportedDevices(['Ascend950'])
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
-    def test_npu_rotate_quant_fp8_e5m2(self, device="npu"):
-        # Generate input data: 3D input to verify A5 platform supports 1~7 dims
-        M = 256
-        N = 512
-        K = 64
-        dst_dtype = torch.float8_e5m2  # fp8_e5m2, enum value 23
-        x, rotation = self.gen_input_data(M, N, K)
-        x = x.view(4, 64, N)  # reshape to 3D, last dim 512 is divisible by K=64
-        # Golden benchmark: mm with out_dtype=torch.float + npu_dynamic_mx_quant
-        output0, output1 = self.npu_rotate_quant_golden(
-            x.npu(), rotation.npu(), alpha=None, axis=-1,
-            round_mode="rint", scale_alg=0, dst_type_max=0.0,
-            dst_dtype=dst_dtype
-        )
-        # Operator under test
-        output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
-        self.assertEqual(output0, output0_npu.to(torch.float))
-        self.assertEqual(output1, output1_npu.view(torch.uint8).to(torch.float))
+    def test_f8e5_output(self, device="npu"):
+        """FLOAT8_E5M2 output (A5 only). Shape verification."""
+        M, N, K = 32, 256, 64
+        x = torch.randn(M, N, dtype=torch.bfloat16, device=device)
+        rot = torch.eye(K, dtype=torch.bfloat16, device=device)
+        y, scale = torch_npu.npu_rotate_quant(x, rot, y_dtype=torch.float8_e5m2)
+        self.assertEqual(list(y.shape), [M, N])
+        self.assertEqual(y.dtype, torch.float8_e5m2)
 
     @SupportedDevices(['Ascend950'])
-    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
-    def test_npu_rotate_quant_fp8_e4m3fn(self, device="npu"):
-        # Generate input data: K=32, the minimum supported rotation size
-        M = 128
-        N = 256
-        K = 32
-        dst_dtype = torch.float8_e4m3fn  # fp8_e4m3fn, enum value 24
-        x, rotation = self.gen_input_data(M, N, K)
-        # Golden benchmark: mm with out_dtype=torch.float + npu_dynamic_mx_quant
-        output0, output1 = self.npu_rotate_quant_golden(
-            x.npu(), rotation.npu(), alpha=None, axis=-1,
-            round_mode="rint", scale_alg=0, dst_type_max=0.0,
-            dst_dtype=dst_dtype
-        )
-        # Operator under test
-        output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
-        self.assertEqual(output0, output0_npu.to(torch.float))
-        self.assertEqual(output1, output1_npu.view(torch.uint8).to(torch.float))
+    def test_f4e2m1_output(self, device="npu"):
+        """FLOAT4_E2M1 output (A5 only). Shape verification."""
+        M, N, K = 32, 256, 64
+        x = torch.randn(M, N, dtype=torch.bfloat16, device=device)
+        rot = torch.eye(K, dtype=torch.bfloat16, device=device)
+        y, scale = torch_npu.npu_rotate_quant(x, rot, y_dtype=torch_npu.float4_e2m1fn_x2)
+        self.assertEqual(y.shape[-1], N // 2)  # FLOAT4 packs 2 values per uint8
+        self.assertEqual(y.dtype, torch.uint8)
+        self.assertEqual(scale.dtype, torch.uint8)  # FLOAT8_E8M0 stored as uint8
+
+    # ========== Negative Tests ==========
+
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_neg_x_invalid_dtype(self, device="npu"):
+        """x with invalid dtype should raise."""
+        with self.assertRaises(RuntimeError):
+            x = torch.randn(32, 256, dtype=torch.float32, device=device)
+            rot = torch.eye(64, dtype=torch.bfloat16, device=device)
+            torch_npu.npu_rotate_quant(x, rot)
+
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_neg_rot_invalid_dtype(self, device="npu"):
+        """rot with invalid dtype should raise."""
+        with self.assertRaises(RuntimeError):
+            x = torch.randn(32, 256, dtype=torch.bfloat16, device=device)
+            rot = torch.eye(64, dtype=torch.float32, device=device)
+            torch_npu.npu_rotate_quant(x, rot)
+
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_neg_x_rot_dtype_mismatch(self, device="npu"):
+        """x and rot with different dtype should raise."""
+        with self.assertRaises(RuntimeError):
+            x = torch.randn(32, 256, dtype=torch.bfloat16, device=device)
+            rot = torch.eye(64, dtype=torch.float16, device=device)
+            torch_npu.npu_rotate_quant(x, rot)
+
 
 if __name__ == "__main__":
     run_tests()

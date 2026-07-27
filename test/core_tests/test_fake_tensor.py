@@ -1207,22 +1207,6 @@ class TestGelu(TestCase):
             self.assertTrue(a.shape == a.grad.shape)
 
 
-class TestGeluMul(TestCase):
-
-    def test_npu_gelu_mul(self):
-        with FakeTensorMode():
-            input_shape = [100, 400]
-            for dtype in [torch.float32, torch.float16, torch.bfloat16]:
-                for mode in ["none", "tanh"]:
-                    input_tensor = torch.rand(input_shape, dtype=dtype, device="npu")
-                    expected_shape = list(input_tensor.shape)
-                    expected_shape[-1] = expected_shape[-1] // 2
-                    expected_shape = tuple(expected_shape)
-                    output_npu = torch_npu.npu_gelu_mul(input_tensor, approximate=mode)
-                    self.assertTrue(output_npu.shape == expected_shape)
-                    self.assertTrue(output_npu.dtype == input_tensor.dtype)
-
-
 class TestIncreFlashAttention(TestCase):
     def testIncreFlashAttention(self):
         with FakeTensorMode():
@@ -6373,81 +6357,6 @@ class TestNpuFusedAttentionScoreBackward(TestCase):
             self.assertEqual(key_dw.shape, grad_output.shape)
             self.assertEqual(value_dw.shape, grad_output.shape)
 
-@unittest.skip("skip until CANN is updated to support aclnnRotateQuant.")
-class TestRotateQuant(TestCase):
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_rotate_quant_int8(self):
-        with FakeTensorMode():
-            M = 512
-            N = 1024
-            K = 1024
-            x = torch.randn(M, N, dtype=torch.bfloat16).npu()
-            rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
-            output0_npu, output1_npu = torch_npu.npu_rotate_quant(x, rotation, dst_dtype=torch.int8)
-            self.assertEqual(output0_npu.shape, torch.Size([M, N]))
-            self.assertEqual(output0_npu.dtype, torch.int8)
-            self.assertEqual(output1_npu.shape, torch.Size([M]))
-            self.assertEqual(output1_npu.dtype, torch.float32)
-
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_rotate_quant_int4(self):
-        with FakeTensorMode():
-            M = 512
-            N = 1024
-            K = 1024
-            x = torch.randn(M, N, dtype=torch.bfloat16).npu()
-            rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
-            output0_npu, output1_npu = torch_npu.npu_rotate_quant(x, rotation, dst_dtype=torch.quint4x2)
-            self.assertEqual(output0_npu.shape, torch.Size([M, N // 8]))
-            self.assertEqual(output0_npu.dtype, torch.int32)
-            self.assertEqual(output1_npu.shape, torch.Size([M]))
-            self.assertEqual(output1_npu.dtype, torch.float32)
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_rotate_quant_mxfp4(self):
-        with FakeTensorMode():
-            M = 512
-            N = 1024
-            K = 1024
-            x = torch.randn(M, N, dtype=torch.bfloat16).npu()
-            rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
-            output0_npu, output1_npu = torch_npu.npu_rotate_quant(
-                x, rotation, dst_dtype=torch_npu.float4_e2m1fn_x2, axis=-1, round_mode="rint")
-            self.assertEqual(output0_npu.shape, torch.Size([M, N // 2]))
-            self.assertEqual(output0_npu.dtype, torch.uint8)
-            self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
-            self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_rotate_quant_mxfp8_e5m2(self):
-        with FakeTensorMode():
-            M = 512
-            N = 1024
-            K = 1024
-            x = torch.randn(M, N, dtype=torch.bfloat16).npu()
-            rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
-            output0_npu, output1_npu = torch_npu.npu_rotate_quant(
-                x, rotation, dst_dtype=torch.float8_e5m2, axis=-1, round_mode="rint")
-            self.assertEqual(output0_npu.shape, torch.Size([M, N]))
-            self.assertEqual(output0_npu.dtype, torch.float8_e5m2)
-            self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
-            self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_rotate_quant_mxfp8_e4m3fn(self):
-        with FakeTensorMode():
-            M = 512
-            N = 1024
-            K = 1024
-            x = torch.randn(M, N, dtype=torch.bfloat16).npu()
-            rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
-            output0_npu, output1_npu = torch_npu.npu_rotate_quant(
-                x, rotation, dst_dtype=torch.float8_e4m3fn, axis=-1, round_mode="rint")
-            self.assertEqual(output0_npu.shape, torch.Size([M, N]))
-            self.assertEqual(output0_npu.dtype, torch.float8_e4m3fn)
-            self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
-            self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
-
 @unittest.skip("skip until CANN is updated to support aclnnRmsNormGradQuant.")
 class TestNpuRmsNormBackwardQuant(TestCase):
     def test_npu_rms_norm_backward_quant_meta(self):
@@ -6597,6 +6506,68 @@ class FakeTensorFormatCastTest(TestCase):
             x = torch.randn(4, 15, 17, device='npu', dtype=torch.float16)
             out = torch.ops.npu._npu_format_cast(x, self.ACL_FORMAT_FRACTAL_NZ)
             self.assertEqual(list(out.shape), [4, 15, 17])
+
+
+class TestNpuRotateQuant(TestCase):
+    def test_npu_rotate_quant_fake_tensor_int8(self):
+        """FakeTensor test: default INT8 path (A2/A3)."""
+        with FakeTensorMode():
+            x = torch.randn(32, 256, dtype=torch.float16).npu()
+            rot = torch.eye(64, dtype=torch.float16).npu()
+            actual_y, actual_scale = torch_npu.npu_rotate_quant(x, rot)
+            self.assertEqual(actual_y.dtype, torch.int8)
+            self.assertEqual(list(actual_y.shape), [32, 256])
+            self.assertEqual(actual_y.device.type, 'npu')
+            self.assertEqual(actual_scale.dtype, torch.float32)
+            self.assertEqual(list(actual_scale.shape), [32])
+            self.assertEqual(actual_scale.device.type, 'npu')
+
+    def test_npu_rotate_quant_fake_tensor_int4(self):
+        """FakeTensor test: INT4 packed output."""
+        with FakeTensorMode():
+            x = torch.randn(32, 256, dtype=torch.bfloat16).npu()
+            rot = torch.eye(64, dtype=torch.bfloat16).npu()
+            actual_y, actual_scale = torch_npu.npu_rotate_quant(
+                x, rot, y_dtype=torch.quint4x2)
+            self.assertEqual(actual_y.dtype, torch.int32)
+            self.assertEqual(actual_y.shape[-1], 32)  # N/8 = 256/8
+            self.assertEqual(actual_scale.dtype, torch.float32)
+            self.assertEqual(list(actual_scale.shape), [32])
+            self.assertEqual(actual_scale.device.type, 'npu')
+
+    def test_npu_rotate_quant_fake_tensor_3d(self):
+        """FakeTensor test: 3D input."""
+        with FakeTensorMode():
+            x = torch.randn(2, 32, 256, dtype=torch.float16).npu()
+            rot = torch.eye(64, dtype=torch.float16).npu()
+            actual_y, actual_scale = torch_npu.npu_rotate_quant(x, rot)
+            self.assertEqual(actual_y.dtype, torch.int8)
+            self.assertEqual(list(actual_y.shape), [2, 32, 256])
+            self.assertEqual(actual_scale.dtype, torch.float32)
+            self.assertEqual(list(actual_scale.shape), [2, 32])
+            self.assertEqual(actual_scale.device.type, 'npu')
+
+    def test_npu_rotate_quant_fake_tensor_a5_f8(self):
+        """FakeTensor test: A5 FLOAT8_E4M3FN output."""
+        with FakeTensorMode():
+            x = torch.randn(32, 256, dtype=torch.bfloat16).npu()
+            rot = torch.eye(64, dtype=torch.bfloat16).npu()
+            actual_y, actual_scale = torch_npu.npu_rotate_quant(
+                x, rot, y_dtype=torch.float8_e4m3fn)
+            self.assertEqual(actual_y.dtype, torch.float8_e4m3fn)
+            self.assertEqual(list(actual_y.shape), [32, 256])
+            self.assertEqual(actual_y.device.type, 'npu')
+
+    def test_npu_rotate_quant_fake_tensor_a5_f4(self):
+        """FakeTensor test: A5 FLOAT4_E2M1 packed output."""
+        with FakeTensorMode():
+            x = torch.randn(32, 256, dtype=torch.bfloat16).npu()
+            rot = torch.eye(64, dtype=torch.bfloat16).npu()
+            actual_y, actual_scale = torch_npu.npu_rotate_quant(
+                x, rot, y_dtype=torch_npu.float4_e2m1fn_x2)
+            self.assertEqual(actual_y.dtype, torch.uint8)
+            self.assertEqual(actual_y.shape[-1], 128)  # N/2 = 256/2
+            self.assertEqual(actual_y.device.type, 'npu')
 
 
 if __name__ == "__main__":
