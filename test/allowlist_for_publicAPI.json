@@ -225,7 +225,8 @@
       "npu_chunk_gated_delta_rule",
       "npu_rotate_quant",
       "npu_mhc_pre_backward",
-      "npu_quant_max"
+      "npu_quant_max",
+      "npu_swi_glu_quant_v2"
     ]
   }
 

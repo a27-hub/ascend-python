@@ -11619,6 +11619,81 @@ out = torch_npu.npu_group_norm_swish(input, num_groups, weight, bias, eps=eps, s
 )
 
 _add_torch_npu_docstr(
+    "npu_swi_glu_quant_v2",
+    """
+功能描述:
+-   在 SwiGlu 激活后添加 quant 操作，支持 MoE/非MoE场景及 int8/int4 量化输出。
+计算公式:
+-   动态量化: Act = SwiGlu(x) = Swish(A)*B; Y_tmp = Act * smooth_scales; scale = dstTypeScale/row_max(abs(Y_tmp)); Y = Cast(Mul(Y_tmp, scale))。int8 时 dstTypeScale=127，int4 时 dstTypeScale=7。
+-   静态量化: Y_tmp = Act * smooth_scales + offsets; Y = Cast(Y_tmp)。
+-   activate_left=True 对前半部分A做Swish，False 对后半部分B做Swish。
+
+接口原型:
+torch_npu.npu_swi_glu_quant_v2(x, *, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode="dynamic", group_list_type=0, dst_type=2) -> (Tensor, Tensor)
+
+参数说明:
+x: Tensor类型, 必选参数, 输入待处理数据, 数据类型支持float16/bfloat16/float32, 数据格式支持ND, 不支持非连续Tensor.
+*: 位置与关键字参数分隔符.
+smooth_scales: Tensor类型, 可选参数, 量化的smooth_scales, 不支持空Tensor, shape支持[G,N]或[G,](G为group_index分组数,N为x最后一维/2), 数据类型支持float32, 默认None.
+offsets: Tensor类型, 可选参数, 动态量化不生效(传空), 静态量化数据类型支持float32, per_channel shape[G,N], per_tensor shape[G,]需与smooth_scales一致, 默认None.
+group_index: Tensor类型, 可选参数, MoE分组group_index, shape[G,], 元素非递减且最大值与G均不超过x除最后一维外维度之积, 数据类型支持int32, None表示非MoE, 默认None.
+activate_left: bool类型, 可选参数, 左矩阵是否参与SwiGlu运算, 默认False.
+quant_mode: str类型, 可选参数, 量化模式, 支持"dynamic"/"static"(static仅per_tensor/per_channel), 默认"dynamic".
+group_list_type: int类型, 可选参数, group_index解析模式, 0=cumsum累计边界/1=count每组元素数, 默认0.
+dst_type: int类型, 可选参数, 量化输出类型(ge约定), 2=int8/29=int4(int4为2-per-byte打包,dtype uint8,物理末维=x末维/4), 默认2.
+
+输出说明:
+y: Tensor类型, 量化输出张量. shape除末维为x末维/2外其余同x; int4(dst_type=29)因2-per-byte打包物理末维为x末维/4. dtype: int8(dst_type=2)或uint8(dst_type=29).
+scale: Tensor类型, 量化scale张量. shape为x去掉末维的形状, dtype为float32.
+
+约束说明:
+该接口支持推理、训练场景下使用.
+该接口支持图模式.
+x维数需大于1维; x末维需为2的倍数且不超过8192; dst_type=29时x末维需为4的倍数.
+quant_mode仅支持dynamic/static; group_list_type仅支持0/1; dst_type仅支持2/29.
+
+支持的PyTorch版本:
+PyTorch 2.10.0
+
+支持的型号:
+Ascend 950PR/950DT, Atlas A3 训练/推理系列, Atlas A2 训练/推理系列
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+x = torch.randn((3, 32), dtype=torch.float16, device='npu')
+smooth_scales = torch.ones((2, 16), dtype=torch.float32, device='npu')
+group_index = torch.tensor([1, 3], dtype=torch.int32, device='npu')
+y, scale = torch_npu.npu_swi_glu_quant_v2(x, smooth_scales=smooth_scales, group_index=group_index, dst_type=2)
+print(y.shape, scale.shape)
+
+图模式调用
+import torch
+import torch_npu
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+config = CompilerConfig()
+npu_backend = tng.get_npu_backend(compiler_config=config)
+
+x = torch.randn((3, 32), dtype=torch.float16, device='npu')
+smooth_scales = torch.ones((2, 16), dtype=torch.float32, device='npu')
+group_index = torch.tensor([1, 3], dtype=torch.int32, device='npu')
+
+class Model(torch.nn.Module):
+    def forward(self, x, smooth_scales, group_index):
+        return torch_npu.npu_swi_glu_quant_v2(x, smooth_scales=smooth_scales, group_index=group_index, dst_type=2)
+
+model = Model().npu()
+model = torch.compile(model, backend=npu_backend, dynamic=False)
+y, scale = model(x, smooth_scales, group_index)
+print(y, scale)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_dequant_swiglu_quant",
     """
 功能描述:

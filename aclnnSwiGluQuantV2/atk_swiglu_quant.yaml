@@ -1,0 +1,130 @@
+api: pytorch
+api_type: function_npu_swiglu_quant
+version: v2.7
+name: torch_npu.npu_swiglu_quant
+generate: ascend_generator_npu_swiglu_quant
+standard:
+  acc: single_bm
+
+
+inputs:
+  - name: x
+    type: tensor
+    required: true
+    dtypes:
+      values: [ fp32 ,fp16, bf16 ]
+    ranges:
+      valid:
+        values: [ [-2, 2]]
+      invalid:
+        values: [ [-2, 2]]
+    shapes:
+      dim_numbers:
+        values: [ 2,3,4,5,6,7,8 ]
+      max_length: 1024000
+
+  - name: smooth_scales
+    type: tensor
+    required: true
+    dtypes:
+      values: [ fp32 ]
+    ranges:
+      valid:
+        values: [ [-2, 2]]
+      invalid:
+        values: [ [-2, 2]]
+    shapes:
+      dim_numbers:
+        values: [ 2]
+      dim_values:
+        values: [ 8, 16, 21, 256, 320, 384, 7168, 7392, [ 8,1024 ]]
+      max_length: 67108864
+
+  - name: offsets_t
+    type: tensor
+    required: true
+    dtypes:
+      values: [ fp32 ]
+    ranges:
+      valid:
+        values: [ [-2, 2]]
+      invalid:
+        values: [ [-2, 2]]
+    shapes:
+      dim_numbers:
+        values: [ 2]
+      dim_values:
+        values: [  8, 16, 21, 256, 320, 384, 7168, 7392, [ 8,1024 ]]
+      max_length: 67108864
+
+  - name: group_index_t
+    type: tensor
+    required: true
+    dtypes:
+      values: [ int32 ]
+    shapes:
+      dim_numbers:
+        values: [ 1 ]
+      dim_values:
+        values: [ [ 1,1024 ] ]
+      max_length: 67108864
+    ranges:
+      valid:
+        values: [ [ 0,10 ] ]
+      invalid:
+        values: [ [ 0,10 ] ]
+
+  - name: activate_left
+    type: attr
+    required: true
+    dtypes:
+      values: [ bool ]
+    ranges:
+      valid:
+        values: [ true,  false]
+      invalid :
+        values: [ true,  false]
+
+  - name: quantModeOptional
+    type: attr
+    required: true
+    dtypes:
+      values: [ string ]
+    ranges:
+      valid:
+        values: [ "static","dynamic" ]
+      invalid :
+        values: [ "static","dynamic" ]
+
+  - name: staticMode
+    type: attr
+    required: false
+    dtypes:
+      values: [ non_param ]
+    ranges:
+      valid:
+        values: [ "per_tensor","per_channel" ]
+      invalid :
+        values: [ "per_tensor","per_channel" ]
+
+  - name: groupListType
+    type: attr
+    required: true
+    dtypes:
+      values: [ int ]
+    ranges:
+      valid:
+        values: [ 0 , 1]
+      invalid :
+        values: [ 0 , 1]
+  
+  - name: dstType
+    type: attr
+    required: true
+    dtypes:
+      values: [ int ]
+    ranges:
+      valid:
+        values: [ 2 , 29]
+      invalid :
+        values: [ 2 , 29]

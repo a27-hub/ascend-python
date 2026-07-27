@@ -6599,5 +6599,40 @@ class FakeTensorFormatCastTest(TestCase):
             self.assertEqual(list(out.shape), [4, 15, 17])
 
 
+class TestNpuSwiGluQuantV2(TestCase):
+    def test_npu_swi_glu_quant_v2_meta(self):
+        # int8 (dst_type=2): y shape last = x_last/2 (int8), dtype int8; scale = x[:-1], float32
+        with FakeTensorMode():
+            x = torch.randn([32, 256], dtype=torch.float16, device='npu')
+            y, scale = torch_npu.npu_swi_glu_quant_v2(
+                x, smooth_scales=torch.randn(128, dtype=torch.float32, device='npu'), dst_type=2)
+            self.assertEqual(list(y.shape), [32, 128])
+            self.assertEqual(y.dtype, torch.int8)
+            self.assertEqual(list(scale.shape), [32])
+            self.assertEqual(scale.dtype, torch.float32)
+
+    def test_npu_swi_glu_quant_v2_int4_meta(self):
+        # int4 (dst_type=29): y dtype uint8 (2-per-byte), physical last = x_last/4; scale = x[:-1], float32
+        with FakeTensorMode():
+            x = torch.randn([32, 256], dtype=torch.bfloat16, device='npu')
+            y, scale = torch_npu.npu_swi_glu_quant_v2(
+                x, smooth_scales=torch.randn(128, dtype=torch.float32, device='npu'), dst_type=29)
+            self.assertEqual(list(y.shape), [32, 64])
+            self.assertEqual(y.dtype, torch.uint8)
+            self.assertEqual(list(scale.shape), [32])
+            self.assertEqual(scale.dtype, torch.float32)
+
+    def test_npu_swi_glu_quant_v2_multi_dtype(self):
+        with FakeTensorMode():
+            for dt in [torch.float16, torch.bfloat16, torch.float32]:
+                x = torch.randn([2, 32, 256], dtype=dt, device='npu')
+                y, scale = torch_npu.npu_swi_glu_quant_v2(
+                    x, smooth_scales=torch.randn(128, dtype=torch.float32, device='npu'), dst_type=2)
+                self.assertEqual(list(y.shape), [2, 32, 128])
+                self.assertEqual(y.dtype, torch.int8)
+                self.assertEqual(list(scale.shape), [2, 32])
+                self.assertEqual(scale.dtype, torch.float32)
+
+
 if __name__ == "__main__":
     run_tests()

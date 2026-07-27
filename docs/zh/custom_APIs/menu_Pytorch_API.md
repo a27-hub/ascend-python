@@ -141,6 +141,7 @@
         -   [torch_npu.npu_moe_gating_top_k](./torch_npu/torch_npu-npu_moe_gating_top_k.md)
         -   [torch_npu.npu_moe_init_routing_v2](./torch_npu/torch_npu-npu_moe_init_routing_v2.md)
         -   [torch_npu.npu_dequant_swiglu_quant](./torch_npu/torch_npu-npu_dequant_swiglu_quant.md)
+        -   [torch_npu.npu_swi_glu_quant_v2](./torch_npu/torch_npu-npu_swi_glu_quant_v2.md)
         -   [torch_npu.npu_kv_rmsnorm_rope_cache](./torch_npu/torch_npu-npu_kv_rmsnorm_rope_cache.md)
         -   [torch_npu.npu_interleave_rope](./torch_npu/torch_npu-npu_interleave_rope.md)
         -   [torch_npu.npu_mrope](./torch_npu/torch_npu-npu_mrope.md)

@@ -5071,5 +5071,11 @@
   },
   "func: npu_renorm_backward(Tensor grad, Tensor self, Scalar p, int dim, Scalar maxnorm) -> Tensor": {
     "version": ["v2.7", "newest"]
+  },
+  "func: npu_swi_glu_quant_v2(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, str quant_mode=\"dynamic\", int group_list_type=0, int dst_type=2) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "op_api: torch_npu.npu_swi_glu_quant_v2(*args, **kwargs)": {
+    "version": ["all_version"]
   }
 }
