@@ -193,3 +193,7 @@ TAGS
 
 # bazel symlinks
 bazel-*
+
+# local run artifacts
+build.log
+npu_gelu_mul_pta_atk/

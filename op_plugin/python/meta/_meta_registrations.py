@@ -2527,6 +2527,42 @@ def npu_gelu_backward_meta(grad, self, *, approximate="none"):
     return torch.empty_like(self)
 
 
+@impl(m, "npu_gelu_mul")
+def npu_gelu_mul_meta(input, *, approximate="none"):
+    # NOTE: sync with C++ npu_gelu_mul TORCH_CHECKs and npu_gelu_mul_output_size (last dim halved)
+    torch._check(
+        approximate == "none" or approximate == "tanh",
+        lambda: f"approximate must be 'none' or 'tanh', but got '{approximate}'." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        input.dtype in (torch.bfloat16, torch.float16, torch.float),
+        lambda: f"input dtype must be BFLOAT16, FLOAT16 or FLOAT, but got {input.dtype}." + ops_error(ErrCode.TYPE),
+    )
+    torch._check(
+        input.dim() >= 2 and input.dim() <= 8,
+        lambda: f"input must be 2D-8D, but got {input.dim()}D." + ops_error(ErrCode.VALUE),
+    )
+    last_dim = input.size(-1)
+    torch._check(
+        last_dim % 2 == 0,
+        lambda: f"the last dimension of input must be even, but got {last_dim}." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        last_dim <= 1024,
+        lambda: f"the last dimension of input must be <= 1024, but got {last_dim}." + ops_error(ErrCode.VALUE),
+    )
+    other_dims_prod = 1
+    for i in range(input.dim() - 1):
+        other_dims_prod = other_dims_prod * input.size(i)
+    torch._check(
+        other_dims_prod <= 200000,
+        lambda: f"the product of the input dimensions except the last one must be <= 200000, but got {other_dims_prod}." + ops_error(ErrCode.VALUE),
+    )
+    output_shape = list(input.size())
+    output_shape[-1] = output_shape[-1] // 2
+    return torch.empty(output_shape, dtype=input.dtype, device='meta')
+
+
 @impl(m, "npu_silu")
 def npu_silu_meta(self):
     return torch.empty_like(self)
