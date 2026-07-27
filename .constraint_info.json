@@ -1,0 +1,45 @@
+[
+  {
+    "param": "input",
+    "optional": false,
+    "supports_empty": true,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": [
+      2,
+      8
+    ],
+    "valid_dtypes": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "mutex": []
+  },
+  {
+    "param": "approximate_optional",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "out",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": [
+      2,
+      8
+    ],
+    "valid_dtypes": [],
+    "mutex": []
+  }
+]

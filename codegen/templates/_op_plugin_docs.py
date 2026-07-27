@@ -15823,3 +15823,32 @@ input与weight数据类型必须一致。softmax为None时logits_max和sum_exp_l
     ...     grad, input_tensor, weight_tensor, target_mask, masked_target, softmax=softmax)
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_gelu_mul",
+    """
+torch_npu.npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor
+功能描述
+将输入Tensor按最后一个维度切分为左右两部分x1和x2，对左半部分x1做GELU激活后，再与右半部分x2相乘。
+
+参数说明
+input (Tensor) - 必选参数，待进行npu_gelu_mul计算的入参，数据类型支持float16、bfloat16、float32，数据格式支持ND，支持非连续的Tensor。维度支持范围为2-8维，最后一维必须为偶数且小于等于1024，其他维度的乘积需小于等于200000。支持空Tensor。
+* - 位置参数与关键字参数的分隔符。
+approximate (str，可选，默认值为'none') - GELU计算使用的激活函数模式，可配置为none或者tanh。none代表使用erf模式，tanh代表使用tanh模式。
+
+输出说明
+返回1个Tensor：输出张量，数据类型与input保持一致，输出shape在input其他维度上保持一致，最后一维的值为input最后一维值的二分之一。
+
+约束说明
+该接口支持推理、训练场景下使用。该接口支持图模式。input的数据类型仅支持float16、bfloat16、float32。input的维度范围为2-8维，最后一维必须为偶数且小于等于1024。input除最后一维外，其他维度的乘积需小于等于200000。approximate仅支持none或tanh。
+
+示例
+    >>> import torch
+    >>> import torch_npu
+    >>> input_tensor = torch.randn(2, 8, dtype=torch.float16).npu()
+    >>> output = torch_npu.npu_gelu_mul(input_tensor, approximate='tanh')
+    >>> output.shape
+    torch.Size([2, 4])
+"""
+)

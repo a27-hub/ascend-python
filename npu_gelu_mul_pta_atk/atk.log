@@ -1,0 +1,15 @@
+[2026-07-27 10:33:44,175] [INFO] [MainProcess] [2791743] [decorators.py:34]  gdd_geluandmul_fatreluandmul is already registered, repeated registration will coverage it, new module path is generator_npu_gelu_mul
+[2026-07-27 10:34:27,820] [INFO] [MainProcess] [2794095] [decorators.py:34]  gdd_geluandmul_fatreluandmul is already registered, repeated registration will coverage it, new module path is generator_npu_gelu_mul
+[2026-07-27 10:34:33,507] [INFO] [MainProcess] [2794095] [decorators.py:34]  Extra cases with amount: {'scalar': 0, 'lower_border': 0, 'upper_border': 0, 'empty': 0, 'infnan': 0}
+[2026-07-27 10:34:33,561] [INFO] [MainProcess] [2794095] [decorators.py:34]  Generate Case cost time: 5.7136 s
+[2026-07-27 10:34:33,561] [INFO] [MainProcess] [2794095] [decorators.py:34]  Case Metrics: {'oversize_case': False, 'shape_intervals': [[507812500, 0.0], [50781250, 0.04047619047619048], [5078125, 0.2561904761904762]], 'case_repetition_rate': 0.024285714285714285, 'result': False}
+[2026-07-27 10:34:33,957] [INFO] [MainProcess] [2794095] [decorators.py:34]  save case json file: result/atk_gelu_mul/json/all_atk_gelu_mul.json
+[2026-07-27 10:34:37,396] [INFO] [MainProcess] [2794095] [decorators.py:34]  save case excel file: result/atk_gelu_mul/excel/atk_gelu_mul20260727103427.xlsx
+[2026-07-27 10:34:37,498] [INFO] [MainProcess] [2794095] [decorators.py:34]  save case csv file: result/atk_gelu_mul/csv/atk_gelu_mul.csv
+[2026-07-27 10:43:09,608] [INFO] [MainProcess] [2820795] [decorators.py:34]  gdd_geluandmul_fatreluandmul is already registered, repeated registration will coverage it, new module path is generator_npu_gelu_mul
+[2026-07-27 10:43:15,312] [INFO] [MainProcess] [2820795] [decorators.py:34]  Extra cases with amount: {'scalar': 0, 'lower_border': 0, 'upper_border': 0, 'empty': 0, 'infnan': 0}
+[2026-07-27 10:43:15,366] [INFO] [MainProcess] [2820795] [decorators.py:34]  Generate Case cost time: 5.7281 s
+[2026-07-27 10:43:15,366] [INFO] [MainProcess] [2820795] [decorators.py:34]  Case Metrics: {'oversize_case': False, 'shape_intervals': [[507812500, 0.0], [50781250, 0.04047619047619048], [5078125, 0.2561904761904762]], 'case_repetition_rate': 0.024285714285714285, 'result': False}
+[2026-07-27 10:43:16,078] [INFO] [MainProcess] [2820795] [decorators.py:34]  save case json file: result/atk_gelu_mul/json/all_atk_gelu_mul.json
+[2026-07-27 10:43:19,317] [INFO] [MainProcess] [2820795] [decorators.py:34]  save case excel file: result/atk_gelu_mul/excel/atk_gelu_mul20260727104309.xlsx
+[2026-07-27 10:43:19,436] [INFO] [MainProcess] [2820795] [decorators.py:34]  save case csv file: result/atk_gelu_mul/csv/atk_gelu_mul.csv

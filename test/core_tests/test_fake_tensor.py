@@ -6508,5 +6508,25 @@ class FakeTensorFormatCastTest(TestCase):
             self.assertEqual(list(out.shape), [4, 15, 17])
 
 
+class TestNpuGeluMul(TestCase):
+
+    def test_npu_gelu_mul_meta(self):
+        # out shape = input shape with last dim halved; dtype == input dtype
+        with FakeTensorMode():
+            x = torch.randn(4, 32, 128, device='npu', dtype=torch.float16)
+            result = torch_npu.npu_gelu_mul(x)
+            self.assertEqual(list(result.shape), [4, 32, 64])  # last dim 128 // 2
+            self.assertEqual(result.dtype, torch.float16)  # same as x.dtype
+            self.assertEqual(result.device.type, "npu")
+
+    def test_npu_gelu_mul_multi_dtype(self):
+        with FakeTensorMode():
+            for dtype in (torch.float16, torch.bfloat16, torch.float32):
+                x = torch.randn(2, 64, device='npu', dtype=dtype)
+                result = torch_npu.npu_gelu_mul(x, approximate="tanh")
+                self.assertEqual(list(result.shape), [2, 32])  # last dim 64 // 2
+                self.assertEqual(result.dtype, dtype)  # same as x.dtype
+
+
 if __name__ == "__main__":
     run_tests()

@@ -5652,6 +5652,10 @@ custom:
         approximate_ptr: 'const_cast<char *>(approximate_str.c_str())'
       exec: aclnnGeluBackwardV2, grad_output, self, approximate_ptr, out
 
+  - func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
+
   - func: npu_sim_exponential_(Tensor(a!) self, float lambd=1, *, Generator? generator=None) -> Tensor(a!)
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]

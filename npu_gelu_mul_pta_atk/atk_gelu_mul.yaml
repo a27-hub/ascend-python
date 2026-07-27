@@ -1,0 +1,37 @@
+api: pytorch
+api_type: function_active_gelu
+version: v2.6.0
+name: torch.nn.GELU
+generate: gdd_geluandmul_fatreluandmul
+standard:
+  acc:
+    single_bm:
+      type: high_performance
+  perf: not_key
+inputs:
+  - name: input
+    type: tensor
+    required: true
+    dtypes:
+      values: [fp16, bf16, fp32]
+    shapes:
+      dim_numbers:
+        values: [2, 3, 4, 5, 6, 7, 8]
+      max_length: 67108864
+    ranges:
+      valid:
+        values: [[-100, 100]]
+      invalid:
+        values: [['-inf'], ['inf'], ['nan']]
+
+  - name: approximateOptional
+    type: attr
+    required: false
+    dtypes:
+      values: [string]
+    ranges:
+      valid:
+        values: ["none", "tanh"]
+      # 注意：invalid 的值与 valid 完全一样，这在实际测试中可能没有意义，请确认是否为笔误
+      invalid:
+        values: ["none", "tanh"]
