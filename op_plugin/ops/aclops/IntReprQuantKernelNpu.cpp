@@ -18,32 +18,34 @@
 namespace acl_op {
 #if VERSION_BETWEEN(V2R2, VERSION_NEWEST)
 namespace {
-at::Tensor int_repr_quantized_nocheck(const at::Tensor& self)
-{
-    auto dtype = self.scalar_type();
-    auto output_dtype = at::kInt;
-    if (dtype == at::ScalarType::QInt8) {
-        output_dtype = at::kChar;
-    } else if (dtype == at::ScalarType::QUInt8) {
-        output_dtype = at::kByte;
-    }
-    at::Tensor tmp = at::empty(
-        self.sizes(),
-        self.options().dtype(output_dtype).memory_format(self.suggest_memory_format()));
-    at::Tensor result = at::empty(
-        self.sizes(),
-        self.options().dtype(output_dtype).memory_format(self.suggest_memory_format()));
+at::Tensor int_repr_quantized_nocheck(const at::Tensor& self) {
+  auto dtype = self.scalar_type();
+  auto output_dtype = at::kInt;
+  if (dtype == at::ScalarType::QInt8) {
+    output_dtype = at::kChar;
+  } else if (dtype == at::ScalarType::QUInt8) {
+    output_dtype = at::kByte;
+  }
+  at::Tensor tmp = at::empty(
+      self.sizes(),
+      self.options()
+          .dtype(output_dtype)
+          .memory_format(self.suggest_memory_format()));
+  at::Tensor result = at::empty(
+      self.sizes(),
+      self.options()
+          .dtype(output_dtype)
+          .memory_format(self.suggest_memory_format()));
 
-    at_npu::native::NPUNativeFunctions::set_(tmp, self);
-    result = at_npu::native::custom_ops::_npu_dtype_cast(tmp, output_dtype);
+  at_npu::native::NPUNativeFunctions::set_(tmp, self);
+  result = at_npu::native::custom_ops::_npu_dtype_cast(tmp, output_dtype);
 
-    return result;
+  return result;
 }
 } // namespace
 
-at::Tensor int_repr(const at::Tensor& self)
-{
-    return int_repr_quantized_nocheck(self);
+at::Tensor int_repr(const at::Tensor& self) {
+  return int_repr_quantized_nocheck(self);
 }
 #endif
 } // namespace acl_op

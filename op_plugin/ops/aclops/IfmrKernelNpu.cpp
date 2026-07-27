@@ -31,8 +31,10 @@ std::tuple<at::Tensor, at::Tensor> npu_ifmr(
     const double search_end,
     const double search_step,
     const bool with_offset) {
-  at::Tensor scale = npu_preparation::apply_tensor_with_format(data_min, ACL_FORMAT_NCHW);
-  at::Tensor offset = npu_preparation::apply_tensor_with_format(data_min, ACL_FORMAT_NCHW);
+  at::Tensor scale =
+      npu_preparation::apply_tensor_with_format(data_min, ACL_FORMAT_NCHW);
+  at::Tensor offset =
+      npu_preparation::apply_tensor_with_format(data_min, ACL_FORMAT_NCHW);
 
   std::vector<float> tmp;
   tmp.push_back(static_cast<float>(search_start));

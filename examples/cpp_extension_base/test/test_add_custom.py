@@ -13,7 +13,7 @@ class TestCustomAdd(TestCase):
         x_cpu = torch.randn([8, 2048], dtype=torch.float16)
         y_cpu = torch.randn([8, 2048], dtype=torch.float16)
         x_npu, y_npu = copy.deepcopy(x_cpu).npu(), copy.deepcopy(y_cpu).npu()
-       
+
         # calculate on npu
         output = torch.ops.cpp_extension_base.add_custom(x_npu, y_npu)
 
@@ -22,7 +22,7 @@ class TestCustomAdd(TestCase):
 
         # compare result
         self.assertRtolEqual(output, cpuout)
-  
+
     def test_add_custom_ops(self):
         x_cpu = torch.randn([8, 2048], dtype=torch.float16)
         y_cpu = torch.randn([8, 2048], dtype=torch.float16)
@@ -30,7 +30,7 @@ class TestCustomAdd(TestCase):
 
         # calculate on npu
         output = cpp_extension_base.ops.add_custom(x_npu, y_npu)
-   
+
         # calculate on cpu
         cpuout = torch.add(x_cpu, y_cpu)
 

@@ -27,21 +27,21 @@ at::Tensor& gather_out_npu_nocheck(
     at::Tensor& result,
     const at::Tensor& self,
     int64_t dim,
-    const at::Tensor& index)
-{
-    if (self.scalar_type() == at::kLong) {
-        TORCH_NPU_WARN_ONCE("The oprator of gather is executed, Currently High Accuracy but Low Performance OP"
+    const at::Tensor& index) {
+  if (self.scalar_type() == at::kLong) {
+    TORCH_NPU_WARN_ONCE(
+        "The oprator of gather is executed, Currently High Accuracy but Low Performance OP"
         "with 64-bit has been used,Please Do Some Cast at Python Functions with 32-bit for Better Performance!");
-    }
+  }
 
-    at_npu::native::OpCommand cmd;
-    cmd.Name("GatherElements")
-        .Input(self)
-        .Input(index)
-        .Attr("dim", dim)
-        .Output(result)
-        .Run();
-    return result;
+  at_npu::native::OpCommand cmd;
+  cmd.Name("GatherElements")
+      .Input(self)
+      .Input(index)
+      .Attr("dim", dim)
+      .Output(result)
+      .Run();
+  return result;
 }
 } // namespace
 
@@ -50,23 +50,18 @@ at::Tensor& gather_out(
     int64_t dim,
     const at::Tensor& index,
     bool sparse_grad,
-    at::Tensor& out)
-{
-    auto output_size = index.sizes();
-    npu_preparation::CheckOut(
-        {self},
-        out,
-        self,
-        output_size);
+    at::Tensor& out) {
+  auto output_size = index.sizes();
+  npu_preparation::CheckOut({self}, out, self, output_size);
 
-    if (!npu_utils::check_match(&out)) {
-        at::Tensor contiguous_out = npu_utils::format_contiguous(out);
-        gather_out_npu_nocheck(contiguous_out, self, dim, index);
-        npu_utils::format_fresh_view(out, contiguous_out);
-    } else {
-        gather_out_npu_nocheck(out, self, dim, index);
-    }
-    return out;
+  if (!npu_utils::check_match(&out)) {
+    at::Tensor contiguous_out = npu_utils::format_contiguous(out);
+    gather_out_npu_nocheck(contiguous_out, self, dim, index);
+    npu_utils::format_fresh_view(out, contiguous_out);
+  } else {
+    gather_out_npu_nocheck(out, self, dim, index);
+  }
+  return out;
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
@@ -75,9 +70,9 @@ at::Tensor& gather_out(
     at::Dimname dim,
     const at::Tensor& index,
     bool sparse_grad,
-    at::Tensor& out)
-{
-    return acl_op::gather_out(self, dimname_to_position(self, dim), index, sparse_grad, out);
+    at::Tensor& out) {
+  return acl_op::gather_out(
+      self, dimname_to_position(self, dim), index, sparse_grad, out);
 }
 #endif
 
@@ -85,11 +80,10 @@ at::Tensor gather(
     const at::Tensor& self,
     int64_t dim,
     const at::Tensor& index,
-    bool sparse_grad)
-{
-    at::Tensor result = npu_preparation::apply_tensor(self, index.sizes());
-    gather_out_npu_nocheck(result, self, dim, index);
-    return result;
+    bool sparse_grad) {
+  at::Tensor result = npu_preparation::apply_tensor(self, index.sizes());
+  gather_out_npu_nocheck(result, self, dim, index);
+  return result;
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
@@ -97,9 +91,9 @@ at::Tensor gather(
     const at::Tensor& self,
     at::Dimname dim,
     const at::Tensor& index,
-    bool sparse_grad)
-{
-    return acl_op::gather(self, dimname_to_position(self, dim), index, sparse_grad);
+    bool sparse_grad) {
+  return acl_op::gather(
+      self, dimname_to_position(self, dim), index, sparse_grad);
 }
 #endif
-}  // op_plugin
+} // namespace acl_op
