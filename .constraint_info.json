@@ -1,0 +1,121 @@
+[
+  {
+    "param": "x(acl_tensor*)",
+    "optional": false,
+    "supports_empty": true,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": [
+      1,
+      7
+    ],
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "rotation(acl_tensor*)",
+    "optional": false,
+    "supports_empty": true,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "alpha(acl_tensor*)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": 1,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "axis(int64_t)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "round_mode(char*)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "scale_alg(int64_t)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "dst_type_max(double)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "trans(bool)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": null,
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "y_out(acl_tensor*)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": [
+      1,
+      7
+    ],
+    "valid_dtypes": [],
+    "mutex": []
+  },
+  {
+    "param": "scale_out(acl_tensor*)",
+    "optional": false,
+    "supports_empty": false,
+    "dtype_link": null,
+    "shape_link": null,
+    "rank": null,
+    "dim_range": [
+      1,
+      8
+    ],
+    "valid_dtypes": [],
+    "mutex": []
+  }
+]

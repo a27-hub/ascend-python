@@ -160,6 +160,7 @@
       "npu_group_quant",
       "npu_dynamic_quant",
       "npu_dynamic_quant_asymmetric",
+      "npu_rotate_quant",
       "npu_scatter_nd_update_",
       "npu_scatter_pa_kv_cache",
       "npu_stride_copy",

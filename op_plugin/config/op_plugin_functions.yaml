@@ -6102,6 +6102,10 @@ custom:
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
 
+  - func: npu_rotate_quant(Tensor x, Tensor rot, *, Tensor? alpha=None, int? y_dtype=None, int axis=-1, str round_mode="rint", int scale_alg=0, float dst_type_max=0.0, bool trans=False) -> (Tensor, Tensor)
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
+
   - func: npu_fast_gelu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version

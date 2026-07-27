@@ -5166,6 +5166,96 @@ def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index
     return (output, scale, offset)
 
 
+@impl(m, "npu_rotate_quant")
+def npu_rotate_quant_meta(x, rot, *, alpha=None, y_dtype=None, axis=-1, round_mode="rint",
+                           scale_alg=0, dst_type_max=0.0, trans=False):
+    torch._check(
+        x.dim() >= 1 and x.dim() <= 7,
+        lambda: f"x dim should be in range [1, 7], but got {x.dim()}D" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        rot.dim() >= 2 and rot.dim() <= 3,
+        lambda: f"rot dim should be in range [2, 3], but got {rot.dim()}D" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        x.dtype == rot.dtype,
+        lambda: f"x and rot must have same dtype, but got {x.dtype} and {rot.dtype}" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        x.dtype == torch.float16 or x.dtype == torch.bfloat16,
+        lambda: f"x dtype must be BFLOAT16 or FLOAT16, but got {x.dtype}" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        rot.size(rot.dim() - 1) == rot.size(rot.dim() - 2),
+        lambda: f"rot last two dims must be square" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        axis == -1 or axis == x.dim() - 1,
+        lambda: f"axis only supports -1 or D-1, but got {axis}" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        round_mode in ("rint", "round", "floor"),
+        lambda: f"round_mode must be one of rint/round/floor, but got {round_mode}" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        scale_alg >= 0 and scale_alg <= 2,
+        lambda: f"scale_alg must be 0, 1, or 2, but got {scale_alg}" + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        not trans,
+        lambda: f"trans only supports false currently" + ops_error(ErrCode.PARAM),
+    )
+
+    # Determine output dtype
+    if y_dtype is None:
+        y_dtype = 1  # Default INT8
+
+    # Determine if this is A5 (MX quant) or A2/A3 (symmetric quant) mode
+    is_a5 = (y_dtype in (291, 292, 296, 297))
+
+    # y shape: same as x, with packing for FLOAT4
+    y_shape = list(x.shape)
+    if y_dtype == 296 or y_dtype == 297:
+        # FLOAT4_E2M1/E1M2: packed 2 values per uint8
+        torch._check(
+            y_shape[-1] % 2 == 0,
+            lambda: f"For FLOAT4 output, x last dim must be divisible by 2, but got {y_shape[-1]}" +
+                     ops_error(ErrCode.PARAM),
+        )
+        y_shape[-1] = y_shape[-1] // 2
+        output_dtype = torch.uint8
+    elif y_dtype == 285:
+        # INT4 packed: 8 values per int32
+        torch._check(
+            y_shape[-1] % 8 == 0,
+            lambda: f"For INT4 output, x last dim must be divisible by 8, but got {y_shape[-1]}" +
+                     ops_error(ErrCode.PARAM),
+        )
+        y_shape[-1] = y_shape[-1] // 8
+        output_dtype = torch.int32
+    elif y_dtype == 1:
+        output_dtype = torch.int8
+    else:
+        # FLOAT8 or other: use dtype map
+        output_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(y_dtype, torch.int8)
+
+    y = x.new_empty(y_shape, dtype=output_dtype)
+
+    # scale shape
+    if is_a5:
+        # A5 scale: (*, CeilDiv(N, 64), 2), dtype uint8 (FLOAT8_E8M0)
+        scale_shape = list(x.shape)
+        n = scale_shape[-1]
+        scale_shape[-1] = int(math.ceil(n / 64))
+        scale_shape.append(2)
+        scale = x.new_empty(scale_shape, dtype=torch.uint8)
+    else:
+        # A2/A3 scale: (M,), dtype float32
+        scale = x.new_empty([x.size(0)], dtype=torch.float32)
+
+    return (y, scale)
+
+
 @impl(m, "npu_dynamic_mx_quant")
 def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=296, block_size=32,
                          scale_alg=0, dst_type_max=0.0, max_low_bound=0.0):
