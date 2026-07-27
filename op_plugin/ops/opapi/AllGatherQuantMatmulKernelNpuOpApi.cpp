@@ -22,8 +22,8 @@ const int32_t MIN_SUPPORT_WORLD_SIZE = 2;
 const int32_t MAX_SUPPORT_WORLD_SIZE = 64;
 static const int FP4_IN_INT8 = 2;
 using npu_preparation = at_npu::native::OpPreparation;
-static c10::SmallVector<int64_t, op_infer::SIZE> get_y_size(const at::Tensor& x1, const at::Tensor& x2,
-                                                            int64_t world_size, int64_t gather_index, bool x2_trans, bool is_mxfp4)
+static c10::SmallVector<int64_t, op_infer::SIZE> get_y_size(
+    const at::Tensor& x1, const at::Tensor& x2, int64_t world_size, int64_t gather_index, bool x2_trans, bool is_mxfp4)
 {
     auto out_x = gather_index == 0 ? x1.size(0) * world_size : x1.size(0);
     auto out_y = x2.size(1);
@@ -55,10 +55,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(const at:
     int64_t stream_mode = 1;
     std::string hcom_str = std::string(hcom);
     char *hcom_value = const_cast<char *>(hcom_str.c_str());
-    const at::Tensor& bias_value = bias.value_or(at::Tensor());
-    const at::Tensor& x1_scale_value = x1_scale.value_or(at::Tensor());
-    const at::Tensor& x2_scale_value = x2_scale.value_or(at::Tensor());
-    const at::Tensor& quant_scale_value = quant_scale.value_or(at::Tensor());
+    const at::Tensor &bias_value = bias.value_or(at::Tensor());
+    const at::Tensor &x1_scale_value = x1_scale.value_or(at::Tensor());
+    const at::Tensor &x2_scale_value = x2_scale.value_or(at::Tensor());
+    const at::Tensor &quant_scale_value = quant_scale.value_or(at::Tensor());
     bool is_mxfp4 = false;
     if ((x1_dtype.has_value() && x2_dtype.has_value()) &&
         (x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
