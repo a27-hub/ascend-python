@@ -17,7 +17,7 @@ $$
 
 ## 函数原型<a name="zh-cn_topic_0000001742717129_section45077510411"></a>
 
-```
+```python
 torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=None, padding_mask=None, atten_mask=None, scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout="", sink=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
 ```
 
