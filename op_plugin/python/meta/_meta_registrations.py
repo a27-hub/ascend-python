@@ -5861,19 +5861,6 @@ def rope_quant_kvcache(x, cos, k_cache, v_cache, size_splits, kv_output=False):
             k_cache, v_cache)
 
 
-@impl(m, "npu_swiglu_quant")
-def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode=0,
-                          group_list_type=0, dst_type=torch.int8):
-    y_size = []
-    scale_size = []
-    for i in range(x.dim() - 1):
-        y_size.append(x.size(i))
-        scale_size.append(x.size(i))
-    y_size.append(math.floor(x.size(x.dim() - 1) / 2))
-    return (torch.empty(y_size, dtype=dst_type, device=x.device),
-            torch.empty(scale_size, dtype=torch.float32, device=x.device))
-
-
 @impl(m, "npu_swiglu_group_quant")
 def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, scale=None,
                                 dst_type=296, quant_mode=0, block_size=0, round_scale=False,
@@ -7310,3 +7297,38 @@ def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype
     else:
         out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
     return (out_weight, out_weight_scale, out_weight_offset, out_bias)
+
+
+@impl(m, "npu_swi_glu_quant_v2")
+def npu_swi_glu_quant_v2_meta(x, *, smooth_scales=None, offsets=None, group_index=None,
+                              activate_left=False, quant_mode="dynamic", group_list_type=0, dst_type=2):
+    # dst_type follows the ge::DataType convention: 2 -> INT8, 29 -> INT4.
+    # Shape/dtype rules must mirror SwiGluQuantV2OpApi.cpp exactly (graph-mode gate).
+    DST_TYPE_INT8 = 2
+    DST_TYPE_INT4 = 29
+    dim_num = x.dim()
+    x_last_dim = x.size(dim_num - 1)
+
+    torch._check(dim_num > 1, lambda: "x dim should larger than 1" + ops_error(ErrCode.PARAM))
+    torch._check(x_last_dim % 2 == 0, lambda: "x last dim should be even" + ops_error(ErrCode.PARAM))
+    torch._check(x_last_dim <= 8192, lambda: "x last dim should not exceed 8192" + ops_error(ErrCode.PARAM))
+    torch._check(dst_type == DST_TYPE_INT8 or dst_type == DST_TYPE_INT4,
+                 lambda: f"dst_type only support 2 or 29, but got {dst_type}" + ops_error(ErrCode.PARAM))
+    if dst_type == DST_TYPE_INT4:
+        torch._check(x_last_dim % 4 == 0,
+                     lambda: "x last dim should be multiple of 4 when dst_type is int4" + ops_error(ErrCode.PARAM))
+
+    # INT8: last dim = x_last/2, dtype int8.
+    # INT4: 2-per-byte packed in uint8, last dim = x_last/4.
+    y_shape = list(x.shape)
+    if dst_type == DST_TYPE_INT4:
+        y_shape[dim_num - 1] = x_last_dim // 4
+        y_dtype = torch.uint8
+    else:
+        y_shape[dim_num - 1] = x_last_dim // 2
+        y_dtype = torch.int8
+
+    scale_shape = list(x.shape)[:-1]
+
+    return (x.new_empty(y_shape, dtype=y_dtype),
+            x.new_empty(scale_shape, dtype=torch.float32))

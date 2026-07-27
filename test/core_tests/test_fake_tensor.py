@@ -6599,5 +6599,31 @@ class FakeTensorFormatCastTest(TestCase):
             self.assertEqual(list(out.shape), [4, 15, 17])
 
 
+class TestSwiGluQuantV2(TestCase):
+    def test_npu_swi_glu_quant_v2_meta_int8(self):
+        with FakeTensorMode():
+            x = torch.randn([2, 32, 256], dtype=torch.float32, device='npu')
+            smooth_scales = torch.randn([1, 128], dtype=torch.float32, device='npu')
+            y, scale = torch_npu.npu_swi_glu_quant_v2(x, smooth_scales=smooth_scales,
+                                                      dst_type=2)  # INT8
+            # y last dim = x_last/2 = 128; scale drops last dim
+            self.assertEqual(y.shape, torch.Size([2, 32, 128]))
+            self.assertEqual(y.dtype, torch.int8)
+            self.assertEqual(scale.shape, torch.Size([2, 32]))
+            self.assertEqual(scale.dtype, torch.float32)
+
+    def test_npu_swi_glu_quant_v2_meta_int4(self):
+        with FakeTensorMode():
+            x = torch.randn([4, 64], dtype=torch.bfloat16, device='npu')
+            smooth_scales = torch.randn([1, 32], dtype=torch.float32, device='npu')
+            y, scale = torch_npu.npu_swi_glu_quant_v2(x, smooth_scales=smooth_scales,
+                                                      dst_type=29)  # INT4 (2-per-byte packed uint8)
+            # y last dim = x_last/4 = 16; scale drops last dim
+            self.assertEqual(y.shape, torch.Size([4, 16]))
+            self.assertEqual(y.dtype, torch.uint8)
+            self.assertEqual(scale.shape, torch.Size([4]))
+            self.assertEqual(scale.dtype, torch.float32)
+
+
 if __name__ == "__main__":
     run_tests()
