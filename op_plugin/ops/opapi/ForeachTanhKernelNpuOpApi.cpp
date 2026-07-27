@@ -21,79 +21,90 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_calcu_util = at_npu::native::CalcuOpUtil;
 
-void _split_and_exec_npu_cmd_tanh(at::TensorList tensors1, at::TensorList result_list, bool is_inplace)
-{
-    size_t tensor_count = tensors1.size();
-    size_t max_tensor_count = is_inplace ? 48 : 24;
+void _split_and_exec_npu_cmd_tanh(
+    at::TensorList tensors1,
+    at::TensorList result_list,
+    bool is_inplace) {
+  size_t tensor_count = tensors1.size();
+  size_t max_tensor_count = is_inplace ? 48 : 24;
 
-    if (tensor_count <= max_tensor_count) {
-        EXEC_NPU_CMD(aclnnForeachTanh, tensors1, result_list);
-        return;
-    }
-    size_t loop_time = tensor_count / max_tensor_count;
-    
-    for (size_t i = 0; i < loop_time; i++) {
-        at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
-        at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
-        EXEC_NPU_CMD(aclnnForeachTanh, temp_tensors1, temp_result);
-    }
+  if (tensor_count <= max_tensor_count) {
+    EXEC_NPU_CMD(aclnnForeachTanh, tensors1, result_list);
+    return;
+  }
+  size_t loop_time = tensor_count / max_tensor_count;
 
-    size_t remaining_count = tensor_count % max_tensor_count;
-    if (remaining_count) {
-        at::TensorList temp_tensors1(tensors1.data() + loop_time * max_tensor_count, remaining_count);
-        at::TensorList temp_result(result_list.data() + loop_time * max_tensor_count, remaining_count);
-        EXEC_NPU_CMD(aclnnForeachTanh, temp_tensors1, temp_result);
-    }
+  for (size_t i = 0; i < loop_time; i++) {
+    at::TensorList temp_tensors1(
+        tensors1.data() + i * max_tensor_count, max_tensor_count);
+    at::TensorList temp_result(
+        result_list.data() + i * max_tensor_count, max_tensor_count);
+    EXEC_NPU_CMD(aclnnForeachTanh, temp_tensors1, temp_result);
+  }
+
+  size_t remaining_count = tensor_count % max_tensor_count;
+  if (remaining_count) {
+    at::TensorList temp_tensors1(
+        tensors1.data() + loop_time * max_tensor_count, remaining_count);
+    at::TensorList temp_result(
+        result_list.data() + loop_time * max_tensor_count, remaining_count);
+    EXEC_NPU_CMD(aclnnForeachTanh, temp_tensors1, temp_result);
+  }
 }
 
-void _foreach_tanh_(const at::TensorList self)
-{
-    DO_COMPATIBILITY(aclnnForeachTanh, at::native::foreach_tensor_tanh_slow_(self));
-    static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    if (!is_support_nd_out) {
-        return at::native::foreach_tensor_tanh_slow_(self);
-    }
+void _foreach_tanh_(const at::TensorList self) {
+  DO_COMPATIBILITY(
+      aclnnForeachTanh, at::native::foreach_tensor_tanh_slow_(self));
+  static const bool is_support_nd_out =
+      (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
+       c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+      (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+  if (!is_support_nd_out) {
+    return at::native::foreach_tensor_tanh_slow_(self);
+  }
 
-    at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
-        return at::native::foreach_tensor_tanh_slow_(self);
-    }
+  at::native::check_foreach_api_restrictions(self);
+  if (!at::native::can_use_fast_route(self) ||
+      at::native::has_integral_tensor(self, true)) {
+    return at::native::foreach_tensor_tanh_slow_(self);
+  }
 
-    if (self.empty()) {
-        return;
-    }
-    auto scalar_type = self[0].scalar_type();
-    
-    _split_and_exec_npu_cmd_tanh(self, self, true);
+  if (self.empty()) {
+    return;
+  }
+  auto scalar_type = self[0].scalar_type();
+
+  _split_and_exec_npu_cmd_tanh(self, self, true);
 }
 
-std::vector<at::Tensor> _foreach_tanh(const at::TensorList self)
-{
-    DO_COMPATIBILITY(aclnnForeachTanh, at::native::foreach_tensor_tanh_slow(self));
-    static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    if (!is_support_nd_out) {
-        return at::native::foreach_tensor_tanh_slow(self);
-    }
+std::vector<at::Tensor> _foreach_tanh(const at::TensorList self) {
+  DO_COMPATIBILITY(
+      aclnnForeachTanh, at::native::foreach_tensor_tanh_slow(self));
+  static const bool is_support_nd_out =
+      (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
+       c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+      (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+  if (!is_support_nd_out) {
+    return at::native::foreach_tensor_tanh_slow(self);
+  }
 
-    at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
-        return at::native::foreach_tensor_tanh_slow(self);
-    }
-    auto scalar_type = self[0].scalar_type();
+  at::native::check_foreach_api_restrictions(self);
+  if (!at::native::can_use_fast_route(self) ||
+      at::native::has_integral_tensor(self, true)) {
+    return at::native::foreach_tensor_tanh_slow(self);
+  }
+  auto scalar_type = self[0].scalar_type();
 
-    // construct output tensorlist
-    std::vector<at::Tensor> result;
-    for (const at::Tensor &tensor : self) {
-        auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
-    }
-    at::TensorList result_ = at::TensorList(result);
+  // construct output tensorlist
+  std::vector<at::Tensor> result;
+  for (const at::Tensor& tensor : self) {
+    auto output_size = op_infer::input_same_output_size(tensor);
+    result.push_back(npu_preparation::apply_tensor_without_format(
+        output_size, tensor.options().dtype(scalar_type)));
+  }
+  at::TensorList result_ = at::TensorList(result);
 
-    _split_and_exec_npu_cmd_tanh(self, result_, false);
-    return result;
+  _split_and_exec_npu_cmd_tanh(self, result_, false);
+  return result;
 }
 } // namespace op_api

@@ -23,13 +23,14 @@ using npu_preparation = at_npu::native::OpPreparation;
 std::tuple<at::Tensor, at::Tensor> npu_gemma_rms_norm(
     const at::Tensor& self,
     const at::Tensor& gamma,
-    double epsilon)
-{
-    auto output_size = op_infer::rms_norm_npu_output_size(self, gamma);
-    at::Tensor y = npu_preparation::apply_tensor_with_format(output_size[0], self.options(), ACL_FORMAT_ND);
-    at::Tensor rstd = npu_preparation::apply_tensor_with_format(output_size[1], self.options().dtype(at::kFloat), ACL_FORMAT_ND);
-    EXEC_NPU_CMD(aclnnGemmaRmsNorm, self, gamma, epsilon, y, rstd);
-    return std::tuple<at::Tensor, at::Tensor>(y, rstd);
+    double epsilon) {
+  auto output_size = op_infer::rms_norm_npu_output_size(self, gamma);
+  at::Tensor y = npu_preparation::apply_tensor_with_format(
+      output_size[0], self.options(), ACL_FORMAT_ND);
+  at::Tensor rstd = npu_preparation::apply_tensor_with_format(
+      output_size[1], self.options().dtype(at::kFloat), ACL_FORMAT_ND);
+  EXEC_NPU_CMD(aclnnGemmaRmsNorm, self, gamma, epsilon, y, rstd);
+  return std::tuple<at::Tensor, at::Tensor>(y, rstd);
 }
 
-}
+} // namespace op_api
