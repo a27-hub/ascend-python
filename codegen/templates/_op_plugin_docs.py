@@ -3606,6 +3606,30 @@ rotate推荐使用场景
 
 
 _add_torch_npu_docstr(
+    "npu_rotate_quant",
+    """
+torch_npu.npu_rotate_quant(Tensor x, Tensor rot, *, Tensor? alpha=None, int? y_dtype=None, int axis=-1, str round_mode="rint", int scale_alg=0, float dst_type_max=0.0, bool trans=False) -> (Tensor, Tensor)
+功能描述
+对张量x进行旋转变换，然后执行可选的clamp操作，最后执行对称动态量化（INT8/INT4）或MX量化（FLOAT4/FLOAT8）。
+
+参数说明
+x (Tensor): 待旋转量化的输入张量，数据类型支持float16、bfloat16，数据格式支持ND，维度支持1-7。
+rot (Tensor): 旋转矩阵，数据类型支持float16、bfloat16，数据格式支持ND，维度支持2或3，最后两维必须是方阵(K, K)。
+alpha (Tensor): 可选参数，clamp的缩放系数，默认值为None。shape为(1,)，数据类型为bfloat16，有效取值范围(0.0, 1.0)。
+y_dtype (ScalarType): 可选参数，指定量化输出的类型，默认值为None（int8）。A2/A3支持int8、quint4x2；A5支持float8_e4m3fn、float8_e5m2、float4_e2m1fn_x2。
+axis (int): 可选参数，量化发生的轴，默认值为-1，仅支持-1或最后一维的正索引。
+round_mode (str): 可选参数，数据转换模式，默认值为"rint"，支持"rint"/"round"/"floor"。
+scale_alg (int): 可选参数，scale计算算法，默认值为0，支持0/1/2。
+dst_type_max (float): 可选参数，量化目标类型最大值，默认值为0.0。
+trans (bool): 可选参数，输出y是否转置，默认值为False，目前仅支持False。
+
+返回值说明
+y (Tensor): 量化后的输出张量。
+scale (Tensor): 量化缩放系数。
+""",
+)
+
+_add_torch_npu_docstr(
     "npu_mrope",
     """
 torch_npu.npu_mrope(Tensor positions, Tensor query, Tensor key, Tensor cos_sin_cache, int head_size, *, int[]? mrope_section, str? rotary_mode='half', str? cache_mode='default') -> (Tensor, Tensor)
