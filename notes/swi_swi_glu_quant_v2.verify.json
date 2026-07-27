@@ -1,0 +1,26 @@
+{
+  "op_name": "swi_swi_glu_quant_v2",
+  "yaml": null,
+  "cpp": null,
+  "meta": null,
+  "derivatives": null,
+  "mismatches": [
+    {
+      "check": "yaml",
+      "error": "Operator 'swi_swi_glu_quant_v2' not found in op_plugin_functions.yaml"
+    },
+    {
+      "check": "cpp",
+      "error": "Cannot parse C++ signature for 'swi_swi_glu_quant_v2' in op_plugin/ops/opapi/SwiGluQuantV2KernelNpuOpApi.cpp"
+    },
+    {
+      "check": "meta",
+      "error": "Meta registration not found for 'swi_swi_glu_quant_v2' in _meta_registrations.py"
+    }
+  ],
+  "passed": false,
+  "cpp_file": "op_plugin/ops/opapi/SwiGluQuantV2KernelNpuOpApi.cpp",
+  "known_inconsistent": false,
+  "warning_count": 0,
+  "known_count": 0
+}
