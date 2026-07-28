@@ -19,9 +19,11 @@
 
 namespace acl_op {
 
-at::Tensor gelu_backward(const at::Tensor& grad_output, const at::Tensor& self, c10::string_view approximate)
-{
-    return gelu_backward_common_nocheck(grad_output, self);
+at::Tensor gelu_backward(
+    const at::Tensor& grad_output,
+    const at::Tensor& self,
+    c10::string_view approximate) {
+  return gelu_backward_common_nocheck(grad_output, self);
 }
 
 } // namespace acl_op

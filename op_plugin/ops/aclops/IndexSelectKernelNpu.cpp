@@ -57,7 +57,8 @@ at::Tensor& index_select_out(
   if (index_tmp.ndimension() == 0) {
     index_tmp = index.unsqueeze(0);
   }
-  auto output_size = op_infer::index_select_npu_output_size(self, dim, index_tmp);
+  auto output_size =
+      op_infer::index_select_npu_output_size(self, dim, index_tmp);
   int64_t npu_format = npu_preparation::get_tensor_npu_format(self);
   if (output_size.empty()) {
     npu_format = ACL_FORMAT_ND;
@@ -67,11 +68,7 @@ at::Tensor& index_select_out(
     input = at_npu::native::custom_ops::_npu_dtype_cast(input, at::kInt);
   }
   npu_preparation::CheckOut(
-      {input, index_tmp},
-      result,
-      npu_format,
-      input.scalar_type(),
-      output_size);
+      {input, index_tmp}, result, npu_format, input.scalar_type(), output_size);
 
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -95,7 +92,8 @@ at::Tensor index_select(
   if (index_tmp.ndimension() == 0) {
     index_tmp = index.unsqueeze(0);
   }
-  auto output_size = op_infer::index_select_npu_output_size(self, dim, index_tmp);
+  auto output_size =
+      op_infer::index_select_npu_output_size(self, dim, index_tmp);
   int64_t npu_format = npu_preparation::get_tensor_npu_format(self);
   if (output_size.empty()) {
     npu_format = ACL_FORMAT_ND;
@@ -104,7 +102,8 @@ at::Tensor index_select(
   if (self.dtype() == at::kBool) {
     input = at_npu::native::custom_ops::_npu_dtype_cast(input, at::kInt);
   }
-  at::Tensor result = npu_preparation::apply_tensor_with_format(input, output_size, npu_format);
+  at::Tensor result =
+      npu_preparation::apply_tensor_with_format(input, output_size, npu_format);
   index_select_out_npu_nocheck(result, input, dim, index_tmp);
   if (self.dtype() == at::kBool) {
     result = at_npu::native::custom_ops::_npu_dtype_cast(result, at::kBool);
@@ -122,7 +121,8 @@ at::Tensor& index_select_out(
   if (index_tmp.ndimension() == 0) {
     index_tmp = index.unsqueeze(0);
   }
-  return acl_op::index_select_out(self, dimname_to_position(self, dim), index_tmp, result);
+  return acl_op::index_select_out(
+      self, dimname_to_position(self, dim), index_tmp, result);
 }
 
 at::Tensor index_select(
