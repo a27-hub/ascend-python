@@ -71,31 +71,31 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 ## 参数说明
 
-**query**(`Tensor`)：必选参数，表示Attention中的query，对应公式中的$q_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, D)$、$(T1, N1, D)$。
+- **query**(`Tensor`)：必选参数，表示Attention中的query，对应公式中的$q_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, D)$、$(T1, N1, D)$。
 
-**key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
+- **key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
 
-**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
+- **query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
 
-**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
+- **key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
 
-**weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
+- **weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
-**sparse_indices**(`Tensor`)：必选参数，表示排序后`key`和`key_index`的token序号。数据格式支持$ND$，数据类型支持`int32`。shape支持$(B, S1, N2index, topK)$、$(T1, N2index, topK)$。
+- **sparse_indices**(`Tensor`)：必选参数，表示排序后`key`和`key_index`的token序号。数据格式支持$ND$，数据类型支持`int32`。shape支持$(B, S1, N2index, topK)$、$(T1, N2index, topK)$。
 
-**softmax_max**(`Tensor`)：必选参数，表示Attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
+- **softmax_max**(`Tensor`)：必选参数，表示Attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
 
-**softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
+- **softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
 
-**scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float`。
+- **scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float`。
 
-**query_rope**(`Tensor`)：可选参数，表示MLA结构中的query的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, Dr)$、$(T1, N1, Dr)$。
+- **query_rope**(`Tensor`)：可选参数，表示MLA结构中的query的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, Dr)$、$(T1, N1, Dr)$。
 
-**key_rope**(`Tensor`)：可选参数，表示MLA结构中的key的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, Dr)$、$(T2, N2, Dr)$。
+- **key_rope**(`Tensor`)：可选参数，表示MLA结构中的key的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, Dr)$、$(T2, N2, Dr)$。
 
-**actual_seq_qlen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
+- **actual_seq_qlen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
 
-**actual_seq_klen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
+- **actual_seq_klen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
 
 **layout**(`str`)：可选参数，用于标识输入`query`的数据排布格式。当前支持$BSND$、$TND$，默认值为"BSND"。
 
