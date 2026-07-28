@@ -8,13 +8,8 @@ WORKSPACE=$4
 
 cd ${WORKSPACE}
 echo ${REMOTE_URL}
-if [[ "${REMOTE_URL}" == *torchair* ]];then
-  bash ${WORKSPACE}/cie/.ci/common/retry_command.sh "rm -rf torchair && git clone -b ${TARGET_BRANCH}  ${REMOTE_URL} torchair"
-  cd ./torchair
-else
-  bash ${WORKSPACE}/cie/.ci/common/retry_command.sh "rm -rf CODE && git clone -b ${TARGET_BRANCH}  ${REMOTE_URL} CODE"
-  cd ./CODE
-fi
+bash ${WORKSPACE}/cie/.ci/common/retry_command.sh "rm -rf CODE && git clone -b ${TARGET_BRANCH}  ${REMOTE_URL} CODE"
+cd ./CODE
 git config --global user.email "AtlasAccount@noreply.gitcode.com"
 git config --global user.name "AtlasAccount"
 if [ "${TRIGGER_TYPE}" == "MR" ];then
