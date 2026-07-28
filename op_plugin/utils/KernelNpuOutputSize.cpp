@@ -2441,4 +2441,112 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_teardown
     return output_size;
 }
 
+c10::SmallVector<int64_t, SIZE> gru_npu_output_size(const at::Tensor &input, at::TensorList params, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t hidden_size = X1.size(0) / 3;
+    int64_t output_last_dim = D * hidden_size;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+        time_step = batch_first ? input.size(1) : input.size(0);
+    }
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    if (batch_first) {
+        output_shape = {batch_size, time_step, output_last_dim};
+    } else {
+        output_shape = {time_step, batch_size, output_last_dim};
+    }
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> gru_npu_hy_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t hidden_size = X1.size(0) / 3;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+    }
+    c10::SmallVector<int64_t, SIZE> output_shape = {D * num_layers, batch_size, hidden_size};
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> gru_npu_gate_output_size(const at::Tensor &input, at::TensorList params, bool train, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    if (!train) {
+        return {};
+    }
+    const at::Tensor X1 = params[0];
+    int64_t hidden_size = X1.size(0) / 3;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+        time_step = batch_first ? input.size(1) : input.size(0);
+    }
+    c10::SmallVector<int64_t, SIZE> output_shape = {time_step, batch_size, hidden_size};
+    return output_shape;
+}
+
+// dxOut: same shape as input
+c10::SmallVector<int64_t, SIZE> gru_backward_npu_output_size(const at::Tensor &input, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    if (batch_sizes.has_value()) {
+        output_shape = {input.size(0), input.size(1)};
+    } else {
+        output_shape = input.sizes().vec();
+    }
+    return output_shape;
+}
+
+// dhPrevOut: (D * num_layers, B, H), same shape as forward hy output
+c10::SmallVector<int64_t, SIZE> gru_backward_npu_h_prev_output_size(
+    const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t hidden_size = X1.size(0) / 3;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+    }
+    c10::SmallVector<int64_t, SIZE> output_shape = {D * num_layers, batch_size, hidden_size};
+    return output_shape;
+}
+
 } // namespace op_infer
