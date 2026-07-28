@@ -5338,5 +5338,34 @@ class TestNpuDenseLightningIndexerSoftmaxLse(TestCase):
             self.assertEqual(softmax_sum.dtype, torch.float32)
 
 
+class TestDenseLightningIndexerSoftmaxLse(TestCase):
+    def test_npu_dense_lightning_indexer_softmax_lse_meta_tnd(self):
+        with FakeTensorMode():
+            # TND: query_index=(T1,Nidx1,D), key_index=(T2,Nidx2,D) -> (Nidx2, T1); dtype float32
+            q = torch.randn([128, 8, 128], dtype=torch.float16).npu()
+            k = torch.randn([256, 1, 128], dtype=torch.float16).npu()
+            w = torch.randn([128, 8], dtype=torch.float16).npu()
+            softmax_max, softmax_sum = torch_npu.npu_dense_lightning_indexer_softmax_lse(
+                q, k, w, actual_seq_qlen=[128], actual_seq_klen=[256], layout="TND", sparse_mode=3)
+            self.assertEqual(softmax_max.shape, torch.Size([1, 128]))
+            self.assertEqual(softmax_sum.shape, torch.Size([1, 128]))
+            self.assertEqual(softmax_max.dtype, torch.float32)
+            self.assertEqual(softmax_sum.dtype, torch.float32)
+            self.assertEqual(softmax_max.device.type, "npu")
+
+    def test_npu_dense_lightning_indexer_softmax_lse_meta_bsnd(self):
+        with FakeTensorMode():
+            # BSND: query_index=(B,S1,Nidx1,D), key_index=(B,S2,Nidx2,D) -> (B, Nidx2, S1); dtype float32
+            q = torch.randn([1, 128, 8, 128], dtype=torch.float16).npu()
+            k = torch.randn([1, 256, 1, 128], dtype=torch.float16).npu()
+            w = torch.randn([1, 128, 8], dtype=torch.float16).npu()
+            softmax_max, softmax_sum = torch_npu.npu_dense_lightning_indexer_softmax_lse(
+                q, k, w, layout="BSND", sparse_mode=3)
+            self.assertEqual(softmax_max.shape, torch.Size([1, 1, 128]))
+            self.assertEqual(softmax_sum.shape, torch.Size([1, 1, 128]))
+            self.assertEqual(softmax_max.dtype, torch.float32)
+            self.assertEqual(softmax_sum.dtype, torch.float32)
+
+
 if __name__ == "__main__":
     run_tests()

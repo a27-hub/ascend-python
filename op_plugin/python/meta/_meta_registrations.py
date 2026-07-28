@@ -6466,3 +6466,33 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
     scale1 = input_dummy.new_empty(scale1_shape, dtype=torch.uint8)
     scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
     return (y, scale1, scale2)
+
+
+@impl(m, "npu_dense_lightning_indexer_softmax_lse")
+def npu_dense_lightning_indexer_softmax_lse_meta(query_index, key_index, weight, *,
+                                                 actual_seq_qlen=None,
+                                                 actual_seq_klen=None,
+                                                 layout="TND", sparse_mode=3,
+                                                 pre_tokens=9223372036854775807,
+                                                 next_tokens=9223372036854775807):
+    # value constraints (mirror C++ TORCH_CHECK)
+    torch._check(
+        layout in ("BSND", "TND"),
+        lambda: "layout only supports BSND or TND, but got " + str(layout) + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        sparse_mode == 3,
+        lambda: "sparse_mode only supports 3 (rightDownCausal), but got " + str(sparse_mode)
+        + ops_error(ErrCode.PARAM),
+    )
+    # output shape (NOTE: sync with C++ dense_lightning_indexer_softmax_lse_out_size):
+    #   BSND: query_index=(B,S1,Nidx1,D), key_index=(B,S2,Nidx2,D) -> (B, Nidx2, S1)
+    #   TND:  query_index=(T1,Nidx1,D),   key_index=(T2,Nidx2,D)   -> (Nidx2, T1)
+    # output dtype is always float32
+    if layout == "BSND":
+        out_shape = [query_index.size(0), key_index.size(2), query_index.size(1)]
+    else:  # TND
+        out_shape = [key_index.size(1), query_index.size(0)]
+    softmax_max_out = query_index.new_empty(out_shape, dtype=torch.float32)
+    softmax_sum_out = query_index.new_empty(out_shape, dtype=torch.float32)
+    return (softmax_max_out, softmax_sum_out)

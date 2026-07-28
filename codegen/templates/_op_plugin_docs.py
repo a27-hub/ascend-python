@@ -15081,3 +15081,92 @@ if __name__ == "__main__":
 
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_dense_lightning_indexer_softmax_lse",
+    """
+功能描述:
+算子功能: 该接口是npu_dense_lightning_indexer_grad_kl_loss算子计算Softmax输入的一个分支算子, 计算Index Attention的Softmax过程中的最大值与累加和. 与npu_dense_lightning_indexer_grad_kl_loss配合使用, 本接口输出的softmax_max_index与softmax_sum_index作为grad_kl_loss的输入, 可优化显存占用.
+计算公式:
+res = AttentionMask(ReduceSum(W * ReLU(Q_index @ K_index^T)))
+maxIndex = max(res)
+sumIndex = ReduceSum(exp(res - maxIndex))
+其中W为weight, Q_index为query_index, K_index为key_index. maxIndex与sumIndex作为输出.
+
+接口原型:
+torch_npu.npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weight, *, actual_seq_qlen=None, actual_seq_klen=None, layout='TND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor)
+
+参数说明:
+query_index: Tensor类型, 必选参数, Lightning Indexer结构的输入query. 数据类型支持bfloat16、float16, 数据格式支持ND. shape支持(B, S1, Nidx1, D)、(T1, Nidx1, D).
+key_index: Tensor类型, 必选参数, Lightning Indexer结构的输入key. 数据类型支持bfloat16、float16, 数据格式支持ND. shape支持(B, S2, Nidx2, D)、(T2, Nidx2, D).
+weight: Tensor类型, 必选参数, Lightning Indexer的权重系数. 数据类型支持bfloat16、float16、float32, 数据格式支持ND. shape支持(B, S1, Nidx1)、(T1, Nidx1).
+*: 位置参数与关键字参数的分隔符.
+actual_seq_qlen: list[int]类型, 可选参数, TND场景时需传入, 表示query每个Batch的有效token数(多个Batch的S1累加), 数据类型支持int64, 默认值为None.
+actual_seq_klen: list[int]类型, 可选参数, TND场景时需传入, 表示key每个Batch的有效token数(多个Batch的S2累加), 数据类型支持int64, 默认值为None.
+layout: str类型, 可选参数, 标识输入的数据排布格式, 当前支持BSND、TND, 默认值为TND.
+sparse_mode: int类型, 可选参数, 表示sparse的模式, 当前仅支持模式3(rightDownCausal), 默认值为3.
+pre_tokens: int类型, 可选参数, 用于稀疏计算, 表示Attention需要和前几个token计算关联, 数据类型支持int64, 默认值为2^63-1.
+next_tokens: int类型, 可选参数, 用于稀疏计算, 表示Attention需要和后几个token计算关联, 数据类型支持int64, 默认值为2^63-1.
+
+输出说明：
+softmax_max_index: Tensor类型, 表示Index Attention softmax结果中的最大值. 数据类型支持float32. shape支持(B, Nidx2, S1)、(Nidx2, T1), 其中Nidx2与key_index的Nidx2保持一致.
+softmax_sum_index: Tensor类型, 表示Index Attention softmax结果的求和. 数据类型支持float32. shape支持(B, Nidx2, S1)、(Nidx2, T1), 其中Nidx2与key_index的Nidx2保持一致.
+
+约束说明:
+该接口支持推理、训练场景下使用.
+该接口支持图模式.
+参数query_index、key_index的数据类型应保持一致.
+参数weight不为float32时, 参数query_index、key_index、weight的数据类型应保持一致.
+规格: B取值范围1~256; S1、S2取值范围0~128K且支持不等长; Nidx1取值8/16/32/64; Nidx2取值1; D取值128; layout支持BSND/TND.
+sparse_mode当前仅支持模式3.
+
+支持的PyTorch版本
+PyTorch 2.10
+
+支持的型号:
+Ascend 950PR/Ascend 950DT, Atlas A3 训练系列产品/Atlas A3 推理系列产品, Atlas A2 训练系列产品/Atlas A2 推理系列产品
+
+调用示例:
+单算子模式调用
+TND layout场景下计算Index Attention的softmax最大值与累加和.
+import torch
+import torch_npu
+
+T1, T2, Nidx1, Nidx2, D = 128, 256, 8, 1, 128
+q_index = torch.randn(T1, Nidx1, D, dtype=torch.float16, device='npu')
+k_index = torch.randn(T2, Nidx2, D, dtype=torch.float16, device='npu')
+weight = torch.randn(T1, Nidx1, dtype=torch.float16, device='npu')
+softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(
+    q_index, k_index, weight,
+    actual_seq_qlen=[T1], actual_seq_klen=[T2],
+    layout='TND', sparse_mode=3)
+
+图模式调用
+BSND layout场景下的图模式调用.
+import torch
+import torch_npu
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+config = CompilerConfig()
+npu_backend = tng.get_npu_backend(compiler_config=config)
+
+B, S1, S2, Nidx1, Nidx2, D = 1, 128, 256, 8, 1, 128
+q_index = torch.randn(B, S1, Nidx1, D, dtype=torch.float16, device='npu')
+k_index = torch.randn(B, S2, Nidx2, D, dtype=torch.float16, device='npu')
+weight = torch.randn(B, S1, Nidx1, dtype=torch.float16, device='npu')
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, q_index, k_index, weight):
+        return torch_npu.npu_dense_lightning_indexer_softmax_lse(
+            q_index, k_index, weight, layout='BSND', sparse_mode=3)
+
+model = Model().npu()
+model = torch.compile(model, backend=npu_backend, dynamic=False)
+softmax_max_index, softmax_sum_index = model(q_index, k_index, weight)
+"""
+)
