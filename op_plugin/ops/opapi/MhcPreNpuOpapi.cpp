@@ -33,18 +33,16 @@ constexpr int64_t CUBE_USE_HF32 = 1;
 // aclnnMhcPre 依赖 CANN 9.0.0 及以上版本，此次校验避免旧版本环境出现找不到算子的兼容性问题。
 // Prefer V2 so inner_precise reaches the kernel. FP32 may fall back to V1 for compatibility.
 // Returns true when the caller should dispatch aclnnMhcPreV2.
-inline bool check_mhc_pre_supported(int64_t inner_precise)
-{
-    static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_900();
-    static const bool is_mhc_pre_available = check_aclnn_kernel_available("aclnnMhcPre");
-    static const bool is_mhc_pre_v2_available = check_aclnn_kernel_available("aclnnMhcPreV2");
-    TORCH_CHECK(
-        is_cann_ready && (is_mhc_pre_v2_available ||
-            (inner_precise == CUBE_USE_FP32 && is_mhc_pre_available)),
-        "torch_npu.npu_mhc_pre requires CANN >= 9.0.0. inner_precise=1 additionally requires aclnnMhcPreV2. "
-        "Please upgrade CANN.",
-        OPS_ERROR(ErrCode::NOT_SUPPORT));
-    return is_mhc_pre_v2_available;
+inline bool check_mhc_pre_supported(int64_t inner_precise) {
+  static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_900();
+  static const bool is_mhc_pre_available = check_aclnn_kernel_available("aclnnMhcPre");
+  static const bool is_mhc_pre_v2_available = check_aclnn_kernel_available("aclnnMhcPreV2");
+  TORCH_CHECK(
+      is_cann_ready && (is_mhc_pre_v2_available || (inner_precise == CUBE_USE_FP32 && is_mhc_pre_available)),
+      "torch_npu.npu_mhc_pre requires CANN >= 9.0.0. inner_precise=1 additionally requires aclnnMhcPreV2. "
+      "Please upgrade CANN.",
+      OPS_ERROR(ErrCode::NOT_SUPPORT));
+  return is_mhc_pre_v2_available;
 }
 
 /**
@@ -63,180 +61,307 @@ inline bool check_mhc_pre_supported(int64_t inner_precise)
  * (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
  */
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> construct_mhc_pre_outputs(
-    const at::Tensor &x, const at::Tensor &phi, int64_t out_flag, bool hasResi)
-{
-    c10::TensorOptions hInOptions = x.options().dtype(x.dtype());
-    c10::TensorOptions hOptions = x.options().dtype(at::kFloat);
-    auto matK = phi.size(DIM_0);
+    const at::Tensor& x,
+    const at::Tensor& phi,
+    int64_t out_flag,
+    bool hasResi) {
+  c10::TensorOptions hInOptions = x.options().dtype(x.dtype());
+  c10::TensorOptions hOptions = x.options().dtype(at::kFloat);
+  auto matK = phi.size(DIM_0);
 
-    at::Tensor outHin;
-    at::Tensor outHpost;
-    at::Tensor outHres;
-    at::Tensor outInvRms;
-    at::Tensor outHmix;
-    at::Tensor outHpre;
+  at::Tensor outHin;
+  at::Tensor outHpost;
+  at::Tensor outHres;
+  at::Tensor outInvRms;
+  at::Tensor outHmix;
+  at::Tensor outHpre;
 
-    if (x.dim() == BSND_DIMS) {
-        auto batch = x.size(DIM_0);
-        auto sequence = x.size(DIM_1);
-        auto numResidual = x.size(DIM_2);
-        auto dim = x.size(DIM_3);
+  if (x.dim() == BSND_DIMS) {
+    auto batch = x.size(DIM_0);
+    auto sequence = x.size(DIM_1);
+    auto numResidual = x.size(DIM_2);
+    auto dim = x.size(DIM_3);
 
-        // 4 维输入场景：x 的 shape 为 [B, S, N, D]
-        // 各输出张量 shape 说明如下：
-        // - outHin    : [B, S, D]
-        // - outHpost  : [B, S, N]
-        // - outHres   : [B, S, N, N]
-        // - outInvRms : [B, S]
-        // - outHmix   : [B, S, K]，其中 K = phi.size(0)
-        // - outHpre   : [B, S, N]
-        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHinSize;
-        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHpostSize;
-        c10::SmallVector<int64_t, BSND_DIMS> outHresSize;
-        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_TWO_DIMS> outInvRmsSize;
-        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHmixSize;
-        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHpreSize;
+    // 4 维输入场景：x 的 shape 为 [B, S, N, D]
+    // 各输出张量 shape 说明如下：
+    // - outHin    : [B, S, D]
+    // - outHpost  : [B, S, N]
+    // - outHres   : [B, S, N, N]
+    // - outInvRms : [B, S]
+    // - outHmix   : [B, S, K]，其中 K = phi.size(0)
+    // - outHpre   : [B, S, N]
+    c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHinSize;
+    c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHpostSize;
+    c10::SmallVector<int64_t, BSND_DIMS> outHresSize;
+    c10::SmallVector<int64_t, BSND_DIMS - REMOVE_TWO_DIMS> outInvRmsSize;
+    c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHmixSize;
+    c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHpreSize;
 
-        outHinSize.push_back(batch);
-        outHinSize.push_back(sequence);
-        outHinSize.push_back(dim);
+    outHinSize.push_back(batch);
+    outHinSize.push_back(sequence);
+    outHinSize.push_back(dim);
 
-        outHpostSize.push_back(batch);
-        outHpostSize.push_back(sequence);
-        outHpostSize.push_back(numResidual);
+    outHpostSize.push_back(batch);
+    outHpostSize.push_back(sequence);
+    outHpostSize.push_back(numResidual);
 
-        if (hasResi) {
-            outHresSize.push_back(batch);
-            outHresSize.push_back(sequence);
-            outHresSize.push_back(numResidual);
-            outHresSize.push_back(numResidual);
-        } else {
-            outHresSize.push_back(1);
-        }
-
-        outInvRmsSize.push_back(batch);
-        outInvRmsSize.push_back(sequence);
-
-        outHmixSize.push_back(batch);
-        outHmixSize.push_back(sequence);
-        outHmixSize.push_back(matK);
-
-        outHpreSize.push_back(batch);
-        outHpreSize.push_back(sequence);
-        outHpreSize.push_back(numResidual);
-
-        outHin = at::empty(outHinSize, hInOptions);
-        outHpost = at::empty(outHpostSize, hOptions);
-        outHres = at::empty(outHresSize, hOptions);
-        if (out_flag == 1) {
-            outInvRms = at::empty(outInvRmsSize, hOptions);
-            outHmix = at::empty(outHmixSize, hOptions);
-            outHpre = at::empty(outHpreSize, hOptions);
-        }
+    if (hasResi) {
+      outHresSize.push_back(batch);
+      outHresSize.push_back(sequence);
+      outHresSize.push_back(numResidual);
+      outHresSize.push_back(numResidual);
     } else {
-        auto t = x.size(DIM_0);
-        auto numResidual = x.size(DIM_1);
-        auto dim = x.size(DIM_2);
-
-        // 3 维输入场景：x 的 shape 为 [T, N, D]
-        // 各输出张量 shape 说明如下：
-        // - outHin    : [T, D]
-        // - outHpost  : [T, N]
-        // - outHres   : [T, N, N]
-        // - outInvRms : [T]
-        // - outHmix   : [T, K]，其中 K = phi.size(0)
-        // - outHpre   : [T, N]
-        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHinSize;
-        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpostSize;
-        c10::SmallVector<int64_t, TND_DIMS> outHresSize;
-        c10::SmallVector<int64_t, TND_DIMS - REMOVE_TWO_DIMS> outInvRmsSize;
-        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHmixSize;
-        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpreSize;
-
-        outHinSize.push_back(t);
-        outHinSize.push_back(dim);
-
-        outHpostSize.push_back(t);
-        outHpostSize.push_back(numResidual);
-
-        if (hasResi) {
-            outHresSize.push_back(t);
-            outHresSize.push_back(numResidual);
-            outHresSize.push_back(numResidual);
-        } else {
-            outHresSize.push_back(1);
-        }
-
-        outInvRmsSize.push_back(t);
-
-        outHmixSize.push_back(t);
-        outHmixSize.push_back(matK);
-
-        outHpreSize.push_back(t);
-        outHpreSize.push_back(numResidual);
-
-        outHin = at::empty(outHinSize, hInOptions);
-        outHpost = at::empty(outHpostSize, hOptions);
-        outHres = at::empty(outHresSize, hOptions);
-        if (out_flag == 1) {
-            outInvRms = at::empty(outInvRmsSize, hOptions);
-            outHmix = at::empty(outHmixSize, hOptions);
-            outHpre = at::empty(outHpreSize, hOptions);
-        }
+      outHresSize.push_back(1);
     }
 
-    return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
+    outInvRmsSize.push_back(batch);
+    outInvRmsSize.push_back(sequence);
+
+    outHmixSize.push_back(batch);
+    outHmixSize.push_back(sequence);
+    outHmixSize.push_back(matK);
+
+    outHpreSize.push_back(batch);
+    outHpreSize.push_back(sequence);
+    outHpreSize.push_back(numResidual);
+
+    outHin = at::empty(outHinSize, hInOptions);
+    outHpost = at::empty(outHpostSize, hOptions);
+    outHres = at::empty(outHresSize, hOptions);
+    if (out_flag == 1) {
+      outInvRms = at::empty(outInvRmsSize, hOptions);
+      outHmix = at::empty(outHmixSize, hOptions);
+      outHpre = at::empty(outHpreSize, hOptions);
+    }
+  } else {
+    auto t = x.size(DIM_0);
+    auto numResidual = x.size(DIM_1);
+    auto dim = x.size(DIM_2);
+
+    // 3 维输入场景：x 的 shape 为 [T, N, D]
+    // 各输出张量 shape 说明如下：
+    // - outHin    : [T, D]
+    // - outHpost  : [T, N]
+    // - outHres   : [T, N, N]
+    // - outInvRms : [T]
+    // - outHmix   : [T, K]，其中 K = phi.size(0)
+    // - outHpre   : [T, N]
+    c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHinSize;
+    c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpostSize;
+    c10::SmallVector<int64_t, TND_DIMS> outHresSize;
+    c10::SmallVector<int64_t, TND_DIMS - REMOVE_TWO_DIMS> outInvRmsSize;
+    c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHmixSize;
+    c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpreSize;
+
+    outHinSize.push_back(t);
+    outHinSize.push_back(dim);
+
+    outHpostSize.push_back(t);
+    outHpostSize.push_back(numResidual);
+
+    if (hasResi) {
+      outHresSize.push_back(t);
+      outHresSize.push_back(numResidual);
+      outHresSize.push_back(numResidual);
+    } else {
+      outHresSize.push_back(1);
+    }
+
+    outInvRmsSize.push_back(t);
+
+    outHmixSize.push_back(t);
+    outHmixSize.push_back(matK);
+
+    outHpreSize.push_back(t);
+    outHpreSize.push_back(numResidual);
+
+    outHin = at::empty(outHinSize, hInOptions);
+    outHpost = at::empty(outHpostSize, hOptions);
+    outHres = at::empty(outHresSize, hOptions);
+    if (out_flag == 1) {
+      outInvRms = at::empty(outInvRmsSize, hOptions);
+      outHmix = at::empty(outHmixSize, hOptions);
+      outHpre = at::empty(outHpreSize, hOptions);
+    }
+  }
+
+  outInvRmsSize.push_back(batch);
+  outInvRmsSize.push_back(sequence);
+
+  outHmixSize.push_back(batch);
+  outHmixSize.push_back(sequence);
+  outHmixSize.push_back(matK);
+
+  outHpreSize.push_back(batch);
+  outHpreSize.push_back(sequence);
+  outHpreSize.push_back(numResidual);
+
+  outHin = at::empty(outHinSize, hInOptions);
+  outHpost = at::empty(outHpostSize, hOptions);
+  if (hasResi) {
+    outHres = at::empty(outHresSize, hOptions);
+  } else {
+    outHres = at::zeros(outHresSize, hOptions);
+  }
+  if (out_flag == 1) {
+    outInvRms = at::empty(outInvRmsSize, hOptions);
+    outHmix = at::empty(outHmixSize, hOptions);
+    outHpre = at::empty(outHpreSize, hOptions);
+  }
+}
+else {
+  auto t = x.size(DIM_0);
+  auto numResidual = x.size(DIM_1);
+  auto dim = x.size(DIM_2);
+
+  // 3 维输入场景：x 的 shape 为 [T, N, D]
+  // 各输出张量 shape 说明如下：
+  // - outHin    : [T, D]
+  // - outHpost  : [T, N]
+  // - outHres   : [T, N, N]
+  // - outInvRms : [T]
+  // - outHmix   : [T, K]，其中 K = phi.size(0)
+  // - outHpre   : [T, N]
+  c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHinSize;
+  c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpostSize;
+  c10::SmallVector<int64_t, TND_DIMS> outHresSize;
+  c10::SmallVector<int64_t, TND_DIMS - REMOVE_TWO_DIMS> outInvRmsSize;
+  c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHmixSize;
+  c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpreSize;
+
+  outHinSize.push_back(t);
+  outHinSize.push_back(dim);
+
+  outHpostSize.push_back(t);
+  outHpostSize.push_back(numResidual);
+
+  if (hasResi) {
+    outHresSize.push_back(t);
+    outHresSize.push_back(numResidual);
+    outHresSize.push_back(numResidual);
+  } else {
+    outHresSize.push_back(1);
+  }
+
+  outInvRmsSize.push_back(t);
+
+  outHmixSize.push_back(t);
+  outHmixSize.push_back(matK);
+
+  outHpreSize.push_back(t);
+  outHpreSize.push_back(numResidual);
+
+  outHin = at::empty(outHinSize, hInOptions);
+  outHpost = at::empty(outHpostSize, hOptions);
+  if (hasResi) {
+    outHres = at::empty(outHresSize, hOptions);
+  } else {
+    outHres = at::zeros(outHresSize, hOptions);
+  }
+  if (out_flag == 1) {
+    outInvRms = at::empty(outInvRmsSize, hOptions);
+    outHmix = at::empty(outHmixSize, hOptions);
+    outHpre = at::empty(outHpreSize, hOptions);
+  }
+}
+
+return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
 }
 } // namespace
 
 namespace op_api {
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_pre(
-    const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha, const at::Tensor &bias,
-    const c10::optional<at::Tensor> &gamma, double norm_eps, double hc_eps, int64_t out_flag, int64_t inner_precise)
-{
-    TORCH_CHECK(x.numel() > 0, "Input x should not be empty.", OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(phi.numel() > 0, "Input phi should not be empty.", OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(alpha.numel() == ALPHA_NUMEL || alpha.numel() == ALPHA_NUMEL_HY,
-        "Input alpha must have 3 or 2 elements, but got ", alpha.numel(), ".", OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(bias.numel() > 0, "Input bias should not be empty.", OPS_ERROR(ErrCode::VALUE));
+    const at::Tensor& x,
+    const at::Tensor& phi,
+    const at::Tensor& alpha,
+    const at::Tensor& bias,
+    const c10::optional<at::Tensor>& gamma,
+    double norm_eps,
+    double hc_eps,
+    int64_t out_flag,
+    int64_t inner_precise) {
+  TORCH_CHECK(x.numel() > 0, "Input x should not be empty.", OPS_ERROR(ErrCode::VALUE));
+  TORCH_CHECK(phi.numel() > 0, "Input phi should not be empty.", OPS_ERROR(ErrCode::VALUE));
+  TORCH_CHECK(
+      alpha.numel() == ALPHA_NUMEL || alpha.numel() == ALPHA_NUMEL_HY,
+      "Input alpha must have 3 or 2 elements, but got ",
+      alpha.numel(),
+      ".",
+      OPS_ERROR(ErrCode::VALUE));
+  TORCH_CHECK(bias.numel() > 0, "Input bias should not be empty.", OPS_ERROR(ErrCode::VALUE));
 
-    TORCH_CHECK(x.dim() == TND_DIMS || x.dim() == BSND_DIMS, "Input x must be 3D or 4D, but got ", x.dim(), "D.",
-        OPS_ERROR(ErrCode::VALUE));
+  TORCH_CHECK(
+      x.dim() == TND_DIMS || x.dim() == BSND_DIMS,
+      "Input x must be 3D or 4D, but got ",
+      x.dim(),
+      "D.",
+      OPS_ERROR(ErrCode::VALUE));
 
-    // out_flag 用于控制 aclnnMhcPreV2 是否实际写出全部输出：
-    // - out_flag == 1：写出全部 6 个结果
-    //   (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
-    // - out_flag == 0：仅需要 outHin / outHpost / outHres，
-    //   后 3 个输出在调用 aclnnMhcPreV2 时使用 nullTensor 占位，不参与实际写出
-    TORCH_CHECK(
-        inner_precise == CUBE_USE_FP32 || inner_precise == CUBE_USE_HF32,
-        "Input inner_precise must be 0 (Cube uses FP32) or 1 (Cube uses HF32), but got ",
+  // out_flag 用于控制 aclnnMhcPreV2 是否实际写出全部输出：
+  // - out_flag == 1：写出全部 6 个结果
+  //   (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
+  // - out_flag == 0：仅需要 outHin / outHpost / outHres，
+  //   后 3 个输出在调用 aclnnMhcPreV2 时使用 nullTensor 占位，不参与实际写出
+  TORCH_CHECK(
+      inner_precise == CUBE_USE_FP32 || inner_precise == CUBE_USE_HF32,
+      "Input inner_precise must be 0 (Cube uses FP32) or 1 (Cube uses HF32), but got ",
+      inner_precise,
+      ".",
+      OPS_ERROR(ErrCode::VALUE));
+
+  TORCH_CHECK(
+      out_flag == 0 || out_flag == 1,
+      "Input out_flag must be 0 or 1, but got ",
+      out_flag,
+      ".",
+      OPS_ERROR(ErrCode::VALUE));
+
+  bool useMhcPreV2 = check_mhc_pre_supported(inner_precise);
+
+  bool hasResi = (alpha.numel() == ALPHA_NUMEL);
+  auto mhcPreOutput = construct_mhc_pre_outputs(x, phi, out_flag, hasResi);
+
+  at::Tensor outHin = std::get<0>(mhcPreOutput);
+  at::Tensor outHpost = std::get<1>(mhcPreOutput);
+  at::Tensor outHres = std::get<2>(mhcPreOutput);
+  at::Tensor outInvRms = std::get<3>(mhcPreOutput);
+  at::Tensor outHmix = std::get<4>(mhcPreOutput);
+  at::Tensor outHpre = std::get<5>(mhcPreOutput);
+
+  if (useMhcPreV2) {
+    EXEC_NPU_CMD(
+        aclnnMhcPreV2,
+        x,
+        phi,
+        alpha,
+        bias,
+        gamma,
+        norm_eps,
+        hc_eps,
         inner_precise,
-        ".",
-        OPS_ERROR(ErrCode::VALUE));
-
-    TORCH_CHECK(out_flag == 0 || out_flag == 1, "Input out_flag must be 0 or 1, but got ", out_flag, ".",
-        OPS_ERROR(ErrCode::VALUE));
-
-    bool useMhcPreV2 = check_mhc_pre_supported(inner_precise);
-
-    bool hasResi = (alpha.numel() == ALPHA_NUMEL);
-    auto mhcPreOutput = construct_mhc_pre_outputs(x, phi, out_flag, hasResi);
-
-    at::Tensor outHin = std::get<0>(mhcPreOutput);
-    at::Tensor outHpost = std::get<1>(mhcPreOutput);
-    at::Tensor outHres = std::get<2>(mhcPreOutput);
-    at::Tensor outInvRms = std::get<3>(mhcPreOutput);
-    at::Tensor outHmix = std::get<4>(mhcPreOutput);
-    at::Tensor outHpre = std::get<5>(mhcPreOutput);
-
-    if (useMhcPreV2) {
-        EXEC_NPU_CMD(aclnnMhcPreV2, x, phi, alpha, bias, gamma, norm_eps, hc_eps, inner_precise, outHin, outHpost,
-            outHres, outInvRms, outHmix, outHpre);
-    } else {
-        EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
-            outHres, outInvRms, outHmix, outHpre);
-    }
-    return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
+        outHin,
+        outHpost,
+        outHres,
+        outInvRms,
+        outHmix,
+        outHpre);
+  } else {
+    EXEC_NPU_CMD(
+        aclnnMhcPre,
+        x,
+        phi,
+        alpha,
+        bias,
+        gamma,
+        norm_eps,
+        hc_eps,
+        outHin,
+        outHpost,
+        outHres,
+        outInvRms,
+        outHmix,
+        outHpre);
+  }
+  return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
 }
 } // namespace op_api
