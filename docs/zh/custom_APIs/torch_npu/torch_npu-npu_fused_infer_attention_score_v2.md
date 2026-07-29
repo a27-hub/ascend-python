@@ -2,12 +2,12 @@
 
 ## 产品支持情况 <a name="zh-cn_topic_0000001832267082_section14441124184110"></a>
 
-| 产品                                                         | 是否支持 |
-| ------------------------------------------------------------ | :------: |
-|<term>Atlas A3 训练系列产品</term>            |    √     |
-|<term>Atlas A3 推理系列产品</term>   | √  |
-|<term>Atlas A2 训练系列产品</term>  | √   |
-|<term>Atlas A2 推理系列产品</term> |    √     |
+| 产品 | 是否支持 |
+| --------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品</term> | √ |
+| <term>Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品</term> | √ |
+| <term>Atlas A2 推理系列产品</term> | √ |
 
 ## 功能说明<a name="zh-cn_topic_0000001832267082_section14441124184110"></a>
 
@@ -145,7 +145,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     | BNSD\_BSND | (B, Q\_N, Q\_S, D) | (B, KV\_N, KV\_S, D) | (B, KV\_N, KV\_S, D) | (B, Q\_S, Q\_N, D) | 输入BNSD，输出BSND，仅Q\_S>1 |
     | BSH\_NBSD | (B, Q\_S, H) | (B, KV\_S, H) | (B, KV\_S, H) | (Q\_N, B, Q\_S, D) | 输入BSH，输出NBSD |
     | BSND\_NBSD | (B, Q\_S, Q\_N, D) | (B, KV\_S, KV\_N, D) | (B, KV\_S, KV\_N, D) | (Q\_N, B, Q\_S, D) | 输入BSND，输出NBSD |
-    | BNSD\_NBSD | (B, Q\_N, Q\_S, D) | (B, KV\_N, KV\_S, D) | (B, KV\_N, KV\_S, D) | (Q\_N, B, Q\_S, D) | 输入BNSD，输出NBSD，仅Q\_S 1~16 |
+    | BNSD\_NBSD | (B, Q\_N, Q\_S, D) | (B, KV\_N, KV\_S, D) | (B, KV\_N, KV\_S, D) | (Q\_N, B, Q\_S, D) | 输入BNSD，输出NBSD，仅支持Q\_S大于1且小于等于16 |
     | TND | (T, Q\_N, D) | (T, KV\_N, D) | (T, KV\_N, D) | (T, Q\_N, D) | T为所有Batch的S累加和 |
     | TND\_NTD | (T, Q\_N, D) | (T, KV\_N, D) | (T, KV\_N, D) | (Q\_N, T, D) | 输入TND，输出NTD |
     | NTD\_TND | (Q\_N, T, D) | (KV\_N, T, D) | (KV\_N, T, D) | (T, Q\_N, D) | 输入NTD，输出TND |
@@ -307,7 +307,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
 - **当Q\_S大于1时：**
     - query、key、value输入，功能使用限制如下：
-        - 支持B轴小于等于65536，D轴32byte不对齐时仅支持到128。
+        - 支持B轴小于等于65536，D轴32byte不对齐时仅支持B轴小于等于128。
         - 支持N轴小于等于256，支持D轴小于等于512；input\_layout为BSH或者BSND时，建议N\*D小于65535。
         - S支持小于等于20971520（20M）。部分长序列场景下，如果计算量过大可能会导致PFA算子执行超时（aicore error类型报错，errorStr为timeout or trap error），此场景下建议做S切分处理（注：这里计算量会受B、S、N、D等的影响，值越大计算量越大），典型的会超时的长序列（即B、S、N、D的乘积较大）场景包括但不限于：
             - B=1，Q\_N=20，Q\_S=2097152，D=256，KV\_N=1，KV\_S=2097152。
@@ -412,7 +412,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     - query、key、value输入，功能使用限制如下：
         - 支持B轴小于等于65536，支持N轴小于等于256，支持S轴小于等于262144，支持D轴小于等于512。
         - query、key、value输入类型均为int8的场景暂不支持。
-        - 在int4（int32）伪量化场景下，PyTorch入图调用仅支持KV int4拼接成int32输入（建议通过dynamicQuant生成int4格式的数据，因为dynamicQuant就是一个int32包括8个int4）。
+        - 在int4（int32）伪量化场景下，PyTorch入图调用仅支持KV int4拼接成int32输入（建议通过dynamicQuant生成int4格式的数据，底层会将8个int4打包存储于一个int32中）。
         - 在int4（int32）伪量化场景下，若KV int4拼接成int32输入，那么KV的N、D或者H是实际值的八分之一。并且，int4伪量化仅支持D 64对齐（int32支持D 8对齐）。
 
     - actual\_seq\_qlen：
@@ -445,8 +445,8 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         - 管理scale/offset的量化模式如下：
     
             > [!NOTE]   
-            > 注意scale、offset两个参数指dequant\_scale\_key、dequant\_scale\_key、dequant\_offset\_value、dequant\_offset\_value。
-    
+            > 注意scale、offset两个参数指dequant\_scale\_key、dequant\_scale\_value、dequant\_offset\_key、dequant\_offset\_value。
+
             <a name="zh-cn_topic_0000001832267082_table4401182238"></a>
             <table><thead align="left"><tr id="zh-cn_topic_0000001832267082_row124112817233"><th class="cellrowborder" valign="top" width="16.950000000000003%" id="mcps1.1.5.1.1"><p id="zh-cn_topic_0000001832267082_p341780235"><a name="zh-cn_topic_0000001832267082_p341780235"></a><a name="zh-cn_topic_0000001832267082_p341780235"></a>量化模式</p>
             </th>
@@ -604,7 +604,7 @@ tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 **关键参数**：
 
 - `num_query_heads=10, num_key_value_heads=1`：必传，GQA支持组合：(10,1)/(64,8)/(80,8)/(128,16)。
-- `block_table=128`：必传，开启PageAttention，仅支持128或512。
+- `block_size=128`：必传，开启PageAttention，仅支持128或512。
 - `dequant_scale_value, dequant_scale_key`：使用per-channel伪量化必传，dtype固定为bfloat16。
 - `key_quant_mode=0,value_quant_mode=0`：使用per-channel伪量化必传，固定为0。
 - `key, value`: 必传，类型为int8，NZ格式[blockNum, KV_N, D/32, blockSize, 32]。
