@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-通过张量融合实现的高性能RMSpropTF优化器，RMSpropTF是timm库（pytorch-image-models）中提供的RMSprop变体， 其实现对齐TensorFlow版RMSprop的行为（故后缀为 "TF"），与torch.optim.RMSprop在初始化方式、epsilon加入位置、动量更新顺序等细节上存在差异，核心功能和torch.optim.RMSprop兼容。RMSpropTF的功能和原理可参考[https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py\#L14](https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py#L14)。
+通过张量融合实现的高性能RMSpropTF优化器，RMSpropTF是timm库（pytorch-image-models）中提供的RMSprop变体， 其实现对齐TensorFlow版RMSprop的行为（故后缀为 "TF"），与torch.optim.RMSprop在初始化方式、epsilon加入位置、动量更新顺序等细节上存在差异，核心功能和torch.optim.RMSprop兼容。RMSpropTF的功能和原理可参考[https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py#L14](https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py#L14)。
 
 ## 函数原型
 
@@ -23,7 +23,7 @@ class torch_npu.optim.NpuFusedRMSpropTF(params, lr=1e-2, alpha=0.9, eps=1e-10, w
 - **params** (`iterable`)：必选参数，模型参数或模型参数组。
 - **lr** (`float`)：可选参数，学习率，默认值为1e-2。`lr`的值小于0时，系统会抛出“ValueError”异常信息。
 - **alpha** (`float`)：可选参数，平滑常量，默认值为0.9。`alpha`的值小于0时，系统会抛出“ValueError”异常信息。
-- **eps** (`float`)：可选参数，分母防止除0项，提高数值稳定性，默认值为1e-10。`eps`的值小于0时，系统会抛出“ValueError”异常信息。
+- **eps** (`float`)：可选参数，作为分母防止除零错误，提高数值稳定性，默认值为1e-10。`eps`的值小于0时，系统会抛出“ValueError”异常信息。
 - **weight_decay** (`float`)：可选参数，权重衰减，默认值为0。`weight_decay`的值小于0时，系统会抛出“ValueError”异常信息。
 - **momentum** (`float`)：可选参数，动量因子，默认值为0。`momentum`的值小于0时，系统会抛出“ValueError”异常信息。
 - **centered** (`bool`)：可选参数，计算中心RMSProp，梯度将被方差的估计值归一化，默认值为False。

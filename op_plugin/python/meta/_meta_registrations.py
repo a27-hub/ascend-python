@@ -3727,6 +3727,10 @@ def npu_matmul_all_to_all_meta(x1, x2, hcom, world_size, bias=None, all2all_axes
         world_size != 0,
         lambda: "world_size should not be 0." + ops_error(ErrCode.VALUE),
     )
+    torch._check(
+        x2.size(1) % world_size == 0,
+        lambda: "The x2 second-axis should be divisible by world_size." + ops_error(ErrCode.VALUE),
+    )
     out_m = x1.size(0) * world_size
     out_n = x2.size(1) // world_size
     size = [out_m, out_n]
@@ -3777,6 +3781,10 @@ def npu_quant_matmul_all_to_all_meta(x1, x2, hcom, world_size, bias=None, x1_sca
         world_size != 0,
         lambda: "world_size should not be 0." + ops_error(ErrCode.VALUE),
     )
+    torch._check(
+        x2.size(1) % world_size == 0,
+        lambda: "The x2 second-axis should be divisible by world_size." + ops_error(ErrCode.VALUE),
+    )
     out_m = x1.size(0) * world_size
     out_n = x2.size(1) // world_size
     size = [out_m, out_n]
@@ -3820,6 +3828,10 @@ def npu_all_to_all_matmul_meta(x1, x2, hcom, world_size, bias=None, all2all_axes
     torch._check(
         world_size != 0,
         lambda: "world_size should not be 0." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x1.size(0) % world_size == 0,
+        lambda: "The x1 first-axis should be divisible by world_size." + ops_error(ErrCode.VALUE),
     )
     out_m = x1.size(0) // world_size
     out_n = x2.size(1)
@@ -3874,6 +3886,10 @@ def npu_all_to_all_quant_matmul_meta(x1, x2, hcom, world_size, all2all_out_flag=
     torch._check(
         world_size != 0,
         lambda: "world_size should not be 0." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x1.size(0) % world_size == 0,
+        lambda: "The x1 first-axis should be divisible by world_size." + ops_error(ErrCode.VALUE),
     )
     INT4_IN_INT32 = 8
     is_w4 = x2.dtype == torch.int32
@@ -5262,7 +5278,7 @@ def npu_dynamic_dual_level_mx_quant(input_dummy, *, smooth_scale=None, round_mod
 
 
 @impl(m, "npu_grouped_dynamic_mx_quant")
-def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=23, blocksize=32, scale_alg=0):
+def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=23, blocksize=32, scale_alg=0, dst_type_max=0.0):
     if x is None or group_index is None:
         raise RuntimeError("Input x and group_index should must not be None" + ops_error(ErrCode.VALUE))
     if x.dim() != 2:
@@ -5271,13 +5287,11 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     if group_index.dim() != 1:
         raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " +
                             str(group_index.dim()) + ops_error(ErrCode.VALUE))
-    # zero division protection
     if blocksize != 32:
         raise RuntimeError("Parameter blocksize only supports 32,  got " +
                             str(blocksize) + ops_error(ErrCode.PARAM))
-
-    if scale_alg != 0 and scale_alg != 1:
-        raise RuntimeError("Parameter scale_alg only supports 0 or 1, got " +
+    if scale_alg != 0 and scale_alg != 1 and scale_alg != 2:
+        raise RuntimeError("Parameter scale_alg only supports 0, 1 or 2, got " +
                             str(scale_alg) + ops_error(ErrCode.PARAM))
 
     mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1], 2]
@@ -5287,8 +5301,15 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     elif TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type) == torch.float8_e4m3fn:
         output = torch.empty_like(x, dtype=torch.float8_e4m3fn)
     else:
-        raise RuntimeError("Parameter dst_type only supports torch.float8_e5m2(23), torch.float8_e4m3fn(24), "
-                           "got " + str(dst_type) + ops_error(ErrCode.PARAM))
+        if x.size(x.dim() - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                               "the last dime of input x must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        output_shape = []
+        for dim in range(x.dim() - 1):
+            output_shape.append(x.size(dim))
+        output_shape.append(x.size(x.dim() - 1) // 2)
+        output = x.new_empty(output_shape, dtype=torch.uint8)
     mxscale = x.new_empty(mxscale_shape, dtype=torch.uint8)
     return (output, mxscale)
 
@@ -6352,6 +6373,13 @@ def npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, pa
     return torch.empty(output_shape, dtype=permuted_tokens.dtype, device=permuted_tokens.device)
 
 
+@impl(m, "_npu_moe_token_unpermute")
+def _npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, padded_mode=False, restore_shape=None):
+    unpermuted_tokens = npu_moe_token_unpermute_meta(
+        permuted_tokens, sorted_indices, probs, padded_mode, restore_shape)
+    return unpermuted_tokens, permuted_tokens
+
+
 @impl(m, "npu_moe_token_permute_grad")
 def npu_moe_token_permute_grad_meta(tokens, grad_permuted_tokens, indices, sorted_indices, padded_mode=False):
     torch._check(tokens.dim() == 2, lambda: f"The dims of input tokens should be 2 dimensional, but got {tokens.dim()}-dimensional.")
@@ -6379,6 +6407,22 @@ def npu_moe_token_unpermute_grad_meta(permuted_tokens, grad_unpermuted_tokens, s
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
 
     grad_permuted_tokens = torch.empty_like(permuted_tokens)
+    grad_probs = torch.empty_like(probs, dtype=probs.dtype) if probs is not None else None
+
+    return grad_permuted_tokens, grad_probs
+
+
+@impl(m, "npu_moe_token_unpermute_grad_v2")
+def npu_moe_token_unpermute_grad_v2_meta(grad_unpermuted_tokens, sorted_indices, permuted_tokens_size_0, permuted_tokens_dtype, probs=None, padded_mode=False, restore_shape=None, permuted_tokens=None):
+    torch._check(grad_unpermuted_tokens.dim() == 2, lambda: f"The dims of input grad_unpermuted_tokens should be 2 dimensional, but got {grad_unpermuted_tokens.dim()}-dimensional.")
+    torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
+    if probs is not None:
+        torch._check(probs.dim() == 2, lambda: f"The dims of input probs should be 2 dimensional, but got {probs.dim()}-dimensional.")
+
+    grad_permuted_tokens = torch.empty(
+        (permuted_tokens_size_0, grad_unpermuted_tokens.shape[1]),
+        dtype=permuted_tokens_dtype,
+        device=grad_unpermuted_tokens.device)
     grad_probs = torch.empty_like(probs, dtype=probs.dtype) if probs is not None else None
 
     return grad_permuted_tokens, grad_probs
@@ -7251,3 +7295,18 @@ def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_fl
     else:
         output_size = [1, self.size(1)]
     return torch.empty(output_size, dtype=self.dtype, device=self.device)
+
+@impl(m, "npu_weight_quant_preprocess")
+def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype, weight_scale_dtype,
+                                     weight_offset=None, bias=None, x_scale_dtype=None, k_group_size=0):
+    out_weight = torch.empty_like(weight)
+    out_weight_scale = torch.empty_like(weight_scale)
+    if weight_offset is not None:
+        out_weight_offset = torch.empty_like(weight_offset)
+    else:
+        out_weight_offset = torch.empty([0], dtype=weight.dtype, device='meta')
+    if bias is not None:
+        out_bias = torch.empty_like(bias)
+    else:
+        out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
+    return (out_weight, out_weight_scale, out_weight_offset, out_bias)
