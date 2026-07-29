@@ -269,7 +269,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                                    (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
                                     weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
 #endif
-#if VERSION_BETWEEN(V2R8, NEWEST)
+#if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
     bool mxfp4_input = false;
     if(x_dtype.has_value()){
         mxfp4_input = (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
