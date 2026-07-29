@@ -142,6 +142,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
     is_mxfp4 = true;
   }
   bool x2_trans = is_transpose_last_two_dims(x2.value_or(at::Tensor()));
+  std::cout << "op-plugin wzydebug x2_trans:" << x2_trans << std::endl;
   c10::SmallVector<int64_t, op_infer::SIZE> y_size = get_y_size(self, x2, world_size, gather_index, x2_trans, is_mxfp4);
   auto gather_out_size = gather_output
       ? get_gather_out_size(self, x2, world_size, gather_index)
