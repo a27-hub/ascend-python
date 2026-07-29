@@ -412,7 +412,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     - query、key、value输入，功能使用限制如下：
         - 支持B轴小于等于65536，支持N轴小于等于256，支持S轴小于等于262144，支持D轴小于等于512。
         - query、key、value输入类型均为int8的场景暂不支持。
-        - 在int4（int32）伪量化场景下，PyTorch入图调用仅支持KV int4拼接成int32输入（建议通过dynamicQuant生成int4格式的数据，底层会将8个int4打包存储于一个int32中）。
+        - 在int4（int32）伪量化场景下，PyTorch入图调用仅支持KV int4拼接成int32输入（建议通过dynamicQuant生成int4格式的数据，算子运行时会将8个int4打包存储于一个int32中）。
         - 在int4（int32）伪量化场景下，若KV int4拼接成int32输入，那么KV的N、D或者H是实际值的八分之一。并且，int4伪量化仅支持D 64对齐（int32支持D 8对齐）。
 
     - actual\_seq\_qlen：
@@ -556,11 +556,11 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
 **关键参数**：
 
-- `num_query_heads=8`：必传，表示head个数。
-- `num_key_value_heads`：可选，为空表示单头大小与`num_query_heads`一致，即单头注意力机制。
-- `input_layout="BNSD"`：必传，输入数据的排布格式。
-- `softmax_scale=1/√D`：必传，防止点积值过大导致softmax梯度消失。
-- `pre_tokens=65535, next_tokens=65535`：可选，表示不限制attention范围。
+- `num_query_heads=8`：必选参数，表示head个数。
+- `num_key_value_heads`：可选参数，为空表示单头大小与`num_query_heads`一致，即单头注意力机制。
+- `input_layout="BNSD"`：必选参数，输入数据的排布格式。
+- `softmax_scale=1/√D`：必选参数，防止点积值过大导致softmax梯度消失。
+- `pre_tokens=65535, next_tokens=65535`：可选参数，表示不限制attention范围。
 
 **相关约束**：[通用约束](#通用约束)
 
@@ -603,12 +603,12 @@ tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 
 **关键参数**：
 
-- `num_query_heads=10, num_key_value_heads=1`：必传，GQA支持组合：(10,1)/(64,8)/(80,8)/(128,16)。
-- `block_size=128`：必传，开启PageAttention，仅支持128或512。
-- `dequant_scale_value, dequant_scale_key`：使用per-channel伪量化必传，dtype固定为bfloat16。
-- `key_quant_mode=0,value_quant_mode=0`：使用per-channel伪量化必传，固定为0。
-- `key, value`: 必传，类型为int8，NZ格式[blockNum, KV_N, D/32, blockSize, 32]。
-- `inner_precise=1`：必传，KV NZ格式约束下仅支持高性能模式。
+- `num_query_heads=10, num_key_value_heads=1`：必选参数，GQA支持组合：(10,1)/(64,8)/(80,8)/(128,16)。
+- `block_size=128`：必选参数，开启PageAttention，仅支持128或512。
+- `dequant_scale_value, dequant_scale_key`：使用per-channel伪量化时必选参数，dtype固定为bfloat16。
+- `key_quant_mode=0,value_quant_mode=0`：使用per-channel伪量化时必选参数，固定为0。
+- `key, value`: 必选参数，类型为int8，NZ格式[blockNum, KV_N, D/32, blockSize, 32]。
+- `inner_precise=1`：必选参数，KV NZ格式约束下仅支持高性能模式。
 
 **相关约束**：[GQA伪量化+KV NZ格式约束](#gqa伪量化kv-nz格式约束)，[增量推理约束](#q_s1增量推理约束)
 
@@ -660,9 +660,9 @@ print(out)
 
 **关键参数**：
 
-- `input_layout="TND"`：TND场景下必传。
-- `actual_seq_qlen, actual_seq_kvlen`：TND场景下必传。
-- `query_rope, key_rope`：必传，MLA模式参数。
+- `input_layout="TND"`：TND场景下必选参数。
+- `actual_seq_qlen, actual_seq_kvlen`：TND场景下必选参数。
+- `query_rope, key_rope`：必选参数，MLA模式参数。
 
 **相关约束**：[MLA场景约束](#mla场景约束)
 
@@ -723,9 +723,9 @@ print(out)  #tensor([[[...]]], device='npu:0', dtype=torch.float16)
 
 **关键参数**：
 
-- `learnable_sink`：必传，learnable_sink约束关键参数。
-- `actual_seq_qlen, actual_seq_kvlen`：TND场景下必传。
-- `input_layout="TND"`：必传，仅支持TND、NTD_TND场景。
+- `learnable_sink`：必选参数，learnable_sink约束关键参数。
+- `actual_seq_qlen, actual_seq_kvlen`：TND场景下必选参数。
+- `input_layout="TND"`：必选参数，仅支持TND、NTD_TND场景。
 
 **相关约束**：[learnable_sink约束](#learnable_sink约束)
 
@@ -774,8 +774,8 @@ print(out)
 
 **关键参数**：
 
-- `quant_scale_out`: 必传，bfloat16输入时同时支持float32 / bfloat16。
-- `quant_offset_out`: 可选，类型和shape与scale一致，不传则默认0。
+- `quant_scale_out`: 必选参数，bfloat16输入时同时支持float32 / bfloat16。
+- `quant_offset_out`: 可选参数，类型和shape与scale一致，不传则默认0。
 
 **相关约束**：[通用约束](#通用约束)
 
@@ -818,7 +818,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 
 **场景说明**：KV分离传入`dequant_scale_key`与`dequant_scale_value`，与`torch_npu.npu_fused_infer_attention_score`的同名示例相比用法相同，仅有参数名的差异。
 
-**关键参数**：`key_quant_mode,value_quant_mode`：必传，取值需保持一致，为0时使用perchannel模式。
+**关键参数**：`key_quant_mode,value_quant_mode`：必选参数，取值需保持一致，为0时使用perchannel模式。
 
 **相关约束**：[Q_S=1（增量推理）约束](#q_s1增量推理约束)
 
@@ -865,7 +865,7 @@ print(out.shape)   # torch.Size([1, 8, 1, 128])
 
 **场景说明**：当显式传入`backend="npugraph_ex"`时，使用[aclgraph模式](https://gitcode.com/Ascend/torchair/blob/master/docs/zh/npugraph_ex/quick_start.md)。
 
-**关键参数**：`backend="npugraph_ex"`：`torch.compile`必传，使用aclgraph模式。
+**关键参数**：`backend="npugraph_ex"`：`torch.compile`的必选参数，使用aclgraph模式。
 
 **相关约束**：[通用约束](#通用约束)
 
