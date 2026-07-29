@@ -55,7 +55,7 @@ class TestQr(TestCase):
             [10, 4, 6, 15, 13]
         ]
         somes_list = [True, False]
-        
+
         shape_format = [
             [[d, i, j], l] for d in dtype_list for i in format_list
             for j in shape_list for l in somes_list
