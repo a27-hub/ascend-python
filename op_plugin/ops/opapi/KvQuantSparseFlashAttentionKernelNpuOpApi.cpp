@@ -32,31 +32,43 @@ const int DIM_3 = 3;
 const int DIM_4 = 4;
 
 at::Tensor construct_quant_sparse_infer_output_tensor(
-    const at::Tensor& query, std::string layout_query_str,
-    std::string layout_kv_str, const uint64_t &rope_head_dim)
-{
-    TORCH_CHECK(layout_query_str == "BSND" || layout_query_str == "TND",
-                "The layout of query only support BSND and TND, but got ", layout_query_str,
-                OPS_ERROR(ErrCode::PARAM));
-    for (auto i = 0; i < query.sizes().size(); i++) {
-        TORCH_CHECK(query.size(i) > 0, "All values within query's shape should be greater "
-            "than 0, but shape[", i, "] is ", query.size(i));
-    }
-    at::SmallVector<int64_t, SIZE> output_size;
-    if (layout_query_str == "BSND") {
-        TORCH_CHECK(query.dim() == DIM_4,
-                    "When the layout of query is BSND, the query dimension must be 4, but got ",
-                    query.dim(), OPS_ERROR(ErrCode::PARAM));
-        output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), query.size(DIM_3) - rope_head_dim};
-    } else {
-        TORCH_CHECK(query.dim() == DIM_3,
-                    "When the layout of query is TND, the query dimension must be 3, but got ",
-                    query.dim(), OPS_ERROR(ErrCode::PARAM));
-        output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2) - rope_head_dim};
-    }
-    at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, query.options().dtype(query.dtype()));
+    const at::Tensor& query,
+    std::string layout_query_str,
+    std::string layout_kv_str,
+    const uint64_t& rope_head_dim) {
+  TORCH_CHECK(
+      layout_query_str == "BSND" || layout_query_str == "TND",
+      "The layout of query only support BSND and TND, but got ",
+      layout_query_str,
+      OPS_ERROR(ErrCode::PARAM));
+  for (auto i = 0; i < query.sizes().size(); i++) {
+    TORCH_CHECK(
+        query.size(i) > 0,
+        "All values within query's shape should be greater "
+        "than 0, but shape[",
+        i,
+        "] is ",
+        query.size(i));
+  }
+  at::SmallVector<int64_t, SIZE> output_size;
+  if (layout_query_str == "BSND") {
+    TORCH_CHECK(
+        query.dim() == DIM_4,
+        "When the layout of query is BSND, the query dimension must be 4, but got ",
+        query.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+    output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), query.size(DIM_3) - rope_head_dim};
+  } else {
+    TORCH_CHECK(
+        query.dim() == DIM_3,
+        "When the layout of query is TND, the query dimension must be 3, but got ",
+        query.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+    output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2) - rope_head_dim};
+  }
+  at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, query.options().dtype(query.dtype()));
 
-    return output;
+  return output;
 }
 
 at::Tensor npu_kv_quant_sparse_flash_attention(
@@ -78,20 +90,25 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
     TORCH_CHECK(sparse_indices.numel() > 0, "Tensor sparse_indices is empty.")
 
-    std::string layout_query_str = std::string(layout_query);
-    std::string layout_kv_str = std::string(layout_kv);
+  std::string layout_query_str = std::string(layout_query);
+  std::string layout_kv_str = std::string(layout_kv);
 
-    bool check_kdtype = key_dtype.has_value() && c10_npu::GetAclDataType(key_dtype.value()) != aclDataType::ACL_HIFLOAT8;
-    TORCH_CHECK(!check_kdtype, "The key_dtype is only used to support hifloat8, and should be default when the dtype of key tensor is not hifloat8.")
-    bool check_vdtype = value_dtype.has_value() && c10_npu::GetAclDataType(value_dtype.value()) != aclDataType::ACL_HIFLOAT8;
-    TORCH_CHECK(!check_vdtype, "The value_dtype is only used to support hifloat8, and should be default when the dtype of value tensor is not hifloat8.")
+  bool check_kdtype = key_dtype.has_value() && c10_npu::GetAclDataType(key_dtype.value()) != aclDataType::ACL_HIFLOAT8;
+  TORCH_CHECK(
+      !check_kdtype,
+      "The key_dtype is only used to support hifloat8, and should be default when the dtype of key tensor is not hifloat8.")
+  bool check_vdtype =
+      value_dtype.has_value() && c10_npu::GetAclDataType(value_dtype.value()) != aclDataType::ACL_HIFLOAT8;
+  TORCH_CHECK(
+      !check_vdtype,
+      "The value_dtype is only used to support hifloat8, and should be default when the dtype of value tensor is not hifloat8.")
 
-    // construct the output tensor
-    at::Tensor output = op_api::construct_quant_sparse_infer_output_tensor(
-        query, layout_query_str, layout_kv_str, rope_head_dim);
-    // convert str
-    char *layout_query_ptr = const_cast<char *>(layout_query_str.c_str());
-    char *layout_kv_ptr = const_cast<char *>(layout_kv_str.c_str());
+  // construct the output tensor
+  at::Tensor output =
+      op_api::construct_quant_sparse_infer_output_tensor(query, layout_query_str, layout_kv_str, rope_head_dim);
+  // convert str
+  char* layout_query_ptr = const_cast<char*>(layout_query_str.c_str());
+  char* layout_kv_ptr = const_cast<char*>(layout_kv_str.c_str());
 
     bool is_hifloat8_kv = key_dtype.has_value() && c10_npu::GetAclDataType(key_dtype.value()) == aclDataType::ACL_HIFLOAT8;
     bool has_sinks = sinks.has_value() && sinks->defined();
