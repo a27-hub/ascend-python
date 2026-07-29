@@ -261,9 +261,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     auto tuning_config_real = tuning_config.value_or(at::IntArrayRef{});
     auto bias_real = bias.value_or(at::Tensor());
     auto smooth_scale_real = smooth_scale.value_or(at::Tensor());
-//==============================================
-//===============增加Pytorch版本判断=============
-//==============================================
+
 #if VERSION_BETWEEN(V2R1, V2R7)
     bool mxfp4_input = x_dtype.has_value() && weight_dtype.has_value() &&
                                    (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
@@ -284,14 +282,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         mxfp4_input = mxfp4_input && weight[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
     }
 #endif
-//==============================================
-//==============================================
-//==============================================
-    // const bool mxfp4_input = x_dtype.has_value() && weight_dtype.has_value() &&
-    //                                (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
-    //                                 x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
-    //                                (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
-    //                                 weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+
     const aclDataType quant_acl_dtype = quant_dtype.has_value() ? c10_npu::GetAclDataType(quant_dtype.value()) :
                                                                   aclDataType::ACL_FLOAT;
     const bool is_fp4_output = quant_acl_dtype == aclDataType::ACL_FLOAT4_E2M1 ||
