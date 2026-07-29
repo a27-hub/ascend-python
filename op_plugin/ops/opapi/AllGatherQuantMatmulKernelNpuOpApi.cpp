@@ -50,6 +50,7 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_y_size(const at::Tensor& x1
     auto out_x = gather_index == 0 ? x1.size(0) * world_size : x1.size(0);
     auto out_y = x2.size(1);
     if (is_mxfp4 && !x2_trans) {
+        std::cout << "op-plugin wzydebug if (is_mxfp4 && !x2_trans):" << std::endl;
         out_y *= FP4_IN_INT8;
     }
     return {out_x, out_y};
