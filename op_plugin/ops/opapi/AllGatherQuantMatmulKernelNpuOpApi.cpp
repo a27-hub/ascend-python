@@ -31,6 +31,7 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_y_size(
         std::cout << "op-plugin wzydebug if (is_mxfp4 && !x2_trans):" << std::endl;
         out_y *= FP4_IN_INT8;
     }
+    std::cout << "op-plugin wzydebug y:" << out_x << out_y << std::endl;
     return {out_x, out_y};
 }
 
