@@ -113,9 +113,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
         output_bs_real = x_m_dim;
     }
     output_size[x_dim_num - LAST_SECOND_DIM_INDEX] = output_bs_real;
-//======================================
-//=========增加pytorch版本判断===========
-//======================================
+
 #if VERSION_BETWEEN(V2R1, V2R7)
     bool mxfp4_valid = x_dtype.has_value() && w_dtype.has_value() &&
                                     x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
@@ -134,12 +132,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
         mxfp4_valid = mxfp4_valid && (w.scalar_type() == at::ScalarType::Float4_e2m1fn_x2);
     }
 #endif
-//======================================
-//======================================
-//======================================
-    // static const bool mxfp4_valid = x_dtype.has_value() && w_dtype.has_value() &&
-    //                                 x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
-    //                                 w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+
     bool weight_trans = is_weight_trans(w);
     if (w.dtype() == at::kInt) {
         output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32;
