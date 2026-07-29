@@ -127,7 +127,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
         mxfp4_valid = x.scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
     }
     if(w_dtype.has_value()){
-        mxfp4_valid = mxfp4_valid && (w_dtype.value() == static_cast<int64_t>(c10_npu::Dtype::FLOAT4_E2M1));
+        mxfp4_valid = mxfp4_valid && (w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
     } else {
         mxfp4_valid = mxfp4_valid && (w.scalar_type() == at::ScalarType::Float4_e2m1fn_x2);
     }
