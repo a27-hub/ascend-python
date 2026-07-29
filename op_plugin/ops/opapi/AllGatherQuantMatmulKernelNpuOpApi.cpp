@@ -51,11 +51,21 @@ static void check_dtype_itemsize_compatible(
   int acl_item_size = npu_preparation::GetAclDataTypeItemSize(tensor_acltype);
   TORCH_CHECK(
       tensor.itemsize() == acl_item_size,
-      "The itemsize of ", param_name, " (dtype:", tensor.dtype(),
-      ", itemsize:", tensor.itemsize(), ") must be equal to the itemsize of ",
-      param_name, "_dtype (", c10_npu::CustomDataTypeToString(tensor_dtype.value()),
-      ", itemsize:", acl_item_size, "). Try use ", param_name,
-      "_dtype=None, or use same itemsize dtype instead.", 
+      "The itemsize of ",
+      param_name,
+      " (dtype:",
+      tensor.dtype(),
+      ", itemsize:",
+      tensor.itemsize(),
+      ") must be equal to the itemsize of ",
+      param_name,
+      "_dtype (",
+      c10_npu::CustomDataTypeToString(tensor_dtype.value()),
+      ", itemsize:",
+      acl_item_size,
+      "). Try use ",
+      param_name,
+      "_dtype=None, or use same itemsize dtype instead.",
       OPS_ERROR(ErrCode::PARAM));
 }
 
