@@ -38,15 +38,8 @@ at::Tensor& hardtanh_out_npu_nocheck(
 }
 } // namespace
 
-at::Tensor& hardtanh_out(
-    const at::Tensor& self,
-    const at::Scalar& min,
-    const at::Scalar& max,
-    at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+at::Tensor& hardtanh_out(const at::Tensor& self, const at::Scalar& min, const at::Scalar& max, at::Tensor& result) {
+  npu_preparation::CheckOut({self}, result, self);
 
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -55,7 +48,7 @@ at::Tensor& hardtanh_out(
   } else {
     hardtanh_out_npu_nocheck(result, self, min, max);
   }
-    return result;
+  return result;
 }
 
 at::Tensor hardtanh(const at::Tensor& self, const at::Scalar& min, const at::Scalar& max) {
