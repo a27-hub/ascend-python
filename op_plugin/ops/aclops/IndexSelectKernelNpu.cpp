@@ -37,22 +37,12 @@ at::Tensor& index_select_out_npu_nocheck(
   c10::SmallVector<int64_t, N> dim_vec = {dim};
   int64_t batch_dims = 0;
   at_npu::native::OpCommand cmd;
-  cmd.Name("GatherV2")
-      .Input(self)
-      .Input(index)
-      .Input(dim_vec)
-      .Output(result)
-      .Attr("batch_dims", batch_dims)
-      .Run();
+  cmd.Name("GatherV2").Input(self).Input(index).Input(dim_vec).Output(result).Attr("batch_dims", batch_dims).Run();
   return result;
 }
 } // namespace
 
-at::Tensor& index_select_out(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index,
-    at::Tensor& result) {
+at::Tensor& index_select_out(const at::Tensor& self, int64_t dim, const at::Tensor& index, at::Tensor& result) {
   at::Tensor index_tmp(index);
   if (index_tmp.ndimension() == 0) {
     index_tmp = index.unsqueeze(0);
@@ -66,12 +56,7 @@ at::Tensor& index_select_out(
   if (self.dtype() == at::kBool) {
     input = at_npu::native::custom_ops::_npu_dtype_cast(input, at::kInt);
   }
-  npu_preparation::CheckOut(
-      {input, index_tmp},
-      result,
-      npu_format,
-      input.scalar_type(),
-      output_size);
+  npu_preparation::CheckOut({input, index_tmp}, result, npu_format, input.scalar_type(), output_size);
 
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -87,10 +72,7 @@ at::Tensor& index_select_out(
   return result;
 }
 
-at::Tensor index_select(
-    const at::Tensor& self,
-    int64_t dim,
-    const at::Tensor& index) {
+at::Tensor index_select(const at::Tensor& self, int64_t dim, const at::Tensor& index) {
   at::Tensor index_tmp(index);
   if (index_tmp.ndimension() == 0) {
     index_tmp = index.unsqueeze(0);
@@ -113,11 +95,7 @@ at::Tensor index_select(
 }
 
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
-at::Tensor& index_select_out(
-    const at::Tensor& self,
-    at::Dimname dim,
-    const at::Tensor& index,
-    at::Tensor& result) {
+at::Tensor& index_select_out(const at::Tensor& self, at::Dimname dim, const at::Tensor& index, at::Tensor& result) {
   at::Tensor index_tmp(index);
   if (index_tmp.ndimension() == 0) {
     index_tmp = index.unsqueeze(0);
@@ -125,10 +103,7 @@ at::Tensor& index_select_out(
   return acl_op::index_select_out(self, dimname_to_position(self, dim), index_tmp, result);
 }
 
-at::Tensor index_select(
-    const at::Tensor& self,
-    at::Dimname dim,
-    const at::Tensor& index) {
+at::Tensor index_select(const at::Tensor& self, at::Dimname dim, const at::Tensor& index) {
   return acl_op::index_select(self, dimname_to_position(self, dim), index);
 }
 #endif
