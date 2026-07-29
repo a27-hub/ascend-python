@@ -491,19 +491,19 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         static void* opApiFuncAddr = nullptr;                                                                          \
         static void* getWorkspaceSizeFuncAddr = nullptr;                                                               \
         GetApiFunc(#aclnn_api, #aclnn_api "GetWorkspaceSize",                                                          \
-                                      opApiFuncAddr, getWorkspaceSizeFuncAddr);                                        \
+                   opApiFuncAddr, getWorkspaceSizeFuncAddr);                                                           \
         /* 2.初始化执行上下文：内存管理相关 */                                                                              \
-        InitExecCommonCtx();                                                                                          \
+        InitExecCommonCtx();                                                                                           \
         /* 3.获取NPU流 */                                                                                               \
         auto acl_stream = GetAclStream();                                                                              \
         /* 4.缓存查询 */                                                                                                \
-        auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                                \
-        if (hit_cache_ext(acl_stream, #aclnn_api, opApiFuncAddr, snapshot, __VA_ARGS__)) {                                       \
+        auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                       \
+        if (hit_cache_ext(acl_stream, #aclnn_api, opApiFuncAddr, snapshot, __VA_ARGS__)) {                             \
             break;                                                                                                     \
         }                                                                                                              \
         /* 5.设置执行配置：确定性算法 */                                                                                   \
-        /* 6.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                                  \
-        at_npu::native::ApplyDeterministicSnapshot(snapshot, true);                                                                 \
+        /* 6.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                               \
+        at_npu::native::ApplyDeterministicSnapshot(snapshot, true);                                                    \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
@@ -511,9 +511,9 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         auto converted_params = ConvertTypes(__VA_ARGS__, workspace_size_addr, executor_addr);                         \
         auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                    \
         auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                          \
-        void* workspace_addr = GetWorkSpaceAddr(workspace_size);                                                      \
+        void* workspace_addr = GetWorkSpaceAddr(workspace_size);                                                       \
         /* 7.定义子线程执行函数 */                                                                                        \
-        auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor, opApiFuncAddr]()->int {\
+        auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor, opApiFuncAddr]() -> int { \
             /* 7.1.初始化子进程上下文 */                                                                                  \
             InitExecSubTheadCtx(acl_stream);                                                                           \
             /* 7.2.执行aclnn函数 */                                                                                     \
@@ -533,29 +533,28 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         static void* opApiFuncAddr = nullptr;                                                                          \
         static void* getWorkspaceSizeFuncAddr = nullptr;                                                               \
         GetApiFunc(#aclnn_api, #aclnn_api "GetWorkspaceSize",                                                          \
-                                      opApiFuncAddr, getWorkspaceSizeFuncAddr);                                        \
+                   opApiFuncAddr, getWorkspaceSizeFuncAddr);                                                           \
         /* 2.获取NPU流 */                                                                                               \
         auto acl_stream = GetAclStream();                                                                              \
         /* 3.拷贝参数列表 */                                                                                             \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
-        /* 4.获取查询缓存所需参数（部分参数需要在主线程获取） */                                                                \
-        auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                                \
+        /* 4.获取查询缓存所需参数（部分参数需要在主线程获取） */                                                           \
+        auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                       \
         CacheParams cache_params = GetCacheParams();                                                                   \
         /* 5.定义子线程执行函数 */                                                                                        \
-        auto acl_call = [copied_params, acl_stream, cache_params, snapshot]()->int {                                    \
+        auto acl_call = [copied_params, acl_stream, cache_params, snapshot]() -> int {                                 \
             /* 5.1.初始化子进程上下文 */                                                                                  \
             InitExecSubTheadCtx(acl_stream);                                                                           \
             int api_ret = 0;                                                                                           \
             /* 5.2.缓存查询 */                                                                                          \
-            if (hit_cache_v2_ext(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, cache_params, snapshot))        \
-            {                                                                                                          \
+            if (hit_cache_v2_ext(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, cache_params, snapshot)) { \
                 return api_ret;                                                                                        \
             }                                                                                                          \
             /* 5.3.设置执行配置 */                                                                                       \
-            at_npu::native::ApplyDeterministicSnapshot(snapshot, true);                                                                 \
-            /* 5.4.初始化执行上下文：内存管理相关 */                                                                         \
+            at_npu::native::ApplyDeterministicSnapshot(snapshot, true);                                                \
+            /* 5.4.初始化执行上下文：内存管理相关 */                                                                        \
             InitExecCommonCtx();                                                                                       \
-            /* 5.5.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                            \
+            /* 5.5.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                           \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
             aclOpExecutor *executor = nullptr;                                                                         \
@@ -564,7 +563,7 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
             auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                \
             auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
             /* 5.6.执行aclnn函数 */                                                                                     \
-            api_ret = ExecuteApiFuncV2(opApiFuncAddr, acl_stream, workspace_size, executor);                             \
+            api_ret = ExecuteApiFuncV2(opApiFuncAddr, acl_stream, workspace_size, executor);                           \
             /* 5.7.清理参数、内存 */                                                                                      \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseExecCommonCtx();                                                                                    \
