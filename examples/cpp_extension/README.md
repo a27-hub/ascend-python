@@ -96,7 +96,7 @@ output = op_extension.ops.custom_add(x_npu, y_npu)
 
 ## 运行自定义的算子
 
-  运行依赖torch、TorchNPU和CANN。具体安装步骤参考[TorchNPU文档](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)
+  运行依赖PyTorch、TorchNPU和CANN。具体安装步骤参考[TorchNPU文档](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)
   运行流程：
 
   1. 运行setup脚本，编译生成whl包。
