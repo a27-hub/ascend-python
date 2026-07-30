@@ -1288,7 +1288,7 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
     if world_size <= 0:
         raise RuntimeError("world_size must be bigger than zero")
 
-    is_mxfp4 = (x1_dtype == torch_npu.float4_e2m1fn_x2 or x2_dtype == torch_npu.float4_e2m1fn_x2)
+    is_mxfp4 = (x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2)
     if is_mxfp4:
         _mxfp4_dim_checks = [(self, "x1", 2), (x2, "x2", 2), (x1_scale, "x1_scale", 3), (x2_scale, "x2_scale", 3)]
         for tensor, name, expected_dim in _mxfp4_dim_checks:
