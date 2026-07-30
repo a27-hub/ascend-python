@@ -1298,8 +1298,7 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
             )
             torch._check(
                 tensor.dim() == expected_dim,
-                lambda: f"{name} dim should be {expected_dim} in mxfp4 quant scene, " 
-                        f"but got {tensor.dim()}D" + ops_error(ErrCode.VALUE),
+                lambda: f"{name} dim should be {expected_dim} in mxfp4 quant scene, but got {tensor.dim()}D" + ops_error(ErrCode.VALUE),
             )
 
     # out_gather_mm
