@@ -54,7 +54,7 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
                                            c10::string_view comm_alg, int64_t zero_expert_num, int64_t copy_expert_num, int64_t const_expert_num)
 {
     TORCH_CHECK((x.dim() == DIM_TWO) && (expert_ids.dim() == DIM_TWO), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(x.scalar_type() == at::kBFloat16 || x.scalar_type() == at::kHalf,
+    TORCH_CHECK(x.scalar_type() == at::kBFloat16 || x.scalar_type() == at::kHalf || x.scalar_type() == at::kInt,
                 "dtype of x should be BFloat16 or Half, but got " + std::string(c10::toString(x.scalar_type())),
                 OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(expert_ids.scalar_type() == at::kInt,
@@ -128,7 +128,7 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
         ep_recv_cnt_num = ep_world_size * local_moe_expert_num;
     }
 
-    auto output_dtype = (!scales.has_value() && quant_mode == 0) ? x.scalar_type() : at::kChar;
+    auto output_dtype = (quant_mode == 0 && (!scales.has_value() || x.scalar_type() == at::kInt)) ? x.scalar_type() : at::kChar;
     char *group_ep_ptr = const_cast<char *>(group_ep.data());
     std::string group_tp_str = std::string(group_tp);
     char *group_tp_ptr = const_cast<char *>(group_tp_str.c_str());

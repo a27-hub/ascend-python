@@ -1551,6 +1551,9 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
     if scales is not None or quant_mode != 0:
         outDtype = torch.int8
 
+    if x.dtype == torch.int32:
+        outDtype = torch.int32
+
     expand_idx = x.new_empty((max(bs * k, a * 128)), dtype=torch.int32)
     if tp_world_size == 0:
         expand_x = x.new_empty((a, h), dtype=outDtype)
