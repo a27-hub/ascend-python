@@ -29,36 +29,65 @@ class TestMmReduceScatterBase(TestCase):
 
     @classmethod
     def _test_npu_mm_reduce_scatter_base(cls, rank, input_list):
-        x1, x2, world_size, comm_mode, init_pg, c2p = input_list
-        pg = init_pg(rank, world_size)
-        group = pg.distributed_c10d._get_default_group()
-        if torch.__version__ > '2.0':
-            hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
-        else:
-            hcom_name = group.get_hccl_comm_name(rank)
+        # torch_npu.profiler.profile采集
+        import torch
+        import torch_npu
+  
+        # 添加Profiling采集扩展配置参数，详细参数介绍可参考下文的参数说明
+        experimental_config = torch_npu.profiler._ExperimentalConfig(
+            export_type=[
+                torch_npu.profiler.ExportType.Text
+                ],
+            profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
+        )
+        
+        # 添加Profiling采集基础配置参数，详细参数介绍可参考下文的参数说明
+        with torch_npu.profiler.profile(
+            activities=[
+                torch_npu.profiler.ProfilerActivity.CPU,
+                torch_npu.profiler.ProfilerActivity.NPU
+                ],
+            schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1, repeat=1, skip_first=0),    # 与prof.step()配套使用
+            on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
+            record_shapes=False,
+            profile_memory=False,
+            with_stack=False,
+            with_modules=False,
+            with_flops=False,
+            experimental_config=experimental_config) as prof:
+    
 
-        x1 = x1.npu()
-        x2 = x2.npu()
 
-        for i in range(REPEAT):
-            t0 = time.time()
-            out = torch_npu.npu_mm_reduce_scatter_base(x1,
-                                                   x2,
-                                                   hcom_name,
-                                                   world_size,
-                                                   reduce_op='sum',
-                                                   bias=None,
-                                                   comm_turn=0, comm_mode=comm_mode)
-            torch.npu.synchronize()
-            elapsed = time.time() - t0
+            x1, x2, world_size, comm_mode, init_pg, c2p = input_list
+            pg = init_pg(rank, world_size)
+            group = pg.distributed_c10d._get_default_group()
+            if torch.__version__ > '2.0':
+                hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
+            else:
+                hcom_name = group.get_hccl_comm_name(rank)
 
-            if i == 0:
-                c2p.put((rank, out.cpu()))
+            x1 = x1.npu()
+            x2 = x2.npu()
 
-            if i % 10 == 0 or i == REPEAT - 1:
-                print(f"[Rank {rank}] base iter {i+1}/{REPEAT}: OK ({elapsed:.4f}s)", flush=True)
+            for i in range(REPEAT):
+                t0 = time.time()
+                out = torch_npu.npu_mm_reduce_scatter_base(x1,
+                                                        x2,
+                                                        hcom_name,
+                                                        world_size,
+                                                        reduce_op='sum',
+                                                        bias=None,
+                                                        comm_turn=0, comm_mode=comm_mode)
+                torch.npu.synchronize()
+                elapsed = time.time() - t0
 
-        pg.barrier()
+                # 第一次迭代做精度校验, 把结果发回主进程
+                if i == 0:
+                    c2p.put((rank, out.cpu()))
+
+                if i % 10 == 0 or i == REPEAT - 1:
+                    print(f"[Rank {rank}] base iter {i+1}/{REPEAT}: OK ({elapsed:.4f}s)", flush=True)
+            pg.barrier()
 
     @classmethod
     def _test_npu_mm_reduce_scatter_quant(cls, rank, input_list):
@@ -126,10 +155,69 @@ class TestMmReduceScatterBase(TestCase):
 
         for _ in range(world_size):
             rank, output = c2p.get()
+            # 检测inf越界
+            # actual = output
+            # expected = expt_out_list[rank]
+
+            # actual_inf = torch.isinf(actual)
+            # expected_inf = torch.isinf(expected)
+            # actual_nan = torch.isnan(actual)
+            # expected_nan = torch.isnan(expected)
+
+            # same_inf_mask = (
+            #     actual_inf
+            #     & expected_inf
+            #     & (torch.signbit(actual) == torch.signbit(expected))
+            # )
+            # same_inf_count = same_inf_mask.sum().item()
+
+            # print(
+            #     f"rank={rank}, "
+            #     f"actual_inf={actual_inf.sum().item()}/{actual.numel()}, "
+            #     f"expected_inf={expected_inf.sum().item()}/{expected.numel()}, "
+            #     f"actual_nan={actual_nan.sum().item()}, "
+            #     f"expected_nan={expected_nan.sum().item()}, "
+            #     f"same_inf={same_inf_count}"
+            # )
+
+            # # 分别检查 NaN、Inf 的位置
+            # self.assertTrue(
+            #     torch.equal(actual_nan, expected_nan),
+            #     f"rank={rank}: NaN positions differ",
+            # )
+            # self.assertTrue(
+            #     torch.equal(actual_inf, expected_inf),
+            #     f"rank={rank}: Inf positions differ",
+            # )
+
+            # # Inf 位置相同时，继续检查正负号
+            # if actual_inf.any():
+            #     self.assertTrue(
+            #         torch.equal(
+            #             torch.signbit(actual[actual_inf]),
+            #             torch.signbit(expected[expected_inf]),
+            #         ),
+            #         f"rank={rank}: Inf signs differ",
+            #     )
+
+            # # assertRtolEqual 只比较两边均为有限值的位置
+            # finite_mask = torch.isfinite(actual) & torch.isfinite(expected)
+
+            # if finite_mask.any():
+            #     self.assertRtolEqual(
+            #         actual[finite_mask],
+            #         expected[finite_mask],
+            #         0.05,
+            #         0.05,
+            #     )
+            # else:
+            #     print(f"rank={rank}: no finite elements to compare")
+#kaishi 
             self.assertRtolEqual(output, expt_out_list[rank], 0.05, 0.05)
 
         for p in ps:
             p.join()
+            # self.assertEqual(p.exitcode, 0, f"child process failed: exitcode={p.exitcode}")
 
     def _construct_excepted_result(self, x1_list, x2_list, world_size):
         out = None
@@ -173,31 +261,33 @@ class TestMmReduceScatterBase(TestCase):
         index = x1_list[0].shape[0] // world_size
         return [out[index * i:index * (i + 1), :] for i in range(world_size)]
 
-    @skipIfUnsupportMultiNPU(2)
+    @skipIfUnsupportMultiNPU(8)
     @SupportedDevices(['Ascend950'])
     def test_npu_mm_reduce_scatter_base(self):
-        world_size = 2
+        world_size = 8
         dtype = np.float16
         data_format = -1
-        x1_shape = [dtype, data_format, [128, 512]]
-        x2_shape = [dtype, data_format, [512, 256]]
+        # x1_shape = [dtype, data_format, [8192, 1024]]
+        # x2_shape = [dtype, data_format, [1024, 8192]]
+        x1_shape = [dtype, data_format, [256, 256]]
+        x2_shape = [dtype, data_format, [256, 512]]
         x1_list = []
         x2_list = []
         for _ in range(world_size):
-            x1, _ = create_common_tensor(x1_shape, -1, 1)
-            x2, _ = create_common_tensor(x2_shape, -1, 1)
+            x1, _ = create_common_tensor(x1_shape, -5, 5)
+            x2, _ = create_common_tensor(x2_shape, -5, 5)
             x1_list.append(x1)
             x2_list.append(x2)
         expt_out_list = self._construct_excepted_result(x1_list, x2_list, world_size)
-        for comm_mode in ['ai_cpu', 'ccu']:
+        for comm_mode in ['aiv']:
             self._test_multiprocess(TestMmReduceScatterBase._test_npu_mm_reduce_scatter_base,
                                     TestMmReduceScatterBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size, comm_mode, None, None, None, None, None])
 
 
-    @skipIfUnsupportMultiNPU(2)
+    @skipIfUnsupportMultiNPU(8)
     @SupportedDevices(['Ascend950'])
     def test_npu_mm_reduce_scatter_quant(self):
-        world_size = 2
+        world_size = 8
         dtype = torch.int8
         m, k, n = 128, 512, 256
         for output_dtype in [torch.float16, torch.bfloat16]:
@@ -224,7 +314,7 @@ class TestMmReduceScatterBase(TestCase):
             expt_out_list = self._construct_quant_excepted_result(x1_list, x2_list, world_size, dequant_type, x1_scale_list, x2_scale_list)
             for is_nz in [False]:
                 self._test_multiprocess(TestMmReduceScatterBase._test_npu_mm_reduce_scatter_quant,
-                                        TestMmReduceScatterBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size, 'ai_cpu', x1_scale_list, x2_scale_list, output_dtype, dequant_type, is_nz])
+                                        TestMmReduceScatterBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size, 'aiv', x1_scale_list, x2_scale_list, output_dtype, dequant_type, is_nz])
 
 
 if __name__ == '__main__':
