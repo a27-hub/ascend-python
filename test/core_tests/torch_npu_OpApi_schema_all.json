@@ -164,9 +164,6 @@
   "op_api: torch_npu.npu_dynamic_block_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
-  "op_api: torch_npu.npu_gelu_mul(*args, **kwargs)": {
-    "version": ["v2.6", "v2.7"]
-  },
   "op_api: torch_npu.npu_sim_exponential_(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
@@ -174,9 +171,6 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_alltoallv_quant_gmm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
-  "op_api: torch_npu.npu_gelu_mul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_fused_floyd_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
