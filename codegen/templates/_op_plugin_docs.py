@@ -15170,3 +15170,41 @@ model = torch.compile(model, backend=npu_backend, dynamic=False)
 softmax_max_index, softmax_sum_index = model(q_index, k_index, weight)
 """
 )
+
+_add_torch_npu_docstr(
+    "batch_norm_gather_stats_update",
+    """
+torch_npu.batch_norm_gather_stats_update(input, sum_all, square_sum_all, running_mean, running_var, momentum, eps, counts) -> (Tensor, Tensor)
+
+功能说明
+在跨 device 的同步 Batch Normalization（SyncBatchNorm）场景下，收集所有 device 的通道特征和、特征平方和与样本计数，计算全局的批均值（batch mean）与批标准差倒数（batch invstd），并以指数平滑方式原地更新运行均值/运行方差（running mean / running variance）。仅返回 (batch_mean, batch_invstd)，running_mean/running_var 为入参并由算子原地更新。
+
+参数说明
+input (Tensor) - 原始输入张量，仅用于确定通道数 C = input.size(1) 与输出 shape/dtype 推导，不参与 aclnn 计算。数据类型支持 float16、bfloat16、float32。
+sum_all (Tensor) - 各 device 的通道特征和 totalSum，shape 为 (N, C)，N 为 device 数。数据类型支持 float16、bfloat16、float32。
+square_sum_all (Tensor) - 各 device 的通道特征平方和 totalSquareSum，shape 必须与 sum_all 完全一致。数据类型支持 float16、bfloat16、float32。
+running_mean (Tensor, optional) - 运行均值 runningMean，1D，shape 为 (C,)，由算子原地更新；传 None 时不更新。数据类型支持 float16、bfloat16、float32。
+running_var (Tensor, optional) - 运行方差 runningVar，1D，shape 为 (C,)，由算子原地更新；传 None 时不更新。数据类型支持 float16、bfloat16、float32。
+momentum (float) - running_mean/running_var 的指数平滑参数。
+eps (float) - 用于防止产生除 0 的偏移。
+counts (Tensor) - 各 device 的样本计数 sampleCount，1D，shape 为 (N,)，与 sum_all 第一维一致。数据类型仅支持 int32。
+
+返回值
+batch_mean (Tensor) - 全局批均值，1D，shape 为 (C,)，数据类型与 sum_all 一致。
+batch_invstd (Tensor) - 全局批标准差倒数，1D，shape 为 (C,)，数据类型与 sum_all 一致。
+
+示例
+>>> import torch
+>>> import torch_npu
+>>> input = torch.randn((4, 8), dtype=torch.float32, device='npu')
+>>> sum_all = torch.randn((2, 8), dtype=torch.float32, device='npu')
+>>> square_sum_all = torch.randn((2, 8), dtype=torch.float32, device='npu')
+>>> running_mean = torch.zeros(8, dtype=torch.float32, device='npu')
+>>> running_var = torch.ones(8, dtype=torch.float32, device='npu')
+>>> counts = torch.tensor([16, 16], dtype=torch.int32, device='npu')
+>>> batch_mean, batch_invstd = torch_npu.batch_norm_gather_stats_update(
+...     input, sum_all, square_sum_all, running_mean, running_var, 0.1, 1e-5, counts)
+>>> batch_mean.shape
+torch.Size([8])
+"""
+)

@@ -636,6 +636,7 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p3743712125811"><a name="p3743712125811"></a><a name="p3743712125811"></a>将tensor updates中的值按指定的轴axis和索引indices更新tensor data中的值，并将结果保存到输出tensor，data本身的数据被改变。</p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-batch_norm_gather_stats_update.md">torch_npu.batch_norm_gather_stats_update</a></p></td><td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>SyncBatchNorm 场景下收集所有 device 的特征和/平方和/样本计数，计算全局批均值与批标准差倒数，并原地更新运行均值/方差。</p></td></tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-empty_with_swapped_memory.md">torch_npu.empty_with_swapped_memory</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊Tensor。</p>

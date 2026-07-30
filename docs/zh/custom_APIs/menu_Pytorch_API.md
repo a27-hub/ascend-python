@@ -130,6 +130,7 @@
         -   [torch_npu.npu_weight_quant_batchmatmul](./torch_npu/torch_npu-npu_weight_quant_batchmatmul.md)
         -   [torch_npu.scatter_update](./torch_npu/torch_npu-scatter_update.md)
         -   [torch_npu.scatter_update_](./torch_npu/torch_npu-scatter_update_.md)
+        -   [torch_npu.batch_norm_gather_stats_update](./torch_npu/torch_npu-batch_norm_gather_stats_update.md)
         -   [torch_npu.empty_with_swapped_memory](./torch_npu/torch_npu-empty_with_swapped_memory.md)
         -   [torch_npu.erase_stream](./torch_npu/torch_npu-erase_stream.md)
         -   [torch_npu.npu_gather_sparse_index](./torch_npu/torch_npu-npu_gather_sparse_index.md)
