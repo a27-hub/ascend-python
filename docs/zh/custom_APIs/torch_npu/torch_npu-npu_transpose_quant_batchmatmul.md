@@ -1,5 +1,8 @@
 # torch\_npu.npu\_transpose\_quant\_batchmatmul
 
+> [!NOTICE]  
+> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
+
 ## 产品支持情况
 
 | 产品 | 是否支持 |
@@ -61,6 +64,11 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 - mx量化场景下：
   - `x1`、`x2`仅支持float8\_e4m3fn输入。k仅支持64的倍数。
   - `x1_scale`、`x2_scale`仅支持4维输入，`x1_scale`要求shape为\(m, b, k/64, 2\)；`perm_x2`为\[0,1,2\]时，`x2_scale`要求shape为\(b, k/64, n, 2\)，`perm_x2`为\[0,2,1\]时，`x2_scale`要求shape为\(b, n, k/64, 2\)。
+
+- T-C量化场景下：
+  - `x1`、`x2`仅支持torch_npu.hifloat8输入。
+  - `x2`仅支持ND格式输入。
+  - `x1_scale`、`x2_scale`仅支持1维输入；`x1_scale`支持为空，非空时要求shape为\(1, \)，`x2_scale`要求shape为\(n, \)。
 
 ## 调用示例
 
