@@ -44,7 +44,7 @@ NPUEvent是一个事件类，实现了NPU设备事件管理的相关功能，可
 
 - **c10::DeviceIndex c10_npu::NPUEvent::device_index()**
 
-    NPUEvent设备id获取，与c10::DeviceIndex at::cuda::CUDAEvent::device_index()相同。
+    NPUEvent设备ID获取，与c10::DeviceIndex at::cuda::CUDAEvent::device_index()相同。
 
 - **aclrtEvent c10_npu::NPUEvent::event()**
 

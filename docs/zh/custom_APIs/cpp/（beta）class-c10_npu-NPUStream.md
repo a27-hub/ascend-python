@@ -12,7 +12,7 @@ NPUStream是一个NPU流类，实现了NPU流管理的相关功能，是属于NP
 
 - **c10_npu::NPUStream::NPUStream(c10::Stream stream)**
 
-    NPUStream构造函数，从指定流构造NPU流，与c10::cuda::CUDAStream::CUDAStream(c10::Stream  _stream_)相同。
+    NPUStream构造函数，从指定流构造NPU流，与c10::cuda::CUDAStream::CUDAStream(c10::Stream _stream_)相同。
 
     stream：Stream类型，指定输入流，必须为NPU流。
 
