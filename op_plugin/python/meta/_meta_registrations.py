@@ -2572,16 +2572,6 @@ def npu_add_layer_norm_meta(x1, x2, gamma, beta, epsilon=1e-5, additional_output
     return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
 
 
-@impl(m, "npu_gelu_mul")
-def npu_gelu_mul_meta(input_tensor, *, approximate="none"):
-    output_shape = list(input_tensor.shape)
-    last_dim = input_tensor.shape[-1]
-    output_shape[-1] = last_dim // 2
-    output_shape = tuple(output_shape)
-    output_dtype = input_tensor.dtype
-    return torch.empty(size=output_shape, dtype=output_dtype, device=torch.device("meta"))
-
-
 @impl(m, "npu_gelu_quant")
 def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None,
                         approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
