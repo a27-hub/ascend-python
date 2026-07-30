@@ -50,8 +50,8 @@
 #### Aten IR实现
 
 根据Aten IR定义适配算子。
-TORCH_NPU的算子下发和执行是异步的，通过TASKQUEUE实现，
-样例中，我们通过`at_npu::native::OpCommand::RunOpApiV2`方法，将算子执行入队到TORCH_NPU的TASKQUEUE。样例如下：
+TorchNPU的算子下发和执行是异步的，通过TASKQUEUE实现，
+样例中，我们通过`at_npu::native::OpCommand::RunOpApiV2`方法，将算子执行入队到TorchNPU的TASKQUEUE。样例如下：
 
   ```c++
 #include "torch_npu/csrc/core/npu/NPUStream.h"
@@ -96,7 +96,7 @@ output = op_extension.ops.custom_add(x_npu, y_npu)
 
 ## 运行自定义的算子
 
-  运行依赖torch、torch_npu和CANN。具体安装步骤参考[torch_npu文档](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)
+  运行依赖torch、TorchNPU和CANN。具体安装步骤参考[TorchNPU文档](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)
   运行流程：
 
   1. 运行setup脚本，编译生成whl包。
@@ -119,10 +119,10 @@ output = op_extension.ops.custom_add(x_npu, y_npu)
       ```bash
       cd test
       python test.py
-      ``` 
+      ```
 
 ## 常见问题 (FAQ)
- 
+
 ### 1. 编译时提示 `bisheng command not found`
 
 **问题原因**：系统中未安装 bisheng 编译器或环境变量未正确配置。
@@ -131,7 +131,7 @@ output = op_extension.ops.custom_add(x_npu, y_npu)
 - 确保已正确安装 CANN 工具包
 - 执行 `source /usr/local/Ascend/ascend-toolkit/set_env.sh` 设置环境变量
 - 验证 bisheng 编译器是否可用：`bisheng --version`
- 
+
 ### 2. 运行时提示 `ModuleNotFoundError: No module named 'op_extension'`
 
 **问题原因**：自定义扩展包未正确安装。
@@ -142,21 +142,21 @@ output = op_extension.ops.custom_add(x_npu, y_npu)
 - 尝试使用 `pip install --force-reinstall *.whl` 重新安装
 
 ## 注意事项
- 
+
 ### 1. 数据类型支持
 
 - 当前实现仅支持 `int32` 数据类型
 - 如需支持其他数据类型（如 float32、float16），需修改内核实现
 - 修改时需注意数据类型的字节大小和对齐要求
- 
+
 ### 2. 硬件兼容性
 
 - 本示例基于 Ascend NPU 开发，仅支持 Ascend 系列硬件
 - 不同型号的 Ascend NPU 可能需要调整编译参数
 - 编译时需指定正确的 NPU 架构：`--npu-arch=dav-2201`
- 
+
 ### 3. 版本兼容性
 
-- 确保 PyTorch、torch_npu 和 CANN 版本兼容
+- 确保 PyTorch、TorchNPU 和 CANN 版本兼容
 - 版本不匹配可能导致编译或运行时错误
-- 参考 [torch_npu 文档](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85) 获取兼容版本信息
+- 参考 [TorchNPU 文档](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85) 获取兼容版本信息

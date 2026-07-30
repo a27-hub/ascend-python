@@ -1,6 +1,6 @@
 # aclnn_extension 样例说明
 
-本样例是 **「自定义算子接入 - 结构化代码生成」** 的示例工程，演示如何通过 YAML 描述 + 代码生成工具，将自定义 aclnn 算子接入 PyTorch NPU 生态，并生成可参与 torch_npu 编译的适配代码。
+本样例是 **「自定义算子接入 - 结构化代码生成」** 的示例工程，演示如何通过 YAML 描述 + 代码生成工具，将自定义 aclnn 算子接入 PyTorch NPU 生态，并生成可参与 TorchNPU 编译的适配代码。
 
 ## 适用场景
 
@@ -15,8 +15,8 @@
 
 ## 环境与依赖
 
-- **运行/编译依赖**：PyTorch、torch_npu、CANN。  
-  安装与版本要求见 [torch_npu 安装说明](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)。
+- **运行/编译依赖**：PyTorch、TorchNPU、CANN。  
+  安装与版本要求见 [TorchNPU 安装说明](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)。
 
 ## 目录与文件结构
 
@@ -158,14 +158,14 @@ python test_npu_fast_gelu_custom.py
 ### 脚本参数与环境
 
 - **入参**：`gen.sh` 接收两个参数（第二个可选）。
-  - `$1`：算子 YAML 文件（必填），如 `npu_custom.yaml`。
+    - `$1`：算子 YAML 文件（必填），如 `npu_custom.yaml`。
 - **工作目录**：脚本会 `cd` 到自身所在目录（`aclnn_extension/`），后续路径均相对该目录。
 - **版本与目录名**：从当前环境的 `torch.__version__` 解析出 `PYTORCH_VERSION`（如 `2.7.0`），并得到目录后缀 `PYTORCH_VERSION_DIR`（如 `v2r7`），用于 `op_plugin/config/v2r7/` 等路径。
 - **环境变量**：脚本会设置并 `export`：
-  - `PYTORCH_VERSION`：PyTorch 版本号。
-  - `PYTORCH_CUSTOM_DERIVATIVES_PATH`：生成的 derivatives 文件路径，供后续 autograd 等使用。
-  - `ACLNN_EXTENSION_PATH`：当前样例根目录。
-  - `ACLNN_EXTENSION_SWITCH="TRUE"`：标识走 aclnn extension 逻辑（部分 torchnpugen 模块会据此分支）。
+    - `PYTORCH_VERSION`：PyTorch 版本号。
+    - `PYTORCH_CUSTOM_DERIVATIVES_PATH`：生成的 derivatives 文件路径，供后续 autograd 等使用。
+    - `ACLNN_EXTENSION_PATH`：当前样例根目录。
+    - `ACLNN_EXTENSION_SWITCH="TRUE"`：标识走 aclnn extension 逻辑（部分 torchnpugen 模块会据此分支）。
 - **创建的目录**：若不存在则会创建 `build`、`op_plugin`、`torch_npu`。
 
 ### 代码生成指令（执行顺序）
@@ -178,11 +178,11 @@ python test_npu_fast_gelu_custom.py
 | 2 | `torchnpugen.gen_derivatives` | 仅当传入 `$2` 时执行；根据 derivatives YAML 生成前反向绑定文件 `derivatives.yaml` | `--version`、`--output_dir`、`--source_yaml`（传入的 derivatives YAML） |
 | 3 | `torchnpugen.gen_op_backend` | 根据 `op_plugin_functions.yaml` 生成 op_plugin 对外接口与路由（如 OpInterface、OpApiInterface 等） | `--version`、`--output_dir`（`op_plugin/`）、`--source_yaml`（上一步生成的 `op_plugin_functions.yaml`）、`--deprecate_yaml` |
 | 4 | `torchnpugen.struct.gen_struct_opapi` | 根据算子 YAML 与 `op_plugin_functions.yaml` 生成 aclnn 结构化适配实现（如 `StructKernelNpuOpApi.cpp`） | `--output_dir`（`op_plugin/ops/opapi/`）、`--native_yaml`（`op_plugin_functions.yaml`）、`--struct_yaml`（传入的算子 YAML） |
-| 5 | `torchnpugen.gen_backend_stubs` | 根据 `test_native_functions.yaml` 等生成 torch_npu 侧 backend stub 代码到 `csrc/aten` | `--output_dir`、`--source_yaml`（当前为 `./test_native_functions.yaml`）、`--impl_path`、`--op_plugin_impl_path`、`--op_plugin_yaml_path` |
+| 5 | `torchnpugen.gen_backend_stubs` | 根据 `test_native_functions.yaml` 等生成 TorchNPU 侧 backend stub 代码到 `csrc/aten` | `--output_dir`、`--source_yaml`（当前为 `./test_native_functions.yaml`）、`--impl_path`、`--op_plugin_impl_path`、`--op_plugin_yaml_path` |
 | 6 | `torchnpugen.autograd.gen_autograd` | 根据 `test_native_functions.yaml` 生成 autograd 相关代码到 `csrc/aten` 与 `autograd` | `--out_dir`、`--autograd_dir`、`--npu_native_function_dir`（当前为 `./test_native_functions.yaml`） |
 
 - **步骤 1～4** 使用算子 YAML 和生成的 `op_plugin_functions.yaml`，产出在 `op_plugin/` 下，是 aclnn 扩展适配的核心。
-- **步骤 5～6** 使用 `test_native_functions.yaml`，产出在 `csrc/aten`、`autograd`，用于与 torch_npu 侧的注册与求导衔接。
+- **步骤 5～6** 使用 `test_native_functions.yaml`，产出在 `csrc/aten`、`autograd`，用于与 TorchNPU 侧的注册与求导衔接。
 
 ### 自定义时可调整的内容
 

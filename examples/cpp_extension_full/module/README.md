@@ -1,6 +1,6 @@
 # 适配开发及调用（完整样例-module）
 
-基于C++ extensions方式，通过torch_npu来调用单算子API的适配开发过程，其中前反向绑定通过Python类的`forward`和`backward`注册实现。
+基于C++ extensions方式，通过TorchNPU来调用单算子API的适配开发过程，其中前反向绑定通过Python类的`forward`和`backward`注册实现。
 
 ## 算子适配开发
 
@@ -9,7 +9,7 @@
 在开始之前，请确保您已完成以下环境的安装。
 
 1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
-2. 请参考《[Ascend Extension for PyTorch 软件安装指南](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
+2. 请参考《[TorchNPU 软件安装指南](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
 
 ### 适配文件结构
 
@@ -30,7 +30,7 @@
 1. 在算子适配层C++代码目录（csrc）中的`add_custom.cpp`完成C++侧算子代码适配、注册自定义算子schema及绑定具体实现。PyTorch提供TORCH_LIBRARY宏来定义新的命名空间，并在该命名空间里注册schema。注意命名空间的名字必须是唯一的。具体示例如下：
 
     > [!NOTE]
-    > 
+    >
     > 多卡场景必须在适配代码中加`const c10::OptionalDeviceGuard device_guard(device_of(Tensor))`保障跨device访问。
 
     ```cpp
@@ -156,7 +156,7 @@
     ```
 
     得到结果如下即为执行成功。
-    
+
     ```bash
     Ran xx tests in xx s
     OK

@@ -72,13 +72,13 @@
 
 ## 代码实现介绍
 
-  - 以Add算子为例，样例在*.asc文件中定义了一个名为ascendc_ops的命名空间，并在其中注册了ascendc_add函数。在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。
+- 以Add算子为例，样例在*.asc文件中定义了一个名为ascendc_ops的命名空间，并在其中注册了ascendc_add函数。在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。
 
     ```c++
-      add_custom<<<blockDim, nullptr, aclStream>>>(xGm, yGm, zGm, totalLength);
+    add_custom<<<blockDim, nullptr, aclStream>>>(xGm, yGm, zGm, totalLength);
     ```
   
-  - PyTorch提供`TORCH_LIBRARY_FRAGMENT`宏作为自定义算子注册的核心接口，用于创建并初始化自定义算子库，注册后在Python侧可以通过`torch.ops.namespace.op_name`方式进行调用，例如：
+- PyTorch提供`TORCH_LIBRARY_FRAGMENT`宏作为自定义算子注册的核心接口，用于创建并初始化自定义算子库，注册后在Python侧可以通过`torch.ops.namespace.op_name`方式进行调用，例如：
   
     ```c++
     TORCH_LIBRARY_FRAGMENT(ascendc_ops, m)
@@ -87,7 +87,7 @@
     }
     ```
   
-  - `TORCH_LIBRARY_IMPL`用于将算子逻辑绑定到特定的DispatchKey（PyTorch设备调度标识）。针对NPU设备，需要将算子实现注册到PrivateUse1这一专属的DispatchKey上，例如：
+- `TORCH_LIBRARY_IMPL`用于将算子逻辑绑定到特定的DispatchKey（PyTorch设备调度标识）。针对NPU设备，需要将算子实现注册到PrivateUse1这一专属的DispatchKey上，例如：
   
     ```c++
     TORCH_LIBRARY_IMPL(ascendc_ops, PrivateUse1, m)
@@ -96,9 +96,9 @@
     }
     ```
 
-  - 注册Meta函数：
+- 注册Meta函数：
   
-    注册Meta函数使faketensor流程正常工作，在使用fx、compile等功能时，注册代码如下：
+  注册Meta函数使faketensor流程正常工作，在使用fx、compile等功能时，注册代码如下：
 
     ```c++
     TORCH_LIBRARY_IMPL(ascendc_ops, Meta, m)
@@ -107,9 +107,9 @@
     }
     ```
 
-  - aclgraph的调用：
+- aclgraph的调用：
 
-    [示例代码](./test/add_aclgraph_test.py)中，通过`torch.ops.load_library`加载生成的自定义算子库，并展示了3种aclgraph的使能方式，通过对比NPU输出与CPU标准加法结果来验证自定义算子的数值正确性。
+  [示例代码](./test/add_aclgraph_test.py)中，通过`torch.ops.load_library`加载生成的自定义算子库，并展示了3种aclgraph的使能方式，通过对比NPU输出与CPU标准加法结果来验证自定义算子的数值正确性。
 
   1. torch.npu.NPUGraph()
   2. torch.npu.make_graphed_callables
@@ -121,20 +121,20 @@
 
 - 环境安装
   
-1. 请参考与您当前使用的版本配套的[《Ascend Extension for PyTorch
-   软件安装指南》](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)，获取PyTorch和torch_npu详细的安装步骤。
-   
+1. 请参考与您当前使用的版本配套的[《TorchNPU
+   软件安装指南》](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)，获取PyTorch和TorchNPU详细的安装步骤。
+
    本样例需torch2.6.0及以上版本，支持`backend="npugraph_ex"`需7.3.0及以上版本。
 2. 根据实际环境安装CANN toolkit包，本样例需8.5.0及以上版本，安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
 3. 根据实际环境安装CANN ops包。根据产品型号和环境架构，下载对应安装包，可参考[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)并执行如下命令安装：
-   
+
    ```bash
    # 确保安装包具有可执行权限
    chmod +x Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run
    # 安装命令
    ./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run  --install --quiet --install-path=${install_path}
    ```
-   
+
    - \$\{soc\_name\}：表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。
    - \$\{install\_path\}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
 
