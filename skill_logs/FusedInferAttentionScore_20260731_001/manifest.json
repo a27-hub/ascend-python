@@ -1,0 +1,27 @@
+{
+  "op_name": "FusedInferAttentionScore",
+  "npu_name": null,
+  "date": "20260731",
+  "seq": 1,
+  "init_time": "2026-07-31T03:34:51+00:00",
+  "finish_time": "2026-07-31T04:47:03+00:00",
+  "status": "done",
+  "workflow_mode": "create",
+  "atk_provided": false,
+  "skipped": [
+    {
+      "step": "C-delimit",
+      "reason": "无 ATK 输入，未执行 ATK 用例验证"
+    }
+  ],
+  "artifacts": {
+    "checklist": "CHECKLIST.md",
+    "parse_json": "notes/npu_fused_infer_attention_score.parse.json",
+    "verify_json": "notes/npu_fused_infer_attention_score.verify.json",
+    "build_log": "build/build.log",
+    "summary": "summary.md",
+    "atk_dir": "atk/",
+    "delimitation_dir": "delimitation/"
+  },
+  "case_ref": null
+}

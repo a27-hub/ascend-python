@@ -6612,6 +6612,60 @@ class FakeTensorFormatCastTest(TestCase):
             out = torch.ops.npu._npu_format_cast(x, self.ACL_FORMAT_FRACTAL_NZ)
             self.assertEqual(list(out.shape), [4, 15, 17])
 
+class TestNpuFusedInferAttentionScore(TestCase):
+    """FakeTensor test for npu_fused_infer_attention_score (FIA V5).
+    Meta-only — validates shape/dtype inference without NPU hardware.
+    """
+
+    def test_npu_fused_infer_attention_score_meta_bnsd(self):
+        with FakeTensorMode():
+            B, N, S, D = 2, 4, 16, 64
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            scale = 1.0 / (D ** 0.5)
+
+            attn_out, softmax_lse = torch_npu.npu_fused_infer_attention_score(
+                query, key, value, num_heads=N, input_layout="BNSD", scale=scale)
+            # attention_out: same shape as query
+            self.assertEqual(attn_out.shape, torch.Size([B, N, S, D]))
+            self.assertEqual(attn_out.dtype, torch.float16)
+            # softmax_lse: returns empty [0] when softmax_lse_flag=False (default)
+            self.assertEqual(softmax_lse.numel(), 0)
+            self.assertEqual(softmax_lse.dtype, torch.float32)
+
+    def test_npu_fused_infer_attention_score_meta_bnsd_lse(self):
+        with FakeTensorMode():
+            B, N, S, D = 2, 4, 16, 64
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            scale = 1.0 / (D ** 0.5)
+
+            attn_out, softmax_lse = torch_npu.npu_fused_infer_attention_score(
+                query, key, value, num_heads=N, input_layout="BNSD", scale=scale,
+                softmax_lse_flag=True)
+            self.assertEqual(attn_out.shape, torch.Size([B, N, S, D]))
+            # softmax_lse with flag=True: [B, N, S, 1]
+            self.assertEqual(softmax_lse.shape, torch.Size([B, N, S, 1]))
+            self.assertEqual(softmax_lse.dtype, torch.float32)
+
+    def test_npu_fused_infer_attention_score_meta_bsh(self):
+        with FakeTensorMode():
+            N, D = 4, 64
+            B, S, H = 2, 16, N * D
+            query = torch.randn(B, S, H, dtype=torch.float16).npu()
+            key = torch.randn(B, S, H, dtype=torch.float16).npu()
+            value = torch.randn(B, S, H, dtype=torch.float16).npu()
+            scale = 1.0 / (D ** 0.5)
+
+            attn_out, softmax_lse = torch_npu.npu_fused_infer_attention_score(
+                query, key, value, num_heads=N, input_layout="BSH", scale=scale)
+            # BSH: output shape matches query
+            self.assertEqual(attn_out.shape, torch.Size([B, S, H]))
+            self.assertEqual(attn_out.dtype, torch.float16)
+            self.assertEqual(softmax_lse.numel(), 0)
+
 
 class TestNpuAddRmsNormQuant(TestCase):
     def test_npu_add_rms_norm_quant_meta(self):
