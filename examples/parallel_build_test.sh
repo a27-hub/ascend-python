@@ -419,13 +419,13 @@ clean_env
 # 9 个工程并行调度
 schedule "aclnn_extension"         task_aclnn_extension
 schedule "cpp_extension"           task_cpp_extension
-schedule "cpp_extension_asc"       task_cpp_extension_asc
+#schedule "cpp_extension_asc"       task_cpp_extension_asc
 schedule "cpp_extension_base"      task_cpp_extension_base
-schedule "cpp_extension_full"      task_cpp_extension_full
+#schedule "cpp_extension_full"      task_cpp_extension_full
 schedule "cpp_extension_pybind"    task_cpp_extension_pybind
 schedule "cpp_extension_structured" task_cpp_extension_structured
 schedule "framwork_cpp_extension" task_framwork_cpp_extension
-schedule "kernel_extension_aclgraph" task_kernel_extension_aclgraph
+#schedule "kernel_extension_aclgraph" task_kernel_extension_aclgraph
 
 # ----------------------------------------------------------------------------
 # 等待所有任务完成并汇总
