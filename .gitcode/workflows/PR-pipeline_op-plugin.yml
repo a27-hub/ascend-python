@@ -11,13 +11,13 @@ concurrency:
 on:
   pull_request_comment:
     types: [created]
-    branches: [ '*' ]
+    branches: [ 'master', '26.1.0', '26.0.0', '7.3.0' ]
     comments: [ '^(?:\/)?compile*' ]
 
 env:
   repo: ${{ atomgit.event.repository.name }}
   pr_id: ${{ atomgit.event.pull_request.number }}
-  org_name: "ComputingActionTest"
+  org_name: "Ascend"
   img_master_arm: "pytorch_master_a2_aarch64_builder:20260704"
   img_2_7_1_arm: "pytorch_2.7.1_a2_aarch64_builder:20260704"
   img_2_9_0_arm: "pytorch_2.9.0_a2_aarch64_builder:20260704"
@@ -34,55 +34,12 @@ env:
   img_2_13_0_x86: "pytorch_2.13.0_a1_x86_64_builder:20260709"
 
 stages:
-  stage_0:
-    name: stage_0
-    select: selected_by_default
-    jobs:
-      PREHEAT_master_x86:
-        name: PREHEAT_master_x86
-        select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          - name: preheat_master_x86
-            uses: dedicate-preheat-plugin
-            with:
-              namespace_id: '13965860'
-              resource_pool_name: Computation-Ascend-GitCode-x64
-              arch: x64
-              image_name: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_x86 }}
-              timeout: '3600'
-
   stage_1:
-    name: stage_1
+    name: CodeCheck
     select: selected_by_default
     jobs:
-      CodeCheck:
-        name: CodeCheck
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          - name: Login to CodeArts
-            uses: codearts-login
-            with:
-              region: cn-north-4
-              name: ${{ secrets.IAM_USER_NAME }}
-              password: ${{ secrets.IAM_USER_PASSWORD }}
-              domain-name: ${{ secrets.IAM_DOMAIN_NAME }}
-          - name: codecheck
-            uses: codecheck_gitcode_v2
-            with:
-              project_id: a9b188a62f334fc0963bcfb523426d17
-              task_name: op-plugin-20260724103005
-              branch: ${{ atomgit.event.pull_request.base.ref }}
       SCA:
         name: SCA
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
@@ -103,35 +60,29 @@ stages:
 
       Antipoison:
         name: Antipoison
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
-          - name: print env
-            run: |
-              echo "pr_id: ${{ env.pr_id }}"
-              echo "------------------------"
-              env
           - name: checkout
             uses: checkout
             with:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
           - name: Antipoison
             run: |
-              git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+              git config --global http.postBuffer 524288000
+              git config --global http.lowSpeedLimit 5000
+              git config --global http.lowSpeedTime 300
+              git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
               pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
               wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
               unzip -q ApiGateway-python-sdk-2.0.7.zip
-              cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+              cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/.gitcode/workflows/scripts/
+              python3.8 cie/.gitcode/workflows/scripts/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}  
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
@@ -156,10 +107,8 @@ stages:
           - name: pre-commit
             uses: openlibing-pre-commit-action
 
-      Only_doc_commit:
-        name: Only_doc_commit
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      Detect_file_changes:
+        name: Detect_file_changes
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
@@ -171,29 +120,52 @@ stages:
             uses: checkout
             with:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
-          - name: Only Doc Commit Check
-            id: only-doc-check
-            uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@main
+              fetch-depth: 0
+          - name: Only_doc_commit
+            id: filter
+            uses: dorny/paths-filter@v3
             with:
-              pr_id: ${{ env.pr_id }}
-              target_branch: ${{ atomgit.event.pull_request.base.ref }}
-              remote_url: ${{ env.ATOMGIT_REPOSITORY_URL }}
+              base: ${{ atomgit.event.pull_request.base.ref }}
+              filters: |
+                non-doc:
+                  - '!**.md'
+                  - '!**.rst'
+                  - '!**.log'
+                  - '!**.png'
+                  - '!**.jpg'
+                  - '!**.doc'
+                  - '!**.eddx'
+                  - '!**.svg'
           - name: set build skip flag
             id: set-skip
             run: |
-              BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
-              echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
-              echo "Only Doc Commit Check result: ${BUILD_SKIP}"
+              if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
+                echo "build_skip=no" >> "$ATOMGIT_OUTPUT"
+              else
+                echo "build_skip=yes" >> "$ATOMGIT_OUTPUT"
+              fi
+          # - name: Only Doc Commit Check
+          #   id: only-doc-check
+          #   uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@main
+          #   with:
+          #     pr_id: ${{ env.pr_id }}
+          #     target_branch: ${{ atomgit.event.pull_request.base.ref }}
+          #     remote_url: ${{ env.ATOMGIT_REPOSITORY_URL }}
+          # - name: set build skip flag
+          #   id: set-skip
+          #   run: |
+          #     BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
+          #     echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
+          #     echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
   stage_2:
-    name: stage_2
+    name: Build
     select: selected_by_default
     jobs:
-
       Build_master_x86:
         name: Build_master_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -206,7 +178,7 @@ stages:
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -217,10 +189,9 @@ stages:
           runs_on_arch: "x64"
           runs_on_spec: "2xlarge"
 
-
       Build_v2_9_0_x86:
         name: Build_v2_9_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -231,10 +202,9 @@ stages:
           runs_on_arch: "x64"
           runs_on_spec: "2xlarge"
 
-
       Build_v2_10_0_x86:
         name: Build_v2_10_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -245,10 +215,9 @@ stages:
           runs_on_arch: "x64"
           runs_on_spec: "2xlarge"
 
-
       Build_v2_11_0_x86:
         name: Build_v2_11_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -259,10 +228,9 @@ stages:
           runs_on_arch: "x64"
           runs_on_spec: "2xlarge"
 
-
       Build_v2_12_0_x86:
         name: Build_v2_12_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -275,7 +243,7 @@ stages:
 
       Build_master_ARM:
         name: Build_master_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -288,7 +256,7 @@ stages:
 
       Build_v2_7_1_ARM:
         name: Build_v2_7_1_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -301,7 +269,7 @@ stages:
 
       Build_v2_9_0_ARM:
         name: Build_v2_9_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -314,7 +282,7 @@ stages:
 
       Build_v2_10_0_ARM:
         name: Build_v2_10_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -327,7 +295,7 @@ stages:
 
       Build_v2_11_0_ARM:
         name: Build_v2_11_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -340,7 +308,7 @@ stages:
 
       Build_v2_12_0_ARM:
         name: Build_v2_12_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
