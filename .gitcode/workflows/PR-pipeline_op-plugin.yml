@@ -106,10 +106,9 @@ stages:
               event-name: 'pull_request'
               base: ${{ atomgit.event.pull_request.base.ref }}
               repo: ${{ atomgit.repository }}
-              number: ${{ env.pr_id }}
-              token: ${{ atomgit.ATOMGIT_TOKEN }}
-              api-base-url: 'https://test.gitcode.net'
-              list-files: json
+              # number: ${{ env.pr_id }}
+              # token: ${{ atomgit.ATOMGIT_TOKEN }}
+              # list-files: json
               filters: |
                 non-doc:
                   - '!**.md'
