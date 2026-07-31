@@ -920,7 +920,12 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
 
     const auto dimNum = at_tensor.sizes().size();
     aclFormat format = ACL_FORMAT_ND;
-    if (!at_npu::native::FormatHelper::IsOpInputBaseFormat(at_tensor)) {
+    // A four-dimensional NPU tensor normally uses NCHW as its base format, but
+    // some ACLNN operators explicitly require ND tensors.  Keep an explicit ND
+    // storage descriptor instead of inferring NCHW again from its rank.
+    const bool is_explicit_nd = torch_npu::utils::is_npu(at_tensor) &&
+        torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_ == ACL_FORMAT_ND;
+    if (is_explicit_nd || !at_npu::native::FormatHelper::IsOpInputBaseFormat(at_tensor)) {
         format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
         // if acl_data_type is ACL_STRING, storageDims is empty.
         if (acl_data_type != ACL_STRING) {

@@ -434,30 +434,31 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_batch_nms(self, scores, score_threshold, iou_threshold, max_size_per_class, max_total_size, change_coordinate_frame=False, transpose_box=False) -> (Tensor, Tensor, Tensor, Tensor)
 功能描述
-根据batch分类计算输入框评分，通过评分排序，删除评分高于阈值(iou_threshold)的框，支持多批多类处理。通过NonMaxSuppression(nms)操作可有效删除冗余的输入框，提高检测精度。NonMaxSuppression：抑制不是极大值的元素，搜索局部的极大值，常用于计算机视觉任务中的检测类模型。
+以批量处理方式对每个类别的检测框进行非极大值抑制（NMS），去除冗余检测框，输出保留的检测框及其对应的类别和得分。支持Ascend 950后端（需安装ops-cv 950算子包）。
 
 参数说明
-self (Tensor) - 必填值，输入框的tensor，包含batch大小，数据类型Float16，输入示例：[batch_size, num_anchors, q, 4]，其中q=1或q=num_classes。
-scores (Tensor) - 必填值，输入tensor，数据类型Float16，输入示例：[batch_size, num_anchors, num_classes]。
-score_threshold (Float32) - 必填值，指定评分过滤器的iou_threshold，用于筛选框，去除得分较低的框，数据类型Float32。
-iou_threshold (Float32) - 必填值，指定nms的iou_threshold，用于设定阈值，去除高于阈值的的框，数据类型Float32。
-max_size_per_class (Int) - 必填值，指定每个类别的最大可选的框数，数据类型Int。
-max_total_size (Int) - 必填值，指定每个batch最大可选的框数，数据类型Int。
-change_coordinate_frame (Bool，默认值为False) -可选值， 是否正则化输出框坐标矩阵，数据类型Bool。
-transpose_box (Bool，默认值为False) - 可选值，确定是否在此op之前插入转置，数据类型Bool。True表示boxes使用4,N排布。 False表示boxes使用过N,4排布。
+self (Tensor) - 必填值，输入框的tensor，包含batch大小，数据类型支持Float16或Float32。当transpose_box=False时，输入shape为[batch_size, num_anchors, q, 4]；当transpose_box=True时，输入shape为[batch_size, q, 4, num_anchors]。其中q=1或q=num_classes。
+scores (Tensor) - 必填值，输入tensor，数据类型支持Float16或Float32，需与self的dtype一致，输入shape为[batch_size, num_anchors, num_classes]。
+score_threshold (float) - 必填值，评分过滤阈值，去除得分低于该值的框。允许负值，必须为有限值。
+iou_threshold (float) - 必填值，NMS的IoU阈值，去除IoU高于该值的冗余框。取值范围为[0, 1]。
+max_size_per_class (int) - 必填值，每个类别最大可选框数，必须为正整数。
+max_total_size (int) - 必填值，每个batch最大可选框数，必须为正整数。
+change_coordinate_frame (bool，默认值为False) - 可选值，是否正则化输出框坐标。当前npu_batch_nms接口不支持设置为True，因为该功能依赖clip_window输入，而本接口未提供该参数。
+transpose_box (bool，默认值为False) - 可选值，确定boxes的布局。True表示boxes使用[B, q, 4, N]排布，False表示boxes使用[B, N, q, 4]排布。
 输出说明
-nmsed_boxes (Tensor) - shape为(batch, max_total_size, 4)的3D张量，指定每批次输出的nms框，数据类型Float16。
-nmsed_scores (Tensor) - shape为(batch, max_total_size)的2D张量，指定每批次输出的nms分数，数据类型Float16。
-nmsed_classes (Tensor) - shape为(batch, max_total_size)的2D张量，指定每批次输出的nms类，数据类型Float16。
+nmsed_boxes (Tensor) - shape为(batch, max_total_size, 4)的3D张量，指定每批次输出的nms框，数据类型与输入一致。
+nmsed_scores (Tensor) - shape为(batch, max_total_size)的2D张量，指定每批次输出的nms分数，数据类型与输入一致。
+nmsed_classes (Tensor) - shape为(batch, max_total_size)的2D张量，指定每批次输出的nms类别，数据类型与输入一致。
 nmsed_num (Tensor) - shape为(batch)的1D张量，指定nmsed_boxes的有效数量，数据类型Int32。
+输出为定长张量，有效输出数量由nmsed_num指定，无效区域填充为0。
 示例
->>> boxes = torch.randn(8, 2, 4, 4, dtype = torch.float32).to("npu")
->>> scores = torch.randn(3, 2, 4, dtype = torch.float32).to("npu")
->>> nmsed_boxes, nmsed_scores, nmsed_classes, nmsed_num = torch_npu.npu_batch_nms(boxes, scores, 0.3, 0.5, 3, 4)
->>> nmsed_boxes
->>> nmsed_scores
->>> nmsed_classes
->>> nmsed_num
+>>> import torch
+>>> import torch_npu
+>>> boxes = torch.randn(2, 100, 1, 4, dtype=torch.float16).to("npu")
+>>> scores = torch.randn(2, 100, 80, dtype=torch.float16).to("npu")
+>>> nmsed_boxes, nmsed_scores, nmsed_classes, nmsed_num = torch_npu.npu_batch_nms(boxes, scores, 0.3, 0.5, 10, 20)
+>>> nmsed_boxes.shape
+torch.Size([2, 20, 4])
 """
 )
 
