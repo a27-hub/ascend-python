@@ -6612,6 +6612,98 @@ class FakeTensorFormatCastTest(TestCase):
             out = torch.ops.npu._npu_format_cast(x, self.ACL_FORMAT_FRACTAL_NZ)
             self.assertEqual(list(out.shape), [4, 15, 17])
 
+class TestNpuFusedInferAttentionScore(TestCase):
+    """FakeTensor test for npu_fused_infer_attention_score (FIA V5).
+    Meta-only — validates shape/dtype inference without NPU hardware.
+    """
+
+    def test_npu_fused_infer_attention_score_meta_bnsd(self):
+        with FakeTensorMode():
+            B, N, S, D = 2, 4, 16, 64
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            scale = 1.0 / (D ** 0.5)
+
+            attn_out, softmax_lse = torch_npu.npu_fused_infer_attention_score(
+                query, key, value, num_heads=N, input_layout="BNSD", scale=scale)
+            # attention_out: same shape as query
+            self.assertEqual(attn_out.shape, torch.Size([B, N, S, D]))
+            self.assertEqual(attn_out.dtype, torch.float16)
+            # softmax_lse: returns empty [0] when softmax_lse_flag=False (default)
+            self.assertEqual(softmax_lse.numel(), 0)
+            self.assertEqual(softmax_lse.dtype, torch.float32)
+
+    def test_npu_fused_infer_attention_score_meta_bnsd_lse(self):
+        with FakeTensorMode():
+            B, N, S, D = 2, 4, 16, 64
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            scale = 1.0 / (D ** 0.5)
+
+            attn_out, softmax_lse = torch_npu.npu_fused_infer_attention_score(
+                query, key, value, num_heads=N, input_layout="BNSD", scale=scale,
+                softmax_lse_flag=True)
+            self.assertEqual(attn_out.shape, torch.Size([B, N, S, D]))
+            # softmax_lse with flag=True: [B, N, S, 1]
+            self.assertEqual(softmax_lse.shape, torch.Size([B, N, S, 1]))
+            self.assertEqual(softmax_lse.dtype, torch.float32)
+
+    def test_npu_fused_infer_attention_score_meta_bsh(self):
+        with FakeTensorMode():
+            N, D = 4, 64
+            B, S, H = 2, 16, N * D
+            query = torch.randn(B, S, H, dtype=torch.float16).npu()
+            key = torch.randn(B, S, H, dtype=torch.float16).npu()
+            value = torch.randn(B, S, H, dtype=torch.float16).npu()
+            scale = 1.0 / (D ** 0.5)
+
+            attn_out, softmax_lse = torch_npu.npu_fused_infer_attention_score(
+                query, key, value, num_heads=N, input_layout="BSH", scale=scale)
+            # BSH: output shape matches query
+            self.assertEqual(attn_out.shape, torch.Size([B, S, H]))
+            self.assertEqual(attn_out.dtype, torch.float16)
+            self.assertEqual(softmax_lse.numel(), 0)
+
+
+class TestNpuAddRmsNormQuant(TestCase):
+    def test_npu_add_rms_norm_quant_meta(self):
+        with FakeTensorMode():
+            x1 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            x2 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            gamma = torch.randn(64, dtype=torch.float16).to("npu")
+            scales1 = (torch.rand(64, dtype=torch.float32) * 0.01 + 0.01).to("npu")
+            y1, y2, x_out, rms_norm_out = torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1)
+            self.assertEqual(y1.shape, x1.shape)
+            self.assertEqual(y2.shape, x1.shape)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(rms_norm_out.shape, x1.shape)
+            self.assertEqual(y1.dtype, torch.int8)
+            self.assertEqual(y2.dtype, torch.int8)
+            self.assertEqual(x_out.dtype, x1.dtype)
+            self.assertEqual(rms_norm_out.dtype, x1.dtype)
+
+    def test_npu_add_rms_norm_quant_meta_with_optional(self):
+        with FakeTensorMode():
+            x1 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            x2 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            gamma = torch.randn(64, dtype=torch.float16).to("npu")
+            scales1 = (torch.rand(64, dtype=torch.float32) * 0.01 + 0.01).to("npu")
+            scales2 = (torch.rand(64, dtype=torch.float32) * 0.01 + 0.01).to("npu")
+            zero_points1 = torch.zeros(64, dtype=torch.int32).to("npu")
+            zero_points2 = torch.zeros(64, dtype=torch.int32).to("npu")
+            bias = torch.randn(64, dtype=torch.float16).to("npu")
+            y1, y2, x_out, rms_norm_out = torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1,
+                scales2=scales2, zero_points1=zero_points1,
+                zero_points2=zero_points2, bias=bias,
+                output_res=True)
+            self.assertEqual(y1.shape, x1.shape)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(rms_norm_out.shape, x1.shape)
+
 
 if __name__ == "__main__":
     run_tests()

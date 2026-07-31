@@ -1,701 +1,452 @@
 import unittest
-import math
-
 import numpy as np
 import torch
-
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
 
-QUANT_TYPE_MIN_MAP = {1: -128, 291: -57345, 292: -449, 290: -32769}
-QUANT_TYPE_MAX_MAP = {1: 127, 291: 57344, 292: 448, 290: 32768}
+class TestNpuAddRmsNormQuant(TestCase):
 
-
-class TestNPUAddRmsNormQuant(TestCase):
-    def numpy_float8_e4m3fn(self):
-        try:
-            from ml_dtypes import float8_e4m3fn
-            return float8_e4m3fn
-        except ModuleNotFoundError:
-            raise RuntimeError("ml_dtypes is needed to support float8_e4m3fn dtype!!! "
-                               "Please install with `pip3 install ml-dtypes`")
-
-    def numpy_hifloat8(self):
-        try:
-            from en_dtypes import hifloat8
-            return hifloat8
-        except ModuleNotFoundError:
-            raise RuntimeError("en_dtypes is needed to support hifloat8 dtype!!! "
-                               "Please install with `pip3 install en-dtypes`")
-        except ImportError:
-            raise RuntimeError("Please upgrade en_dtypes to v0.0.3 at least to support hifloat8 dtype!!! "
-                               "Command is `pip3 install --upgrade en-dtypes`")
-
-    def numpy_float8_e5m2(self):
-        try:
-            from ml_dtypes import float8_e5m2
-            return float8_e5m2
-        except ModuleNotFoundError:
-            raise RuntimeError("ml_dtypes is needed to support float8_e5m2 dtype!!! "
-                               "Please install with `pip3 install ml-dtypes`")
-
-    def compare(self, a, b, benchmark):
-        diff_abs = torch.abs(a - b)
-        max_diff_abs, _ = torch.max(diff_abs, dim=0)
-
-        if max_diff_abs.item() == 0:
-            return True
+    def _quantize(self, data, scale, zero_point, div_mode, dtype_info):
+        """Quantize data with given scale and zero_point."""
+        if div_mode:
+            quant = np.round(data / scale + zero_point)
         else:
-            rel_error = 0
-            abs_error = 0
-            for i in range(a.shape[0]):
-                yes_no = (a[i] == 0 and b[i].item() != 0)
-                no_yes = (a[i] != 0 and b[i].item() == 0)
-                if a[i].item() == 0 and b[i].item() == 0:
-                    diff_rel_item = 0
-                elif yes_no or no_yes:
-                    diff_rel_item = 1
-                elif a[i] != 0 and b[i].item() != 0:
-                    diff_rel_item = diff_abs[i].item() / abs(a[i].item())
+            quant = np.round(data * scale + zero_point)
+        quant = np.clip(quant, dtype_info["min"], dtype_info["max"])
+        return quant.astype(dtype_info["dtype"])
 
-                if abs(a[i].item()) < 1 and diff_abs[i].item() > benchmark:
-                    abs_error += 1
-                elif abs(a[i].item()) >= 1 and diff_rel_item > benchmark:
-                    rel_error += 1
-                if (rel_error + abs_error) > 10:
-                    break
-            if (rel_error + abs_error) > 0:
-                return False
-            else:
-                return True
+    def supported_op_exec(
+        self, x1, x2, gamma, scales1,
+        scales2=None, zero_points1=None, zero_points2=None, beta=None,
+        axis=-1, epsilon=1e-6, div_mode=True, output_res=False, dst_type=None
+    ):
+        """CPU reference implementation of add_rms_norm_quant (all float32)."""
+        if isinstance(x1, torch.Tensor):
+            x1 = x1.numpy()
+        if isinstance(x2, torch.Tensor):
+            x2 = x2.numpy()
+        if isinstance(gamma, torch.Tensor):
+            gamma = gamma.numpy()
+        if isinstance(scales1, torch.Tensor):
+            scales1 = scales1.numpy()
+        if scales2 is not None and isinstance(scales2, torch.Tensor):
+            scales2 = scales2.numpy()
+        if zero_points1 is not None and isinstance(zero_points1, torch.Tensor):
+            zero_points1 = zero_points1.numpy()
+        if zero_points2 is not None and isinstance(zero_points2, torch.Tensor):
+            zero_points2 = zero_points2.numpy()
+        if beta is not None and isinstance(beta, torch.Tensor):
+            beta = beta.numpy()
 
-    # pylint:disable = huawei-too-many-arguments
-    def npu_add_rms_norm_quant_golden(self, input_x1, input_x2, input_gamma, input_scales1,
-                                      input_zero_points1, input_scales2=None, input_zero_points2=None,
-                                      dst_type=1, epsilon=1e-06):
-        torchType32 = torch.float32
-        len_shape_x = len(input_x1.shape)
-        len_shape_gamma = len(input_gamma.shape)
-        axis = len_shape_x - len_shape_gamma
-        divMode = True
+        x = x1 + x2
+        x_sq = x ** 2
+        axis_dim = axis if axis >= 0 else x.ndim + axis
+        rms = np.sqrt(np.mean(x_sq, axis=axis_dim, keepdims=True) + epsilon)
+        y_normalized = x / rms * gamma
+        rms_norm_out = y_normalized.copy()
 
-        n = len(input_x1.shape) - len(input_gamma.shape)
-        input_gamma = input_gamma.reshape(np.multiply.reduce(np.array(input_gamma.shape)))
+        if beta is not None:
+            y_normalized = y_normalized + beta
 
-        input_scales1 = input_scales1.reshape(np.multiply.reduce(np.array(input_scales1.shape)))
-        if input_scales2 is not None:
-            input_scales2 = input_scales2.reshape(np.multiply.reduce(np.array(input_scales2.shape)))
-        if input_zero_points1 is not None:
-            input_zero_points1 = input_zero_points1.reshape(np.multiply.reduce(np.array(input_zero_points1.shape)))
-        if input_zero_points2 is not None:
-            input_zero_points2 = input_zero_points2.reshape(np.multiply.reduce(np.array(input_zero_points2.shape)))
-
-        x1_shape = input_x1.shape[0:n] + input_gamma.shape
-        input_x1 = input_x1.reshape(x1_shape)
-        input_x2 = input_x2.reshape(x1_shape)
-        len_shape_x = len(input_x1.shape)
-        len_shape_gamma = len(input_gamma.shape)
-        axis = len_shape_x - len_shape_gamma
-        input_x_dtype = input_x1.dtype
-        input_scales_dtype = input_scales1.dtype
-        if input_zero_points1 is not None:
-            input_zp_dtype = input_zero_points1.dtype
-        if input_zero_points2 is not None:
-            input_zp_dtype = input_zero_points2.dtype
-
-        if (input_x_dtype == torchType32):
-            add_x = input_x1 + input_x2
-        elif (input_x_dtype == torch.float16):
-            add_x = (input_x1.type(torchType32) + input_x2.type(torchType32))
+        dtype_info = {"dtype": np.int8, "min": -128, "max": 127}
+        y1 = self._quantize(y_normalized, scales1,
+                            zero_points1 if zero_points1 is not None else 0,
+                            div_mode, dtype_info)
+        if scales2 is not None:
+            y2 = self._quantize(y_normalized, scales2,
+                                zero_points2 if zero_points2 is not None else 0,
+                                div_mode, dtype_info)
         else:
-            add_x = (input_x1.type(torchType32) + input_x2.type(torchType32))
+            y2 = y1.copy()
 
-        if input_scales_dtype is not torchType32:
-            input_scales1 = input_scales1.type(torchType32)
-        if input_scales2 is not None:
-            if input_scales_dtype is not torchType32:
-                input_scales2 = input_scales2.type(torchType32)
-        if input_zero_points1 is not None:
-            if input_zp_dtype == torch.int32:
-                input_zero_points1 = input_zero_points1.type(torchType32)
-            elif input_scales_dtype is not torchType32:
-                input_zero_points1 = input_zero_points1.type(torchType32)
-        if input_zero_points2 is not None:
-            if input_zp_dtype == torch.int32:
-                input_zero_points2 = input_zero_points2.type(torchType32)
-            elif input_scales_dtype is not torchType32:
-                input_zero_points2 = input_zero_points2.type(torchType32)
-
-        x_fp32 = add_x.type(torchType32)
-        variance = torch.mean(torch.pow(x_fp32, 2), axis=axis, keepdims=True)
-        std = torch.sqrt(variance + epsilon)
-        rstd = 1 / std
-        result_mid = x_fp32 * rstd
-
-        if input_x_dtype == torchType32:
-            y_array = result_mid * input_gamma
-        elif input_x_dtype == torch.float16:
-            input_gamma_fp32 = input_gamma.type(torchType32)
-            y_array = result_mid * input_gamma_fp32
+        if output_res:
+            ret_rms = rms_norm_out.astype(np.float32)
         else:
-            input_gamma_fp32 = input_gamma.type(torchType32)
-            y_array = result_mid * input_gamma_fp32
+            ret_rms = np.array([], dtype=np.float32)
+        return (y1.astype(np.float32), y2.astype(np.float32),
+                x.astype(np.float32), ret_rms)
 
-        tensor_scales1 = input_scales1.to(torch.float32)
+    def custom_op_exec(
+        self, x1, x2, gamma, scales1,
+        scales2=None, zero_points1=None, zero_points2=None, beta=None,
+        axis=-1, epsilon=1e-6, div_mode=True, output_res=False, dst_type=None
+    ):
+        """NPU op execution, returning CPU numpy arrays."""
+        kwargs = {}
+        if scales2 is not None:
+            kwargs["scales2"] = scales2
+        if zero_points1 is not None:
+            kwargs["zero_points1"] = zero_points1
+        if zero_points2 is not None:
+            kwargs["zero_points2"] = zero_points2
+        if beta is not None:
+            kwargs["beta"] = beta
+        if dst_type is not None:
+            kwargs["dst_type"] = dst_type
+        y1, y2, x_out, rms_norm_out = torch_npu.npu_add_rms_norm_quant(
+            x1, x2, gamma, scales1,
+            axis=axis, epsilon=epsilon, div_mode=div_mode,
+            output_res=output_res, **kwargs)
 
-        if input_zero_points1 is None:
-            tensor_zero_points1 = torch.zeros(input_scales1.shape, dtype=torch.float32)
-        else:
-            tensor_zero_points1 = input_zero_points1
-        if input_scales2 is None:
-            tensor_scales2 = torch.ones(input_scales1.shape, dtype=torch.float32)
-        else:
-            tensor_scales2 = input_scales2
-        if input_zero_points2 is None:
-            tensor_zero_points2 = torch.zeros(input_scales1.shape, dtype=torch.float32)
-        else:
-            tensor_zero_points2 = input_zero_points2
+        def to_float32(t):
+            t_cpu = t.cpu()
+            if t_cpu.dtype == torch.bfloat16:
+                t_cpu = t_cpu.float()
+            return t_cpu.numpy().astype(np.float32)
 
-        if not divMode:
-            tensor_scales1 = 1.0 / tensor_scales1
-            if input_scales2 is not None:
-                tensor_scales2 = 1.0 / tensor_scales2
+        return (
+            to_float32(y1),
+            to_float32(y2),
+            to_float32(x_out),
+            to_float32(rms_norm_out),
+        )
 
-        dst_type_map = {1: np.int8, 291: self.numpy_float8_e5m2(),
-                        292: self.numpy_float8_e4m3fn(), 290: self.numpy_hifloat8()}
-        y = y_array.to(torch.float32)
-        y1 = (y / tensor_scales1) + tensor_zero_points1
-        y1_np = y1.detach().clone().cpu().numpy()
-        y1_np = np.clip(y1_np, QUANT_TYPE_MIN_MAP[dst_type], QUANT_TYPE_MAX_MAP[dst_type]).astype(
-            dst_type_map[dst_type], copy=False)
-        y2 = (y / tensor_scales2) + tensor_zero_points2
-        y2_np = y2.detach().clone().cpu().numpy()
-        y2_np = np.clip(y2_np, QUANT_TYPE_MIN_MAP[dst_type], QUANT_TYPE_MAX_MAP[dst_type]).astype(
-            dst_type_map[dst_type], copy=False)
+    def _assert_quant_outputs(self, cpu_out, npu_out, prec_quant=1.0, prec_fp=0.001):
+        """Assert with per-output tolerances: y1/y2 int8 ±1 LSB, x_out/rms_norm_out fp16."""
+        tol = [prec_quant, prec_quant, prec_fp, prec_fp]
+        for i in range(4):
+            self.assertRtolEqual(cpu_out[i], npu_out[i], tol[i])
 
-        if dst_type == 1:
-            return torch.tensor(y1_np.reshape(input_x1.shape)), torch.tensor(y2_np.reshape(input_x1.shape)), \
-                   add_x.type(input_x_dtype).reshape(input_x1.shape)
-        else:
-            return torch.tensor(y1_np.reshape(input_x1.shape).astype("float32")), \
-                   torch.tensor(y2_np.reshape(input_x1.shape).astype("float32")), \
-                   add_x.type(input_x_dtype).reshape(input_x1.shape)
+    # ============ Positive Tests ============
 
-
-    # pylint:disable = huawei-too-many-arguments
-    def npu_add_rms_norm_quant_v2_golden(self, input_x1, input_x2, input_gamma, input_scales1,
-                                      input_zero_points1, input_beta, input_scales2=None, input_zero_points2=None, epsilon=1e-06):
-        torchType32 = torch.float32
-        len_shape_x = len(input_x1.shape)
-        len_shape_gamma = len(input_gamma.shape)
-        len_shape_beta = len(input_beta.shape)
-        axis = len_shape_x - len_shape_gamma
-        divMode = True
-
-        n = len(input_x1.shape) - len(input_gamma.shape)
-        input_gamma = input_gamma.reshape(np.multiply.reduce(np.array(input_gamma.shape)))
-        input_beta = input_beta.reshape(np.multiply.reduce(np.array(input_beta.shape)))
-
-        input_scales1 = input_scales1.reshape(np.multiply.reduce(np.array(input_scales1.shape)))
-        if input_scales2 is not None:
-            input_scales2 = input_scales2.reshape(np.multiply.reduce(np.array(input_scales2.shape)))
-        if input_zero_points1 is not None:
-            input_zero_points1 = input_zero_points1.reshape(np.multiply.reduce(np.array(input_zero_points1.shape)))
-        if input_zero_points2 is not None:
-            input_zero_points2 = input_zero_points2.reshape(np.multiply.reduce(np.array(input_zero_points2.shape)))
-
-        x1_shape = input_x1.shape[0:n] + input_gamma.shape
-        input_x1 = input_x1.reshape(x1_shape)
-        input_x2 = input_x2.reshape(x1_shape)
-        len_shape_x = len(input_x1.shape)
-        len_shape_gamma = len(input_gamma.shape)
-        len_shape_beta = len(input_beta.shape)
-        axis = len_shape_x - len_shape_gamma
-        input_x_dtype = input_x1.dtype
-        input_scales_dtype = input_scales1.dtype
-        if input_zero_points1 is not None:
-            input_zp_dtype = input_zero_points1.dtype
-        if input_zero_points2 is not None:
-            input_zp_dtype = input_zero_points2.dtype
-
-        if (input_x_dtype == torchType32):
-            add_x = input_x1 + input_x2
-        elif (input_x_dtype == torch.float16):
-            add_x = (input_x1.type(torchType32) + input_x2.type(torchType32))
-        else:
-            add_x = (input_x1.type(torchType32) + input_x2.type(torchType32))
-
-        if input_scales_dtype is not torchType32:
-            input_scales1 = input_scales1.type(torchType32)
-        if input_scales2 is not None:
-            if input_scales_dtype is not torchType32:
-                input_scales2 = input_scales2.type(torchType32)
-        if input_zero_points1 is not None:
-            if input_zp_dtype == torch.int32:
-                input_zero_points1 = input_zero_points1.type(torchType32)
-            elif input_scales_dtype is not torchType32:
-                input_zero_points1 = input_zero_points1.type(torchType32)
-        if input_zero_points2 is not None:
-            if input_zp_dtype == torch.int32:
-                input_zero_points2 = input_zero_points2.type(torchType32)
-            elif input_scales_dtype is not torchType32:
-                input_zero_points2 = input_zero_points2.type(torchType32)
-
-        x_fp32 = add_x.type(torchType32)
-        variance = torch.mean(torch.pow(x_fp32, 2), axis=axis, keepdims=True)
-        std = torch.sqrt(variance + epsilon)
-        rstd = 1 / std
-        result_mid = x_fp32 * rstd
-
-        if input_x_dtype == torchType32:
-            y_array = result_mid * input_gamma + input_beta
-        elif input_x_dtype == torch.float16:
-            input_gamma_fp32 = input_gamma.type(torchType32)
-            input_beta_fp32 = input_beta.type(torchType32)
-            y_array = result_mid * input_gamma_fp32 + input_beta_fp32
-        else:
-            input_gamma_fp32 = input_gamma.type(torchType32)
-            input_beta_fp32 = input_beta.type(torchType32)
-            y_array = result_mid * input_gamma_fp32 + input_beta_fp32
-
-        tensor_scales1 = input_scales1.to(torch.float32)
-
-        if input_zero_points1 is None:
-            tensor_zero_points1 = torch.zeros(input_scales1.shape, dtype=torch.float32)
-        else:
-            tensor_zero_points1 = input_zero_points1
-        if input_scales2 is None:
-            tensor_scales2 = torch.ones(input_scales1.shape, dtype=torch.float32)
-        else:
-            tensor_scales2 = input_scales2
-        if input_zero_points2 is None:
-            tensor_zero_points2 = torch.zeros(input_scales1.shape, dtype=torch.float32)
-        else:
-            tensor_zero_points2 = input_zero_points2
-
-        if not divMode:
-            tensor_scales1 = 1.0 / tensor_scales1
-            if input_scales2 is not None:
-                tensor_scales2 = 1.0 / tensor_scales2
-
-        y = y_array.type(torch.float32)
-        y1 = torch.quantize_per_channel(y, tensor_scales1, tensor_zero_points1, axis, torch.qint8)
-        y1_np = y1.int_repr().detach().clone().cpu().numpy()
-
-        y2 = torch.quantize_per_channel(y, tensor_scales2, tensor_zero_points2, axis, torch.qint8)
-        y2_np = y2.int_repr().detach().clone().cpu().numpy()
-
-        return torch.tensor(y1_np).type(torch.int8), torch.tensor(y2_np).type(torch.int8), \
-            add_x.type(input_x_dtype).reshape(input_x1.shape)
-
-    @unittest.skip("Skip test_npu_add_rms_norm_quant due to low version of cann")
     @SupportedDevices(['Ascend910B'])
-    def test_npu_add_rms_norm_quant(self):
-        shape_list = [[[16, ], [16, ]],
-                      [[2, 16], [16, ]],
-                      [[2, 16], [2, 16]],
-                      [[16, 32], [16, 32]],
-                      [[16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [2, 2, 2, 8, 16, 32]],
-                      [[2, 2, 2, 8, 16, 32], [16, 32]],
-                      [[2, 2, 2, 8, 16, 32], [32, ]],
-                      [[2, 2, 2, 2, 2, 16, 32], [2, 2, 2, 2, 2, 16, 32]],
-                      [[2, 2, 2, 2, 2, 16, 32], [16, 32]],
-                      [[2, 2, 2, 2, 2, 16, 32], [32, ]],
-                      [[2, 2, 2, 2, 2, 8, 16, 32], [2, 2, 2, 2, 2, 8, 16, 32]],
-                      [[2, 2, 2, 2, 2, 8, 16, 32], [16, 32]],
-                      [[2, 2, 2, 2, 2, 8, 16, 32], [32, ]]]
-        for item in shape_list:
-            x_shape = item[0]
-            quant_shape = item[1]
-            x1 = torch.randn(x_shape, dtype=torch.float16)
-            x2 = torch.randn(x_shape, dtype=torch.float16)
-            gamma = torch.randn(quant_shape, dtype=torch.float16)
-            beta = torch.randn(quant_shape, dtype=torch.float16)
-            scales1 = torch.randn(quant_shape, dtype=torch.float32)
-            zero_points1 = torch.randint(-10, 10, quant_shape, dtype=torch.int32)
+    def test_basic_fp16(self, device="npu"):
+        """Test basic functionality with float16."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float16) * 0.01 + 0.01).npu()
 
-            x1_npu = x1.npu()
-            x2_npu = x2.npu()
-            gamma_npu = gamma.npu()
-            beta_npu = beta.npu()
-            scales1_npu = scales1.npu()
-            zero_points1_npu = zero_points1.npu()
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float())
+        npu_out = self.custom_op_exec(x1, x2, gamma, scales1)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-            y1_v1, _, x_out = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu)
-            y1_v1_cpu, _, x_out_cpu = self.npu_add_rms_norm_quant_golden(x1, x2, gamma, scales1, zero_points1)
-
-            benchmark = math.pow(2, -7)
-            benchmark_int8 = 1
-            y1_v1_cpu_data = y1_v1_cpu.reshape(1, y1_v1_cpu.numel())[0].cpu()
-            y1_v1_npu_data = y1_v1.reshape(1, y1_v1.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_v1_cpu_data, y1_v1_npu_data, benchmark_int8))
-
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
-
-            y1_v2, _, x_out = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, beta_npu)
-            y1_v2_cpu, _, x_out_cpu = self.npu_add_rms_norm_quant_v2_golden(x1, x2, gamma, scales1, zero_points1, beta)
-
-            y1_v2_cpu_data = y1_v2_cpu.reshape(1, y1_v2_cpu.numel())[0].cpu()
-            y1_v2_npu_data = y1_v2.reshape(1, y1_v2.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_v2_cpu_data, y1_v2_npu_data, benchmark_int8))
-
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
-
-    @unittest.skip("Skip test_npu_add_rms_norm_quant due to low version of cann")
     @SupportedDevices(['Ascend910B'])
-    def test_npu_add_rms_norm_quant_bf16(self):
-        shape_list = [[[16, ], [16, ]],
-                      [[2, 16], [16, ]],
-                      [[2, 16], [2, 16]],
-                      [[16, 32], [16, 32]],
-                      [[16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [2, 2, 2, 8, 16, 32]],
-                      [[2, 2, 2, 8, 16, 32], [16, 32]],
-                      [[2, 2, 2, 8, 16, 32], [32, ]],
-                      [[2, 2, 2, 2, 2, 16, 32], [2, 2, 2, 2, 2, 16, 32]],
-                      [[2, 2, 2, 2, 2, 16, 32], [16, 32]],
-                      [[2, 2, 2, 2, 2, 16, 32], [32, ]],
-                      [[2, 2, 2, 2, 2, 8, 16, 32], [2, 2, 2, 2, 2, 8, 16, 32]],
-                      [[2, 2, 2, 2, 2, 8, 16, 32], [16, 32]],
-                      [[2, 2, 2, 2, 2, 8, 16, 32], [32, ]]]
-        for item in shape_list:
-            x_shape = item[0]
-            quant_shape = item[1]
-            x1 = torch.randn(x_shape, dtype=torch.bfloat16)
-            x2 = torch.randn(x_shape, dtype=torch.bfloat16)
-            gamma = torch.randn(quant_shape, dtype=torch.bfloat16)
-            beta = torch.randn(quant_shape, dtype=torch.bfloat16)
-            # Don't support scales with 0.
-            scales1 = torch.randn(quant_shape, dtype=torch.bfloat16).uniform_(0.1, 1)
-            zero_points1 = torch.randn(quant_shape, dtype=torch.bfloat16)
+    def test_basic_bf16(self, device="npu"):
+        """Test basic functionality with bfloat16."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.bfloat16).npu()
+        x2 = torch.randn(shape, dtype=torch.bfloat16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.bfloat16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.bfloat16) * 0.01 + 0.01).npu()
 
-            x1_npu = x1.npu()
-            x2_npu = x2.npu()
-            gamma_npu = gamma.npu()
-            beta_npu = beta.npu()
-            scales1_npu = scales1.npu()
-            zero_points1_npu = zero_points1.npu()
-
-            y1_v1, _, x_out = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu)
-            y1_v1_cpu, _, x_out_cpu = self.npu_add_rms_norm_quant_golden(x1, x2, gamma, scales1, zero_points1)
-
-            benchmark = math.pow(2, -7)
-            benchmark_int8 = 1
-            y1_v1_cpu_data = y1_v1_cpu.reshape(1, y1_v1_cpu.numel())[0].cpu()
-            y1_v1_npu_data = y1_v1.reshape(1, y1_v1.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_v1_cpu_data, y1_v1_npu_data, benchmark_int8))
-
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
-
-            y1_v2, _, x_out = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, beta_npu)
-            y1_v2_cpu, _, x_out_cpu = self.npu_add_rms_norm_quant_v2_golden(x1, x2, gamma, scales1, zero_points1, beta)
-
-            y1_v2_cpu_data = y1_v2_cpu.reshape(1, y1_v2_cpu.numel())[0].cpu()
-            y1_v2_npu_data = y1_v2.reshape(1, y1_v2.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_v2_cpu_data, y1_v2_npu_data, benchmark_int8))
-
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float())
+        npu_out = self.custom_op_exec(x1, x2, gamma, scales1)
+        self._assert_quant_outputs(cpu_out, npu_out, prec_fp=0.004)
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_add_rms_norm_quant_float8_e5m2(self):
-        x_shape = [2, 16]
-        x1 = torch.randn(x_shape, dtype=torch.float32)
-        x2 = torch.randn(x_shape, dtype=torch.float32)
-        gamma = torch.randn([x_shape[1]], dtype=torch.float32)
-        scales1 = torch.randn([x_shape[1]], dtype=torch.float32)
-        zero_points1 = torch.randn([x_shape[1]], dtype=torch.float32)
+    def test_basic_fp32(self, device="npu"):
+        """Test basic functionality with float32 (Ascend950 only)."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float32).npu()
+        x2 = torch.randn(shape, dtype=torch.float32).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float32) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float32) * 0.01 + 0.01).npu()
 
-        x1_npu = x1.npu()
-        x2_npu = x2.npu()
-        gamma_npu = gamma.npu()
-        scales1_npu = scales1.npu()
-        zero_points1_npu = zero_points1.npu()
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float())
+        npu_out = self.custom_op_exec(x1, x2, gamma, scales1)
+        self._assert_quant_outputs(cpu_out, npu_out, prec_fp=0.0001)
 
-        dst_type = 291
+    @SupportedDevices(['Ascend910B'])
+    def test_min_dimension(self, device="npu"):
+        """Test 1D input (minimum dimension)."""
+        torch.manual_seed(0)
+        shape = (256,)
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(shape, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(shape, dtype=torch.float16) * 0.01 + 0.01).npu()
 
-        y1_v1, _, x_out = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, dst_type=dst_type)
-        y1_v1_cpu, _, x_out_cpu = self.npu_add_rms_norm_quant_golden(x1, x2, gamma, scales1, zero_points1, dst_type=dst_type)
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float())
+        npu_out = self.custom_op_exec(x1, x2, gamma, scales1)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-        benchmark = math.pow(2, -7)
-        benchmark_float32 = 1e-8
-        y1_v1_cpu_data = y1_v1_cpu.reshape(1, y1_v1_cpu.numel())[0].cpu()
-        y1_v1_npu_data = y1_v1.to(torch.float32).reshape(1, y1_v1.numel())[0].cpu()
-        self.assertTrue(self.compare(y1_v1_cpu_data, y1_v1_npu_data, benchmark_float32))
+    @SupportedDevices(['Ascend910B'])
+    def test_3d_input(self, device="npu"):
+        """Test 3D input."""
+        torch.manual_seed(0)
+        shape = (2, 32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float16) * 0.01 + 0.01).npu()
 
-        x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-        x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-        self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float())
+        npu_out = self.custom_op_exec(x1, x2, gamma, scales1)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_add_rms_norm_quant_950_v1_int8(self):
-        # 950 + 无 beta + 默认 dst_type(int8) -> 走 aclnnAddRmsNormQuant (V1) 新增分支
-        shape_list = [[[16, ], [16, ]],
-                      [[2, 16], [16, ]],
-                      [[16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [16, 32]]]
-        for item in shape_list:
-            x_shape = item[0]
-            quant_shape = item[1]
-            x1 = torch.randn(x_shape, dtype=torch.float32)
-            x2 = torch.randn(x_shape, dtype=torch.float32)
-            gamma = torch.randn(quant_shape, dtype=torch.float32)
-            scales1 = torch.randn(quant_shape, dtype=torch.float32)
-            zero_points1 = torch.randint(-10, 10, quant_shape, dtype=torch.int32)
+    @SupportedDevices(['Ascend910B'])
+    def test_with_optional_beta(self, device="npu"):
+        """Test with optional beta parameter."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float16) * 0.01 + 0.01).npu()
+        beta = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
 
-            x1_npu = x1.npu()
-            x2_npu = x2.npu()
-            gamma_npu = gamma.npu()
-            scales1_npu = scales1.npu()
-            zero_points1_npu = zero_points1.npu()
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float(), beta=beta.cpu().float())
+        npu_out = self.custom_op_exec(x1, x2, gamma, scales1, beta=beta)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-            y1_npu, y2_npu, x_out = torch_npu.npu_add_rms_norm_quant(
-                x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu)
-            y1_cpu, y2_cpu, x_out_cpu = self.npu_add_rms_norm_quant_golden(
-                x1, x2, gamma, scales1, zero_points1)
+    @SupportedDevices(['Ascend910B'])
+    def test_with_all_optional_params(self, device="npu"):
+        """Test with all optional parameters provided."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float32) * 0.01 + 0.01).npu()
+        scales2 = (torch.rand(last_dim, dtype=torch.float32) * 0.01 + 0.01).npu()
+        zero_points1 = torch.zeros(last_dim, dtype=torch.int32).npu()
+        zero_points2 = torch.zeros(last_dim, dtype=torch.int32).npu()
+        beta = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
 
-            benchmark = math.pow(2, -7)
-            benchmark_int8 = 1
-            y1_cpu_data = y1_cpu.reshape(1, y1_cpu.numel())[0].cpu()
-            y1_npu_data = y1_npu.reshape(1, y1_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_cpu_data, y1_npu_data, benchmark_int8))
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float(), scales2=scales2.cpu().float(),
+            zero_points1=zero_points1.cpu().float(),
+            zero_points2=zero_points2.cpu().float(),
+            beta=beta.cpu().float())
+        npu_out = self.custom_op_exec(
+            x1, x2, gamma, scales1,
+            scales2=scales2, zero_points1=zero_points1,
+            zero_points2=zero_points2, beta=beta)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-            y2_cpu_data = y2_cpu.reshape(1, y2_cpu.numel())[0].cpu()
-            y2_npu_data = y2_npu.reshape(1, y2_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y2_cpu_data, y2_npu_data, benchmark_int8))
+    @SupportedDevices(['Ascend910B'])
+    def test_div_mode_false(self, device="npu"):
+        """Test with div_mode=False (multiply mode)."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float16) * 0.01 + 0.01).npu()
 
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_add_rms_norm_quant_950_v2_beta_int8(self):
-        # 950 + 有 beta + int8 -> 走 aclnnAddRmsNormQuantV2 分支
-        shape_list = [[[16, ], [16, ]],
-                      [[2, 16], [16, ]],
-                      [[16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [16, 32]]]
-        for item in shape_list:
-            x_shape = item[0]
-            quant_shape = item[1]
-            x1 = torch.randn(x_shape, dtype=torch.float32)
-            x2 = torch.randn(x_shape, dtype=torch.float32)
-            gamma = torch.randn(quant_shape, dtype=torch.float32)
-            beta = torch.randn(quant_shape, dtype=torch.float32)
-            scales1 = torch.randn(quant_shape, dtype=torch.float32)
-            zero_points1 = torch.randint(-10, 10, quant_shape, dtype=torch.int32)
-
-            x1_npu = x1.npu()
-            x2_npu = x2.npu()
-            gamma_npu = gamma.npu()
-            beta_npu = beta.npu()
-            scales1_npu = scales1.npu()
-            zero_points1_npu = zero_points1.npu()
-
-            y1_npu, y2_npu, x_out = torch_npu.npu_add_rms_norm_quant(
-                x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, beta_npu)
-            y1_cpu, y2_cpu, x_out_cpu = self.npu_add_rms_norm_quant_v2_golden(
-                x1, x2, gamma, scales1, zero_points1, beta)
-
-            benchmark = math.pow(2, -7)
-            benchmark_int8 = 1
-            y1_cpu_data = y1_cpu.reshape(1, y1_cpu.numel())[0].cpu()
-            y1_npu_data = y1_npu.reshape(1, y1_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_cpu_data, y1_npu_data, benchmark_int8))
-
-            y2_cpu_data = y2_cpu.reshape(1, y2_cpu.numel())[0].cpu()
-            y2_npu_data = y2_npu.reshape(1, y2_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y2_cpu_data, y2_npu_data, benchmark_int8))
-
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float(), div_mode=False)
+        npu_out = self.custom_op_exec(
+            x1, x2, gamma, scales1, div_mode=False)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_add_rms_norm_quant_950_dst_type(self):
-        # 950 + 无 beta + 不同 dst_type -> 走 V1 分支，覆盖 int8/hifloat8/float8_e5m2/float8_e4m3fn
-        x_shape = [2, 16]
-        quant_shape = [x_shape[1]]
-        x1 = torch.randn(x_shape, dtype=torch.float32)
-        x2 = torch.randn(x_shape, dtype=torch.float32)
-        gamma = torch.randn(quant_shape, dtype=torch.float32)
-        scales1 = torch.randn(quant_shape, dtype=torch.float32)
-        zero_points1 = torch.randn(quant_shape, dtype=torch.float32)
+    def test_output_res_true(self, device="npu"):
+        """Test with output_res=True (Ascend950 only; 910B computeV1 requires nullptr)."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float16) * 0.01 + 0.01).npu()
 
-        x1_npu = x1.npu()
-        x2_npu = x2.npu()
-        gamma_npu = gamma.npu()
-        scales1_npu = scales1.npu()
-        zero_points1_npu = zero_points1.npu()
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float(), output_res=True)
+        npu_out = self.custom_op_exec(
+            x1, x2, gamma, scales1, output_res=True)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-        benchmark = math.pow(2, -7)
-        benchmark_int8 = 1
-        benchmark_float8 = 1e-8
-        dst_type_list = [1, 290, 291, 292]
-        for dst_type in dst_type_list:
-            y1_npu, y2_npu, x_out = torch_npu.npu_add_rms_norm_quant(
-                x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, dst_type=dst_type)
-            y1_cpu, y2_cpu, x_out_cpu = self.npu_add_rms_norm_quant_golden(
-                x1, x2, gamma, scales1, zero_points1, dst_type=dst_type)
+    @SupportedDevices(['Ascend910B'])
+    def test_large_input(self, device="npu"):
+        """Test large input shape."""
+        torch.manual_seed(0)
+        shape = (3072, 7168)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float32) * 0.01 + 0.01).npu()
 
-            if dst_type == 1:
-                y1_cpu_data = y1_cpu.reshape(1, y1_cpu.numel())[0].cpu()
-                y1_npu_data = y1_npu.reshape(1, y1_npu.numel())[0].cpu()
-                self.assertTrue(self.compare(y1_cpu_data, y1_npu_data, benchmark_int8))
-                y2_cpu_data = y2_cpu.reshape(1, y2_cpu.numel())[0].cpu()
-                y2_npu_data = y2_npu.reshape(1, y2_npu.numel())[0].cpu()
-                self.assertTrue(self.compare(y2_cpu_data, y2_npu_data, benchmark_int8))
-            else:
-                y1_cpu_data = y1_cpu.reshape(1, y1_cpu.numel())[0].cpu()
-                y1_npu_data = y1_npu.to(torch.float32).reshape(1, y1_npu.numel())[0].cpu()
-                self.assertTrue(self.compare(y1_cpu_data, y1_npu_data, benchmark_float8))
-                y2_cpu_data = y2_cpu.reshape(1, y2_cpu.numel())[0].cpu()
-                y2_npu_data = y2_npu.to(torch.float32).reshape(1, y2_npu.numel())[0].cpu()
-                self.assertTrue(self.compare(y2_cpu_data, y2_npu_data, benchmark_float8))
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float())
+        npu_out = self.custom_op_exec(x1, x2, gamma, scales1)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
+    @SupportedDevices(['Ascend910B'])
+    def test_dst_type_int8(self, device="npu"):
+        """Test dst_type=int8 explicitly."""
+        torch.manual_seed(0)
+        shape = (32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float32) * 0.01 + 0.01).npu()
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_add_rms_norm_quant_950_scales2_zero_points2(self):
-        # 950 + scales2/zero_points2，验证第二组量化输出 y2
-        # 无 beta -> 走 V1 分支（透传 scales2/zero_points2）；有 beta -> 走 V2 分支
-        shape_list = [[[2, 16], [16, ]],
-                      [[16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [32, ]]]
-        for item in shape_list:
-            x_shape = item[0]
-            quant_shape = item[1]
-            x1 = torch.randn(x_shape, dtype=torch.float32)
-            x2 = torch.randn(x_shape, dtype=torch.float32)
-            gamma = torch.randn(quant_shape, dtype=torch.float32)
-            beta = torch.randn(quant_shape, dtype=torch.float32)
-            scales1 = torch.randn(quant_shape, dtype=torch.float32)
-            zero_points1 = torch.randint(-10, 10, quant_shape, dtype=torch.int32)
-            scales2 = torch.randn(quant_shape, dtype=torch.float32)
-            zero_points2 = torch.randint(-10, 10, quant_shape, dtype=torch.int32)
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float(), dst_type=1)
+        npu_out = self.custom_op_exec(
+            x1, x2, gamma, scales1, dst_type=1)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-            x1_npu = x1.npu()
-            x2_npu = x2.npu()
-            gamma_npu = gamma.npu()
-            beta_npu = beta.npu()
-            scales1_npu = scales1.npu()
-            zero_points1_npu = zero_points1.npu()
-            scales2_npu = scales2.npu()
-            zero_points2_npu = zero_points2.npu()
+    @SupportedDevices(['Ascend910B'])
+    def test_scale_value(self, device="npu"):
+        """Test scale numerical values (compare golden, not just shape)."""
+        torch.manual_seed(0)
+        shape = (2, 32, 256)
+        last_dim = shape[-1]
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = (torch.randn(last_dim, dtype=torch.float16) * 0.1).npu()
+        scales1 = (torch.rand(last_dim, dtype=torch.float32) * 0.01 + 0.01).npu()
+        zero_points1 = torch.zeros(last_dim, dtype=torch.int32).npu()
 
-            benchmark = math.pow(2, -7)
-            benchmark_int8 = 1
+        cpu_out = self.supported_op_exec(
+            x1.cpu().float(), x2.cpu().float(), gamma.cpu().float(),
+            scales1.cpu().float(), zero_points1=zero_points1.cpu().float())
+        npu_out = self.custom_op_exec(
+            x1, x2, gamma, scales1, zero_points1=zero_points1)
+        self._assert_quant_outputs(cpu_out, npu_out)
 
-            # 无 beta -> 950 走 V1 分支（透传 scales2/zero_points2）
-            y1_npu, y2_npu, x_out = torch_npu.npu_add_rms_norm_quant(
-                x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu,
-                scales2=scales2_npu, zero_points2=zero_points2_npu)
-            y1_cpu, y2_cpu, x_out_cpu = self.npu_add_rms_norm_quant_golden(
-                x1, x2, gamma, scales1, zero_points1, scales2, zero_points2)
+    # ============ Negative Tests ============
 
-            y1_cpu_data = y1_cpu.reshape(1, y1_cpu.numel())[0].cpu()
-            y1_npu_data = y1_npu.reshape(1, y1_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_cpu_data, y1_npu_data, benchmark_int8))
-
-            y2_cpu_data = y2_cpu.reshape(1, y2_cpu.numel())[0].cpu()
-            y2_npu_data = y2_npu.reshape(1, y2_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y2_cpu_data, y2_npu_data, benchmark_int8))
-
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
-
-            # 有 beta -> 950 走 V2 分支
-            y1_npu, y2_npu, x_out = torch_npu.npu_add_rms_norm_quant(
-                x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, beta_npu,
-                scales2=scales2_npu, zero_points2=zero_points2_npu)
-            y1_cpu, y2_cpu, x_out_cpu = self.npu_add_rms_norm_quant_v2_golden(
-                x1, x2, gamma, scales1, zero_points1, beta, scales2, zero_points2)
-
-            y1_cpu_data = y1_cpu.reshape(1, y1_cpu.numel())[0].cpu()
-            y1_npu_data = y1_npu.reshape(1, y1_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y1_cpu_data, y1_npu_data, benchmark_int8))
-
-            y2_cpu_data = y2_cpu.reshape(1, y2_cpu.numel())[0].cpu()
-            y2_npu_data = y2_npu.reshape(1, y2_npu.numel())[0].cpu()
-            self.assertTrue(self.compare(y2_cpu_data, y2_npu_data, benchmark_int8))
-
-            x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-            x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-            self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_add_rms_norm_quant_950_fp16_bf16(self):
-        # 950 + fp16/bf16 输入 + 无 beta -> 走 V1 分支，dtype 覆盖
-        shape_list = [[[2, 16], [16, ]],
-                      [[16, 32], [32, ]],
-                      [[2, 2, 2, 8, 16, 32], [32, ]]]
-        for dtype in [torch.float16, torch.bfloat16]:
-            for item in shape_list:
-                x_shape = item[0]
-                quant_shape = item[1]
-                x1 = torch.randn(x_shape, dtype=dtype)
-                x2 = torch.randn(x_shape, dtype=dtype)
-                gamma = torch.randn(quant_shape, dtype=dtype)
-                # Don't support scales with 0.
-                scales1 = torch.randn(quant_shape, dtype=dtype).uniform_(0.1, 1)
-                zero_points1 = torch.randint(-10, 10, quant_shape, dtype=torch.int32)
-
-                x1_npu = x1.npu()
-                x2_npu = x2.npu()
-                gamma_npu = gamma.npu()
-                scales1_npu = scales1.npu()
-                zero_points1_npu = zero_points1.npu()
-
-                y1_npu, y2_npu, x_out = torch_npu.npu_add_rms_norm_quant(
-                    x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu)
-                y1_cpu, y2_cpu, x_out_cpu = self.npu_add_rms_norm_quant_golden(
-                    x1, x2, gamma, scales1, zero_points1)
-
-                benchmark = math.pow(2, -7)
-                benchmark_int8 = 1
-                y1_cpu_data = y1_cpu.reshape(1, y1_cpu.numel())[0].cpu()
-                y1_npu_data = y1_npu.reshape(1, y1_npu.numel())[0].cpu()
-                self.assertTrue(self.compare(y1_cpu_data, y1_npu_data, benchmark_int8))
-
-                y2_cpu_data = y2_cpu.reshape(1, y2_cpu.numel())[0].cpu()
-                y2_npu_data = y2_npu.reshape(1, y2_npu.numel())[0].cpu()
-                self.assertTrue(self.compare(y2_cpu_data, y2_npu_data, benchmark_int8))
-
-                x_cpu_data = x_out_cpu.reshape(1, x_out_cpu.numel())[0].cpu()
-                x_npu_data = x_out.reshape(1, x_out.numel())[0].cpu()
-                self.assertTrue(self.compare(x_cpu_data, x_npu_data, benchmark))
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_add_rms_norm_quant_axis_invalid(self):
-        # axis != -1 -> TORCH_CHECK 抛异常
-        x_shape = [2, 16]
-        x1 = torch.randn(x_shape, dtype=torch.float32)
-        x2 = torch.randn(x_shape, dtype=torch.float32)
-        gamma = torch.randn([x_shape[1]], dtype=torch.float32)
-        scales1 = torch.randn([x_shape[1]], dtype=torch.float32)
-
-        x1_npu = x1.npu()
-        x2_npu = x2.npu()
-        gamma_npu = gamma.npu()
-        scales1_npu = scales1.npu()
-
+    def _neg_dtype_helper(self, bad_tensor, **kwargs):
+        """Helper: call op with a bad-dtype tensor, expect RuntimeError."""
         with self.assertRaises(RuntimeError):
-            torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, axis=0)
+            torch_npu.npu_add_rms_norm_quant(**kwargs)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_x1_invalid_dtype(self, device="npu"):
+        """Negative test: x1 with invalid dtype."""
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        x1_bad = torch.randint(-10, 10, (32, 256), dtype=torch.int64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(x1_bad, x2, gamma, scales1)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_x2_invalid_dtype(self, device="npu"):
+        """Negative test: x2 with invalid dtype."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        x2_bad = torch.randint(-10, 10, (32, 256), dtype=torch.int64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(x1, x2_bad, gamma, scales1)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_gamma_invalid_dtype(self, device="npu"):
+        """Negative test: gamma with invalid dtype."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        gamma_bad = torch.randint(-10, 10, (256,), dtype=torch.int64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(x1, x2, gamma_bad, scales1)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_scales1_invalid_dtype(self, device="npu"):
+        """Negative test: scales1 with invalid dtype."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1_bad = torch.randint(0, 10, (256,), dtype=torch.int64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1_bad)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_scales2_invalid_dtype(self, device="npu"):
+        """Negative test: scales2 with invalid dtype."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        scales2_bad = torch.randint(0, 10, (256,), dtype=torch.int64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1, scales2=scales2_bad)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_zero_points1_invalid_dtype(self, device="npu"):
+        """Negative test: zero_points1 with invalid dtype."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        zp1_bad = torch.randn(256, dtype=torch.float64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1, zero_points1=zp1_bad)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_zero_points2_invalid_dtype(self, device="npu"):
+        """Negative test: zero_points2 with invalid dtype."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        zp2_bad = torch.randn(256, dtype=torch.float64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1, zero_points2=zp2_bad)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_beta_invalid_dtype(self, device="npu"):
+        """Negative test: beta with invalid dtype."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        beta_bad = torch.randint(0, 10, (256,), dtype=torch.int64).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1, beta=beta_bad)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_dim_above_max(self, device="npu"):
+        """Negative test: input exceeds max dimension (9D)."""
+        torch.manual_seed(0)
+        shape = (2, 2, 2, 2, 2, 2, 2, 2, 2)
+        x1 = torch.randn(shape, dtype=torch.float16).npu()
+        x2 = torch.randn(shape, dtype=torch.float16).npu()
+        gamma = torch.randn(2, dtype=torch.float16).npu()
+        scales1 = (torch.rand(2, dtype=torch.float32) * 0.01 + 0.01).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_neg_dst_type_invalid(self, device="npu"):
+        """Negative test: dst_type with invalid value."""
+        x1 = torch.randn(32, 256, dtype=torch.float16).npu()
+        x2 = torch.randn(32, 256, dtype=torch.float16).npu()
+        gamma = torch.randn(256, dtype=torch.float16).npu()
+        scales1 = (torch.rand(256, dtype=torch.float32) * 0.01 + 0.01).npu()
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1, dst_type=999)
 
 
 if __name__ == "__main__":

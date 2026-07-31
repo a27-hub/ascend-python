@@ -7352,3 +7352,49 @@ def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype
     else:
         out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
     return (out_weight, out_weight_scale, out_weight_offset, out_bias)
+
+
+@impl(m, "npu_fused_infer_attention_score")
+def npu_fused_infer_attention_score_meta(
+    query, key, value, num_heads, input_layout,
+    pse_shift=None, atten_mask=None,
+    actual_seq_lengths=None, actual_seq_lengths_kv=None,
+    dequant_scale1=None, quant_scale1=None,
+    dequant_scale2=None, quant_scale2=None, quant_offset2=None,
+    antiquant_scale=None, antiquant_offset=None,
+    block_table=None, query_padding_size=None, kv_padding_size=None,
+    key_antiquant_scale=None, key_antiquant_offset=None,
+    value_antiquant_scale=None, value_antiquant_offset=None,
+    key_shared_prefix=None, value_shared_prefix=None,
+    actual_shared_prefix_len=None,
+    query_rope=None, key_rope=None, key_rope_antiquant_scale=None,
+    dequant_scale_query=None, learnable_sink=None,
+    q_start_idx=None, kv_start_idx=None,
+    scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
+    num_key_value_heads=0, sparse_mode=0, inner_precise=1,
+    block_size=0, antiquant_mode=0,
+    softmax_lse_flag=False, key_antiquant_mode=0,
+    value_antiquant_mode=0, query_quant_mode=0,
+    pse_type=0, out_dtype=0):
+    # attention_out shape: same as query shape
+    # softmax_lse shape: depends on layout
+    B = query.size(0)
+    N = num_heads
+    Q_S = query.size(1) if input_layout == "BSH" else query.size(2)
+    V_D = value.size(-1)
+
+    attention_out = torch.empty(
+        query.shape, dtype=query.dtype, device='meta')
+
+    if softmax_lse_flag:
+        if input_layout in ("TND", "NTD", "NTD_TND", "TND_NTD"):
+            softmax_lse = torch.empty(
+                [B, N, 1], dtype=torch.float32, device='meta')
+        else:
+            softmax_lse = torch.empty(
+                [B, N, Q_S, 1], dtype=torch.float32, device='meta')
+    else:
+        softmax_lse = torch.empty(
+            [1], dtype=torch.float32, device='meta')
+
+    return (attention_out, softmax_lse)
