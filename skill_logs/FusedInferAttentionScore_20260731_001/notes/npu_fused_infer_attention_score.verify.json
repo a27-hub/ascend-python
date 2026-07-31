@@ -1,0 +1,27 @@
+{
+  "op_name": "FusedInferAttentionScore",
+  "yaml": null,
+  "cpp": null,
+  "meta": null,
+  "derivatives": null,
+  "mismatches": [
+    {
+      "check": "yaml",
+      "error": "Operator 'FusedInferAttentionScore' not found in op_plugin_functions.yaml"
+    },
+    {
+      "check": "cpp",
+      "error": "Cannot parse C++ signature for 'FusedInferAttentionScore' (tried base + _symint) in /home/jerry_home/op-plugin/op_plugin/ops/opapi/FusedInferAttentionScoreKernelNpuOpApi.cpp"
+    },
+    {
+      "check": "meta",
+      "error": "Meta registration not found for 'FusedInferAttentionScore' in _meta_registrations.py"
+    }
+  ],
+  "passed": false,
+  "cpp_func_name": "FusedInferAttentionScore",
+  "cpp_file": "/home/jerry_home/op-plugin/op_plugin/ops/opapi/FusedInferAttentionScoreKernelNpuOpApi.cpp",
+  "known_inconsistent": false,
+  "warning_count": 0,
+  "known_count": 0
+}
