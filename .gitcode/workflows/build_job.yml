@@ -53,14 +53,17 @@ jobs:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
     steps:
+      - name: checkout
+        uses: checkout
+        with:
+          ref: refs/merge-requests/${{ inputs.pr_id }}/merge
+          path: CODE
       - name: compile
         run: |
-          rm -rf *
           git config --global http.postBuffer 524288000
           git config --global http.lowSpeedLimit 5000
           git config --global http.lowSpeedTime 300
           git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
-          bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
           bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
       - name: Upload to OBS
         uses: obs-upload
