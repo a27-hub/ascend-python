@@ -5837,8 +5837,9 @@ custom:
         dtype: x1
       exec: aclnnAddRmsNormCast
 
-  - func: npu_add_rms_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor scales1, Tensor? zero_points1, Tensor? beta=None, Tensor? scales2=None, Tensor? zero_points2=None, *, int axis=-1, float epsilon=1e-06, bool div_mode=True, int? dst_type=None) -> (Tensor, Tensor, Tensor)
+  - func: npu_add_rms_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor scales1, *, Tensor? scales2=None, Tensor? zero_points1=None, Tensor? zero_points2=None, Tensor? beta=None, int axis=-1, float epsilon=1e-06, bool div_mode=True, bool output_res=False, int? dst_type=None) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
+    exposed: all_version
 
   - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> (Tensor, Tensor)
     op_api: all_version
@@ -7645,6 +7646,21 @@ custom:
   - func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291, Tensor? group_list=None) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value, int num_heads, str input_layout, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, int[]? actual_shared_prefix_len=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_rope_antiquant_scale=None, Tensor? dequant_scale_query=None, Tensor? learnable_sink=None, int[]? q_start_idx=None, int[]? kv_start_idx=None, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, int num_key_value_heads=0, int sparse_mode=0, int inner_precise=1, int block_size=0, int antiquant_mode=0, bool softmax_lse_flag=False, int key_antiquant_mode=0, int value_antiquant_mode=0, int query_quant_mode=0, int pse_type=0, int? out_dtype=0) -> (Tensor, Tensor)
+    op_api: [v2.7, newest]
+    exposed: [v2.7, newest]
+    device_check: NoCheck
+
+  - func: npu_fused_infer_attention_score.out(Tensor query, Tensor key, Tensor value, int num_heads, str input_layout, Tensor? pse_shift=None, Tensor? atten_mask=None, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, int[]? actual_shared_prefix_len=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_rope_antiquant_scale=None, Tensor? dequant_scale_query=None, Tensor? learnable_sink=None, int[]? q_start_idx=None, int[]? kv_start_idx=None, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, int num_key_value_heads=0, int sparse_mode=0, int inner_precise=1, int block_size=0, int antiquant_mode=0, bool softmax_lse_flag=False, int key_antiquant_mode=0, int value_antiquant_mode=0, int query_quant_mode=0, int pse_type=0, int? out_dtype=0, Tensor? workspace=None, *, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
+    op_api: [v2.7, newest]
+    internal_format_opapi: [v2.7, newest]
+    device_check: NoCheck
+
+  - func: _npu_fused_infer_attention_score_get_max_workspace(Tensor query, Tensor key, Tensor value, int num_heads, str input_layout, Tensor? pse_shift=None, Tensor? atten_mask=None, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, int[]? actual_shared_prefix_len=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_rope_antiquant_scale=None, Tensor? dequant_scale_query=None, Tensor? learnable_sink=None, int[]? q_start_idx=None, int[]? kv_start_idx=None, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, int num_key_value_heads=0, int sparse_mode=0, int inner_precise=1, int block_size=0, int antiquant_mode=0, bool softmax_lse_flag=False, int key_antiquant_mode=0, int value_antiquant_mode=0, int query_quant_mode=0, int pse_type=0, int? out_dtype=0) -> Tensor
+    op_api: [v2.7, newest]
+    internal_format_opapi: [v2.7, newest]
+    device_check: NoCheck
+
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
     op_api: all_version
@@ -7743,6 +7759,9 @@ symint:
   - func: npu_dense_lightning_indexer_softmax_lse(Tensor query_index, Tensor key_index, Tensor weights, *, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_klen=None, str? layout='BSND', int? sparse_mode=3, int? pre_tokens=9223372036854775807, int? next_tokens=9223372036854775807) -> (Tensor, Tensor)
     op_api: all_version
 
+
+  - func: npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value, int num_heads, str input_layout, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, int[]? actual_shared_prefix_len=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_rope_antiquant_scale=None, Tensor? dequant_scale_query=None, Tensor? learnable_sink=None, int[]? q_start_idx=None, int[]? kv_start_idx=None, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, int num_key_value_heads=0, int sparse_mode=0, int inner_precise=1, int block_size=0, int antiquant_mode=0, bool softmax_lse_flag=False, int key_antiquant_mode=0, int value_antiquant_mode=0, int query_quant_mode=0, int pse_type=0, int? out_dtype=0) -> (Tensor, Tensor)
+    op_api: [v2.7, newest]
 quant:
   - func: q_scale(Tensor self) -> float
     acl_op: v2.2
