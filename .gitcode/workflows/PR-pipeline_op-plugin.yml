@@ -123,9 +123,15 @@ stages:
               fetch-depth: 0
           - name: Only_doc_commit
             id: filter
-            uses: dorny/paths-filter@v3
+            uses: paths-changes-filter
             with:
+              event-name: 'pull_request_target'
               base: ${{ atomgit.event.pull_request.base.ref }}
+              repo: ${{ atomgit.repository }}
+              number: ${{ env.pr_id }}
+              token: ${{ secrets.GITCODE_TOKEN }}
+              api-base-url: 'https://test.gitcode.net'
+              list-files: json
               filters: |
                 non-doc:
                   - '!**.md'
