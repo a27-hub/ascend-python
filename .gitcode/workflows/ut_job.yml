@@ -1,0 +1,76 @@
+name: UT Job
+
+on:
+  workflow_call:
+    inputs:
+      py_version:
+        required: false
+        type: string
+        default: "3.10"
+      REMOTE_URL:
+        required: false
+        type: string
+        default: ${{ env.ATOMGIT_REPOSITORY_URL }}
+      pr_id:
+        required: false
+        type: string
+        default: ${{ atomgit.event.pull_request.number }}
+      CP_DOCKER_IMG:
+        required: true
+        type: string
+      pytorch_branch:
+        required: true
+        type: string
+      runs_on_arch:
+        required: false
+        type: string
+        default: "x64"
+      runs_on_os:
+        required: false
+        type: string
+        default: "euler"
+      runs_on_spec:
+        required: false
+        type: string
+        default: "large"
+      TEST_RANK:
+        required: false
+        type: string
+      TSET_WORD_SIZE:
+        required: false
+        type: string
+
+jobs:
+  JOB_UT:
+    name: JOB_UT
+    select: selected_by_default
+    # runs-on: [ self-hosted, arch=arm64, os=euler ]
+    runs-on: [ dedicate-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      options: --user root
+    env:
+      TEST_RANK: ${{ inputs.TEST_RANK }}
+      TSET_WORD_SIZE: ${{ inputs.TSET_WORD_SIZE }}
+    steps:
+      - name: print env
+        run: |
+          env
+      - name: UT
+        run: |
+          rm -rf *
+          # .ci/ 仅存在于默认分支，需先拉取
+          git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
+          bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
+          pwd
+          cd ./CODE
+          git diff-tree -r --name-only --no-commit-id origin/${TARGET_BRANCH} HEAD > ../modify_files.txt
+          cat ../modify_files.txt
+          cd -
+          # bash cie/.ci/UT/op-plugin_ut_general.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
+          echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
+          echo "py_version: ${{ inputs.py_version }}"
+          echo "pr_id: ${{ env.pr_id }}"
+          echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
+
+
