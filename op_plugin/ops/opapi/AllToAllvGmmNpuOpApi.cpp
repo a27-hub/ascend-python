@@ -33,36 +33,71 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm(
     bool trans_mm_weight,
     bool permute_out_flag,
     c10::optional<c10::string_view> comm_mode) {
+  int64_t e = gmm_weight.size(0);
+  int64_t total_experts = e * ep_world_size;
+  bool has_send_tensor = send_counts_tensor.has_value() && send_counts_tensor.value().defined();
+  bool has_recv_tensor = recv_counts_tensor.has_value() && recv_counts_tensor.value().defined();
+  bool has_send_attr = !send_counts.empty();
+  bool has_recv_attr = !recv_counts.empty();
+  TORCH_CHECK(
+      total_experts <= 2048, "e*ep_world_size must be <= 2048, but got ", total_experts, OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      !(has_send_tensor && has_send_attr),
+      "attr and tensor send_counts are mutually exclusive",
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      !(has_recv_tensor && has_recv_attr),
+      "attr and tensor recv_counts are mutually exclusive",
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      !(total_experts > 256 && !has_send_tensor),
+      "when e*ep_world_size > 256, send_counts must be Tensor",
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      !(total_experts > 256 && !has_recv_tensor),
+      "when e*ep_world_size > 256, recv_counts must be Tensor",
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      !(total_experts > 256 && has_send_attr),
+      "when e*ep_world_size > 256, attr send_counts not supported, use Tensor",
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      !(total_experts > 256 && has_recv_attr),
+      "when e*ep_world_size > 256, attr recv_counts not supported, use Tensor",
+      OPS_ERROR(ErrCode::PARAM));
+
   at::Tensor mm_y{nullptr};
   at::Tensor permute_out{nullptr};
   int64_t a = 0;
-  for (auto& i : recv_counts) {
-    a += i;
+  if (has_recv_attr) {
+    for (auto& i : recv_counts) {
+      a += i;
+    }
+  } else {
+    a = op_api::sum(recv_counts_tensor.value()).item().toLong();
   }
   if (mm_x.has_value() && mm_weight.has_value()) {
     const at::Tensor& mm_x_value = mm_x.value();
     const at::Tensor& mm_weight_value = mm_weight.value();
     int64_t bs = mm_x_value.size(0);
-    int64_t n2 =
-        trans_mm_weight ? mm_weight_value.size(0) : mm_weight_value.size(1);
-    mm_y = at_npu::native::OpPreparation::apply_tensor_without_format(
-        {bs, n2}, mm_x_value.options());
+    int64_t n2 = trans_mm_weight ? mm_weight_value.size(0) : mm_weight_value.size(1);
+    mm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bs, n2}, mm_x_value.options());
   }
   if (permute_out_flag) {
     int64_t h1 = gmm_x.size(1);
-    permute_out = at_npu::native::OpPreparation::apply_tensor_without_format(
-        {a, h1}, gmm_x.options());
+    permute_out = at_npu::native::OpPreparation::apply_tensor_without_format({a, h1}, gmm_x.options());
   }
   int64_t n1 = trans_gmm_weight ? gmm_weight.size(1) : gmm_weight.size(2);
-  auto gmm_y = at_npu::native::OpPreparation::apply_tensor_without_format(
-      {a, n1}, gmm_x.options());
+  auto gmm_y = at_npu::native::OpPreparation::apply_tensor_without_format({a, n1}, gmm_x.options());
   const at::Tensor& mm_x_real = mm_x.value_or(at::Tensor());
   const at::Tensor& mm_weight_real = mm_weight.value_or(at::Tensor());
-  const at::Tensor& send_count_tensor_real =
-      send_counts_tensor.value_or(at::Tensor());
-  const at::Tensor& recv_count_tensor_real =
-      recv_counts_tensor.value_or(at::Tensor());
+  const at::Tensor& send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
+  const at::Tensor& recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
   char* hcom_ptr = const_cast<char*>(hcom.data());
+  c10::optional<at::IntArrayRef> send_counts_opt =
+      has_send_tensor ? c10::nullopt : c10::optional<at::IntArrayRef>(send_counts);
+  c10::optional<at::IntArrayRef> recv_counts_opt =
+      has_recv_tensor ? c10::nullopt : c10::optional<at::IntArrayRef>(recv_counts);
   if (comm_mode.has_value()) {
     TORCH_CHECK(
         check_aclnn_kernel_available("aclnnAlltoAllvGroupedMatMulV2"),
@@ -80,8 +115,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm(
         hcom_ptr,
         comm_mode_real,
         ep_world_size,
-        send_counts,
-        recv_counts,
+        send_counts_opt,
+        recv_counts_opt,
         trans_gmm_weight,
         trans_mm_weight,
         permute_out_flag,
@@ -99,8 +134,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm(
         mm_weight_real,
         hcom_ptr,
         ep_world_size,
-        send_counts,
-        recv_counts,
+        send_counts_opt,
+        recv_counts_opt,
         trans_gmm_weight,
         trans_mm_weight,
         permute_out_flag,
