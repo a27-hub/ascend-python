@@ -147,3 +147,4 @@ at::ScalarType npu_moe_distribute_dispatch_setup_out_dtype(c10::optional<int64_t
 }
 
 } // namespace op_infer
+// ci test
