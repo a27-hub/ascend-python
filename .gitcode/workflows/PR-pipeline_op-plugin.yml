@@ -108,8 +108,10 @@ stages:
               repo: ${{ atomgit.repository }}
               # number: ${{ env.pr_id }}
               # token: ${{ atomgit.ATOMGIT_TOKEN }}
-              # list-files: json
+              list-files: json
               filters: |
+                changed:
+                  - '**'
                 non-doc:
                   - '!**.md'
                   - '!**.rst'
@@ -119,9 +121,11 @@ stages:
                   - '!**.doc'
                   - '!**.eddx'
                   - '!**.svg'
+                
           - name: set build skip flag
             id: set-skip
             run: |
+              echo "changed: ${{ steps.filter.outputs.changed_files }}"
               echo "non-doc: ${{ steps.filter.outputs.non-doc }}"
               if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
                 echo "build_skip=no" >> "$ATOMGIT_OUTPUT"
