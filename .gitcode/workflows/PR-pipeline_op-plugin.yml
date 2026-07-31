@@ -103,7 +103,7 @@ stages:
             id: filter
             uses: paths-changes-filter
             with:
-              event-name: 'pull_request_target'
+              event-name: 'pull_request'
               base: ${{ atomgit.event.pull_request.base.ref }}
               repo: ${{ atomgit.repository }}
               number: ${{ env.pr_id }}
