@@ -6613,5 +6613,43 @@ class FakeTensorFormatCastTest(TestCase):
             self.assertEqual(list(out.shape), [4, 15, 17])
 
 
+class TestNpuAddRmsNormQuant(TestCase):
+    def test_npu_add_rms_norm_quant_meta(self):
+        with FakeTensorMode():
+            x1 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            x2 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            gamma = torch.randn(64, dtype=torch.float16).to("npu")
+            scales1 = (torch.rand(64, dtype=torch.float32) * 0.01 + 0.01).to("npu")
+            y1, y2, x_out, rms_norm_out = torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1)
+            self.assertEqual(y1.shape, x1.shape)
+            self.assertEqual(y2.shape, x1.shape)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(rms_norm_out.shape, x1.shape)
+            self.assertEqual(y1.dtype, torch.int8)
+            self.assertEqual(y2.dtype, torch.int8)
+            self.assertEqual(x_out.dtype, x1.dtype)
+            self.assertEqual(rms_norm_out.dtype, x1.dtype)
+
+    def test_npu_add_rms_norm_quant_meta_with_optional(self):
+        with FakeTensorMode():
+            x1 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            x2 = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            gamma = torch.randn(64, dtype=torch.float16).to("npu")
+            scales1 = (torch.rand(64, dtype=torch.float32) * 0.01 + 0.01).to("npu")
+            scales2 = (torch.rand(64, dtype=torch.float32) * 0.01 + 0.01).to("npu")
+            zero_points1 = torch.zeros(64, dtype=torch.int32).to("npu")
+            zero_points2 = torch.zeros(64, dtype=torch.int32).to("npu")
+            bias = torch.randn(64, dtype=torch.float16).to("npu")
+            y1, y2, x_out, rms_norm_out = torch_npu.npu_add_rms_norm_quant(
+                x1, x2, gamma, scales1,
+                scales2=scales2, zero_points1=zero_points1,
+                zero_points2=zero_points2, bias=bias,
+                output_res=True)
+            self.assertEqual(y1.shape, x1.shape)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(rms_norm_out.shape, x1.shape)
+
+
 if __name__ == "__main__":
     run_tests()
