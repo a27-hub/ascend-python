@@ -5065,5 +5065,11 @@
   },
   "func: npu_renorm_backward(Tensor grad, Tensor self, Scalar p, int dim, Scalar maxnorm) -> Tensor": {
     "version": ["v2.7", "newest"]
+  },
+  "func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor": {
+    "version": ["all_version"]
+  },
+  "op_api: torch_npu.npu_gelu_mul(*args, **kwargs)": {
+    "version": ["all_version"]
   }
 }

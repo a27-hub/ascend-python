@@ -1207,6 +1207,26 @@ class TestGelu(TestCase):
             self.assertTrue(a.shape == a.grad.shape)
 
 
+class TestGeluMul(TestCase):
+
+    def test_npu_gelu_mul(self):
+        with FakeTensorMode():
+            a = torch.randn(10, 3, 8).npu()
+            result = torch.ops.npu.npu_gelu_mul(a)
+            # last dim halved: 8 -> 4
+            expected_shape = list(a.shape)
+            expected_shape[-1] = expected_shape[-1] // 2
+            self.assertTrue(tuple(expected_shape) == tuple(result.shape))
+
+    def test_npu_gelu_mul_approximate_tanh(self):
+        with FakeTensorMode():
+            a = torch.randn(10, 3, 8).npu()
+            result = torch.ops.npu.npu_gelu_mul(a, approximate='tanh')
+            expected_shape = list(a.shape)
+            expected_shape[-1] = expected_shape[-1] // 2
+            self.assertTrue(tuple(expected_shape) == tuple(result.shape))
+
+
 class TestIncreFlashAttention(TestCase):
     def testIncreFlashAttention(self):
         with FakeTensorMode():

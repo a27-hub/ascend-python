@@ -1,0 +1,126 @@
+{
+  "constraints_total": 7,
+  "noise_skipped": 8,
+  "covered": 2,
+  "uncovered": 2,
+  "unanchored": 3,
+  "covered_details": [
+    {
+      "rule": "input（aclTensor*） | 输入 | 输入的张量，公式中的input。 | 支持空Tensor。最后一维值为偶数且小于等于1024。其他维度的乘积小于等于200000。 | BFLOAT1",
+      "confidence": "medium",
+      "anchored": true,
+      "anchor": [
+        "input"
+      ],
+      "matched_check": {
+        "message": "input must be at least 1-dimensional.",
+        "line": 28,
+        "condition": "!output_shape.empty(), \"input must be at least 1-dimensional.\" + OPS_ERROR(ErrCode::PARAM)"
+      }
+    },
+    {
+      "rule": "每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeluMulGetWorkspaceSize”接口获取入参并根据计算流程计算所",
+      "confidence": "low",
+      "anchored": false,
+      "matched_check": {
+        "message": "input must be at least 1-dimensional.",
+        "line": 28,
+        "matched_keywords": [
+          "must"
+        ]
+      }
+    }
+  ],
+  "uncovered_details": [
+    {
+      "rule": "approximateOptional（char*） | 输入 | Gelu计算的模式。 | 只支持“none”和“tanh”，分别对应Gelu的erf模式和tanh模式，输入为空指针时为“none”",
+      "confidence": "medium",
+      "md_line": 89,
+      "anchor": [
+        "approximate"
+      ],
+      "reason": "no TORCH_CHECK references all of ['approximate']",
+      "best_partial": null,
+      "missing": [
+        "approximate"
+      ]
+    },
+    {
+      "rule": "out（aclTensor*） | 输出 | 输出的张量，公式中的out。 | 输出的数据类型与输入保持一致。输出shape和输入shape其他维度一致。最后一维的值为输入shape最后一维值的二分之",
+      "confidence": "medium",
+      "md_line": 89,
+      "anchor": [
+        "out"
+      ],
+      "reason": "no TORCH_CHECK references all of ['out']",
+      "best_partial": null,
+      "missing": [
+        "out"
+      ]
+    }
+  ],
+  "unanchored_details": [
+    {
+      "rule": "- <term>Atlas 200I/500 A2 推理产品</term>：不支持",
+      "confidence": "low",
+      "md_line": 17,
+      "reason": "no known parameter name mentioned in constraint row"
+    },
+    {
+      "rule": "- <term>Atlas 推理系列产品</term>：不支持",
+      "confidence": "low",
+      "md_line": 20,
+      "reason": "no known parameter name mentioned in constraint row"
+    },
+    {
+      "rule": "- <term>Atlas 训练系列产品</term>：不支持",
+      "confidence": "low",
+      "md_line": 23,
+      "reason": "no known parameter name mentioned in constraint row"
+    }
+  ],
+  "torch_checks_found": [
+    {
+      "condition": "!output_shape.empty(), \"input must be at least 1-dimensional.\" + OPS_ERROR(ErrCode::PARAM)",
+      "message": "input must be at least 1-dimensional.",
+      "line": 28,
+      "macro": "TORCH_CHECK",
+      "match_text": "!output_shape.empty(), \"input must be at least 1-dimensional.\" +   input must be at least 1-dimensional."
+    },
+    {
+      "condition": "input.scalar_type() == at::kBFloat16 || input.scalar_type() == at::kHalf || input.scalar_type() == at::kFloat,\n        \"input dtype must be BFLOAT16, FLOAT16 or FLOAT, but got \", input.scalar_type(),\n",
+      "message": "input dtype must be BFLOAT16, FLOAT16 or FLOAT, but got ",
+      "line": 37,
+      "macro": "TORCH_CHECK",
+      "match_text": "input.scalar_type() == at::kBFloat16 || input.scalar_type() == at::kHalf || input.scalar_type() == at::kFloat,\n        \"input dtype must be BFLOAT16, FLOAT16 or FLOAT, but got \", input.scalar_type(),\n input dtype must be BFLOAT16, FLOAT16 or FLOAT, but got "
+    },
+    {
+      "condition": "input.dim() >= 2 && input.dim() <= 8,\n                \"input dim must be in [2, 8], but got \", input.dim(),\n                OPS_ERROR(ErrCode::PARAM)",
+      "message": "input dim must be in [2, 8], but got ",
+      "line": 43,
+      "macro": "TORCH_CHECK",
+      "match_text": "input.dim() >= 2 && input.dim() <= 8,\n                \"input dim must be in [2, 8], but got \", input.dim(),\n                  input dim must be in [2, 8], but got "
+    },
+    {
+      "condition": "last_dim % 2 == 0,\n                \"input last dim must be even, but got \", last_dim,\n                OPS_ERROR(ErrCode::PARAM)",
+      "message": "input last dim must be even, but got ",
+      "line": 49,
+      "macro": "TORCH_CHECK",
+      "match_text": "last_dim % 2 == 0,\n                \"input last dim must be even, but got \", last_dim,\n                  input last dim must be even, but got "
+    },
+    {
+      "condition": "last_dim <= 1024,\n                \"input last dim must be <= 1024, but got \", last_dim,\n                OPS_ERROR(ErrCode::PARAM)",
+      "message": "input last dim must be <= 1024, but got ",
+      "line": 52,
+      "macro": "TORCH_CHECK",
+      "match_text": "last_dim <= 1024,\n                \"input last dim must be <= 1024, but got \", last_dim,\n                  input last dim must be <= 1024, but got "
+    },
+    {
+      "condition": "other_dims_product <= 200000,\n                \"product of input dims except the last one must be <= 200000, but got \", other_dims_product,\n                OPS_ERROR(ErrCode::PARAM)",
+      "message": "product of input dims except the last one must be <= 200000, but got ",
+      "line": 61,
+      "macro": "TORCH_CHECK",
+      "match_text": "other_dims_product <= 200000,\n                \"product of input dims except the last one must be <= 200000, but got \", other_dims_product,\n                  product of input dims except the last one must be <= 200000, but got "
+    }
+  ]
+}

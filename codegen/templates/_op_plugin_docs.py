@@ -15900,3 +15900,38 @@ input与weight数据类型必须一致。softmax为None时logits_max和sum_exp_l
     ...     grad, input_tensor, weight_tensor, target_mask, masked_target, softmax=softmax)
 """
 )
+
+_add_torch_npu_docstr(
+    "npu_gelu_mul",
+    """
+torch_npu.npu_gelu_mul(input, *, approximate='none') -> Tensor
+功能描述
+将输入Tensor按最后一维分成左右两半x1和x2，对x1进行GELU激活后与x2逐元素相乘。
+
+参数说明
+input (Tensor) - 输入张量，数据类型支持bfloat16、float16、float32，数据格式支持ND，支持非连续的Tensor，支持空Tensor。维度支持2-8维，最后一维的值必须为偶数且小于等于1024，其他维度的乘积须小于等于200000。
+* - 位置参数与关键字参数的分隔符。
+approximate (str，可选，默认值为'none') - GELU计算的模式，可配置为'none'或'tanh'，分别对应GELU的erf模式和tanh模式。
+
+输出说明
+output (Tensor) - 输出张量，数据类型与input保持一致，数据格式支持ND，shape的最后一维为input最后一维的二分之一，其他维度与input保持一致，支持非连续的Tensor。
+
+约束说明
+该接口支持推理、训练场景下使用。
+该接口支持图模式。
+input输入不能为None。
+input最后一维的值必须为偶数且小于等于1024，其他维度的乘积须小于等于200000。
+approximate仅支持'none'和'tanh'两种取值。
+
+支持的型号
+Ascend 950PR/Ascend 950DT、Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas A2 训练系列产品/Atlas A2 推理系列产品。
+
+示例
+    >>> import torch
+    >>> import torch_npu
+    >>> input_tensor = torch.randn(2, 4, dtype=torch.float32, device='npu')
+    >>> output_tensor = torch_npu.npu_gelu_mul(input_tensor, approximate='tanh')
+    >>> output_tensor.shape
+    torch.Size([2, 2])
+"""
+)

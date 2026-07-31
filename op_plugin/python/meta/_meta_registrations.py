@@ -7301,3 +7301,31 @@ def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype
     else:
         out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
     return (out_weight, out_weight_scale, out_weight_offset, out_bias)
+
+
+@impl(m, "npu_gelu_mul")
+def npu_gelu_mul_meta(input, *, approximate="none"):
+    # Constraint 1: input rank 2-8
+    torch._check(
+        input.dim() >= 2 and input.dim() <= 8,
+        lambda: f"input dim must be in [2, 8], but got {input.dim()}D" + ops_error(ErrCode.PARAM),
+    )
+    # Constraint 2: input last dim even
+    torch._check(
+        input.shape[-1] % 2 == 0,
+        lambda: f"input last dim must be even, but got {input.shape[-1]}" + ops_error(ErrCode.PARAM),
+    )
+    # Constraint 3: input last dim <= 1024
+    torch._check(
+        input.shape[-1] <= 1024,
+        lambda: f"input last dim must be <= 1024, but got {input.shape[-1]}" + ops_error(ErrCode.PARAM),
+    )
+    # Constraint 4: approximate ∈ {"none", "tanh"}
+    torch._check(
+        approximate in ("none", "tanh"),
+        lambda: f"approximate must be 'none' or 'tanh', but got {approximate}" + ops_error(ErrCode.PARAM),
+    )
+    # Output shape: copy input shape, halve last dim; dtype = input dtype (matches C++ npu_gelu_mul_out_size)
+    output_shape = list(input.shape)
+    output_shape[-1] = output_shape[-1] // 2
+    return torch.empty(output_shape, dtype=input.dtype, device='meta')

@@ -7633,6 +7633,10 @@ custom:
   - func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291, Tensor? group_list=None) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor
+    op_api: all_version
+    exposed: all_version
+
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
     op_api: all_version
