@@ -2463,3 +2463,4 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_teardown
 }
 
 } // namespace op_infer
+// ci test
