@@ -45,6 +45,11 @@ stages:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
+          - name: print env
+            run: |
+              echo "pr_id: ${{ env.pr_id }}"
+              echo "------------------------"
+              env
           - name: checkout
             uses: checkout
             with:
@@ -74,7 +79,6 @@ stages:
               git config --global http.postBuffer 524288000
               git config --global http.lowSpeedLimit 5000
               git config --global http.lowSpeedTime 300
-              echo "debug"
               git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
               pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
               wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
