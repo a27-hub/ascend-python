@@ -1126,7 +1126,11 @@ def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                         trans_mm_weight=False, permute_out_flag=False, comm_mode=None):
     if ep_world_size <= 0:
         ep_world_size = 1
-    out_x = sum(recv_counts)
+    has_recv_tensor = recv_counts_tensor is not None
+    if has_recv_tensor:
+        out_x = -1
+    else:
+        out_x = sum(recv_counts)
     out_y = gmm_weight.size(2)
     if trans_gmm_weight:
         out_y = gmm_weight.size(1)
@@ -1241,7 +1245,11 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
                 lambda: f"In MX quant mode, the gmm_weight_scale's dim should be 4, but got {gmm_weight_scale.dim()}.",
             )
 
-    out_x = sum(recv_counts)
+    has_recv_tensor = recv_counts_tensor is not None
+    if has_recv_tensor:
+        out_x = -1
+    else:
+        out_x = sum(recv_counts)
     out_y = gmm_weight.size(2)
     out_mm_x = 0
     out_mm_y = 0
