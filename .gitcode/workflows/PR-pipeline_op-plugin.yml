@@ -150,20 +150,6 @@ stages:
               else
                 echo "build_skip=yes" >> "$ATOMGIT_OUTPUT"
               fi
-          # - name: Only Doc Commit Check
-          #   id: only-doc-check
-          #   uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@main
-          #   with:
-          #     pr_id: ${{ env.pr_id }}
-          #     target_branch: ${{ atomgit.event.pull_request.base.ref }}
-          #     remote_url: ${{ env.ATOMGIT_REPOSITORY_URL }}
-          # - name: set build skip flag
-          #   id: set-skip
-          #   run: |
-          #     BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
-          #     echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
-          #     echo "Only Doc Commit Check result: ${BUILD_SKIP}"
-
 
   stage_2:
     name: Build
