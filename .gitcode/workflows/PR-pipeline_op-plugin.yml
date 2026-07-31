@@ -58,28 +58,6 @@ stages:
               repository-name: ${{ atomgit.repository }}
               project-name: FrameworkPTAdapter
 
-      Antipoison:
-        name: Antipoison
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          - name: checkout
-            uses: checkout
-            with:
-              ref: refs/merge-requests/${{ env.pr_id }}/merge
-          - name: Antipoison
-            run: |
-              git config --global http.postBuffer 524288000
-              git config --global http.lowSpeedLimit 5000
-              git config --global http.lowSpeedTime 300
-              git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
-              pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
-              wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
-              unzip -q ApiGateway-python-sdk-2.0.7.zip
-              cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/.gitcode/workflows/scripts/
-              python3.8 cie/.gitcode/workflows/scripts/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}  
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
@@ -145,6 +123,7 @@ stages:
           - name: set build skip flag
             id: set-skip
             run: |
+              echo "non-doc: ${{ steps.filter.outputs.non-doc }}"
               if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
                 echo "build_skip=no" >> "$ATOMGIT_OUTPUT"
               else
