@@ -78,8 +78,16 @@ jobs:
             echo "need_build=yes" >> "$ATOMGIT_OUTPUT"
             echo "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" >> "$ATOMGIT_OUTPUT"
           fi
-      
-      - name: download and install torch
+
+      - name: checkout pytorch
+        if: ${{ steps.check_support.outputs.need_build == 'yes' && inputs.pytorch_branch == 'master' }}
+        uses: checkout
+        with:
+          repository: Ascend/pytorch
+          ref: master
+          path: pytorch
+          fetch-depth: 1
+      - name: install torch
         if: ${{ steps.check_support.outputs.need_build == 'yes' && inputs.pytorch_branch == 'master' }}
         run: |
           ARCH="${{ inputs.runs_on_arch }}"
@@ -91,8 +99,7 @@ jobs:
             TORCH_ARCH="${ARCH}"
           fi
 
-          git clone --depth=1 https://gitcode.com/Ascend/pytorch.git /tmp/pytorch
-          torch_version=$(cat /tmp/pytorch/requirements.txt | grep torch== | cut -c 8-25)
+          torch_version=$(cat pytorch/requirements.txt | grep torch== | cut -c 8-25)
           nightly_date=${torch_version:10:8}
 
           if [ ${#nightly_date} -ne 8 ]; then
@@ -113,6 +120,7 @@ jobs:
         with:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
           fetch-depth: 0
+          clean: true
       - name: compile
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
         run: |
