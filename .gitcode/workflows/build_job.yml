@@ -41,7 +41,7 @@ on:
 
 jobs:
   JOB_compile:
-    name: JOB_compile
+    name: Compile
     select: selected_by_default
     runs-on: [ dedicate-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
     container:
