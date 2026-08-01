@@ -126,4 +126,5 @@ jobs:
       - name: compile
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
         run: |
+          ls -al
           bash ci/build.sh --python=3.10 --pytorch=${{ steps.check_support.outputs.pytorch_build_branch }}
