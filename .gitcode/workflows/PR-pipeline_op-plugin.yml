@@ -12,7 +12,7 @@ on:
   pull_request_comment:
     types: [created]
     branches: [ 'master', '26.1.0', '26.0.0', '7.3.0' ]
-    comments: [ '^(?:\/)?compile*' ]
+    comments: [ 'compile' ]
 
 env:
   repo: ${{ atomgit.event.repository.name }}
@@ -139,9 +139,6 @@ stages:
         name: Build_master_x86
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_x86 }}
@@ -152,9 +149,6 @@ stages:
         name: Build_v2_7_1_x86
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_x86 }}
@@ -165,9 +159,6 @@ stages:
         name: Build_v2_9_0_x86
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_x86 }}
@@ -178,9 +169,6 @@ stages:
         name: Build_v2_10_0_x86
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_x86 }}
@@ -191,9 +179,6 @@ stages:
         name: Build_v2_11_0_x86
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_x86 }}
@@ -204,9 +189,6 @@ stages:
         name: Build_v2_12_0_x86
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_x86 }}
@@ -217,9 +199,6 @@ stages:
         name: Build_master_ARM
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -230,9 +209,6 @@ stages:
         name: Build_v2_7_1_ARM
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
@@ -243,9 +219,6 @@ stages:
         name: Build_v2_9_0_ARM
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
@@ -256,9 +229,6 @@ stages:
         name: Build_v2_10_0_ARM
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
@@ -269,9 +239,6 @@ stages:
         name: Build_v2_11_0_ARM
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
@@ -282,9 +249,6 @@ stages:
         name: Build_v2_12_0_ARM
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
