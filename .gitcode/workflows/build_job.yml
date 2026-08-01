@@ -122,7 +122,7 @@ jobs:
         with:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
           fetch-depth: 0
-          clean: true
+          # clean: true
       - name: compile
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
         run: |
