@@ -133,7 +133,6 @@ stages:
   stage_2:
     name: Build
     select: selected_by_default
-    if: ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
     jobs:
       Build_master_x86:
         name: Build_master_x86
