@@ -10,8 +10,9 @@ concurrency:
 
 on:
   pull_request_comment:
+    types: [created]
     branches: [ 'master', '26.1.0', '26.0.0', '7.3.0' ]
-    comments: [ '^(?:\/)?compile*' ]
+    comments: [ 'compile' ]
 
 env:
   repo: ${{ atomgit.event.repository.name }}
@@ -87,7 +88,7 @@ stages:
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         outputs:
-          build_skip: ${{ steps.set-skip.outputs.build_skip }}
+          need_build: ${{ steps.set-skip.outputs.need_build }}
         steps:
           - name: checkout
             uses: checkout
@@ -98,14 +99,16 @@ stages:
             id: filter
             uses: paths-changes-filter
             with:
-              event-name: 'pull_request_target'
+              event-name: 'pull_request'
               base: ${{ atomgit.event.pull_request.base.ref }}
               repo: ${{ atomgit.repository }}
               number: ${{ env.pr_id }}
-              token: ${{ atomgit.GITCODE_TOKEN }}
-              api-base-url: 'https://test.gitcode.net'
+              token: ${{ atomgit.ATOMGIT_TOKEN }}
               list-files: json
+              predicate-quantifier: every
               filters: |
+                changed:
+                  - '**'
                 non-doc:
                   - '!**.md'
                   - '!**.rst'
@@ -115,13 +118,16 @@ stages:
                   - '!**.doc'
                   - '!**.eddx'
                   - '!**.svg'
+                
           - name: set build skip flag
             id: set-skip
             run: |
+              echo "changed: ${{ steps.filter.outputs.changed_files }}"
+              echo "non-doc: ${{ steps.filter.outputs.non-doc }}"
               if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
-                echo "build_skip=no" >> "$ATOMGIT_OUTPUT"
+                echo "need_build=yes" >> "$ATOMGIT_OUTPUT"
               else
-                echo "build_skip=yes" >> "$ATOMGIT_OUTPUT"
+                echo "need_build=no" >> "$ATOMGIT_OUTPUT"
               fi
 
   stage_2:
@@ -130,11 +136,8 @@ stages:
     jobs:
       Build_master_x86:
         name: Build_master_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_x86 }}
@@ -143,11 +146,8 @@ stages:
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_x86 }}
@@ -156,11 +156,8 @@ stages:
 
       Build_v2_9_0_x86:
         name: Build_v2_9_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_x86 }}
@@ -169,11 +166,8 @@ stages:
 
       Build_v2_10_0_x86:
         name: Build_v2_10_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_x86 }}
@@ -182,11 +176,8 @@ stages:
 
       Build_v2_11_0_x86:
         name: Build_v2_11_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_x86 }}
@@ -195,11 +186,8 @@ stages:
 
       Build_v2_12_0_x86:
         name: Build_v2_12_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_x86 }}
@@ -208,11 +196,8 @@ stages:
 
       Build_master_ARM:
         name: Build_master_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -221,11 +206,8 @@ stages:
 
       Build_v2_7_1_ARM:
         name: Build_v2_7_1_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
@@ -234,11 +216,8 @@ stages:
 
       Build_v2_9_0_ARM:
         name: Build_v2_9_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
@@ -247,11 +226,8 @@ stages:
 
       Build_v2_10_0_ARM:
         name: Build_v2_10_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
@@ -260,11 +236,8 @@ stages:
 
       Build_v2_11_0_ARM:
         name: Build_v2_11_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
@@ -273,11 +246,8 @@ stages:
 
       Build_v2_12_0_ARM:
         name: Build_v2_12_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
-        secrets:
-          OBS_AK: ${{ secrets.OBS_AK }}
-          OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
