@@ -164,12 +164,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
   const at::Tensor& x2_scale_real = x2_scale.value_or(at::Tensor());
   if (x1_scale_dtype.has_value() && x1_wrapper.dtype == ACL_FLOAT4_E2M1) {
     TORCH_CHECK(c10_npu::GetAclDataType(x1_scale_dtype.value()) == ACL_FLOAT8_E8M0,
-      "In the mxfp4 scenario, x1_scale must be float8_e8m0, but got x1_scale_dtype: ",
+      "When x1 dtype is float4_e2m1, x1_scale must be float8_e8m0, but got x1_scale_dtype: ",
       c10_npu::CustomDataTypeToString(x1_scale_dtype.value()), ".", OPS_ERROR(ErrCode::VALUE));
   }
   if (x2_scale_dtype.has_value() && x2_wrapper.dtype == ACL_FLOAT4_E2M1) {
     TORCH_CHECK(c10_npu::GetAclDataType(x2_scale_dtype.value()) == ACL_FLOAT8_E8M0,
-      "In the mxfp4 scenario, x2_scale must be float8_e8m0, but got x2_scale_dtype: ",
+      "When x2 dtype is float4_e2m1, x2_scale must be float8_e8m0, but got x2_scale_dtype: ",
       c10_npu::CustomDataTypeToString(x2_scale_dtype.value()), ".", OPS_ERROR(ErrCode::VALUE));
   }
   check_dtype_itemsize_compatible(x1_scale_real, x1_scale_dtype, "x1_scale");
