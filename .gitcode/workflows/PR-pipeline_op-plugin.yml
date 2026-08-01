@@ -43,7 +43,6 @@ stages:
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
         steps:
           - name: checkout
             uses: checkout
@@ -64,7 +63,6 @@ stages:
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
         steps:
           - name: checkout
             uses: checkout
@@ -90,7 +88,6 @@ stages:
         runs-on: [ dedicate-hosted, x64, 2xlarge ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
         outputs:
           need_build: ${{ steps.set-skip.outputs.need_build }}
         steps:
