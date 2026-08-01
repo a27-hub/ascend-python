@@ -25,10 +25,6 @@ on:
         required: false
         type: string
         default: "x64"
-      runs_on_os:
-        required: false
-        type: string
-        default: "euler"
       runs_on_spec:
         required: false
         type: string
@@ -49,7 +45,7 @@ jobs:
     steps:
       - name: print env
         run: |
-          echo "[ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]"
+          echo "[ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]"
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
           echo "py_version=${{ inputs.py_version }}"
           echo "pr_id=${{ inputs.pr_id }}"
