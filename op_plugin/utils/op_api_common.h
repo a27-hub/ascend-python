@@ -177,6 +177,22 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
     add_param_to_buf(std::string(aclnn_api), args...);
     add_param_to_buf(device);
     add_param_to_buf((uintptr_t)acl_stream);
+    ASCEND_LOGI("hit_cache aclnn_api=%s, core_control_enabled=%d, deterministic_level=%d, "
+                "device=%d, acl_stream=0x%lx, hash_buf_len=%d",
+                aclnn_api, c10_npu::is_core_control_enabled() ? 1 : 0,
+                static_cast<int>(deterministic_level), static_cast<int>(device),
+                static_cast<uint64_t>((uintptr_t)acl_stream), g_hash_offset);
+    {
+        std::string hash_buf_hex;
+        hash_buf_hex.reserve(static_cast<size_t>(g_hash_offset) * 2);
+        constexpr char hex_chars[] = "0123456789abcdef";
+        for (int i = 0; i < g_hash_offset; i++) {
+            auto byte = static_cast<unsigned char>(g_hash_buf[i]);
+            hash_buf_hex.push_back(hex_chars[(byte >> 4) & 0xF]);
+            hash_buf_hex.push_back(hex_chars[byte & 0xF]);
+        }
+        ASCEND_LOGI("hit_cache hash_buf(hex)=%s", hash_buf_hex.c_str());
+    }
     uint64_t hashId = calc_hash_id();
     setPTAHashKeyFunc(hashId);
     aclOpExecutor *executor = ptaGetExecCacheFunc(hashId, workspace_size_addr);
