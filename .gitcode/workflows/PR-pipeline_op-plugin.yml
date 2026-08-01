@@ -92,7 +92,7 @@ stages:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         outputs:
-          build_skip: ${{ steps.set-skip.outputs.build_skip }}
+          need_build: ${{ steps.set-skip.outputs.need_build }}
         steps:
           - name: checkout
             uses: checkout
@@ -129,9 +129,9 @@ stages:
               echo "changed: ${{ steps.filter.outputs.changed_files }}"
               echo "non-doc: ${{ steps.filter.outputs.non-doc }}"
               if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
-                echo "build_skip=no" >> "$ATOMGIT_OUTPUT"
+                echo "need_build=yes" >> "$ATOMGIT_OUTPUT"
               else
-                echo "build_skip=yes" >> "$ATOMGIT_OUTPUT"
+                echo "need_build=no" >> "$ATOMGIT_OUTPUT"
               fi
 
   stage_2:
@@ -140,7 +140,7 @@ stages:
     jobs:
       Build_master_x86:
         name: Build_master_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -153,7 +153,7 @@ stages:
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -166,7 +166,7 @@ stages:
 
       Build_v2_9_0_x86:
         name: Build_v2_9_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -179,7 +179,7 @@ stages:
 
       Build_v2_10_0_x86:
         name: Build_v2_10_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -192,7 +192,7 @@ stages:
 
       Build_v2_11_0_x86:
         name: Build_v2_11_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -205,7 +205,7 @@ stages:
 
       Build_v2_12_0_x86:
         name: Build_v2_12_0_x86
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -218,7 +218,7 @@ stages:
 
       Build_master_ARM:
         name: Build_master_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -231,7 +231,7 @@ stages:
 
       Build_v2_7_1_ARM:
         name: Build_v2_7_1_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -244,7 +244,7 @@ stages:
 
       Build_v2_9_0_ARM:
         name: Build_v2_9_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -257,7 +257,7 @@ stages:
 
       Build_v2_10_0_ARM:
         name: Build_v2_10_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -270,7 +270,7 @@ stages:
 
       Build_v2_11_0_ARM:
         name: Build_v2_11_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
@@ -283,7 +283,7 @@ stages:
 
       Build_v2_12_0_ARM:
         name: Build_v2_12_0_ARM
-        if : ${{ jobs.Detect_file_changes.outputs.build_skip == 'no' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         secrets:
           OBS_AK: ${{ secrets.OBS_AK }}
