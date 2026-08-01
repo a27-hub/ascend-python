@@ -80,7 +80,7 @@ jobs:
           fi
 
       - name: checkout pytorch
-        # if: ${{ steps.check_support.outputs.need_build == 'yes' && inputs.pytorch_branch == 'master' }}
+        if: ${{ steps.check_support.outputs.need_build == 'yes' && inputs.pytorch_branch == 'master' }}
         uses: checkout
         with:
           repository: https://gitcode.com/Ascend/pytorch.git
@@ -88,7 +88,7 @@ jobs:
           path: pytorch
           fetch-depth: 1
       - name: install torch
-        # if: ${{ steps.check_support.outputs.need_build == 'yes' && inputs.pytorch_branch == 'master' }}
+        if: ${{ steps.check_support.outputs.need_build == 'yes' && inputs.pytorch_branch == 'master' }}
         run: |
           ARCH="${{ inputs.runs_on_arch }}"
           if [ "${ARCH}" = "x64" ]; then
@@ -114,7 +114,7 @@ jobs:
 
           torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_${TORCH_ARCH}.whl"
           echo "torch_url=${torch_url}"
-          # pip3.10 install $torch_url
+          pip3.10 install $torch_url
 
       - name: checkout
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
@@ -122,7 +122,6 @@ jobs:
         with:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
           fetch-depth: 0
-          # clean: true
       - name: compile
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
         run: |

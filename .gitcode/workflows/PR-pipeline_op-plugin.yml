@@ -10,7 +10,6 @@ concurrency:
 
 on:
   pull_request_comment:
-    types: [created]
     branches: [ 'master', '26.1.0', '26.0.0', '7.3.0' ]
     comments: [ 'compile' ]
 
