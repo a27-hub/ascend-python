@@ -109,6 +109,7 @@ stages:
               number: ${{ env.pr_id }}
               token: ${{ atomgit.ATOMGIT_TOKEN }}
               list-files: json
+              predicate-quantifier: every
               filters: |
                 changed:
                   - '**'
