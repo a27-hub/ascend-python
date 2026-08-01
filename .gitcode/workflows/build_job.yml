@@ -83,8 +83,8 @@ jobs:
         # if: ${{ steps.check_support.outputs.need_build == 'yes' && inputs.pytorch_branch == 'master' }}
         uses: checkout
         with:
-          repository: Ascend/pytorch
-          ref: master
+          repository: https://gitcode.com/Ascend/pytorch.git
+          ref: refs/heads/master
           path: pytorch
           fetch-depth: 1
       - name: install torch
