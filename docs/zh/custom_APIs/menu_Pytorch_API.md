@@ -174,6 +174,7 @@
         -   [torch_npu.apply_rotary_pos_emb](./torch_npu/torch_npu-apply_rotary_pos_emb.md)
         -   [torch_npu.npu_add_quant_matmul_](torch_npu/torch_npu-npu_add_quant_matmul_.md)
         -   [torch_npu.npu_dynamic_dual_level_mx_quant](torch_npu/torch_npu-npu_dynamic_dual_level_mx_quant.md)
+        -   [torch_npu.npu_dynamic_mx_quant_with_dual_axis_out](torch_npu/torch_npu-npu_dynamic_mx_quant_with_dual_axis_out.md)
         -   [torch_npu.npu_fused_causal_conv1d](torch_npu/torch_npu-npu_fused_causal_conv1d.md)
         -   [torch_npu.npu_grouped_dynamic_block_quant](torch_npu/torch_npu-npu_grouped_dynamic_block_quant.md)
         -   [torch_npu.npu_mhc_post](torch_npu/torch_npu-npu_mhc_post.md)
