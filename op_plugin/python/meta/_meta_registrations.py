@@ -6909,6 +6909,57 @@ def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_t
     return (y1, mxscale1, y2, mxscale2)
 
 
+@impl(m, "npu_dynamic_mx_quant_with_dual_axis_out")
+def npu_dynamic_mx_quant_with_dual_axis_out_meta(input_dummy, y1_out, mxscale1_out, y2_out, mxscale2_out,
+                                                  *, round_mode="rint", dst_type=296, scale_alg=0,
+                                                  dst_type_max=0.0):
+    if input_dummy.dim() < 2:
+        raise RuntimeError("The input should be at least 2D" + ops_error(ErrCode.PARAM))
+    if input_dummy.dtype not in (torch.float16, torch.bfloat16):
+        raise RuntimeError("input only supports float16 or bfloat16" + ops_error(ErrCode.PARAM))
+    output_tensors = (y1_out, mxscale1_out, y2_out, mxscale2_out)
+    if not input_dummy.is_contiguous() or any(not tensor.is_contiguous() for tensor in output_tensors):
+        raise RuntimeError("input and all output tensors must be contiguous" + ops_error(ErrCode.PARAM))
+    if any(tensor.device != input_dummy.device for tensor in output_tensors):
+        raise RuntimeError("input and all output tensors must be on the same device" + ops_error(ErrCode.PARAM))
+    if scale_alg not in [0, 1, 2]:
+        raise RuntimeError(f"Invalid scale_alg value: {scale_alg}. Expected 0, 1 or 2." +
+                           ops_error(ErrCode.PARAM))
+
+    y_shape = list(input_dummy.shape)
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type)
+    if torch_dtype in (torch.float8_e5m2, torch.float8_e4m3fn):
+        y_dtype = torch_dtype
+    elif dst_type in (296, 297):
+        if input_dummy.size(-1) % 2:
+            raise RuntimeError("The last dim input shape must be divisible by 2 for a float4 output" +
+                               ops_error(ErrCode.PARAM))
+        y_shape[-1] //= 2
+        y_dtype = torch.uint8
+    else:
+        raise RuntimeError(f"Unsupported dst_type: {dst_type}" + ops_error(ErrCode.PARAM))
+
+    if y1_out.dtype != y_dtype or y2_out.dtype != y_dtype:
+        raise RuntimeError("y1_out and y2_out must use the storage dtype selected by dst_type" +
+                           ops_error(ErrCode.PARAM))
+    if list(y1_out.shape) != y_shape or list(y2_out.shape) != y_shape:
+        raise RuntimeError("y1_out and y2_out have an invalid shape" + ops_error(ErrCode.PARAM))
+
+    mxscale1_shape = list(input_dummy.shape) + [2]
+    mxscale2_shape = list(input_dummy.shape) + [2]
+    mxscale1_shape[-2] = ((mxscale1_shape[-2] + 31) // 32 + 1) // 2
+    mxscale2_shape[-3] = ((mxscale2_shape[-3] + 31) // 32 + 1) // 2
+    if list(mxscale1_out.shape) != mxscale1_shape:
+        raise RuntimeError("mxscale1_out has an invalid shape" + ops_error(ErrCode.PARAM))
+    if list(mxscale2_out.shape) != mxscale2_shape:
+        raise RuntimeError("mxscale2_out has an invalid shape" + ops_error(ErrCode.PARAM))
+    if mxscale1_out.dtype != torch.uint8 or mxscale2_out.dtype != torch.uint8:
+        raise RuntimeError("mxscale1_out and mxscale2_out must use uint8 storage for FLOAT8_E8M0 values" +
+                           ops_error(ErrCode.PARAM))
+
+    return y1_out, mxscale1_out, y2_out, mxscale2_out
+
+
 @impl(m, "npu_grouped_dynamic_block_quant")
 def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_mode="rint", dst_type=torch.float8_e5m2, row_block_size=1, col_block_size=128, group_list_type=0, dst_type_max=0.0):
     dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e5m2)
