@@ -56,6 +56,7 @@ jobs:
         id: check_support
         run: |
           PYTORCH_BRANCH="${{ inputs.pytorch_branch }}"
+          TARGET_BRANCH="${{ inputs.TARGET_BRANCH }}"
           echo "TARGET_BRANCH=${TARGET_BRANCH}"
           echo "PYTORCH_BRANCH=${PYTORCH_BRANCH}"
           if [ "${TARGET_BRANCH}" = "master" ]; then
