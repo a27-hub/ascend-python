@@ -150,10 +150,10 @@ static bool is_weight_trans(const at::Tensor &tensor) {
 // ArrayRef, so on 2.13 the wrapper still passes at::TensorList and it converts
 // transparently -- no version gating needed.
 at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
-        const at::ITensorListRef& scale_a,
+        const at::ITensorListRef& scale_a_ilist,
         at::IntArrayRef scale_recipe_a,
         at::IntArrayRef swizzle_a,
-        const at::ITensorListRef& scale_b,
+        const at::ITensorListRef& scale_b_list,
         at::IntArrayRef scale_recipe_b,
         at::IntArrayRef swizzle_b,
         const c10::optional<at::Tensor> &offs, // group_list -tensor
@@ -167,12 +167,12 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     // and scale_a[i] indexing -- needs no further change. Cost: shallow
     // per-Tensor refcount bump into a local vector; vector stays alive for
     // the whole call, so the ArrayRef view never dangles.
-    auto scale_a_materialized = scale_a.materialize();
-    auto scale_b_materialized = scale_b.materialize();
+    auto scale_a_materialized = scale_a_list.materialize();
+    auto scale_b_materialized = scale_b_list.materialize();
     std::vector<at::Tensor> scale_a_owned(scale_a_materialized.begin(), scale_a_materialized.end());
     std::vector<at::Tensor> scale_b_owned(scale_b_materialized.begin(), scale_b_materialized.end());
-    at::TensorList scale_a_tl(scale_a_owned);
-    at::TensorList scale_b_tl(scale_b_owned);
+    at::TensorList scale_a(scale_a_owned);
+    at::TensorList scale_b(scale_b_owned);
 
     // check A5
     TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
