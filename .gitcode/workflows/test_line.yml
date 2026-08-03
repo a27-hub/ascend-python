@@ -56,27 +56,7 @@ stages:
     select: selected_by_default
     jobs:
 
-      Compile_Torchair_Check:
-        name: Compile_Torchair_Check
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        outputs:
-          build_skip: ${{ steps.set-skip.outputs.build_skip }}
-        steps:
-          - name: checkout
-            uses: checkout
-            with:
-              ref: refs/merge-requests/${{ env.pr_id }}/merge
-          - name: Compile_Torchair_Check
-            id: compile-check
-            uses: WWQ129/.gitcode/.action_test/actions/Compile_Torchair_Check@main
-            with:
-              merge_request_note: ${{ atomgit.event.comment.body }}
-          - name: set build skip flag
-            id: set-skip
-            run: |
-              torchair_result=${{ steps.compile-check.outputs.torchair }}
-              echo "torchair=${torchair_result}"
+        Build_master_ARM:
+        name: Build_master_ARM
+        uses: openlibing-test/openlibing-cicd-test/.gitcode/workflows/workflow_call_test.yml@main
 
