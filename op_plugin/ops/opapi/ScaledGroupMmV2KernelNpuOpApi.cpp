@@ -144,10 +144,10 @@ static bool is_weight_trans(const at::Tensor &tensor) {
 
 
 at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
-        c10::ArrayRef<at::Tensor> scale_a,
+        const at::ITensorListRef& scale_a,
         at::IntArrayRef scale_recipe_a,
         at::IntArrayRef swizzle_a,
-        c10::ArrayRef<at::Tensor> scale_b,
+        const at::ITensorListRef& scale_b,
         at::IntArrayRef scale_recipe_b,
         at::IntArrayRef swizzle_b,
         const c10::optional<at::Tensor> &offs, // group_list -tensor
