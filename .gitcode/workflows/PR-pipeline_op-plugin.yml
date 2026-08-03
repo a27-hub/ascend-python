@@ -10,7 +10,7 @@ concurrency:
 
 on:
   pull_request:
-    types: [open, reopen, update]
+    types: [open, update]
     branches: [ 'master', '26.1.0', '26.0.0', '7.3.0' ]
 
   pull_request_comment:
