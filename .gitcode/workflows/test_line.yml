@@ -56,7 +56,7 @@ stages:
     select: selected_by_default
     jobs:
 
-        Build_master_ARM:
+      Build_master_ARM:
         name: Build_master_ARM
         uses: openlibing-test/openlibing-cicd-test/.gitcode/workflows/workflow_call_test.yml@main
 
