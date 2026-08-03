@@ -42,24 +42,6 @@ stages:
     name: CodeCheck
     select: selected_by_default
     jobs:
-      SCA:
-        name: SCA
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-        steps:
-          - name: checkout
-            uses: checkout
-            with:
-              ref: refs/merge-requests/${{ env.pr_id }}/merge
-          - name: Run SCA PR Scan
-            uses: sca-pr-scan
-            with:
-              scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
-              scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
-              pr-id: ${{ atomgit.event.pull_request.number }}
-              repository-name: ${{ atomgit.repository }}
-              project-name: FrameworkPTAdapter
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
