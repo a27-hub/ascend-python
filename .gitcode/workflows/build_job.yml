@@ -47,7 +47,6 @@ jobs:
       - name: check branch support
         id: check_support
         run: |
-          TARGET_BRANCH="${{ atomgit.event.pull_request.base.ref }}"
           PYTORCH_BRANCH="${{ inputs.pytorch_branch }}"
           if [ "${TARGET_BRANCH}" = "master" ]; then
             echo "master branch, build all versions"
