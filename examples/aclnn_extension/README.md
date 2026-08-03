@@ -1,6 +1,6 @@
 # aclnn_extension 样例说明
 
-本样例是 **「自定义算子接入 - 结构化代码生成」** 的示例工程，演示如何通过 YAML 描述 + 代码生成工具，将自定义 aclnn 算子接入 PyTorch NPU 生态，并生成可参与 TorchNPU 编译的适配代码。
+本样例是 **「自定义算子接入 - 结构化代码生成」** 的示例工程，演示如何通过 YAML 描述 + 代码生成工具，将自定义 aclnn 算子接入 Ascend for PyTorch生态，并生成可参与 TorchNPU 编译的适配代码。
 
 ## 适用场景
 
