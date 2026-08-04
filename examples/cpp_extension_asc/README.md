@@ -181,7 +181,7 @@
         
 ## 调用样例
 
-完成了算子适配开发后，即可实现C++ extensions的方式调用自定义算子。
+完成了算子适配开发后，即可通过C++ extensions的方式调用自定义算子。
 
 1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发指南](https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0002.html)》。
 2. 下载示例代码。
@@ -233,7 +233,7 @@
 
 - 算子功能：
 
-  该算子入参为x, out_sin ,out_cos, 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，返回值tan(x)计算结果。对应的算子原型为：
+  该算子入参为x、out_sin和out_cos。 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，并返回值tan(x)计算结果。对应的算子原型为：
   
   ```python
   ascendc_trig(Tensor x, Tensor(a!) out_sin, Tensor(b!) out_cos) -> Tensor
