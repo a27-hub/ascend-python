@@ -39,7 +39,7 @@ stages:
       PREHEAT_master_x86:
         name: PREHEAT_master_x86
         select: selected_by_default
-        runs-on: [ dedicate-hosted, x64, large ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -59,7 +59,7 @@ stages:
     jobs:
       CodeCheck:
         name: CodeCheck
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -81,7 +81,7 @@ stages:
         name: SCA
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -103,7 +103,7 @@ stages:
         name: Antipoison
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -130,7 +130,7 @@ stages:
         name: CodeCheck_pre_commit
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -158,7 +158,7 @@ stages:
         name: Only_doc_commit
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -199,8 +199,8 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_x86 }}
-          runs_on_arch: "x64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "x86"
+          runs_on_spec: "cpu=8"
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
@@ -212,8 +212,8 @@ stages:
         with:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_x86 }}
-          runs_on_arch: "x64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "x86"
+          runs_on_spec: "cpu=8"
 
 
       Build_v2_9_0_x86:
@@ -226,8 +226,8 @@ stages:
         with:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_x86 }}
-          runs_on_arch: "x64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "x86"
+          runs_on_spec: "cpu=8"
 
 
       Build_v2_10_0_x86:
@@ -240,8 +240,8 @@ stages:
         with:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_x86 }}
-          runs_on_arch: "x64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "x86"
+          runs_on_spec: "cpu=8"
 
 
       Build_v2_11_0_x86:
@@ -254,8 +254,8 @@ stages:
         with:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_x86 }}
-          runs_on_arch: "x64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "x86"
+          runs_on_spec: "cpu=8"
 
 
       Build_v2_12_0_x86:
@@ -268,8 +268,8 @@ stages:
         with:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_x86 }}
-          runs_on_arch: "x64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "x86"
+          runs_on_spec: "cpu=8"
 
       Build_master_ARM:
         name: Build_master_ARM
@@ -281,8 +281,8 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       Build_v2_7_1_ARM:
         name: Build_v2_7_1_ARM
@@ -294,8 +294,8 @@ stages:
         with:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       Build_v2_9_0_ARM:
         name: Build_v2_9_0_ARM
@@ -307,8 +307,8 @@ stages:
         with:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       Build_v2_10_0_ARM:
         name: Build_v2_10_0_ARM
@@ -320,8 +320,8 @@ stages:
         with:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       Build_v2_11_0_ARM:
         name: Build_v2_11_0_ARM
@@ -333,8 +333,8 @@ stages:
         with:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       Build_v2_12_0_ARM:
         name: Build_v2_12_0_ARM
@@ -346,8 +346,8 @@ stages:
         with:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
 
   stage_3:
@@ -360,8 +360,8 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
           TEST_RANK: "1"
           TSET_WORD_SIZE: "2"
 
@@ -372,8 +372,8 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
           TEST_RANK: "2"
           TSET_WORD_SIZE: "2"
 
@@ -384,8 +384,8 @@ stages:
         with:
           pytorch_branch: "v2.7.1"
           CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       UT_v2_9_0_ARM:
         name: UT_v2_9_0_ARM
@@ -394,8 +394,8 @@ stages:
         with:
           pytorch_branch: "v2.9.0"
           CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       UT_v2_10_0_ARM:
         name: UT_v2_10_0_ARM
@@ -404,8 +404,8 @@ stages:
         with:
           pytorch_branch: "v2.10.0"
           CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       UT_v2_11_0_ARM:
         name: UT_v2_11_0_ARM
@@ -414,8 +414,8 @@ stages:
         with:
           pytorch_branch: "v2.11.0"
           CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
 
       UT_v2_12_0_ARM:
         name: UT_v2_12_0_ARM
@@ -424,5 +424,5 @@ stages:
         with:
           pytorch_branch: "v2.12.0"
           CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=8"
