@@ -22,6 +22,7 @@ torch_npu.profiler.AiCMetrics
 
 以下采集项的结果数据含义可参见《CANN 性能调优工具》中的“op_summary（算子详细信息）”章节，但具体采集结果请以实际情况为准。
 <!-- 《CANN 性能调优工具》中的“<a href="https://www.hiascend.com/document/detail/zh/canncommercial/900/devaids/Profiling/atlasprofiling_16_0067.html">op_summary（算子详细信息）</a>” -->
+
 - **torch_npu.profiler.AiCMetrics.AiCoreNone**：可选参数，关闭AI Core的性能指标采集。
 - **torch_npu.profiler.AiCMetrics.PipeUtilization**：可选参数，计算单元和搬运单元耗时占比。
 - **torch_npu.profiler.AiCMetrics.ArithmeticUtilization**：可选参数，各种计算类指标占比统计。
