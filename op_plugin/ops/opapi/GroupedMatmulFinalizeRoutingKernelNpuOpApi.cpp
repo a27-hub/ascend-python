@@ -107,6 +107,12 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     auto w_n_dim = w.size(w_dim_num - 1);
     auto w_k_dim = w.size(w_dim_num - LAST_SECOND_DIM_INDEX);
 
+//===================
+    std::cout << "x_k_dim: " << x_k_dim << std::endl;
+    std::cout << "w_k_dim: " << w_k_dim << std::endl;
+    std::cout << "w_n_dim: " << w_n_dim << std::endl;
+//===================
+
     auto output_size = op_infer::array_to_small_vector(x.sizes());
     int32_t output_bs_real = static_cast<int32_t>(output_bs.value_or(0));
     if (output_bs_real == 0) {
@@ -114,9 +120,36 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     }
     output_size[x_dim_num - LAST_SECOND_DIM_INDEX] = output_bs_real;
 
-    static const bool mxfp4_valid = x_dtype.has_value() && w_dtype.has_value() &&
+//======================================
+//=========Ôö¼Ópytorch°æ±¾ÅÐ¶Ï===========
+//======================================
+#if VERSION_BETWEEN(V2R1, V2R7)
+    bool mxfp4_valid = x_dtype.has_value() && w_dtype.has_value() &&
                                     x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
                                     w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+#endif
+#if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
+    bool mxfp4_valid = false;
+    if(x_dtype.has_value()){
+        mxfp4_valid = (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+    } else {
+        mxfp4_valid = x.scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+    }
+    if(w_dtype.has_value()){
+        mxfp4_valid = mxfp4_valid && (w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+    } else {
+        mxfp4_valid = mxfp4_valid && (w.scalar_type() == at::ScalarType::Float4_e2m1fn_x2);
+    }
+    std::cout << "mxfp4_valid="
+              << mxfp4_valid 
+              << std::endl;
+#endif
+//======================================
+//======================================
+//======================================
+    // static const bool mxfp4_valid = x_dtype.has_value() && w_dtype.has_value() &&
+    //                                 x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
+    //                                 w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
     bool weight_trans = is_weight_trans(w);
     if (w.dtype() == at::kInt) {
         output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32;
@@ -144,6 +177,14 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     TensorWrapper w_wrapper = make_wrapper(w, w_dtype);
     TensorWrapper scale_wrapper = make_wrapper(scale_real, scale_dtype);
     TensorWrapper pertoken_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
+
+    std::cout << "x shape:" << x_wrapper.tensor_.sizes()
+              << ", stride" << x_wrapper.tensor_.strides()
+              << std::endl;
+
+    std::cout << "w shape:" << w_wrapper.tensor_.sizes()
+              << ", stride" << w_wrapper.tensor_.strides()
+              << std::endl;
 
     at::ScalarType dst_type = c10::value_or_else(dtype, [] {return at::ScalarType::Float;});
     TORCH_CHECK(dst_type == at::ScalarType::Float,
@@ -178,6 +219,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     static const bool is_v3_available = check_aclnn_kernel_available("aclnnGroupedMatmulFinalizeRoutingV3");
     if (is_v3_available) {
+        std::cout << "OKOKOKOKOKOKOK" << std::endl;
         EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingV3, x_wrapper, w_wrapper, scale_wrapper, bias_real, offset_real, antiquant_scale_real, antiquant_offset_real, pertoken_scale_wrapper,
                      group_list, shared_input_real, logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW,
                      group_list_type_real, tuning_config_real, result);
