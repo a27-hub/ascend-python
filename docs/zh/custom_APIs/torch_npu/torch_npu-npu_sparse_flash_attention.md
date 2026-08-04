@@ -79,7 +79,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **query\_rope**（`Tensor`）：可选参数，表示MLA结构中的query的rope信息，不支持非连续，数据格式支持ND，数据类型支持`bfloat16`和`float16`。
 
-- **key\_rope**（`Tensor`）：可选参数，表示MLA结构中的key的rope信息，不支持非连续，数据格式支持ND，数据类型支持`bfloat16`和`float16`。
+- **key\_rope**（`Tensor`）：可选参数，表示MLA结构中的key的rope信息，数据格式支持ND，数据类型支持`bfloat16`和`float16`。
 
 - **sparse\_block\_size**（`int`）：可选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持`int64`，取值范围为[1,128]，且为2的幂次方。
     - sparse_block_size为1时，为Token-wise稀疏化场景，将每个token视为独立单元，在计算重要性分数时，评估每个查询token与每个键值token之间的独立关联程度。
@@ -120,12 +120,12 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 - Ascend 950PR/Ascend 950DT：
   - Q\_N支持1~128。
   - sparse\_block\_size仅支持1。
-  - 仅在`layout_kv`为PA_BSND时，key、value和key_rope支持0轴非连续。
+  - 仅在`layout_kv`为PA_BSND时，key、value支持0轴非连续。
 - Atlas A3 推理系列产品/Atlas A2 推理系列产品：
   - Q\_N支持1/2/4/8/16/32/64/128。
   - 参数sparse\_block\_size支持[1,128]，且要求是2的幂次方，在PageAttention场景下要求sparse\_block\_size整除block\_size。
   - 不支持sinks。
-  - key、value和key_rope不支持非连续。
+  - key、value不支持非连续。
 
 ## 调用示例
 

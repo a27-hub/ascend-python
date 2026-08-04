@@ -98,7 +98,7 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 - 参数key、value中的D值为656，即nope\+rope\*2\+dequant\_scale\*4=512\+64\*2\+4\*4。
 - 非Paged Attention场景layout\_query和layout\_kv需要保持一致。
 - Ascend 950PR/Ascend 950DT：
-  - 参数key、value数据类型仅支持`float8_e4m3、int8、hifloat8`数据类型。
+  - 参数key、value数据类型仅支持`float8_e4m3fn、int8、hifloat8`数据类型。
   - 参数sparse\_block\_size仅支持1。
   - 仅在`layout_kv`为PA_BSND时，key支持0轴非连续。
 - Atlas A3 推理系列产品/Atlas A2 推理系列产品：
