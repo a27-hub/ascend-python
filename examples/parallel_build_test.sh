@@ -61,7 +61,7 @@ pip_install_locked() {
 # ----------------------------------------------------------------------------
 clean_env() {
     echo "[INFO] pre-run cleanup: uninstall leftover custom ops packages (if any)"
-    local pkgs=(aclnn_extension op_extension cpp_extension_acs cpp_extension_base \
+    local pkgs=(aclnn_extension op_extension cpp_extension_asc cpp_extension_base \
                 cpp_extension_full cpp_extension_pybind cpp_extension_structured custom_ops)
     for p in "${pkgs[@]}"; do
         if ${PIP} show "$p" >/dev/null 2>&1; then
@@ -254,13 +254,14 @@ task_cpp_extension() {
 }
 
 task_cpp_extension_asc() {
+    # add/trig_aclgraph_test.py 为图相关用例 (依赖 npugraph_ex backend)，
+    # 当前环境不支持，不看护；本工程仅看护「编译 whl + 安装」
     run_project "cpp_extension_asc" \
         "${EXAMPLES_DIR}/cpp_extension_asc" \
         "" \
         "${PYTHON} setup.py bdist_wheel" \
-        "cpp_extension_acs*.whl" \
-        "" \
-        "add_aclgraph_test.py" "trig_aclgraph_test.py"
+        "cpp_extension_asc*.whl" \
+        ""
 }
 
 task_cpp_extension_base() {
@@ -275,6 +276,7 @@ task_cpp_extension_base() {
 
 task_cpp_extension_full() {
     # module 与 torch_lib_impl 共享包名 cpp_extension_full，串行执行
+    # test_add_custom_graph.py 为图相关用例 (依赖 npugraph_ex backend)，不看护
     local log="${LOG_DIR}/cpp_extension_full.log"
     local start_ts=$(date +%s)
     echo "[$(date '+%H:%M:%S')] [START] cpp_extension_full" | tee -a "${SUMMARY_LOG}"
@@ -286,7 +288,7 @@ task_cpp_extension_full() {
             "${PYTHON} setup.py build bdist_wheel" \
             "*.whl" \
             "" \
-            "test_add_custom.py" "test_add_custom_graph.py"
+            "test_add_custom.py"
         local rc1=$?
 
         run_subproject "cpp_extension_full/torch_lib_impl" \
@@ -295,7 +297,7 @@ task_cpp_extension_full() {
             "${PYTHON} setup.py build bdist_wheel" \
             "*.whl" \
             "" \
-            "test_add_custom.py" "test_add_custom_graph.py"
+            "test_add_custom.py"
         local rc2=$?
 
         [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ]
@@ -332,13 +334,16 @@ task_cpp_extension_structured() {
 }
 
 task_framwork_cpp_extension() {
+    # 注意: test_add_custom_graph.py 依赖 torchair (import torchair /
+    # torchair.ge.custom_op / torchair.get_npu_backend)，当前环境未安装 torchair，
+    # 故该用例不看护、脚本中不执行；本工程仅看护「编译 whl + 安装」+ test_add_custom.py
     run_project "framwork_cpp_extension" \
         "${EXAMPLES_DIR}/framwork_cpp_extension" \
         "" \
         "${PYTHON} setup.py build bdist_wheel" \
         "*.whl" \
         "" \
-        "test_add_custom.py" "test_add_custom_graph.py"
+        "test_add_custom.py"
 }
 
 task_kernel_extension_aclgraph() {
@@ -348,13 +353,14 @@ task_kernel_extension_aclgraph() {
     echo "[$(date '+%H:%M:%S')] [START] kernel_extension_aclgraph" | tee -a "${SUMMARY_LOG}"
     (
         set +e
+        # pybind/torch_library 的 add/trig_aclgraph_test.py 为图相关用例 (依赖 npugraph_ex)，
+        # 当前环境不支持，不看护；本工程仅看护「编译 whl + 安装」
         run_subproject "kernel_extension_aclgraph/pybind" \
             "${EXAMPLES_DIR}/kernel_extension_aclgraph/pybind" \
             "" \
             "${PYTHON} setup.py bdist_wheel" \
             "op_extension*.whl" \
-            "${OP_EXT_MOD_LOCK}" \
-            "add_aclgraph_test.py" "trig_aclgraph_test.py"
+            "${OP_EXT_MOD_LOCK}"
         local rc1=$?
 
         run_subproject "kernel_extension_aclgraph/torch_library" \
@@ -362,8 +368,7 @@ task_kernel_extension_aclgraph() {
             "" \
             "${PYTHON} setup.py bdist_wheel" \
             "op_extension*.whl" \
-            "${OP_EXT_MOD_LOCK}" \
-            "add_aclgraph_test.py" "trig_aclgraph_test.py"
+            "${OP_EXT_MOD_LOCK}"
         local rc2=$?
 
         [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ]
@@ -417,15 +422,15 @@ echo "========================================================================" 
 clean_env
 
 # 9 个工程并行调度
-#schedule "aclnn_extension"         task_aclnn_extension
+schedule "aclnn_extension"         task_aclnn_extension
 schedule "cpp_extension"           task_cpp_extension
-#schedule "cpp_extension_asc"       task_cpp_extension_asc
+schedule "cpp_extension_asc"       task_cpp_extension_asc
 schedule "cpp_extension_base"      task_cpp_extension_base
-#schedule "cpp_extension_full"      task_cpp_extension_full
+schedule "cpp_extension_full"      task_cpp_extension_full
 schedule "cpp_extension_pybind"    task_cpp_extension_pybind
 schedule "cpp_extension_structured" task_cpp_extension_structured
-#schedule "framwork_cpp_extension" task_framwork_cpp_extension
-#schedule "kernel_extension_aclgraph" task_kernel_extension_aclgraph
+schedule "framwork_cpp_extension" task_framwork_cpp_extension
+schedule "kernel_extension_aclgraph" task_kernel_extension_aclgraph
 
 # ----------------------------------------------------------------------------
 # 等待所有任务完成并汇总
