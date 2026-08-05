@@ -31,9 +31,9 @@ static bool is_nz_format(const at::Tensor& w)
 
 static bool is_weight_trans(const at::Tensor &tensor)
 {
-    int64_t dim1 = tensor.dim() - 1;
-    int64_t dim2 = tensor.dim() - 2;
-    return tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2);
+    int64_t dim1 = tensor.dim() - 1; //w的最后一维索引 2 (N)
+    int64_t dim2 = tensor.dim() - 2; //w的倒数第二维索引 1 (K)
+    return tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2); //返回w是不是转置了
 }
 
 at::Tensor npu_grouped_matmul_finalize_routing(
@@ -64,17 +64,18 @@ at::Tensor npu_grouped_matmul_finalize_routing(
                 "only support group_list_type's value 0 or 1.",
                 OPS_ERROR(ErrCode::PARAM));
 
-    auto x_dim_num = x.dim();
-    auto w_dim_num = w.dim();
+    auto x_dim_num = x.dim(); //x的维度数
+    auto w_dim_num = w.dim(); //w的维度数
 
-    constexpr int EXPECTED_X_DIM = 2;
-    constexpr int EXPECTED_W_DIM = 3;
+    constexpr int EXPECTED_X_DIM = 2; //输入维度希望是2,Token矩阵
+    constexpr int EXPECTED_W_DIM = 3; //输入w维度希望是3,专家矩阵[E,K,N]
 
     TORCH_CHECK(x_dim_num == EXPECTED_X_DIM && w_dim_num == EXPECTED_W_DIM,
                 "x dim is ", EXPECTED_X_DIM, " weight dim is ", EXPECTED_W_DIM,
                 OPS_ERROR(ErrCode::PARAM));
 
-    if (x_dtype.has_value()) {
+    //如果x_dtype有值,检查是否是float4_e2m1fn_x2或hifloat8
+    if (x_dtype.has_value()) { 
         TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
                         x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
             "The optional parameter x_dtype only supports float4_e2m1fn_x2, hifloat8 or None, but now is ",
@@ -82,6 +83,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
             "." + OPS_ERROR(ErrCode::VALUE));
     }
 
+    //如果w_dtype有值,检查是否是float4_e2m1fn_x2或hifloat8
     if (w_dtype.has_value()) {
         TORCH_CHECK(w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
                         w_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
@@ -90,6 +92,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
             "." + OPS_ERROR(ErrCode::VALUE));
     }
 
+    //如果scale_dtype有值,检查是否是float8_e8m0fnu或None
     if (scale_dtype.has_value()) {
         TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter scale_dtype only supports float8_e8m0fnu or None, but now is ",
@@ -102,17 +105,17 @@ at::Tensor npu_grouped_matmul_finalize_routing(
                     c10_npu::CustomDataTypeToString(pertoken_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
-    auto x_m_dim = x.size(x_dim_num - LAST_SECOND_DIM_INDEX);
-    auto x_k_dim = x.size(x_dim_num - 1);
-    auto w_n_dim = w.size(w_dim_num - 1);
-    auto w_k_dim = w.size(w_dim_num - LAST_SECOND_DIM_INDEX);
+    auto x_m_dim = x.size(x_dim_num - LAST_SECOND_DIM_INDEX); //x的M维的大小
+    auto x_k_dim = x.size(x_dim_num - 1); //x的K维的大小
+    auto w_n_dim = w.size(w_dim_num - 1); //w的N维的大小
+    auto w_k_dim = w.size(w_dim_num - LAST_SECOND_DIM_INDEX); //w的K维的大小
 
     auto output_size = op_infer::array_to_small_vector(x.sizes());
-    int32_t output_bs_real = static_cast<int32_t>(output_bs.value_or(0));
+    int32_t output_bs_real = static_cast<int32_t>(output_bs.value_or(0)); //输出token的大小
     if (output_bs_real == 0) {
-        output_bs_real = x_m_dim;
+        output_bs_real = x_m_dim;  //output_bs_real为什么可以是x_m_dim?
     }
-    output_size[x_dim_num - LAST_SECOND_DIM_INDEX] = output_bs_real;
+    output_size[x_dim_num - LAST_SECOND_DIM_INDEX] = output_bs_real; //推导输出行的个数
 
 #if VERSION_BETWEEN(V2R1, V2R7)
     bool mxfp4_valid = x_dtype.has_value() && w_dtype.has_value() &&
@@ -134,10 +137,11 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 #endif
 
     bool weight_trans = is_weight_trans(w);
-    if (w.dtype() == at::kInt) {
-        output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32;
+    //推导实际输出N维的大小
+    if (w.dtype() == at::kInt) { //at::kInt是int32
+        output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32; //一个INT32里面有8个INT4,所以输出N维的大小是w_n_dim*8
     } else if (mxfp4_valid && !weight_trans) {
-        output_size[x_dim_num - 1] = w_n_dim * FP4_IN_INT8;
+        output_size[x_dim_num - 1] = w_n_dim * FP4_IN_INT8;//如果 FP4 权重没有转置，压缩发生在最后一维 N 上
     } else {
         output_size[x_dim_num - 1] = w_n_dim;
     }
@@ -162,20 +166,27 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     TensorWrapper pertoken_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
 
     at::ScalarType dst_type = c10::value_or_else(dtype, [] {return at::ScalarType::Float;});
-    TORCH_CHECK(dst_type == at::ScalarType::Float,
-        "The dtype should be float", OPS_ERROR(ErrCode::PARAM));
-
-    if (shared_input.has_value()) {
-        TORCH_CHECK(dst_type == at::ScalarType::Float,
-                    "When shared_input and logit is not None, the dtype must be float32",
-                    OPS_ERROR(ErrCode::PARAM));
-    }
-    c10::TensorOptions options = x.options().dtype(dst_type);
-    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
+    TORCH_CHECK(dst_type == at::ScalarType::Float || dst_type == at::ScalarType::BFloat16,
+        "The dtype should be float or bfloat16", OPS_ERROR(ErrCode::PARAM));
+    // if (shared_input.has_value()) {
+    //     TORCH_CHECK(dst_type == at::ScalarType::Float || dst_type == at::ScalarType::BFloat16,
+    //                 "When shared_input and logit is not None, the dtype must be float32 or bfloat16",
+    //                 OPS_ERROR(ErrCode::PARAM));
+    // }
+    // TORCH_CHECK(dst_type == at::ScalarType::Float,
+    //     "The dtype should be float", OPS_ERROR(ErrCode::PARAM));
+    // if (shared_input.has_value()) {
+    //     TORCH_CHECK(dst_type == at::ScalarType::Float,
+    //                 "When shared_input and logit is not None, the dtype must be float32",
+    //                 OPS_ERROR(ErrCode::PARAM));
+    // }
+    c10::TensorOptions options = x.options().dtype(dst_type); //拷贝x的张量属性给options,并修改options的dtype为dst_type
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);//为NPU开辟内存，形状为output_size,属性为options的张量result
 
     bool transposeX = false;
     bool transposeW = false;
-    int64_t dtype_real = 0;
+    //int64_t dtype_real = 0;
+    int64_t dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(static_cast<int64_t>(dst_type)));
     if (is_weight_nz) {
         static const bool is_v2_available = check_aclnn_kernel_available("aclnnGroupedMatmulFinalizeRoutingWeightNzV2");
         if (is_v2_available) {
