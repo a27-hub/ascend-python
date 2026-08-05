@@ -66,10 +66,6 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
     TORCH_CHECK(
         x0->scalar_type() == x1.scalar_type(),
         "The dtype of x0 and x1 must be the same" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(
-        x0->is_contiguous(),
-        "x0 must be contiguous, non-contiguous x0 is not supported" +
-            OPS_ERROR(ErrCode::PARAM));
   }
 
   static const bool is_available =
@@ -129,8 +125,8 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
 
   // rstd shape 推导
   bool output_rstd = x1.requires_grad() && x2.requires_grad();
-  if (has_x0 && x0->requires_grad()) {
-    output_rstd = true;
+  if (has_x0) {
+    output_rstd = output_rstd || x0->requires_grad();
   }
   if (output_rstd) {
     auto output_size = rms_norm_npu_output_size(x1, gamma);
