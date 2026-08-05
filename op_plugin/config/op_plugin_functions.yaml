@@ -7180,6 +7180,26 @@ custom:
       exec: aclnnCrossEntropyLoss, input, target, weight, reduction_char, ignore_index, label_smoothing, lse_square_scale_for_zloss, return_zloss, loss, log_prob, zloss, lse_for_zloss
     exposed: all_version
 
+  - func: npu_cross_entropy_sumexp_and_index_logit(Tensor vocab_parallel_logits, Tensor target, Tensor global_logits_max, int vocab_start_index, int vocab_end_index) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      predicted_logits:
+        size: target
+        dtype: at::kFloat
+      sum_exp_logits:
+        size: target
+        dtype: at::kFloat
+      exp_logits:
+        size: vocab_parallel_logits
+        dtype: at::kFloat
+      target_offset:
+        size: target
+        dtype: at::kInt
+      target_mask:
+        size: target
+        dtype: at::kInt
+      exec: aclnnCrossEntropySumexpAndIndexLogit, vocab_parallel_logits, target, global_logits_max, vocab_start_index, vocab_end_index, predicted_logits, sum_exp_logits, exp_logits, target_offset, target_mask
+
   - func: npu_cross_entropy_loss_backward(Tensor grad_loss, Tensor log_prob, Tensor target, Tensor? weight=None, Tensor? grad_zloss=None, Tensor? lse_for_zloss=None, str reduction='mean', int ignore_index=-100, float label_smoothing=0.0, float lse_square_scale_for_zloss=0.0) -> Tensor
     op_api: all_version
     gen_opapi:

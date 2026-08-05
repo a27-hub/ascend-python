@@ -4910,6 +4910,9 @@
   "func: npu_cross_entropy_loss(Tensor input, Tensor target, Tensor? weight=None, str reduction='mean', int ignore_index=-100, float label_smoothing=0.0, float lse_square_scale_for_zloss=0.0, bool return_zloss=False) -> (Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_cross_entropy_sumexp_and_index_logit(Tensor vocab_parallel_logits, Tensor target, Tensor global_logits_max, int vocab_start_index, int vocab_end_index) -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_cross_entropy_loss_backward(Tensor grad_loss, Tensor log_prob, Tensor target, Tensor? weight=None, Tensor? grad_zloss=None, Tensor? lse_for_zloss=None, str reduction='mean', int ignore_index=-100, float label_smoothing=0.0, float lse_square_scale_for_zloss=0.0) -> Tensor": {
     "version": ["all_version"]
   },
