@@ -1189,10 +1189,6 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.back() *= FP4_IN_INT8;
                 CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
-                auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
-                TORCH_CHECK(realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".",
-                    OPS_ERROR(ErrCode::VALUE));
-                format = realFormat->second;
             }
         }
     } else {
@@ -1274,11 +1270,7 @@ aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
             storageDims = (*at_tensor).storage_sizes;
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.back() *= FP4_IN_INT8;
-                CollectB4ShapeInfo(static_cast<int64_t>(dimNum), wrapperStride, wrapperShape);
-                auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
-                TORCH_CHECK(realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".",
-                    OPS_ERROR(ErrCode::VALUE));
-                format = realFormat->second;
+                CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
             }
         }
     } else {
