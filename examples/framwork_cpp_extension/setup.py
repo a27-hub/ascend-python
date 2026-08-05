@@ -33,7 +33,7 @@ ext = NpuExtension(
         '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/acl/inc"),
         '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/op-plugin"),
         '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/op-plugin/op_plugin/include"),
-        current_version_macro
+        current_version_macro,
     ],
 )
 exts.append(ext)
