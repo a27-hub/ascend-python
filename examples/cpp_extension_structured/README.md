@@ -9,7 +9,7 @@
 在开始之前，请确保您已完成以下环境的安装。
 
 1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
-2. 请参考《[Ascend Extension for PyTorch 软件安装指南](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
+2. 请参考《[软件安装](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
 
 ### 适配文件结构
 
@@ -35,7 +35,7 @@ cpp_extension_structured/
 >
 > 结构化适配暂未支持前反向绑定，用户可参考[cpp_extension_full/module](../cpp_extension_full/module/README.md)章节通过Python绑定。
 
-1. 算子适配层c++代码目录（csrc）中，通过`npu_custom.yaml`文件完成结构化适配的配置。
+1. 算子适配层C++代码目录（csrc）中，通过`npu_custom.yaml`文件完成结构化适配的配置。
 
     - `func`：PyTorch侧暴露的算子签名（ATen IR格式）。
 
