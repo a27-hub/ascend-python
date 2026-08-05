@@ -3,7 +3,7 @@ import unittest
 import torch
 import numpy as np
 import torch_npu
-from torch.nn.utils.rnn import pack_padded_sequence
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torch_npu.testing.testcase import TestCase, run_tests
 
 
@@ -103,6 +103,52 @@ class TestLstm(TestCase):
         self.assertEqual(y.shape, (4, 1, 3))
         self.assertEqual(h.shape, (3, 1, 3))
         self.assertEqual(c.shape, (3, 1, 3))
+
+    def test_lstm_packed_matches_cpu(self):
+        torch.manual_seed(20260805)
+        lengths = [5, 3, 2]
+
+        for num_layers in (1, 2):
+            for bidirectional in (False, True):
+                for bias in (False, True):
+                    for explicit_hx in (False, True):
+                        with self.subTest(num_layers=num_layers, bidirectional=bidirectional,
+                                          bias=bias, explicit_hx=explicit_hx):
+                            cpu_lstm = torch.nn.LSTM(
+                                input_size=4,
+                                hidden_size=6,
+                                num_layers=num_layers,
+                                bias=bias,
+                                bidirectional=bidirectional,
+                                dropout=0.0,
+                            ).eval()
+                            npu_lstm = copy.deepcopy(cpu_lstm).npu().eval()
+
+                            padded = torch.randn(5, 3, 4)
+                            packed_cpu = pack_padded_sequence(padded, lengths, enforce_sorted=True)
+                            packed_npu = pack_padded_sequence(padded.npu(), lengths, enforce_sorted=True)
+
+                            hx_cpu = None
+                            hx_npu = None
+                            if explicit_hx:
+                                num_directions = 2 if bidirectional else 1
+                                hidden_shape = (num_layers * num_directions, 3, 6)
+                                h0 = torch.randn(hidden_shape)
+                                c0 = torch.randn(hidden_shape)
+                                hx_cpu = (h0, c0)
+                                hx_npu = (h0.npu(), c0.npu())
+
+                            output_cpu, (hn_cpu, cn_cpu) = cpu_lstm(packed_cpu, hx_cpu)
+                            output_npu, (hn_npu, cn_npu) = npu_lstm(packed_npu, hx_npu)
+                            output_cpu, _ = pad_packed_sequence(output_cpu)
+                            output_npu, _ = pad_packed_sequence(output_npu)
+
+                            self.assertRtolEqual(
+                                output_cpu.detach().numpy(), output_npu.cpu().detach().numpy(), prec=5e-3)
+                            self.assertRtolEqual(
+                                hn_cpu.detach().numpy(), hn_npu.cpu().detach().numpy(), prec=5e-3)
+                            self.assertRtolEqual(
+                                cn_cpu.detach().numpy(), cn_npu.cpu().detach().numpy(), prec=5e-3)
 
     def test_lstm_single_direction(self):
         # shape_format:[[dtype, (num_step, batch_size, input_size)],
