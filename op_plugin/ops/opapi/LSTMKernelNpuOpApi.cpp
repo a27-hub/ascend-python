@@ -211,6 +211,13 @@ inline bool ShouldFallbackToAclOp(const at::Tensor& input, const at::TensorList 
   return HasBf16Tensor(input, hx, params) || HasMixedFloatDtype(input, hx, params);
 }
 
+inline std::tuple<at::Tensor, at::Tensor, at::Tensor> reshape_packed_lstm_output(
+    std::tuple<at::Tensor, at::Tensor, at::Tensor> output) {
+  const auto& output_y = std::get<0>(output);
+  std::get<0>(output) = output_y.reshape({-1, output_y.size(-1)});
+  return output;
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     const at::Tensor& input,
     const at::TensorList hx,
@@ -244,16 +251,24 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     double dropout,
     bool train,
     bool bidirectional) {
+  auto batch_sizes_npu = batch_sizes;
+  if (batch_sizes_npu.device() != data.device()) {
+    batch_sizes_npu = batch_sizes_npu.to(data.device());
+  }
+
   // If bf16 or mixed dtype, fallback to acl_op
   if (ShouldFallbackToAclOp(data, hx, params)) {
-    return acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional);
+    return reshape_packed_lstm_output(
+        acl_op::lstm(data, batch_sizes_npu, hx, params, has_biases, num_layers, dropout, train, bidirectional));
   }
 
   DO_COMPATIBILITY(
-      aclnnLSTM, acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional));
+      aclnnLSTM,
+      reshape_packed_lstm_output(
+          acl_op::lstm(data, batch_sizes_npu, hx, params, has_biases, num_layers, dropout, train, bidirectional)));
   auto output = at_npu::native::custom_ops::_lstm_npu(
-      data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes);
-  return std::make_tuple(
-      std::get<0>(output), std::get<1>(output), std::get<2>(output)); // 0 for output_y, 1 for output_h, 2 for output_c
+      data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes_npu);
+  return reshape_packed_lstm_output(std::make_tuple(
+      std::get<0>(output), std::get<1>(output), std::get<2>(output))); // 0 for output_y, 1 for output_h, 2 for output_c
 }
 } // namespace op_api
