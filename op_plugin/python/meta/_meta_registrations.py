@@ -3038,9 +3038,6 @@ def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, x0=None,
         if x0.dtype != x1.dtype:
             raise RuntimeError("The dtype of x0 and x1 must be the same" +
                                 ops_error(ErrCode.PARAM))
-        if not x0.is_contiguous():
-            raise RuntimeError("x0 must be contiguous, non-contiguous x0 is not supported" +
-                                ops_error(ErrCode.PARAM))
 
     dim_num = x1.dim()
 

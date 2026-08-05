@@ -66,6 +66,11 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
     TORCH_CHECK(
         x0->scalar_type() == x1.scalar_type(),
         "The dtype of x0 and x1 must be the same" + OPS_ERROR(ErrCode::PARAM));
+    // x0 仅在 CANN >= 9.2.0 时支持，老版本 CANN 无含 x0 的 aclnn 接口
+    TORCH_CHECK(
+        op_plugin::utils::is_gte_cann_version_920(),
+        "x0 is only supported on CANN >= 9.2.0, please update CANN or do not pass x0" +
+            OPS_ERROR(ErrCode::NOT_SUPPORT));
   }
 
   static const bool is_available =
@@ -141,22 +146,40 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
   TensorWrapper y_wrapper = {y, y_acltype};
   TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
 
-  EXEC_NPU_CMD(
-      aclnnAddRmsNormDynamicMxQuant,
-      x1,
-      x2,
-      gamma,
-      beta,
-      x0,
-      epsilon,
-      scale_alg,
-      round_mode_ptr,
-      y_acltype,
-      output_rstd,
-      y_wrapper,
-      x_out,
-      mxscale_wrapper,
-      rstd);
+  if (op_plugin::utils::is_gte_cann_version_920()) {
+    EXEC_NPU_CMD(
+        aclnnAddRmsNormDynamicMxQuant,
+        x1,
+        x2,
+        gamma,
+        beta,
+        x0,
+        epsilon,
+        scale_alg,
+        round_mode_ptr,
+        y_acltype,
+        output_rstd,
+        y_wrapper,
+        x_out,
+        mxscale_wrapper,
+        rstd);
+  } else {
+    EXEC_NPU_CMD(
+        aclnnAddRmsNormDynamicMxQuant,
+        x1,
+        x2,
+        gamma,
+        beta,
+        epsilon,
+        scale_alg,
+        round_mode_ptr,
+        y_acltype,
+        output_rstd,
+        y_wrapper,
+        x_out,
+        mxscale_wrapper,
+        rstd);
+  }
 
   return std::make_tuple(y, x_out, mxscale, rstd);
 }
