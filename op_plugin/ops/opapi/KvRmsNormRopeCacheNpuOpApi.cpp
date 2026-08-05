@@ -227,7 +227,7 @@ namespace op_api {
         at::Tensor k_cache_inplace = k_cache.clone();
         at::Tensor ckv_cache_inplace = ckv_cache.clone();
 
-        // Wrap the inplace tensor cloned from inputs to keep graph fucntionalities normal
+        // Wrap the inplace tensor cloned from inputs to keep graph functionalities normal
         TensorWrapper k_cache_wrapper = {k_cache_inplace, k_cache_acltype};
         TensorWrapper ckv_cache_wrapper = {ckv_cache_inplace, ckv_cache_acltype};
 
