@@ -501,7 +501,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
                     quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None, actual_seq_len=None, k_nope_clip_alpha=None, rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5,
                     cache_mode="PA_BSND", query_norm_flag=False, weight_quant_mode=0, kv_cache_quant_mode=0, query_quant_mode=0, ckvkr_repo_mode=0, quant_scale_repo_mode=0, tile_size=128,
                     qc_qr_scale=1.0, kc_scale=1.0, token_x_dtype=None, weight_dq_dtype=None, weight_uq_qr_dtype=None, weight_dkv_kr_dtype=None, kv_cache_dtype=None):
-    require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
+    require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "kv_cache": kv_cache, "kr_cache": kr_cache}
 
     if weight_quant_mode == 3:
         torch._check(
@@ -555,13 +555,36 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         lambda: "weight_uk dim num should be 3, but the actual value is " + str(weight_uk_dim) + ops_error(ErrCode.VALUE),
     )
 
-    rope_sin_dim = rope_sin.dim()
-    if token_x_dim == 3:
-        torch._check(
-            rope_sin_dim == 3,
-            lambda: "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
-        )
+    has_rope_sin = rope_sin is not None
+    has_rope_cos = rope_cos is not None
+    torch._check(
+        has_rope_sin == has_rope_cos,
+        lambda: "rope_sin and rope_cos must both be None (RoPE off) or both be tensors (RoPE on)" + ops_error(ErrCode.VALUE),
+    )
+    enable_rope = has_rope_sin
 
+    if enable_rope:
+        rope_sin_dim = rope_sin.dim()
+        if token_x_dim == 3:
+            torch._check(
+                rope_sin_dim == 3,
+                lambda: "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            )
+            rope_dim = rope_sin.size(2)
+        else:
+            torch._check(
+                rope_sin_dim == 2,
+                lambda: "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            )
+            rope_dim = rope_sin.size(1)
+    else:
+        torch._check(
+            kr_cache.dim() >= 1,
+            lambda: "when rope_sin/rope_cos are None, kr_cache must be valid to infer Dr" + ops_error(ErrCode.VALUE),
+        )
+        rope_dim = kr_cache.size(-1)
+
+    if token_x_dim == 3:
         query_shape = []
         query_shape.append(token_x.size(0))
         query_shape.append(token_x.size(1))
@@ -572,7 +595,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(token_x.size(1))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(2))
+        query_rope_shape.append(rope_dim)
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0) * token_x.size(1))
@@ -591,11 +614,6 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         else:
             dequant_scale_q_norm_shape.append(1)
     else:
-        torch._check(
-            rope_sin_dim == 2,
-            lambda: "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
-        )
-
         query_shape = []
         query_shape.append(token_x.size(0))
         query_shape.append(weight_uk.size(0))
@@ -604,7 +622,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         query_rope_shape = []
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(1))
+        query_rope_shape.append(rope_dim)
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0))
@@ -679,7 +697,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
                     quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None, actual_seq_len=None, k_nope_clip_alpha=None, rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5,
                     cache_mode="PA_BSND", query_norm_flag=False, weight_quant_mode=0, kv_cache_quant_mode=0, query_quant_mode=0, ckvkr_repo_mode=0, quant_scale_repo_mode=0, tile_size=128,
                     qc_qr_scale=1.0, kc_scale=1.0, token_x_dtype=None, weight_dq_dtype=None, weight_uq_qr_dtype=None, weight_dkv_kr_dtype=None, kv_cache_dtype=None):
-    require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
+    require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "kv_cache": kv_cache, "kr_cache": kr_cache}
 
     if weight_quant_mode == 3:
         torch._check(
@@ -733,13 +751,36 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         lambda: "weight_uk dim num should be 3, but the actual value is " + str(weight_uk_dim) + ops_error(ErrCode.VALUE),
     )
 
-    rope_sin_dim = rope_sin.dim()
-    if token_x_dim == 3:
-        torch._check(
-            rope_sin_dim == 3,
-            lambda: "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
-        )
+    has_rope_sin = rope_sin is not None
+    has_rope_cos = rope_cos is not None
+    torch._check(
+        has_rope_sin == has_rope_cos,
+        lambda: "rope_sin and rope_cos must both be None (RoPE off) or both be tensors (RoPE on)" + ops_error(ErrCode.VALUE),
+    )
+    enable_rope = has_rope_sin
 
+    if enable_rope:
+        rope_sin_dim = rope_sin.dim()
+        if token_x_dim == 3:
+            torch._check(
+                rope_sin_dim == 3,
+                lambda: "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            )
+            rope_dim = rope_sin.size(2)
+        else:
+            torch._check(
+                rope_sin_dim == 2,
+                lambda: "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            )
+            rope_dim = rope_sin.size(1)
+    else:
+        torch._check(
+            kr_cache.dim() >= 1,
+            lambda: "when rope_sin/rope_cos are None, kr_cache must be valid to infer Dr" + ops_error(ErrCode.VALUE),
+        )
+        rope_dim = kr_cache.size(-1)
+
+    if token_x_dim == 3:
         query_shape = []
         query_shape.append(token_x.size(0))
         query_shape.append(token_x.size(1))
@@ -750,7 +791,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(token_x.size(1))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(2))
+        query_rope_shape.append(rope_dim)
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0) * token_x.size(1))
@@ -769,11 +810,6 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         else:
             dequant_scale_q_norm_shape.append(1)
     else:
-        torch._check(
-            rope_sin_dim == 2,
-            lambda: "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
-        )
-
         query_shape = []
         query_shape.append(token_x.size(0))
         query_shape.append(weight_uk.size(0))
@@ -782,7 +818,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         query_rope_shape = []
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(1))
+        query_rope_shape.append(rope_dim)
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0))
