@@ -131,6 +131,10 @@ stages:
               wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
               chmod +x gitleaks
               cd -
+          - name: network test
+            run: |
+              curl -v --connect-timeout 10 https://apig.openlibing.com/openlibing-anti-poison/poison-pr/sca-pr
+              nslookup apig.openlibing.com
           - name: pre-commit
             uses: openlibing-pre-commit-action
 
