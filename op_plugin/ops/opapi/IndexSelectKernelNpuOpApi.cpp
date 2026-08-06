@@ -48,4 +48,4 @@ at::Tensor index_select(const at::Tensor& self, at::Dimname dim, const at::Tenso
 }
 #endif
 
-}
+} // namespace op_api
