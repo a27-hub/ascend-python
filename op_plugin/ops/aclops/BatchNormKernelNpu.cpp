@@ -351,4 +351,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
     double eps) {
   return acl_op::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps);
 }
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
+    const at::Tensor& input,
+    const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias,
+    bool training,
+    double momentum,
+    double eps) {
+  return acl_op::native_batch_norm(input, weight, bias, c10::nullopt, c10::nullopt, training, momentum, eps);
+}
 } // namespace acl_op
