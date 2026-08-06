@@ -120,12 +120,12 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 - Ascend 950PR/Ascend 950DT：
   - Q\_N支持1~128。
   - sparse\_block\_size仅支持1。
-  - 仅在`layout_kv`为PA_BSND时，key、value支持0轴非连续。
+  - 仅在`layout_kv`为PA_BSND时，key、value和key_rope支持0轴非连续。
 - Atlas A3 推理系列产品/Atlas A2 推理系列产品：
   - Q\_N支持1/2/4/8/16/32/64/128。
   - 参数sparse\_block\_size支持[1,128]，且要求是2的幂次方，在PageAttention场景下要求sparse\_block\_size整除block\_size。
   - 不支持sinks。
-  - key、value不支持非连续。
+  - key、value和key_rope不支持非连续。
 
 ## 调用示例
 
