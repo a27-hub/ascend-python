@@ -27,8 +27,8 @@ constexpr int64_t REMOVE_ONE_DIM = 1;
 constexpr int64_t REMOVE_TWO_DIMS = 2;
 constexpr int64_t ALPHA_NUMEL = 3;
 constexpr int64_t ALPHA_NUMEL_HY = 2;
-constexpr int64_t USE_FP32 = 0;
-constexpr int64_t USE_HF32 = 1;
+constexpr int64_t CUBE_USE_FP32 = 0;
+constexpr int64_t CUBE_USE_HF32 = 1;
 
 // aclnnMhcPre 依赖 CANN 9.0.0 及以上版本，此次校验避免旧版本环境出现找不到算子的兼容性问题。
 // Prefer V2 so inner_precise reaches the kernel. FP32 may fall back to V1 for compatibility.
@@ -40,7 +40,7 @@ inline bool check_mhc_pre_supported(int64_t inner_precise)
     static const bool is_mhc_pre_v2_available = check_aclnn_kernel_available("aclnnMhcPreV2");
     TORCH_CHECK(
         is_cann_ready && (is_mhc_pre_v2_available ||
-            (inner_precise == USE_FP32 && is_mhc_pre_available)),
+            (inner_precise == CUBE_USE_FP32 && is_mhc_pre_available)),
         "torch_npu.npu_mhc_pre requires CANN >= 9.0.0. inner_precise=1 additionally requires aclnnMhcPreV2. "
         "Please upgrade CANN.",
         OPS_ERROR(ErrCode::NOT_SUPPORT));
@@ -194,13 +194,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha, const at::Tensor &bias,
     const c10::optional<at::Tensor> &gamma, double norm_eps, double hc_eps, int64_t out_flag, int64_t inner_precise)
 {
-    TORCH_CHECK(x.numel() > 0, "Input x should not be empty.");
-    TORCH_CHECK(phi.numel() > 0, "Input phi should not be empty.");
+    TORCH_CHECK(x.numel() > 0, "Input x should not be empty.", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(phi.numel() > 0, "Input phi should not be empty.", OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(alpha.numel() == ALPHA_NUMEL || alpha.numel() == ALPHA_NUMEL_HY,
-        "Input alpha must have 3 or 2 elements, but got ", alpha.numel(), ".");
-    TORCH_CHECK(bias.numel() > 0, "Input bias should not be empty.");
+        "Input alpha must have 3 or 2 elements, but got ", alpha.numel(), ".", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(bias.numel() > 0, "Input bias should not be empty.", OPS_ERROR(ErrCode::VALUE));
 
-    TORCH_CHECK(x.dim() == TND_DIMS || x.dim() == BSND_DIMS, "Input x must be 3D or 4D, but got ", x.dim(), "D.");
+    TORCH_CHECK(x.dim() == TND_DIMS || x.dim() == BSND_DIMS, "Input x must be 3D or 4D, but got ", x.dim(), "D.",
+        OPS_ERROR(ErrCode::VALUE));
 
     // out_flag 用于控制 aclnnMhcPreV2 是否实际写出全部输出：
     // - out_flag == 1：写出全部 6 个结果
@@ -208,12 +209,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     // - out_flag == 0：仅需要 outHin / outHpost / outHres，
     //   后 3 个输出在调用 aclnnMhcPreV2 时使用 nullTensor 占位，不参与实际写出
     TORCH_CHECK(
-        inner_precise == USE_FP32 || inner_precise == USE_HF32,
-        "inner_precise must be 0 (USE_FP32) or 1 (USE_HF32), but got ",
+        inner_precise == CUBE_USE_FP32 || inner_precise == CUBE_USE_HF32,
+        "Input inner_precise must be 0 (Cube uses FP32) or 1 (Cube uses HF32), but got ",
         inner_precise,
-        ".");
+        ".",
+        OPS_ERROR(ErrCode::VALUE));
 
-    TORCH_CHECK(out_flag == 0 || out_flag == 1, "out_flag must be 0 or 1, but got ", out_flag, ".");
+    TORCH_CHECK(out_flag == 0 || out_flag == 1, "Input out_flag must be 0 or 1, but got ", out_flag, ".",
+        OPS_ERROR(ErrCode::VALUE));
 
     bool useMhcPreV2 = check_mhc_pre_supported(inner_precise);
 
