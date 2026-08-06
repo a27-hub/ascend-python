@@ -314,7 +314,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                               (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_4) ||
                               (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16);
     const bool is_a8w4 = x_wrapper.dtype == ACL_INT8 && weight_wrapper.dtype == ACL_INT32 &&
-        scale_wrapper.dtype == ACL_UINT64 && !scale_real.empty();
+        (scale_wrapper.dtype == ACL_UINT64 || scale_wrapper.dtype == ACL_INT64) && !scale_real.empty();
     if (is_weight_nz) {
         static const bool is_weight_nz_available = check_aclnn_kernel_available("aclnnGroupedMatmulWeightNz");
         TORCH_CHECK(is_weight_nz_available,
