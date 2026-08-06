@@ -6749,6 +6749,27 @@ def npu_cross_entropy_loss_meta(
     )
 
 
+@impl(m, "npu_cross_entropy_sumexp_and_index_logit")
+def npu_cross_entropy_sumexp_and_index_logit_meta(vocab_parallel_logits, target, global_logits_max,
+                                                   vocab_start_index, vocab_end_index):
+    target_shape = target.shape
+    logits_shape = vocab_parallel_logits.shape
+
+    # 返回 5 个输出，shape/dtype 严格按 §3.2
+    # predicted_logits: shape 同 target, dtype 固定 float32
+    predicted_logits = target.new_empty(target_shape, dtype=torch.float32)
+    # sum_exp_logits: shape 同 target, dtype 固定 float32
+    sum_exp_logits = target.new_empty(target_shape, dtype=torch.float32)
+    # exp_logits: shape 同 vocab_parallel_logits, dtype 固定 float32
+    exp_logits = vocab_parallel_logits.new_empty(logits_shape, dtype=torch.float32)
+    # target_offset: shape 同 target, dtype 固定 int32
+    target_offset = target.new_empty(target_shape, dtype=torch.int32)
+    # target_mask: shape 同 target, dtype 固定 int32
+    target_mask = target.new_empty(target_shape, dtype=torch.int32)
+
+    return (predicted_logits, sum_exp_logits, exp_logits, target_offset, target_mask)
+
+
 @impl(m, "npu_cross_entropy_loss_backward")
 def npu_cross_entropy_loss_backward_meta(
     grad_loss,
