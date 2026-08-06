@@ -1526,7 +1526,7 @@ _add_torch_npu_docstr(
 QuantSparseFlashAttentionAnti在SparseFlashAttention的基础上支持了Per-Token-Head-Tile-128量化输入。
 
 接口原型
-custom.npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, int sparse_block_size, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode=0, int quant_scale_repo_mode=0, int tile_size=0, int rope_head_dim=0) -> Tensor
+custom.npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, int sparse_block_size, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode=0, int quant_scale_repo_mode=0, int tile_size=0, int rope_head_dim=0, bool return_softmax_lse=False, Tensor? sinks=None) -> (Tensor, Tensor, Tensor)
 
 query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16，query相同dtype的q_nope和q_rope按D维度拼接得到。
 
@@ -1578,7 +1578,15 @@ tile_size（int）：可选参数，表示per_tile时每个参数对应的数据
 
 rope_head_dim（int）：可选参数，表示MLA架构下的rope head dim大小，仅在attention_mode为2时有效。数据类型支持int64，默认值为0。
 
-out（Tensor）：公式中的输出。数据格式支持ND，数据类型支持bfloat16。
+return_softmax_lse（bool）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，False表示不返回；默认值为False。
+
+sinks（Tensor）：可选参数，表示attention结构中的sinks信息。传入该参数时调用aclnnKvQuantSparseFlashAttentionV2接口；不传入时调用原aclnnKvQuantSparseFlashAttention接口。数据格式支持ND，数据类型支持float32，shape为[Q_N]。
+
+attention_out（Tensor）：公式中的输出。数据格式支持ND，数据类型支持bfloat16。
+
+softmax_max（Tensor）：可选输出，Attention算法对query乘key的结果，取max得到softmax_max，数据类型支持float。
+
+softmax_sum（Tensor）：可选输出，Attention算法query乘key的结果减去softmax_max, 再取exp，接着求sum，得到softmax_sum，数据类型支持float。
 
 说明：
 query、key、value参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示hidden层的大小、N（Head Num）表示多头数、D（Head Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。

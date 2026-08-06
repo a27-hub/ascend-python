@@ -59,7 +59,7 @@ at::Tensor construct_quant_sparse_infer_output_tensor(
     return output;
 }
 
-at::Tensor npu_kv_quant_sparse_flash_attention(
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_kv_quant_sparse_flash_attention(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const at::Tensor &sparse_indices, double scale_value,
     int64_t key_quant_mode, int64_t value_quant_mode,
@@ -72,6 +72,7 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode,
     int64_t tile_size, int64_t rope_head_dim,
     c10::optional<int64_t> key_dtype, c10::optional<int64_t> value_dtype,
+    bool return_softmax_lse,
     const c10::optional<at::Tensor> &sinks)
 {
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
@@ -89,6 +90,24 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     // construct the output tensor
     at::Tensor output = op_api::construct_quant_sparse_infer_output_tensor(
         query, layout_query_str, layout_kv_str, rope_head_dim);
+    at::Tensor softmax_max;
+    at::Tensor softmax_sum;
+    at::SmallVector<int64_t, SIZE> softmax_max_size;
+    at::SmallVector<int64_t, SIZE> softmax_sum_size;
+    if (return_softmax_lse) {
+        if (query.dim() == DIM_3) {
+            softmax_max_size = {key.size(DIM_1), query.size(DIM_0), query.size(DIM_1) / key.size(DIM_1)};
+            softmax_sum_size = {key.size(DIM_1), query.size(DIM_0), query.size(DIM_1) / key.size(DIM_1)};
+        } else {
+            softmax_max_size = {query.size(DIM_0), key.size(DIM_2), query.size(DIM_1), query.size(DIM_2) / key.size(DIM_2)};
+            softmax_sum_size = {query.size(DIM_0), key.size(DIM_2), query.size(DIM_1), query.size(DIM_2) / key.size(DIM_2)};
+        }
+    } else {
+        softmax_max_size = {0};
+        softmax_sum_size = {0};
+    }
+    softmax_max = at::empty(softmax_max_size, query.options().dtype(at::kFloat));
+    softmax_sum = at::empty(softmax_sum_size, query.options().dtype(at::kFloat));
     // convert str
     char *layout_query_ptr = const_cast<char *>(layout_query_str.c_str());
     char *layout_kv_ptr = const_cast<char *>(layout_kv_str.c_str());
@@ -103,13 +122,13 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
                 value_wrapper, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
                 actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
                 layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-                rope_head_dim, output);
+                rope_head_dim, return_softmax_lse, output, softmax_max, softmax_sum);
         } else {
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttention, query,
                 key, value, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
                 actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
                 layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-                rope_head_dim, output);
+                rope_head_dim, return_softmax_lse, output, softmax_max, softmax_sum);
         }
     } else {
         if (is_hifloat8_kv) {
@@ -119,17 +138,17 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
                 value_wrapper, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
                 actual_seq_lengths_kv, sinks, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
                 layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-                rope_head_dim, output);
+                rope_head_dim, return_softmax_lse, output, softmax_max, softmax_sum);
         } else {
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttentionV2, query,
                 key, value, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
                 actual_seq_lengths_kv, sinks, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
                 layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-                rope_head_dim, output);
+                rope_head_dim, return_softmax_lse, output, softmax_max, softmax_sum);
         }
     }
 
-    return output;
+    return std::tuple<at::Tensor, at::Tensor, at::Tensor>(output, softmax_max, softmax_sum);
 }
 
 } // namespace op_api

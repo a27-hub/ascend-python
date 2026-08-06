@@ -22,7 +22,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices, scale_value, key_quant_mode, value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None, actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, attention_mode=0, quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None) -> Tensor
+torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices, scale_value, key_quant_mode, value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None, actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, attention_mode=0, quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None, return_softmax_lse=False, sinks=None) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -84,9 +84,15 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 
 - **value\_dtype**（`int`）：可选参数，表示value传入的数据类型，支持传入`hifloat8`数据类型或不传。当传入`hifloat8`时，表示key传入数据类型为`hifloat8`，当不传时，表示key传入数据类型为`int8`或`float8_e4m3fn`，具体数据类型根据key进行推导，数据类型需要与key\_dtype保持一致。
 
+- **return\_softmax\_lse**（`bool`）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，但图模式下不支持，False表示不返回；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
+
+- **sinks**（`Tensor`）：可选参数，表示attention结构中的sinks信息。传入该参数时调用`aclnnKvQuantSparseFlashAttentionV2`接口；不传入时调用原`aclnnKvQuantSparseFlashAttention`接口。数据格式支持ND，数据类型支持`float32`，shape为[Q\_N]。
+
 ## 返回值说明
 
-- **out**（`Tensor`）：代表公式中的输出Attention。数据格式支持$ND$，数据类型支持`bfloat16`和`float16`。输出shape与入参`query`的shape保持一致。
+- **attention\_out**（`Tensor`）：代表公式中的输出Attention。数据格式支持$ND$，数据类型支持`bfloat16`和`float16`。输出shape与入参`query`的shape保持一致。
+- **softmax\_max**（`Tensor`）：可选输出，Attention算法对query乘key的结果，取max得到softmax_max，数据类型支持`float`。当layout\_query为BSND时shape为[B,KV\_N,S1,Q\_N/KV\_N]，当layout\_query为TND时shape为[KV\_N,Q\_T,Q\_N/KV\_N]。
+- **softmax\_sum**（`Tensor`）：可选输出，Attention算法query乘key的结果减去softmax\_max, 再取exp，接着求sum，得到softmax\_sum，数据类型支持`float`。当layout\_query为BSND时shape为[B,KV\_N,S1,Q\_N/KV\_N]，当layout\_query为TND时shape为[KV\_N,Q\_T,Q\_N/KV\_N]。
 
 ## 约束说明
 
@@ -147,14 +153,14 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
     block_table = torch.tensor([range(b * s2 // block_size)], dtype=torch.int32).reshape(b, -1).npu()
 
     # 调用qsfa算子
-    out = torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
+    attention_out, softmax_max, softmax_sum = torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
         scale_value=scale_value, sparse_block_size=sparse_block_size,
         actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
         layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
         attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
         value_quant_mode=2, rope_head_dim=64)
 
-    print(out)
+    print(attention_out)
     # 执行上述代码的输出out类似如下
     tensor([[[[ 0.0000,  -72.0000,  0.0000,  ...,  0.0000, 0.0000, 189.0000],
             [ -390.0000,  780.0000, -390.0000,  ...,  168.0000,  84.0000, -504.0000],

@@ -428,6 +428,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
         block_size = 256
         layout_query = 'BSND'
         s2_act = 4096
+        return_softmax_lse = False
 
         query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
         key = torch.tensor(np.random.uniform(-5, 10, (b * (s2 // block_size), block_size, n2, dn))).to(torch.int8)
@@ -466,13 +467,14 @@ class TestKvQuantSparseFlashAttention(TestCase):
         block_table = block_table.npu()
         antiquant_scale = antiquant_scale.npu()
 
-        npu_out = torch_npu.npu_kv_quant_sparse_flash_attention(
+        npu_out, _, _ = torch_npu.npu_kv_quant_sparse_flash_attention(
             query, key, value, sparse_indices,
             scale_value=scale_value, sparse_block_size=sparse_block_size,
             actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
             layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
-            value_quant_mode=2, rope_head_dim=64)
+            value_quant_mode=2, rope_head_dim=64,
+            return_softmax_lse=return_softmax_lse)
 
         npu_out = npu_out.cpu().to(torch.float32).numpy()
         cpu_out = cpu_out.to(torch.float32).numpy()
@@ -503,6 +505,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
         layout_query = 'BSND'
         s2_act = 3904
         block_num = b * (s2 + block_size - 1) // block_size
+        return_softmax_lse = False
 
         query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
         key_float = np.random.uniform(-5, 10, (block_num, block_size, n2, dn)).astype(np.float32)
@@ -542,14 +545,15 @@ class TestKvQuantSparseFlashAttention(TestCase):
         block_table = block_table.npu()
         antiquant_scale = antiquant_scale.npu()
 
-        npu_out = torch_npu.npu_kv_quant_sparse_flash_attention(
+        npu_out, _, _ = torch_npu.npu_kv_quant_sparse_flash_attention(
             query, key, value, sparse_indices,
             scale_value=scale_value, sparse_block_size=sparse_block_size,
             actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
             layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
             value_quant_mode=2, rope_head_dim=64,
-            key_dtype=torch_npu.hifloat8, value_dtype=torch_npu.hifloat8)
+            key_dtype=torch_npu.hifloat8, value_dtype=torch_npu.hifloat8,
+            return_softmax_lse=return_softmax_lse)
 
         npu_out = npu_out.cpu().to(torch.float32).numpy()
         cpu_out = cpu_out.to(torch.float32).numpy()
@@ -577,6 +581,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
         dr = 64
         tile_size = 128
         s2_act = 2048
+        return_softmax_lse = False
 
         query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
         key_float = np.random.uniform(-5, 10, (b, s2, n2, dn)).astype(np.float32)
@@ -612,14 +617,15 @@ class TestKvQuantSparseFlashAttention(TestCase):
         act_seq_kv = act_seq_kv.npu()
         sinks = sinks.npu()
 
-        npu_out = torch_npu.npu_kv_quant_sparse_flash_attention(
+        npu_out, _, _ = torch_npu.npu_kv_quant_sparse_flash_attention(
             query, key, value, sparse_indices,
             scale_value=scale_value, sparse_block_size=sparse_block_size,
             actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, sinks=sinks,
             layout_query='BSND', layout_kv='BSND', sparse_mode=3, block_table=None,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
             value_quant_mode=2, rope_head_dim=64,
-            key_dtype=torch_npu.hifloat8, value_dtype=torch_npu.hifloat8)
+            key_dtype=torch_npu.hifloat8, value_dtype=torch_npu.hifloat8,
+            return_softmax_lse=return_softmax_lse)
 
         npu_out = npu_out.cpu().to(torch.float32).numpy()
         cpu_out = cpu_out.to(torch.float32).numpy()
