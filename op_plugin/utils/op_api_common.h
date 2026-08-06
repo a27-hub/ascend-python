@@ -111,16 +111,12 @@ uint64_t calc_hash_id();
         }                                                                                                              \
     } while (0)
 
-    #define DO_COMPATIBILITY_COMMON(aclnn_api, originCallExpression)                                                   \
+#define DO_COMPATIBILITY_COMMON(aclnn_api, originCallExpression)                                                   \
     do {                                                                                                               \
         static const auto getWorkspaceSizeFuncAddr = GetOpApiFuncAddr(#aclnn_api "GetWorkspaceSize");                  \
         static const auto opApiFuncAddr = GetOpApiFuncAddr(#aclnn_api);                                                \
         static const auto isAclnnOnly = c10_npu::IsAclnnOnly();                                                        \
         if (getWorkspaceSizeFuncAddr == nullptr || opApiFuncAddr == nullptr) {                                         \
-            if (isAclnnOnly) {                                                                                         \
-                ASCEND_LOGW("Current device only support aclnn operators, but ",                                       \
-                    #aclnn_api, " or ", #aclnn_api, "GetWorkspaceSize not found", OPS_ERROR(ErrCode::NOT_SUPPORT));    \
-            }                                                                                                          \
             ASCEND_LOGW("%s or %sGetWorkspaceSize not in %s, or %s not found. Will call %s", #aclnn_api, #aclnn_api,   \
                         GetOpApiLibName(), GetOpApiLibName(), #originCallExpression);                                  \
             return originCallExpression;                                                                               \
