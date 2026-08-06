@@ -4103,9 +4103,10 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
     is_a4w4_input = False
     if x_dtype is not None and w_dtype is not None:
         is_a4w4_input = x_dtype == torch_npu.float4_e2m1fn_x2 and w_dtype == torch_npu.float4_e2m1fn_x2
+    is_native_mxfp4 = x.dtype == torch.float4_e2m1fn_x2 and w.dtype == torch.float4_e2m1fn_x2
     if w.dtype == torch.int32:
         dim_n = dimn * INT4_IN_INT32
-    elif is_a4w4_input and not w_trans:
+    elif (is_a4w4_input or is_native_mxfp4) and not w_trans:
         dim_n = dimn * FP4_IN_INT8
     else:
         dim_n = dimn
@@ -4116,7 +4117,6 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
         return x.new_empty(tuple(dim_list), dtype=torch.float32)
     else:
         raise RuntimeError("Not supportted output dtype is " + str(dtype))
-
 
 @impl(m, "npu_group_norm_silu")
 def group_norm_silu_meta(self, gemma, beta, group, eps=0.00001):
