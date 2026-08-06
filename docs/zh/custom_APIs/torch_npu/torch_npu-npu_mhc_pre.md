@@ -44,7 +44,7 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 - **norm\_eps**（`float`）：可选参数，RmsNorm的防除零参数，默认值是1e-6，数据类型为`float32`。
 - **hc\_eps**（`float`）：可选参数，H<sub>pre</sub>的sigmoid后的eps参数，默认值是1e-6，数据类型支持`float32`。
 - **out\_flag**（`int`）：可选参数，表示是否输出h\_mix/inv\_rms/h\_pre，默认为0表示不输出，为1表示全输出。
-- **inner\_precise**（`int`）：可选参数，表示MhcPre私有计算模式，默认为0。0表示`USE_FP32`，Cube计算使用FLOAT32模式；1表示`USE_HF32`，Cube计算使用HFLOAT32模式。
+- **inner\_precise**（`int`）：可选参数，指定MhcPre算子的计算模式，默认值为0。0表示在Cube中使用FP32模式计算；1表示在Cube中使用HF32模式计算。
 
 ## 返回值说明
 
@@ -62,6 +62,7 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 - Shape规格约束：
   - n：目前支持4、6、8。
   - D：支持1\~16384，需满足D为16对齐。
+  - inner_precise：目前支持0、1。
 
 ## 调用示例
 

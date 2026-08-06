@@ -4017,7 +4017,7 @@ gamma: Tensor类型，可选输入，表示进行 RMSNorm 计算时的缩放因�
 norm_eps: Float类型，可选输入，RMSNorm 的防除零参数。
 hc_eps: Float类型，可选输入，H_pre 经过 sigmoid 运算后的 eps 参数。
 out_flag: Int类型，可选输入，表示是否输出中间结果标识，默认值为0(仅输出最终变换结果)。
-inner_precise: Int类型，可选输入，MhcPre私有计算模式。0表示USE_FP32，1表示USE_HF32，默认值为0。
+inner_precise: Int类型，可选输入，指定MhcPre算子的计算模式，默认值为0。0表示在Cube中使用FP32模式计算；1表示在Cube中使用HF32模式计算。
 n：shape 中的 n 常取 4、6、8。
 
 输出说明:

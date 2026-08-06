@@ -212,7 +212,7 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
     torch._check(
         inner_precise == 0 or inner_precise == 1,
         lambda: (
-            f"Input inner_precise must be 0 (USE_FP32) or 1 (USE_HF32), but got {inner_precise}."
+            f"Input inner_precise must be 0 (Cube uses FP32) or 1 (Cube uses HF32), but got {inner_precise}."
             + ops_error(ErrCode.VALUE)
         ),
     )
