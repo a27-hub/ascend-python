@@ -33,10 +33,10 @@ env:
 
 stages:
 
-  # stage_1:
-  #   name: stage_1
-  #   select: selected_by_default
-  #   jobs:
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
   #     CodeCheck:
   #       name: CodeCheck
   #       runs-on: [ self-hosted, x86, cpu=8 ]
@@ -106,33 +106,33 @@ stages:
   #             cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
   #             python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
-      # CodeCheck_pre_commit:
-      #   name: CodeCheck_pre_commit
-      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   # runs-on: [ self-hosted, x86, cpu=8 ]
-      #   container:
-      #     image: harbor-portal.osinfra.cn/north4-myhuaweicloud/pytorch_images_x86/pytorchx86:v_03
-      #     options: --user root
-      #   steps:
-      #     - name: checkout
-      #       uses: checkout
-      #       with:
-      #         ref: refs/merge-requests/${{ env.pr_id }}/merge
-      #     - name: setup-python310
-      #       run: |
-      #         PYTHON310_BIN=$(dirname "$(which python3.10)")
-      #         ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
-      #         echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
-      #         python --version
-      #     - name: install gitleaks
-      #       run: |
-      #         cd ${ATOMGIT_WORKSPACE}
-      #         wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
-      #         chmod +x gitleaks
-      #         cd -
-      #     - name: pre-commit
-      #       uses: openlibing-pre-commit-action
+      CodeCheck_pre_commit:
+        name: CodeCheck_pre_commit
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        # runs-on: [ self-hosted, x86, cpu=8 ]
+        container:
+          image: harbor-portal.osinfra.cn/north4-myhuaweicloud/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+          - name: setup-python310
+            run: |
+              PYTHON310_BIN=$(dirname "$(which python3.10)")
+              ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
+              echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
+              python --version
+          - name: install gitleaks
+            run: |
+              cd ${ATOMGIT_WORKSPACE}
+              wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
+              chmod +x gitleaks
+              cd -
+          - name: pre-commit
+            uses: openlibing-pre-commit-action
 
   #     Only_doc_commit:
   #       name: Only_doc_commit
