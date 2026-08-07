@@ -1188,8 +1188,18 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
                 OPS_ERROR(ErrCode::VALUE));
             storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
             if (Is4BitDtype(acl_data_type)) {
-                storageDims.back() *= FP4_IN_INT8;
-                CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
+                // 对于 NZ 格式，storage shape 已经是物理布局，不需要乘以 2
+                // 只有 ND 格式需要乘以 2（物理字节 → 逻辑元素）
+                bool is_nz_format = (format == ACL_FORMAT_FRACTAL_NZ || 
+                                    format == ACL_FORMAT_FRACTAL_NZ_C0_2 ||
+                                    format == ACL_FORMAT_FRACTAL_NZ_C0_4 ||
+                                    format == ACL_FORMAT_FRACTAL_NZ_C0_8 ||
+                                    format == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
+                                    format == ACL_FORMAT_FRACTAL_NZ_C0_32);
+                if (!is_nz_format) {
+                    storageDims.back() *= FP4_IN_INT8;
+                    CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
+                }
                 auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
                 TORCH_CHECK(realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".",
                     OPS_ERROR(ErrCode::VALUE));
