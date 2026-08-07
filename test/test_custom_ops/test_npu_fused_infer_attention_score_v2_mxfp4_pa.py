@@ -459,12 +459,28 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
         return output.cpu()
 
     def _run_cached_nonpa_case(self, case):
-        if case.name not in self._nonpa_result_cache:
-            self._nonpa_result_cache[case.name] = self._run_nonpa_case(case)
-        return self._nonpa_result_cache[case.name]
+        if case.peer_group not in self._nonpa_result_cache:
+            self._nonpa_result_cache[case.peer_group] = self._run_nonpa_case(case)
+        return self._nonpa_result_cache[case.peer_group]
 
     @SupportedDevices(["Ascend950", "Ascend950P"])
-    def test_mxfp4_mode6_page_attention(self, device="npu"):
+    def test_mxfp4_mode6_page_attention_matches_nonpa(self, device="npu"):
+        selected = _selected_cases()
+        print(f"[MXFP4_PTA_NONPA] batch_cases={len(selected)}")
+        for case in selected:
+            with self.subTest(case=case.name):
+                actual, _ = self._run_cached_case(case)
+                nonpa = self._run_cached_nonpa_case(case)
+                passed, detail = _fia_precision(actual, nonpa, case.q_dtype)
+                max_abs = float((actual.to(torch.float32) - nonpa.to(torch.float32)).abs().max().item())
+                print(f"[MXFP4_PTA_NONPA][{case.name}] mode6_pa_vs_nonpa "
+                      f"{'PASS' if passed else 'FAIL'} max_abs_difference={max_abs:.7f} {detail}")
+                self.assertTrue(passed, f"{case.name}: mode6 PA vs non-PA: {detail}")
+
+    @SupportedDevices(["Ascend950", "Ascend950P"])
+    def test_mxfp4_mode6_page_attention_cpu_diagnostic(self, device="npu"):
+        if os.getenv("MXFP4_PA_PTA_RUN_CPU_DIAGNOSTIC") != "1":
+            self.skipTest("CPU oracle diagnostic requires MXFP4_PA_PTA_RUN_CPU_DIAGNOSTIC=1")
         run_nonpa_peer = os.getenv("MXFP4_PA_PTA_NONPA_PEER") == "1"
         run_predequant_peer = os.getenv("MXFP4_PA_PTA_PREDEQUANT_PEER") == "1" or run_nonpa_peer
         for case in _selected_cases():
