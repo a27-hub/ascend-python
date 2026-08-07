@@ -131,6 +131,15 @@ bool judge_mm_a16w4_int4(QuantContext &ctx) {
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
 
+    OP_LOG_DEBUG("judge_mm_a16w4_int4: x_acl_dtype=%d, weight_acl_dtype=%d, weight_scale_acl_dtype=%d, "
+                 "weight_dim=%d, weight_stride=[%d,%d], weight_size=[%d,%d]",
+        static_cast<int>(x_acl_dtype), static_cast<int>(weight_acl_dtype),
+        static_cast<int>(weight_scale_acl_dtype), static_cast<int>(ctx.weight.dim()),
+        ctx.weight.dim() >= 2 ? static_cast<int>(ctx.weight.stride(0)) : -1,
+        ctx.weight.dim() >= 2 ? static_cast<int>(ctx.weight.stride(1)) : -1,
+        ctx.weight.dim() >= 2 ? static_cast<int>(ctx.weight.size(0)) : -1,
+        ctx.weight.dim() >= 2 ? static_cast<int>(ctx.weight.size(1)) : -1);
+
     bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
     bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
