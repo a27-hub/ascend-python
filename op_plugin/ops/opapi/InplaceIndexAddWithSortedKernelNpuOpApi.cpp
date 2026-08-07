@@ -20,7 +20,7 @@
 namespace op_api {
 
 at::Tensor& npu_inplace_index_add_with_sorted_(
-    at::Tensor& var,
+    at::Tensor& self,
     const at::Tensor& value,
     const at::Tensor& sorted_indices,
     const at::Tensor& pos,
@@ -28,8 +28,8 @@ at::Tensor& npu_inplace_index_add_with_sorted_(
     int64_t axis)
 {
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnInplaceIndexAddWithSorted,
-                                 var, value, sorted_indices, pos, alpha, axis, var);
-    return var;
+                                 self, value, sorted_indices, pos, alpha, axis, self);
+    return self;
 }
 
 } // namespace op_api
