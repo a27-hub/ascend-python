@@ -18,8 +18,10 @@ the block table independently.  Device tensors are separately packed into NZ,
 BNBD, or BBH storage, so a shared layout/packing bug cannot validate itself.
 """
 
+import csv
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
@@ -42,6 +44,7 @@ D0 = 16
 @dataclass(frozen=True)
 class Case:
     name: str
+    peer_group: str
     layout: str
     q_dtype: torch.dtype
     asymmetric: bool
@@ -57,63 +60,121 @@ class Case:
     seed: int
 
 
-def _core_cases():
+def _case_file():
+    configured = os.getenv("MXFP4_PA_PTA_CASE_FILE")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return Path(__file__).resolve().parent / "data" / "fused_infer_attention_score_mxfp4_pa_business_cases.csv"
+
+
+def _parse_int_tuple(text):
+    return tuple(int(value) for value in text.split(";") if value)
+
+
+def _parse_block_table(text):
+    return tuple(_parse_int_tuple(row) for row in text.split("|") if row)
+
+
+def _validate_case(case):
+    if case.layout not in ("nz", "bnbd", "bbh"):
+        raise ValueError(f"{case.name}: unsupported layout {case.layout}")
+    if case.b <= 0 or case.q_heads <= 0 or case.kv_heads <= 0 or case.s1 <= 0:
+        raise ValueError(f"{case.name}: B/QH/KVH/S1 must be positive")
+    if case.q_heads % case.kv_heads != 0:
+        raise ValueError(f"{case.name}: QH must be divisible by KVH")
+    if case.d <= 0 or case.d % GROUP_SIZE != 0 or case.d % D0 != 0:
+        raise ValueError(f"{case.name}: D must be divisible by {GROUP_SIZE} and {D0}")
+    if case.block_size <= 0 or case.physical_pages <= 0:
+        raise ValueError(f"{case.name}: block_size and physical_pages must be positive")
+    if len(case.kv_lens) != case.b or len(case.block_table) != case.b:
+        raise ValueError(f"{case.name}: kv_lens and block_table rows must equal B")
+    if not case.block_table or not case.block_table[0]:
+        raise ValueError(f"{case.name}: block_table must not be empty")
+    table_width = len(case.block_table[0])
+    if any(len(row) != table_width for row in case.block_table):
+        raise ValueError(f"{case.name}: block_table must be rectangular")
+    if any(length <= 0 or length > table_width * case.block_size for length in case.kv_lens):
+        raise ValueError(f"{case.name}: kv_lens exceed block_table capacity")
+    if any(page < 0 or page >= case.physical_pages for row in case.block_table for page in row):
+        raise ValueError(f"{case.name}: block_table contains an invalid physical page")
+    if case.seed <= 0:
+        raise ValueError(f"{case.name}: seed must be positive")
+
+
+def _load_cases():
+    dtype_map = {"fp16": torch.float16, "bf16": torch.bfloat16}
+    path = _case_file()
     cases = []
-    table = ((9, 2, 5), (1, 8, 3), (7, 0, 6))
-    for layout in ("nz", "bnbd", "bbh"):
-        for q_dtype in (torch.float16, torch.bfloat16):
-            for asymmetric in (False, True):
-                dtype_name = "fp16" if q_dtype == torch.float16 else "bf16"
-                mode_name = "asymmetric" if asymmetric else "symmetric"
-                cases.append(Case(
-                    f"{layout}_{dtype_name}_{mode_name}_three_page_tail",
-                    layout, q_dtype, asymmetric, 3, 3, 3, 1, 128, 128, 10,
-                    (257, 130, 1), table, 1729,
-                ))
-    return cases
+    names = set()
+    with path.open(newline="", encoding="utf-8") as csv_file:
+        for row in csv.DictReader(line for line in csv_file if not line.lstrip().startswith("#")):
+            name = row["name"].strip()
+            if name in names:
+                raise ValueError(f"duplicate case name: {name}")
+            dtype_name = row["q_dtype"].strip().lower()
+            if dtype_name not in dtype_map:
+                raise ValueError(f"{name}: unsupported q_dtype {dtype_name}")
+            asymmetric_text = row["asymmetric"].strip()
+            if asymmetric_text not in ("0", "1"):
+                raise ValueError(f"{name}: asymmetric must be 0 or 1")
+            case = Case(
+                name=name,
+                peer_group=row["peer_group"].strip(),
+                layout=row["layout"].strip().lower(),
+                q_dtype=dtype_map[dtype_name],
+                asymmetric=asymmetric_text == "1",
+                b=int(row["b"]),
+                q_heads=int(row["q_heads"]),
+                kv_heads=int(row["kv_heads"]),
+                s1=int(row["s1"]),
+                d=int(row["d"]),
+                block_size=int(row["block_size"]),
+                physical_pages=int(row["physical_pages"]),
+                kv_lens=_parse_int_tuple(row["kv_lens"]),
+                block_table=_parse_block_table(row["block_table"]),
+                seed=int(row["seed"]),
+            )
+            _validate_case(case)
+            names.add(name)
+            cases.append(case)
+    if not cases:
+        raise ValueError(f"no cases loaded from {path}")
+    peer_groups = {}
+    for case in cases:
+        if not case.peer_group:
+            raise ValueError(f"{case.name}: peer_group must not be empty")
+        peer_groups.setdefault(case.peer_group, []).append(case)
+    for peer_group, peers in peer_groups.items():
+        if len(peers) != 3 or {peer.layout for peer in peers} != {"nz", "bnbd", "bbh"}:
+            raise ValueError(f"{peer_group}: peer group must contain exactly one NZ, BNBD and BBH case")
+        signatures = {
+            (peer.q_dtype, peer.asymmetric, peer.b, peer.q_heads, peer.kv_heads, peer.s1, peer.d,
+             peer.block_size, peer.physical_pages, peer.kv_lens, peer.block_table, peer.seed)
+            for peer in peers
+        }
+        if len(signatures) != 1:
+            raise ValueError(f"{peer_group}: logical inputs differ across layouts")
+    return tuple(cases)
 
 
-def _generalization_cases():
-    cases = []
-    gqa_table = ((9, 2, 5), (1, 8, 3), (7, 0, 6))
-    for layout in ("nz", "bnbd", "bbh"):
-        cases.append(Case(
-            f"{layout}_bf16_asymmetric_gqa_page_boundaries",
-            layout, torch.bfloat16, True, 3, 4, 2, 2, 128, 128, 10,
-            (128, 256, 257), gqa_table, 999983,
-        ))
-    for layout in ("bnbd", "bbh"):
-        cases.append(Case(
-            f"{layout}_bf16_asymmetric_group1_d32_boundaries",
-            layout, torch.bfloat16, True, 3, 2, 2, 1, 32, 128, 12,
-            (1, 128, 129), ((11, 3), (8, 1), (10, 4)), 2097143,
-        ))
-        cases.append(Case(
-            f"{layout}_bf16_asymmetric_group6_d192_three_page_tail",
-            layout, torch.bfloat16, True, 2, 3, 3, 1, 192, 128, 10,
-            (257, 129), ((9, 2, 5), (1, 8, 3)), 8191,
-        ))
-        cases.append(Case(
-            f"{layout}_bf16_asymmetric_group8_d256_three_page_tail",
-            layout, torch.bfloat16, True, 2, 3, 3, 1, 256, 128, 10,
-            (257, 129), ((9, 2, 5), (1, 8, 3)), 32749,
-        ))
-        cases.append(Case(
-            f"{layout}_bf16_asymmetric_group16_d512_boundaries",
-            layout, torch.bfloat16, True, 2, 2, 2, 1, 512, 128, 12,
-            (127, 129), ((11, 3), (8, 1)), 4194301,
-        ))
-    for layout in ("nz", "bnbd", "bbh"):
-        cases.append(Case(
-            f"{layout}_fp16_symmetric_single_page_b1n1",
-            layout, torch.float16, False, 1, 1, 1, 1, 128, 128, 3,
-            (127,), ((2,),), 2026,
-        ))
-    return cases
+POSITIVE_CASES = _load_cases()
 
 
-POSITIVE_CASES = tuple(_core_cases() + _generalization_cases())
-REFERENCE_CASES = tuple(case for case in POSITIVE_CASES if case.layout == "nz" and "three_page_tail" in case.name)
+def _selected_cases():
+    selected_name = os.getenv("MXFP4_PA_PTA_CASE")
+    selected_group = os.getenv("MXFP4_PA_PTA_GROUP")
+    if selected_name and selected_group:
+        raise ValueError("set only one of MXFP4_PA_PTA_CASE and MXFP4_PA_PTA_GROUP")
+    if selected_name:
+        selected = tuple(case for case in POSITIVE_CASES if case.name == selected_name)
+    elif selected_group:
+        selected = tuple(case for case in POSITIVE_CASES if case.peer_group == selected_group)
+    else:
+        selected = POSITIVE_CASES
+    if not selected:
+        requested = selected_name or selected_group
+        raise ValueError(f"no case matched selection: {requested}")
+    return selected
 
 
 def _canonical_inputs(case):
@@ -242,6 +303,8 @@ def _fia_precision(actual, expected, q_dtype):
 
 
 class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
+    _result_cache = {}
+
     def _logical_dtypes(self):
         if not hasattr(torch_npu, "float4_e2m1fn_x2"):
             self.fail("Ascend950 MXFP4 PA prerequisite missing dtype: float4_e2m1fn_x2")
@@ -299,50 +362,57 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
         expected = _golden(case, *canonical)
         return output.cpu(), expected
 
+    def _run_cached_case(self, case):
+        if case.name not in self._result_cache:
+            self._result_cache[case.name] = self._run_case(case)
+        return self._result_cache[case.name]
+
     @SupportedDevices(["Ascend950"])
     def test_mxfp4_mode6_page_attention(self, device="npu"):
-        selected = os.getenv("MXFP4_PA_PTA_CASE")
-        matched = 0
-        for case in REFERENCE_CASES:
-            if selected and selected != case.name:
-                continue
-            matched += 1
+        for case in _selected_cases():
             with self.subTest(case=case.name):
-                actual, expected = self._run_case(case)
+                actual, expected = self._run_cached_case(case)
                 passed, detail = _fia_precision(actual, expected, case.q_dtype)
+                print(f"[MXFP4_PTA][{case.name}] {'PASS' if passed else 'FAIL'} {detail}")
                 self.assertTrue(passed, f"{case.name}: {detail}")
-        if selected and matched == 0:
-            self.fail(f"MXFP4_PA_PTA_CASE did not match a case: {selected}")
 
     @SupportedDevices(["Ascend950"])
     def test_mxfp4_mode6_page_attention_layout_equivalence(self, device="npu"):
+        selected = _selected_cases()
+        selected_names = {case.name for case in selected}
         peer_groups = {}
         for case in POSITIVE_CASES:
-            signature = (case.q_dtype, case.asymmetric, case.b, case.q_heads, case.kv_heads,
-                         case.s1, case.d, case.block_size, case.physical_pages,
-                         case.kv_lens, case.block_table, case.seed)
-            peer_groups.setdefault(signature, []).append(case)
-        for signature, peers in peer_groups.items():
-            if len(peers) < 2:
+            peer_groups.setdefault(case.peer_group, []).append(case)
+        tested_group = False
+        for peer_group, peers in peer_groups.items():
+            if len(peers) != 3 or not all(peer.name in selected_names for peer in peers):
                 continue
+            tested_group = True
             baseline_output = None
             baseline_expected = None
             for case in peers:
-                actual, expected = self._run_case(case)
+                actual, expected = self._run_cached_case(case)
                 if baseline_output is None:
                     baseline_output = actual
                     baseline_expected = expected
                     continue
                 self.assertTrue(torch.equal(baseline_expected, expected),
-                                f"CPU oracle differs across layouts for {signature}")
+                                f"CPU oracle differs across layouts for {peer_group}")
                 self.assertTrue(torch.equal(baseline_output, actual),
-                                f"device output differs across layouts for {signature}: {case.layout}")
+                                f"device output differs across layouts for {peer_group}: {case.layout}")
+            print(f"[MXFP4_PTA_EQUIV][{peer_group}] PASS layouts=nz,bnbd,bbh bitwise_exact=yes")
+        if not tested_group:
+            self.skipTest("layout equivalence needs a complete peer group; use MXFP4_PA_PTA_GROUP")
 
     @SupportedDevices(["Ascend950"])
     def test_mxfp4_mode6_page_attention_rejects_wrong_param_layout(self, device="npu"):
+        if os.getenv("MXFP4_PA_PTA_CASE") or os.getenv("MXFP4_PA_PTA_GROUP"):
+            self.skipTest("negative layout checks run only without a case/group filter")
         negative_cases = (
-            next(case for case in POSITIVE_CASES if case.name == "bnbd_bf16_asymmetric_group1_d32_boundaries"),
-            next(case for case in POSITIVE_CASES if case.name == "bbh_bf16_asymmetric_group16_d512_boundaries"),
+            next(case for case in POSITIVE_CASES if case.name ==
+                 "bnbd_d256_bf16_asym_mha_qh4_kvh4_s1x1_tail"),
+            next(case for case in POSITIVE_CASES if case.name ==
+                 "bbh_d256_fp16_asym_gqa_qh8_kvh2_s1x2_boundaries"),
         )
         for case in negative_cases:
             canonical = _canonical_inputs(case)
