@@ -16,34 +16,16 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-
-std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
-    const at::Tensor &input,
-    const c10::optional<at::Tensor> &weight,
-    const c10::optional<at::Tensor> &bias,
-    at::Tensor &running_mean,
-    at::Tensor &running_var,
-    bool training,
-    double momentum,
-    double eps)
-{
-    return at::native_batch_norm(
-        input, weight, bias, running_mean, running_var, training, momentum, eps);
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(const at::Tensor &input,
+    const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias, at::Tensor &running_mean,
+    at::Tensor &running_var, bool training, double momentum, double eps) {
+    return at::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps);
 }
 
-// track_running_stats=False: no running buffers; reuse NPU native_batch_norm.
-std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
-    const at::Tensor &input,
-    const c10::optional<at::Tensor> &weight,
-    const c10::optional<at::Tensor> &bias,
-    bool training,
-    double momentum,
-    double eps)
-{
-    c10::optional<at::Tensor> empty_running_mean;
-    c10::optional<at::Tensor> empty_running_var;
-    return at::native_batch_norm(
-        input, weight, bias, empty_running_mean, empty_running_var, training, momentum, eps);
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(const at::Tensor &input,
+    const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias, bool training, double momentum,
+    double eps) {
+    return at::native_batch_norm(input, weight, bias, c10::nullopt, c10::nullopt, training, momentum, eps);
 }
 
 } // namespace op_api
