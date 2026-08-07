@@ -101,16 +101,8 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
                     OPS_ERROR(ErrCode::PARAM));
         EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulNz, x, weight_wrapper, antiquant_scale, antiquant_offset_real,
                      quant_scale_real, quant_offset_real, bias_real, antiquant_group_size_real, result);
-    } else if (is_weight_nz_c0 && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
-        at::Tensor weight_nz = at_npu::native::custom_ops::npu_format_cast(weight, ACL_FORMAT_FRACTAL_NZ);
-        TensorWrapper weight_nz_wrapper = make_wrapper(weight_nz, weight_dtype);
-        static const bool is_weight_quant_matmul_nz_available =
-            check_aclnn_kernel_available("aclnnWeightQuantBatchMatmulNz");
-        TORCH_CHECK(is_weight_quant_matmul_nz_available,
-                    "Get aclnnWeightQuantBatchMatmulNz or aclnnWeightQuantBatchMatmulNzGetWorkspaceSize failed, only "
-                    "aclnnWeightQuantBatchMatmulNz support weight's format is nz, please upgrade CANN.",
-                    OPS_ERROR(ErrCode::PARAM));
-        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulNz, x, weight_nz_wrapper, antiquant_scale, antiquant_offset_real,
+    } else if (is_weight_nz_c0) {
+        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV2, x, weight_wrapper, antiquant_scale, antiquant_offset_real,
                      quant_scale_real, quant_offset_real, bias_real, antiquant_group_size_real, result);
     } else if (quant_scale.has_value() && quant_scale_real.dtype() == at::kFloat) {
         auto quant_scale_output_size = op_infer::array_to_small_vector(quant_scale_real.sizes());
