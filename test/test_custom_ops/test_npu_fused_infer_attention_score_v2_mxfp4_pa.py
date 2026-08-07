@@ -234,6 +234,19 @@ def _layout_param(canonical_param, layout):
     return np.ascontiguousarray(physical)
 
 
+def _layout_predequant_kv(canonical_kv, layout):
+    p, n, bs, d = canonical_kv.shape
+    if layout == "nz":
+        physical = canonical_kv.reshape(p, n, bs, d // D0, D0).permute(0, 1, 3, 2, 4)
+    elif layout == "bnbd":
+        physical = canonical_kv
+    elif layout == "bbh":
+        physical = canonical_kv.permute(0, 2, 1, 3).reshape(p, bs, n * d)
+    else:
+        raise ValueError(f"unknown layout: {layout}")
+    return physical.contiguous()
+
+
 def _dequantize(codes, scale_codes, offsets, asymmetric, out_dtype):
     code_indices = torch.from_numpy(codes.astype(np.int64, copy=False))
     values = FP4_E2M1[code_indices].to(torch.bfloat16)
@@ -304,6 +317,7 @@ def _fia_precision(actual, expected, q_dtype):
 
 class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
     _result_cache = {}
+    _predequant_result_cache = {}
 
     def _logical_dtypes(self):
         if not hasattr(torch_npu, "float4_e2m1fn_x2"):
@@ -367,13 +381,58 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
             self._result_cache[case.name] = self._run_case(case)
         return self._result_cache[case.name]
 
+    def _run_predequant_case(self, case):
+        canonical = _canonical_inputs(case)
+        query, key_codes, value_codes, key_scale, value_scale, key_offset, value_offset = canonical
+        key_dequant = _dequantize(key_codes, key_scale, key_offset, case.asymmetric, case.q_dtype)
+        value_dequant = _dequantize(value_codes, value_scale, value_offset, case.asymmetric, case.q_dtype)
+        output, _ = torch_npu.npu_fused_infer_attention_score_v2(
+            torch.from_numpy(query).to(case.q_dtype).npu(),
+            _layout_predequant_kv(key_dequant, case.layout).npu(),
+            _layout_predequant_kv(value_dequant, case.layout).npu(),
+            actual_seq_qlen=[case.s1] * case.b,
+            actual_seq_kvlen=list(case.kv_lens),
+            block_table=torch.tensor(case.block_table, dtype=torch.int32).npu(),
+            num_query_heads=case.q_heads,
+            num_key_value_heads=case.kv_heads,
+            softmax_scale=case.d ** -0.5,
+            pre_tokens=65536,
+            next_tokens=65536,
+            input_layout="BNSD",
+            sparse_mode=0,
+            block_size=case.block_size,
+            query_quant_mode=0,
+            key_quant_mode=0,
+            value_quant_mode=0,
+            inner_precise=1,
+            return_softmax_lse=False,
+        )
+        return output.cpu()
+
+    def _run_cached_predequant_case(self, case):
+        if case.name not in self._predequant_result_cache:
+            self._predequant_result_cache[case.name] = self._run_predequant_case(case)
+        return self._predequant_result_cache[case.name]
+
     @SupportedDevices(["Ascend950", "Ascend950P"])
     def test_mxfp4_mode6_page_attention(self, device="npu"):
+        run_predequant_peer = os.getenv("MXFP4_PA_PTA_PREDEQUANT_PEER") == "1"
         for case in _selected_cases():
             with self.subTest(case=case.name):
                 actual, expected = self._run_cached_case(case)
                 passed, detail = _fia_precision(actual, expected, case.q_dtype)
                 print(f"[MXFP4_PTA][{case.name}] {'PASS' if passed else 'FAIL'} {detail}")
+                if run_predequant_peer:
+                    predequant = self._run_cached_predequant_case(case)
+                    predequant_passed, predequant_detail = _fia_precision(predequant, expected, case.q_dtype)
+                    peer_passed, peer_detail = _fia_precision(actual, predequant, case.q_dtype)
+                    exact = torch.equal(actual, predequant)
+                    max_abs = float((actual.to(torch.float32) - predequant.to(torch.float32)).abs().max().item())
+                    print(f"[MXFP4_PTA_BASELINE][{case.name}] predequant_vs_cpu "
+                          f"{'PASS' if predequant_passed else 'FAIL'} {predequant_detail}")
+                    print(f"[MXFP4_PTA_BASELINE][{case.name}] mode6_vs_predequant "
+                          f"{'PASS' if peer_passed else 'FAIL'} exact={str(exact).lower()} "
+                          f"max_abs_difference={max_abs:.7f} {peer_detail}")
                 self.assertTrue(passed, f"{case.name}: {detail}")
 
     @SupportedDevices(["Ascend950", "Ascend950P"])
