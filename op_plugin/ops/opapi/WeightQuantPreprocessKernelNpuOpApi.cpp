@@ -225,6 +225,23 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
     ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
 
     auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
+    
+    // 对于 4-bit 紧凑排布，torch 层使用 uint8 存储（每个字节 2 个 int4/fp4）
+    // 需要根据 weight_dtype 调整 view shape
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    if (weight_acl_dtype == ACL_INT4 || weight_acl_dtype == ACL_FLOAT4_E2M1 || 
+        weight_acl_dtype == ACL_FLOAT4_E1M2) {
+        // 4-bit 类型：torch 层 view shape 的最后一维需要除以 2
+        weight_view_shape[weight_dim - 1] = weight_view_shape[weight_dim - 1] / 2;
+        // 同时调整 k 和 n
+        if (!ctx.is_weight_trans) {
+            // 非转置：(K, N)，N 维度需要除以 2
+            n = n / 2;
+        } else {
+            // 转置：(N, K) 存储，(K, N) 视图，K 维度需要除以 2
+            k = k / 2;
+        }
+    }
 
     if (ctx.is_weight_trans) {
         ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, trans_stride);
