@@ -7282,6 +7282,10 @@ custom:
         mode: '(int64_t)0'
       exec: aclnnIndexAddV2, self, dim, index, source, alpha, mode, self
 
+  - func: npu_inplace_index_add_with_sorted_(Tensor(a!) var, Tensor value, Tensor sorted_indices, Tensor pos, *, Tensor? alpha=None, int axis=0) -> Tensor(a!)
+    op_api: all_version
+    exposed: all_version
+
   - func: npu_nsa_compress(Tensor input, Tensor weight, int compress_block_size, int compress_stride, *, int[]? actual_seq_len=None) -> Tensor
     op_api: all_version
     gen_opapi:
