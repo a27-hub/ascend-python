@@ -1680,6 +1680,10 @@ def _npu_index_add_meta(self, index, source, alpha=1):
 def _npu_index_add__meta(self, index, source, alpha=1):
     return self
 
+@impl(m, "npu_inplace_index_add_with_sorted_")
+def npu_inplace_index_add_with_sorted__meta(var, value, sorted_indices, pos, *, alpha=None, axis=0):
+    return var
+
 @impl(m, "npu_reshape")
 def npu_reshape_meta(self, shape, can_refresh=False):
     return torch.empty(tuple(shape), dtype=self.dtype, device='meta')
