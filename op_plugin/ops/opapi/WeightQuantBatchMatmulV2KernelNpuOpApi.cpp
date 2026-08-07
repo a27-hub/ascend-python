@@ -93,15 +93,18 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     
     // 对于紧凑模式 (FRACTAL_NZ_C0_8/C0_16)，临时修改 format 为 FORMAT_FRACTAL_NZ
     // 因为 aclnnWeightQuantBatchMatmulNz 目前不支持 C0_16 格式
-    at::Tensor weight_modified = weight;
+    // 注意：这里直接修改原始 tensor 的 format，调用后需要恢复
+    aclFormat original_format = ACL_FORMAT_FRACTAL_NZ;
+    bool need_restore_format = false;
     if ((weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8 || weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16) &&
         c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
-        weight_modified = weight.clone();
-        auto &weight_desc = torch_npu::NPUBridge::GetNpuStorageImplDesc(weight_modified);
+        auto &weight_desc = torch_npu::NPUBridge::GetNpuStorageImplDesc(weight);
+        original_format = weight_desc.npu_format_;
         weight_desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
+        need_restore_format = true;
     }
     
-    TensorWrapper weight_wrapper = make_wrapper(weight_modified, weight_dtype);
+    TensorWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
 
     if (is_weight_nz && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         static const bool is_weight_quant_matmul_nz_available =
@@ -126,6 +129,12 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     } else {
         EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV2, x, weight_wrapper, antiquant_scale, antiquant_offset_real, quant_scale_real,
                      quant_offset_real, bias_real, antiquant_group_size_real, result);
+    }
+
+    // 恢复原始 format
+    if (need_restore_format) {
+        auto &weight_desc = torch_npu::NPUBridge::GetNpuStorageImplDesc(weight);
+        weight_desc.npu_format_ = original_format;
     }
 
     return result;
