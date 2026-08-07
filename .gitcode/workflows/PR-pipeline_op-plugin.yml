@@ -109,8 +109,8 @@ stages:
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
         # runs-on: [ self-hosted, arch=x64, os=euler ]
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        # runs-on: [ self-hosted, x86, cpu=8 ]
+        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: harbor-portal.osinfra.cn/north4-myhuaweicloud/pytorch_images_x86/pytorchx86:v_03
           options: --user root
