@@ -74,7 +74,7 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 ## 约束说明
 
 - 该接口支持图模式。
-- 参数key中的N支持1。
+- 参数key中的N仅支持为1。
 - 参数query中的D和参数key中的D值相等为128。
 - 参数query、key的数据类型应保持一致。
 - 参数weights不为`float32`时，参数query、key、weights的数据类型应保持一致。
@@ -84,7 +84,7 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
     - 参数weights不支持`float32`类型。
     - 仅在layout_key为PA_BSND时，key支持0轴非连续。
 - <term>Atlas A2 推理系列产品</term>、<term>Atlas A3 推理系列产品</term>：
-    - query中的N支持小于等于64。
+    - query中的N必须小于等于64。
     - key不支持非连续。
 
 ## 调用示例
