@@ -214,7 +214,11 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
                             weight_acl_dtype == ACL_FLOAT4_E2M1 || 
                             weight_acl_dtype == ACL_FLOAT4_E1M2);
     
-    if (is_4bit_compact) {
+    if (is_4bit_compact && ctx.is_weight_trans) {
+        // 对于转置的 weight，K 维度是第二维（IDX_1）
+        k = k * 2;
+    } else if (is_4bit_compact && !ctx.is_weight_trans) {
+        // 对于非转置的 weight，K 维度是第一维（IDX_2）
         k = k * 2;
     }
 
