@@ -367,7 +367,7 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
             self._result_cache[case.name] = self._run_case(case)
         return self._result_cache[case.name]
 
-    @SupportedDevices(["Ascend950"])
+    @SupportedDevices(["Ascend950", "Ascend950P"])
     def test_mxfp4_mode6_page_attention(self, device="npu"):
         for case in _selected_cases():
             with self.subTest(case=case.name):
@@ -376,7 +376,7 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
                 print(f"[MXFP4_PTA][{case.name}] {'PASS' if passed else 'FAIL'} {detail}")
                 self.assertTrue(passed, f"{case.name}: {detail}")
 
-    @SupportedDevices(["Ascend950"])
+    @SupportedDevices(["Ascend950", "Ascend950P"])
     def test_mxfp4_mode6_page_attention_layout_equivalence(self, device="npu"):
         selected = _selected_cases()
         selected_names = {case.name for case in selected}
@@ -404,7 +404,7 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
         if not tested_group:
             self.skipTest("layout equivalence needs a complete peer group; use MXFP4_PA_PTA_GROUP")
 
-    @SupportedDevices(["Ascend950"])
+    @SupportedDevices(["Ascend950", "Ascend950P"])
     def test_mxfp4_mode6_page_attention_rejects_wrong_param_layout(self, device="npu"):
         if os.getenv("MXFP4_PA_PTA_CASE") or os.getenv("MXFP4_PA_PTA_GROUP"):
             self.skipTest("negative layout checks run only without a case/group filter")
