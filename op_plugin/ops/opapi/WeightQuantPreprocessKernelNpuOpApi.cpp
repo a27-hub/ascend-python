@@ -144,9 +144,6 @@ bool judge_mm_a16w4_int4(QuantContext &ctx) {
     bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
     if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2) {
-        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
-            "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        ctx.is_weight_trans = true;
         return true;
     }
     return false;
@@ -164,9 +161,6 @@ bool judge_mm_a16w4_fp4(QuantContext &ctx) {
 
     if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 &&
         x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2) {
-        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
-            "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        ctx.is_weight_trans = true;
         return true;
     }
     return false;
@@ -186,11 +180,6 @@ bool judge_mm_mx_a16w4(QuantContext &ctx) {
         x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2) {
         TORCH_CHECK(ctx.weight_scale.dim() == DIMS_3, "Input weight scale tensor should be 3D, but got ",
             ctx.weight_scale.dim(), OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
-            "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight_scale, 0),
-            "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        ctx.is_weight_trans = true;
         return true;
     }
     return false;
