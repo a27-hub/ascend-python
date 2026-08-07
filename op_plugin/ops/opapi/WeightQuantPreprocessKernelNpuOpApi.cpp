@@ -207,6 +207,17 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
     int64_t k = weight_sizes[weight_dim - IDX_2];
     int64_t n = weight_sizes[weight_dim - IDX_1];
 
+    // 对于 4-bit 紧凑排布，CANN 会把 K 维度乘以 2
+    // 因为每个字节存储 2 个 4-bit 值
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    bool is_4bit_compact = (weight_acl_dtype == ACL_INT4 || 
+                            weight_acl_dtype == ACL_FLOAT4_E2M1 || 
+                            weight_acl_dtype == ACL_FLOAT4_E1M2);
+    
+    if (is_4bit_compact) {
+        k = k * 2;
+    }
+
     c10::SmallVector<int64_t, DIMS_MAX> storage_shape;
     c10::SmallVector<int64_t, DIMS_MAX> trans_stride;
 
@@ -236,6 +247,11 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
     ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
 
     auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
+    
+    // 对于 4-bit 紧凑排布，outWeight 的 view shape 也需要调整
+    if (is_4bit_compact) {
+        weight_view_shape[weight_dim - IDX_2] = weight_view_shape[weight_dim - IDX_2] * 2;
+    }
 
     if (ctx.is_weight_trans) {
         ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, trans_stride);
