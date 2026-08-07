@@ -263,13 +263,13 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
         ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(weight_view_shape);
     }
 
-    OP_LOG_DEBUG("prepare_out_weight_nz: weight_sizes=[%d,%d], k=%d, n=%d, storage_shape=[%d,%d,%d,%d], "
-                 "weight_view_shape=[%d,%d], out_weight.sizes()=[%d,%d], out_weight.strides()=[%d,%d]",
-        weight_sizes[0], weight_sizes[1], k, n,
-        storage_shape[0], storage_shape[1], storage_shape[2], storage_shape[3],
-        weight_view_shape[0], weight_view_shape[1],
-        ctx.out_weight.sizes()[0], ctx.out_weight.sizes()[1],
-        ctx.out_weight.strides()[0], ctx.out_weight.strides()[1]);
+    std::cerr << "DEBUG prepare_out_weight_nz: weight_sizes=[" << weight_sizes[0] << "," << weight_sizes[1] 
+              << "], k=" << k << ", n=" << n 
+              << ", storage_shape=[" << storage_shape[0] << "," << storage_shape[1] << "," << storage_shape[2] << "," << storage_shape[3] << "]"
+              << ", weight_view_shape=[" << weight_view_shape[0] << "," << weight_view_shape[1] << "]"
+              << ", out_weight.sizes()=[" << ctx.out_weight.sizes()[0] << "," << ctx.out_weight.sizes()[1] << "]"
+              << ", out_weight.strides()=[" << ctx.out_weight.strides()[0] << "," << ctx.out_weight.strides()[1] << "]"
+              << std::endl;
 
     at_npu::native::StorageDescHelper::SetDesc(ctx.out_weight, ctx.out_weight.sizes(), storage_shape,
         ctx.out_weight.strides(), static_cast<aclFormat>(OutWeightFormat));
