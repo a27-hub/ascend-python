@@ -23,7 +23,7 @@
     - 新增`cache_mode`对"PA_BLK_BSND"、"PA_BLK_NZ"、"BSND"和"TND"格式的支持。
     - 新增可选参数`weight_quant_mode`、`kv_cache_quant_mode`、`query_quant_mode`、`ckvkr_repo_mode`、`quant_scale_repo_mode`，用于配置量化场景。
     - 调整`cache_index`为可选参数。
-    - Ascend 950PR/Ascend 950DT：`rope_sin`/`rope_cos`支持可选语义——二者同时传入Tensor时执行RoPE；二者同时为`None`时跳过RoPE（`query_rope`/`kr_cache`写直通结果，`Dr`由`kr_cache`末维推断）；不允许只传其中一个。Atlas A2/A3仍须传入有效Tensor，行为与改造前一致。
+    - `rope_sin`/`rope_cos`支持RoPE可选开关：二者同时为有效非空Tensor时执行RoPE；二者同时为`None`时跳过RoPE（`query_rope`/`kr_cache`写直通结果）；不允许只传其中一个。
 
 - 计算公式：
     - RmsNorm公式
@@ -129,9 +129,9 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **rmsnorm_gamma_ckv**（`Tensor`）：必选参数，计算$c^{KV}$的RmsNorm公式中的$\gamma$参数。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`，shape为[Hckv]。
 
-- **rope_sin**（`Tensor`）：位置参数，用于计算旋转位置编码的正弦参数矩阵。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`。BS合轴时，shape为[T, Dr]；BS非合轴时，shape为[B, S, Dr]。支持B=0,S=0,T=0的空Tensor（表示空batch，仍开启RoPE）。Ascend 950PR/Ascend 950DT上可与`rope_cos`同时传`None`以关闭RoPE；Atlas A2/A3上为必选，不可为`None`。须与`rope_cos`同时为`None`或同时为Tensor。
+- **rope_sin**（`Tensor`）：位置参数，用于计算旋转位置编码的正弦参数矩阵。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`。BS合轴时，shape为[T, Dr]；BS非合轴时，shape为[B, S, Dr]。支持B=0,S=0,T=0的空Tensor（表示空batch，仍开启RoPE）。可与`rope_cos`同时传`None`以关闭RoPE。
 
-- **rope_cos**（`Tensor`）：位置参数，用于计算旋转位置编码的余弦参数矩阵。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`；BS合轴时，shape为[T, Dr]；BS非合轴时，shape为[B, S, Dr]。支持B=0,S=0,T=0的空Tensor（表示空batch，仍开启RoPE）。Ascend 950PR/Ascend 950DT上可与`rope_sin`同时传`None`以关闭RoPE；Atlas A2/A3上为必选，不可为`None`。须与`rope_sin`同时为`None`或同时为Tensor。
+- **rope_cos**（`Tensor`）：位置参数，用于计算旋转位置编码的余弦参数矩阵。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`；BS合轴时，shape为[T, Dr]；BS非合轴时，shape为[B, S, Dr]。支持B=0,S=0,T=0的空Tensor（表示空batch，仍开启RoPE）。可与`rope_sin`同时传`None`以关闭RoPE。
 
 - **kv_cache**（`Tensor`）：必选参数，表示cache的索引，计算结果原地更新（对应公式中的$k^C$）。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`、`int8`、`float8_e4m3fn`、`hifloat8`，当cache_mode为"PA_BSND"、"PA_NZ"、"PA_BLK_BSND"、"PA_BLK_NZ"时shape为[BlockNum, BlockSize, Nkv, Dtile]，支持B=0,Skv=0的空Tensor;当cache_mode为"BSND"时shape为[B, S, Nkv, Dtile]，不支持空Tensor；当cache_mode为"TND"时shape为[T, Nkv, Dtile]，不支持空Tensor；Nkv与N关联，N是超参，故不支持Nkv=0。
 
@@ -233,7 +233,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     | S            | Seq-Length（输入样本序列长度） | 取值范围：不限制                                                              |
     | He           | Head-Size（隐藏层大小）        | 取值固定为：1024、2048、3072、4096、5120、6144、7168、7680、8192                                                      |
     | Hcq          | q 低秩矩阵维度                 | 取值固定为：1536、 2048                                                           |
-    | N            | Head-Num（多头数）             | 取值范围：1、2、4、8、16、32、64、128                                       |
+    | N            | Head-Num（多头数）             | 取值范围：[1,128]                                       |
     | Hckv         | kv 低秩矩阵维度                | 取值固定为：512                                                             |
     | Dtile        | kv_cache的D轴维度              | 取值固定为：pertoken-pergroup场景下为656，非pertoken-pergroup场景下为512                                                          |
     | D            | qk 不含位置编码维度            | 取值固定为：128、 192                                                             |

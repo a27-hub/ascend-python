@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstring>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/core/npu/GetCANNInfo.h"
-#include "torch_npu/csrc/core/npu/interface/AclInterface.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -40,14 +38,7 @@ inline bool HasDefinedTensor(const c10::optional<at::Tensor>& opt_tensor)
     return opt_tensor.has_value() && opt_tensor.value().defined();
 }
 
-// Compatible with torch_npu headers that may not yet define SocVersion::Ascend950.
-inline bool IsAscend950Soc()
-{
-    const char *soc_name = c10_npu::acl::AclGetSocName();
-    return (soc_name != nullptr) && (std::strstr(soc_name, "950") != nullptr);
-}
-
-// Resolve rope dim: both tensors → RoPE on; both None → RoPE off (Ascend 950 only).
+// Resolve rope dim: both tensors → RoPE on; both None → RoPE off.
 inline int64_t ResolveRopeDim(
     const at::Tensor& token_x, const c10::optional<at::Tensor>& rope_sin,
     const c10::optional<at::Tensor>& rope_cos, const at::Tensor& kr_cache)
@@ -58,10 +49,6 @@ inline int64_t ResolveRopeDim(
                 "rope_sin and rope_cos must both be None (RoPE off) or both be tensors (RoPE on)",
                 OPS_ERROR(ErrCode::PARAM));
     if (!has_rope_sin) {
-        TORCH_CHECK(IsAscend950Soc(),
-                    "rope_sin/rope_cos can be None (RoPE off) only on Ascend 950; "
-                    "current platform requires both rope_sin and rope_cos tensors",
-                    OPS_ERROR(ErrCode::NOT_SUPPORT));
         TORCH_CHECK(kr_cache.dim() >= 1, "when rope_sin/rope_cos are None, kr_cache must be valid to infer Dr",
                     OPS_ERROR(ErrCode::PARAM));
         return kr_cache.size(kr_cache.dim() - 1);
