@@ -39,9 +39,20 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     TORCH_CHECK(!(std::min(x_dim_num, weight_dim_num) > MINIMUM_SHAPE_SIZE && x_dim_num != weight_dim_num),
                 "x dim is not the same as weight dim", OPS_ERROR(ErrCode::PARAM));
     auto x_k_dim = x.size(x_dim_num - 1);
-    auto weight_k_dim = ((weight.dtype() == at::kInt || weight.dtype() == at::kFloat) && trans_weight) ?
-                        weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE) * INT4_NUMS_IN_INT32 :
-                        weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE);
+    
+    // 计算 weight 的 K 维度
+    // 对于 INT32/FLOAT 类型的 4-bit 打包（INT4_NUMS_IN_INT32 = 8）
+    // 对于 uint8 类型的 4-bit 紧凑排布（每字节 2 个 4-bit 值，需要乘以 2）
+    bool is_int32_float_packed = (weight.dtype() == at::kInt || weight.dtype() == at::kFloat);
+    bool is_uint8_4bit_compact = (weight.dtype() == at::kByte);
+    
+    int64_t weight_k_dim = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE);
+    if (is_int32_float_packed && trans_weight) {
+        weight_k_dim *= INT4_NUMS_IN_INT32;  // 8
+    } else if (is_uint8_4bit_compact) {
+        weight_k_dim *= 2;  // 每字节 2 个 4-bit 值
+    }
+    
     TORCH_CHECK(x_k_dim == weight_k_dim, "The k of x and weight should be equal. but x_k_dim is ", x_k_dim,
                 ", weight_k_dim is ", weight_k_dim, OPS_ERROR(ErrCode::PARAM));
     auto out_dim_num = std::max(x_dim_num, weight_dim_num);
