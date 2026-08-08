@@ -251,11 +251,6 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
     ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
 
     auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
-    
-    // 对于 4-bit 紧凑排布，outWeight 的 view shape 也需要调整
-    if (is_4bit_compact) {
-        weight_view_shape[weight_dim - IDX_2] = weight_view_shape[weight_dim - IDX_2] * 2;
-    }
 
     if (ctx.is_weight_trans) {
         ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, trans_stride);
