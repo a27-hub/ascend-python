@@ -328,13 +328,13 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
                 {prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
                     prepare_out_weight_scale_mx<true>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16w4_int4,
-                {prepare_out_weight_nz<false, NZ_C0_8, ACL_FORMAT_FRACTAL_NZ_C0_8>,
+                {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16w4_fp4,
-                {prepare_out_weight_nz<false, NZ_C0_8, ACL_FORMAT_FRACTAL_NZ_C0_8>,
+                {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_mx_a16w4,
-                {prepare_out_weight_nz<false, NZ_C0_8, ACL_FORMAT_FRACTAL_NZ_C0_8>,
+                {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
                     prepare_out_weight_scale_mx<false>, prepare_out_weight_offset, prepare_out_bias}}}},
 };
 
