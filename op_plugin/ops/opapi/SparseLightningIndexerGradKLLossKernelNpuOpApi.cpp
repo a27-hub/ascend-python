@@ -40,11 +40,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_sparse_lightning_
     const c10::optional<at::Tensor> &key_rope,
     c10::OptionalArrayRef<c10::SymInt> actual_seq_qlen,
     c10::OptionalArrayRef<c10::SymInt> actual_seq_klen,
-    const c10::optional<at::Tensor> &sinks,
     c10::optional<c10::string_view> layout,
     c10::optional<int64_t> sparse_mode,
     c10::optional<int64_t> pre_tokens,
-    c10::optional<int64_t> next_tokens)
+    c10::optional<int64_t> next_tokens,
+    const c10::optional<at::Tensor> &sinks)
 {
     const at::Tensor &query_rope_const = query_rope.value_or(at::Tensor());
     const at::Tensor &key_rope_const = key_rope.value_or(at::Tensor());
