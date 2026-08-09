@@ -207,20 +207,9 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
     int64_t k = weight_sizes[weight_dim - IDX_2];
     int64_t n = weight_sizes[weight_dim - IDX_1];
 
-    // 对于 4-bit 紧凑排布，CANN 会把 K 维度乘以 2
-    // 因为每个字节存储 2 个 4-bit 值
-    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-    bool is_4bit_compact = (weight_acl_dtype == ACL_INT4 || 
-                            weight_acl_dtype == ACL_FLOAT4_E2M1 || 
-                            weight_acl_dtype == ACL_FLOAT4_E1M2);
-    
-    if (is_4bit_compact && ctx.is_weight_trans) {
-        // 对于转置的 weight，K 维度是第二维（IDX_1）
-        k = k * 2;
-    } else if (is_4bit_compact && !ctx.is_weight_trans) {
-        // 对于非转置的 weight，K 维度是第一维（IDX_2）
-        k = k * 2;
-    }
+    // 注意：对于 4-bit 紧凑排布，不需要在这里修改 K 维度
+    // CANN 内部会自动处理 4-bit 的打包（每个字节 2 个值）
+    // view shape 应该保持和输入 weight 一致
 
     c10::SmallVector<int64_t, DIMS_MAX> storage_shape;
     c10::SmallVector<int64_t, DIMS_MAX> trans_stride;
@@ -257,14 +246,6 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
     } else {
         ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(weight_view_shape);
     }
-
-    std::cerr << "DEBUG prepare_out_weight_nz: weight_sizes=[" << weight_sizes[0] << "," << weight_sizes[1] 
-              << "], k=" << k << ", n=" << n 
-              << ", storage_shape=[" << storage_shape[0] << "," << storage_shape[1] << "," << storage_shape[2] << "," << storage_shape[3] << "]"
-              << ", weight_view_shape=[" << weight_view_shape[0] << "," << weight_view_shape[1] << "]"
-              << ", out_weight.sizes()=[" << ctx.out_weight.sizes()[0] << "," << ctx.out_weight.sizes()[1] << "]"
-              << ", out_weight.strides()=[" << ctx.out_weight.strides()[0] << "," << ctx.out_weight.strides()[1] << "]"
-              << std::endl;
 
     at_npu::native::StorageDescHelper::SetDesc(ctx.out_weight, ctx.out_weight.sizes(), storage_shape,
         ctx.out_weight.strides(), static_cast<aclFormat>(OutWeightFormat));
