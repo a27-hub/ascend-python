@@ -100,9 +100,9 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
 
     int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
     const bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) ||
-                              (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_2) ||
-                              (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8) ||
-                              (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16);
+                              (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_2);
+    const bool is_weight_nz_4bit_compact = (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8) ||
+                                           (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16);
     
     TensorWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
 
@@ -114,6 +114,10 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
                     "aclnnWeightQuantBatchMatmulNz support weight's format is nz, please upgrade CANN.",
                     OPS_ERROR(ErrCode::PARAM));
         EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulNz, x, weight_wrapper, antiquant_scale, antiquant_offset_real,
+                     quant_scale_real, quant_offset_real, bias_real, antiquant_group_size_real, result);
+    } else if (is_weight_nz_4bit_compact) {
+        // 对于 4-bit 紧凑排布，使用 aclnnWeightQuantBatchMatmulV2
+        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV2, x, weight_wrapper, antiquant_scale, antiquant_offset_real,
                      quant_scale_real, quant_offset_real, bias_real, antiquant_group_size_real, result);
     } else if (quant_scale.has_value() && quant_scale_real.dtype() == at::kFloat) {
         auto quant_scale_output_size = op_infer::array_to_small_vector(quant_scale_real.sizes());
