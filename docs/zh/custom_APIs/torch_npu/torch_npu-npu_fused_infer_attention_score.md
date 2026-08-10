@@ -4,8 +4,8 @@
 
 | 产品 | 是否支持 |
 | ---- | :------: |
-| <term>Atlas A3训练系列产品/Atlas A3推理系列产品</term> | √ |
-| <term>Atlas A2训练系列产品/Atlas A2推理系列产品</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
 
 ## 功能说明
 
@@ -75,7 +75,7 @@ torch_npu.npu_fused_infer_attention_score(
 | B | Batch Size | ≤ 65536 | ≤ 65536 | — |
 | N (Q_N) | query head数 | ≤ 256 | ≤ 256 | — |
 | N (KV_N) | key/value head数 | ≤ 256 | ≤ 256 | — |
-| D | Head Dim | ≤ 512 | ≤ 512 | `float16`/`bfloat16`: 16字节对齐; `int8`: 32字节对齐; `int4`: 64字节对齐 |
+| D | Head Dim | ≤ 512 | ≤ 512 | `float16`/`bfloat16`： 16字节对齐、 `int8`： 32字节对齐、 `int4`： 64字节对齐 |
 | S (Q_S) | query序列长度 | ≤ 20971520 (20M) | = 1 | — |
 | S (KV_S) | key/value序列长度 | ≤ 20971520 (20M) | ≤ 262144 | — |
 
@@ -368,7 +368,7 @@ torch_npu.npu_fused_infer_attention_score(
 - 搬运终点= KV_S − kv_padding_size（Q_S > 1时须 ≤ KV_S；Q_S = 1时若< 0则返回全0）。
 - 需与`actual_seq_lengths_kv`一起开启。
 - 不支持PageAttention。
-- <term>Atlas A2/A3</term>：不支持Q为`bfloat16`/`float16`、KV为`int4`的场景。
+- 不支持Q为`bfloat16`/`float16`、KV为`int4`的场景。
 
 ### <a id="tnd_constraints"></a>TND布局约束
 
@@ -489,7 +489,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 >
 > - `input_layout="BNSD"`：表示输入为(B,N,S,D)。
 >
-> -此场景命中Q_S > 1，走PromptFlashAttention分支。
+> - 此场景命中Q_S > 1，走PromptFlashAttention分支。
 
 ### 示例2：GQA + Decode + PageAttention
 

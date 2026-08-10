@@ -30,20 +30,21 @@ $$
 ## 函数原型
 
 ```python
-torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0, inner_precise=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
 
 - **x**（`Tensor`）：必选参数，待计算的数据，表示网络中mHC层的输入数据，数据类型支持`bfloat16`、`float16`，shape为\(B, S, n, D\)或\(T, n, D\)，数据格式支持ND，支持非连续Tensor，不支持空Tensor。
 - **phi**（`Tensor`）：必选参数，mHC的参数矩阵，顺序是W\_pre\(n, nD\)、W\_post\(n, nD\)、W\_res\(n<sup>2</sup>, nD\)，数据类型为`float32`，shape为\(n<sup>2</sup>+2n, nD\)或\(2n, nD\)，数据格式支持ND，支持非连续Tensor，不支持空Tensor。
-- **alpha**（`Tensor`）：必选参数，mHC的缩放参数，顺序是alpha\_pre、alpha\_post、alpha\_res，数据类型为`float32`，shape为\(3\)或\(2\)，不支持空Tensor。
+- **alpha**（`Tensor`）：必选参数，mHC的缩放参数，顺序是alpha\_pre、alpha\_post、alpha\_res，数据类型为`float32`，shape为\[3\]或\[2\]，不支持空Tensor。
 - **bias**（`Tensor`）：必选参数，mHC层的bias参数，数据类型为`float32`，shape为\(n<sup>2</sup>+2n\)或\(2n\)，不支持空Tensor。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **gamma**（`Tensor`）：可选参数，表示进行RmsNorm的缩放因子，数据类型为`float32`，shape为\(n, D\)，数据格式支持ND，支持非连续Tensor。
 - **norm\_eps**（`float`）：可选参数，RmsNorm的防除零参数，默认值是1e-6，数据类型为`float32`。
 - **hc\_eps**（`float`）：可选参数，H<sub>pre</sub>的sigmoid后的eps参数，默认值是1e-6，数据类型支持`float32`。
 - **out\_flag**（`int`）：可选参数，表示是否输出h\_mix/inv\_rms/h\_pre，默认为0表示不输出，为1表示全输出。
+- **inner\_precise**（`int`）：可选参数，指定MhcPre算子的计算模式，默认值为0。0表示在Cube中使用FP32模式计算；1表示在Cube中使用HF32模式计算。
 
 ## 返回值说明
 
@@ -61,6 +62,9 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 - Shape规格约束：
   - n：目前支持4、6、8。
   - D：支持1\~16384，需满足D为16对齐。
+- 当alpha=\[3\]时，支持 h\_res 输出，必须满足以下条件：输入 phi=\(n<sup>2</sup>+2n, nD\)，bias=\(n<sup>2</sup>+2n\)，输出 h\_mix=\(B, S ,n<sup>2</sup>+2n\) 或 \(T, n<sup>2</sup>+2n\)；当alpha=\[2\]时，h\_res 输出为0，必须满足以下条件：输入 phi=\(2n, nD\)，bias=\(2n\)，输出 h\_mix=\(B, S ,2n\) 或 \(T, 2n\)。
+- 可选输出 inv\_rms、h\_mix、h\_pre 为互存关系，需同时输出或全部不输出，不支持仅返回其中部分。
+  - inner_precise：目前支持0、1。
 
 ## 调用示例
 

@@ -1,6 +1,6 @@
 # 算子适配开发及调用（结构化）
 
-本文档介绍基于C++ extensions方式与torch_npu单算子API进行自定义NPU算子适配开发的完整流程，流程涵盖了算子定义、算子适配、ATen IR注册绑定。本样例重点阐述结构化内核适配方法，该方法适用于aclnn接口与ATen IR语义一致，且适配层逻辑仅需负责output tensor申请的场景。
+本文档介绍基于C++ extensions方式与TorchNPU单算子API进行自定义NPU算子适配开发的完整流程，流程涵盖了算子定义、算子适配、ATen IR注册绑定。本样例重点阐述结构化内核适配方法，该方法适用于aclnn接口与ATen IR语义一致，且适配层逻辑仅需负责output tensor申请的场景。
 
 ## 算子适配开发
 
@@ -8,8 +8,8 @@
 
 在开始之前，请确保您已完成以下环境的安装。
 
-1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
-2. 请参考《[Ascend Extension for PyTorch 软件安装指南](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
+1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
+2. 请参考[源码编译](https://gitcode.com/Ascend/pytorch/blob/master/docs/zh/installation_guide/references/building_from_source.md)完成PyTorch和TorchNPU的安装。
 
 ### 适配文件结构
 
@@ -35,7 +35,7 @@ cpp_extension_structured/
 >
 > 结构化适配暂未支持前反向绑定，用户可参考[cpp_extension_full/module](../cpp_extension_full/module/README.md)章节通过Python绑定。
 
-1. 算子适配层c++代码目录（csrc）中，通过`npu_custom.yaml`文件完成结构化适配的配置。
+1. 算子适配层C++代码目录（csrc）中，通过`npu_custom.yaml`文件完成结构化适配的配置。
 
     - `func`：PyTorch侧暴露的算子签名（ATen IR格式）。
 
@@ -83,7 +83,7 @@ cpp_extension_structured/
 
 完成了算子适配开发后，即可通过C++ extensions的方式调用自定义算子。
 
-1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发指南](https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0002.html)》。
+1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E5%85%A5%E9%97%A8%E6%95%99%E7%A8%8B/Ascend-C%E6%A6%82%E8%BF%B0%E4%B8%8E%E5%AD%A6%E4%B9%A0%E8%B7%AF%E5%BE%84.md)》。
 
 2. 下载示例代码。
 

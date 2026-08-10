@@ -175,7 +175,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该场景下单卡包含双DIE（简称为“晶粒”或“裸片”），因此参数说明里的“本卡”均表示单DIE。
 - moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num < MAX_INT32。
 - 参数里Shape使用的变量如下：
-    - A：表示本卡接收的最大token数量，取值范围如下
+    - A：表示本卡接收的最大token数量，取值范围如下：
         - 对于共享专家，要满足A=BS\*shared\_expert\_num/shared\_expert\_rank\_num。
         - 对于MoE专家，当`global_bs`为0时，要满足A\>=BS\*ep\_world\_size\*min\(local\_expert\_num, K\)；当`global_bs`不为0时，要满足A\>=global\_bs\* min\(local\_expert\_num, K\)。
 
@@ -234,7 +234,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
 - 版本配套约束：
 
-     静态图模式下，从TorchNPU 8.0.0版本开始，TorchNPU框架会对静态图中最后一个节点输出结果做Meta推导与inferShape推导的结果强校验。当图中只有一个Dispatch\_v2算子，若CANN版本落后于TorchNPU版本，会出现Shape不匹配报错，建议用户升级CANN版本，详细的版本配套关系参见《[TorchNPU版本说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md)》中“相关产品版本配套说明”。
+     静态图模式下，从TorchNPU 8.0.0版本开始，TorchNPU框架会对静态图中最后一个节点输出结果做Meta推导与inferShape推导的结果强校验。当图中只有一个Dispatch\_v2算子，若CANN版本落后于TorchNPU版本，会出现Shape不匹配报错，建议用户升级CANN版本，详细的版本配套关系参见《[版本配套](https://gitcode.com/Ascend/pytorch/blob/master/COMPATIBILITY.md)》中“TorchNPU 版本配套表”。
 
 ## 调用示例<a name="zh-cn_topic_0000002203575833_section14459801435"></a>
 
