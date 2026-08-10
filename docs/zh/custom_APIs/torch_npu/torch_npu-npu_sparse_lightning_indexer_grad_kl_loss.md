@@ -106,6 +106,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 **next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值2^63-1。
 
 - **sinks**(`float`)：可选参数，表示attention结构中的sinks信息，不支持非连续，数据格式支持$ND$，数据类型支持`float32`，shape为$(N1)$。
+
 ## 返回值说明
 
 - **d\_query\_index**(`Tensor`)：对应公式中的$d\tilde{q}_{t}$，表示`query_index`的梯度，数据类型支持`bfloat16`、`float16`。
