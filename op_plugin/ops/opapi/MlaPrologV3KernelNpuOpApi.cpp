@@ -33,10 +33,45 @@ const char* const CANN_PRODUCT = "CANN";
 bool is_hifloat8_dtype = false;
 bool is_cann_version_gte_required = IsGteCANNVersion(REQUIRED_CANN_VERSION, CANN_PRODUCT); // whether cann version >= 8.5.0.alpha003
 
+inline bool HasDefinedTensor(const c10::optional<at::Tensor>& opt_tensor)
+{
+    return opt_tensor.has_value() && opt_tensor.value().defined();
+}
+
+// Resolve rope dim: both tensors → RoPE on; both None → RoPE off.
+inline int64_t ResolveRopeDim(
+    const at::Tensor& token_x, const c10::optional<at::Tensor>& rope_sin,
+    const c10::optional<at::Tensor>& rope_cos, const at::Tensor& kr_cache)
+{
+    const bool has_rope_sin = HasDefinedTensor(rope_sin);
+    const bool has_rope_cos = HasDefinedTensor(rope_cos);
+    TORCH_CHECK(has_rope_sin == has_rope_cos,
+                "rope_sin and rope_cos must both be None (RoPE off) or both be tensors (RoPE on)",
+                OPS_ERROR(ErrCode::PARAM));
+    if (!has_rope_sin) {
+        TORCH_CHECK(kr_cache.dim() >= 1, "when rope_sin/rope_cos are None, kr_cache must be valid to infer Dr",
+                    OPS_ERROR(ErrCode::PARAM));
+        return kr_cache.size(kr_cache.dim() - 1);
+    }
+    const at::Tensor& rope_sin_tensor = rope_sin.value();
+    auto token_x_dim = token_x.dim();
+    auto rope_sin_dim = rope_sin_tensor.dim();
+    if (token_x_dim == DIM_3) {
+        TORCH_CHECK(rope_sin_dim == DIM_3,
+                    "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim,
+                    OPS_ERROR(ErrCode::PARAM));
+        return rope_sin_tensor.size(2);
+    }
+    TORCH_CHECK(rope_sin_dim == DIM_2,
+                "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is ", rope_sin_dim,
+                OPS_ERROR(ErrCode::PARAM));
+    return rope_sin_tensor.size(1);
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
     const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& rmsnorm_gamma_cq,
-    const at::Tensor& rmsnorm_gamma_ckv, const at::Tensor& rope_sin, const at::Tensor& rope_cos,
+    const at::Tensor& rmsnorm_gamma_ckv, const c10::optional<at::Tensor>& rope_sin, const c10::optional<at::Tensor>& rope_cos,
     at::Tensor& kv_cache, at::Tensor& kr_cache, const c10::optional<at::Tensor>& cache_index,
     const c10::optional<at::Tensor>& dequant_scale_x, const c10::optional<at::Tensor>& dequant_scale_w_dq,
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
@@ -92,7 +127,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     auto weight_uk_dim = weight_uk.dim();
     TORCH_CHECK(weight_uk_dim == DIM_3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
 
-    auto rope_sin_dim = rope_sin.dim();
+    int64_t rope_dim = ResolveRopeDim(token_x, rope_sin, rope_cos, kr_cache);
 
     at::Tensor query;
     at::Tensor query_rope;
@@ -101,7 +136,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor dequant_scale_q_norm {nullptr};
 
     if (token_x_dim == DIM_3) {
-        TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) && kv_cache_quant_mode == MODE_1) {
             // weight_quant_mode=2,4,5且kv_cache_quant_mode=1时为全量化kv量化场景(int8,fp8,hif8)
             // weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
@@ -114,7 +148,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kBFloat16));
         }
-        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
+        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_dim}, at::kBFloat16);
         if (query_norm_flag) {
             if (is_hifloat8_dtype) {
                 query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(at::kByte));
@@ -129,7 +163,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             }
         }
     } else {
-        TORCH_CHECK(rope_sin_dim == DIM_2, "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) && kv_cache_quant_mode == MODE_1) {
             if (is_hifloat8_dtype) {
                 query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kByte));
@@ -140,7 +173,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kBFloat16));
         }
-        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
+        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_dim}, at::kBFloat16);
         if (query_norm_flag) {
             if (is_hifloat8_dtype) {
                 query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(at::kByte));
@@ -228,7 +261,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3_functional(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
     const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& rmsnorm_gamma_cq,
-    const at::Tensor& rmsnorm_gamma_ckv, const at::Tensor& rope_sin, const at::Tensor& rope_cos,
+    const at::Tensor& rmsnorm_gamma_ckv, const c10::optional<at::Tensor>& rope_sin, const c10::optional<at::Tensor>& rope_cos,
     const at::Tensor& kv_cache, const at::Tensor& kr_cache, const c10::optional<at::Tensor>& cache_index,
     const c10::optional<at::Tensor>& dequant_scale_x, const c10::optional<at::Tensor>& dequant_scale_w_dq,
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
@@ -284,8 +317,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     auto weight_uk_dim = weight_uk.dim();
     TORCH_CHECK(weight_uk_dim == DIM_3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
 
-    auto rope_sin_dim = rope_sin.dim();
-    
+    int64_t rope_dim = ResolveRopeDim(token_x, rope_sin, rope_cos, kr_cache);
+
     at::Tensor query;
     at::Tensor query_rope;
     at::Tensor dequant_scale_q_nope {nullptr};
@@ -293,7 +326,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor dequant_scale_q_norm {nullptr};
 
     if (token_x_dim == DIM_3) {
-        TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) && kv_cache_quant_mode == MODE_1) {
             // weight_quant_mode=2,4,5且kv_cache_quant_mode=1时为全量化kv量化场景(int8,fp8,hif8)
             // weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
@@ -306,7 +338,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kBFloat16));
         }
-        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
+        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_dim}, at::kBFloat16);
         if (query_norm_flag) {
             if (is_hifloat8_dtype) {
                 query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(at::kByte));
@@ -321,7 +353,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             }
         }
     } else {
-        TORCH_CHECK(rope_sin_dim == DIM_2, "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) && kv_cache_quant_mode == MODE_1) {
             if (is_hifloat8_dtype) {
                 query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kByte));
@@ -332,7 +363,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kBFloat16));
         }
-        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
+        query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_dim}, at::kBFloat16);
         if (query_norm_flag) {
             if (is_hifloat8_dtype) {
                 query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(at::kByte));
