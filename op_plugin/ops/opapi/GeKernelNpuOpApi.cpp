@@ -61,6 +61,7 @@ at::Tensor& ge_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 }
 
 at::Tensor ge(const at::Tensor& self, const at::Tensor& other) {
+  printf("当你看到这行打印的时候，代表本次编包生效\n");
   DO_COMPATIBILITY(aclnnGeTensor, acl_op::ge(self, other));
   if (is_ascend950_path()) {
       auto [self_device, other_device] = prepare_binary_tensors(self, other);
