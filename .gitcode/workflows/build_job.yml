@@ -38,12 +38,6 @@ on:
         type: string
         default: ${{ atomgit.event.pull_request.base.ref }}
 
-    secrets:
-      OBS_AK:
-        required: true
-      OBS_SK:
-        required: true
-
 jobs:
   JOB_compile:
     name: JOB_compile
@@ -80,12 +74,9 @@ jobs:
           cd -
           source cie/.ci/common/ccache_env.sh
           bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
-      - name: Upload to OBS
-        uses: obs-upload
+      - name: Upload artifact
+        uses: upload-artifact
         with:
-          endpoint: "obs.cn-north-4.myhuaweicloud.com"
-          bucket: "pta-pr"
-          access-key: "${{ secrets.OBS_AK }}"
-          secret-key: "${{ secrets.OBS_SK }}"
-          artifact-path: "*.tar.gz*"
-          object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
+          name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
+          path: |
+            *.tar.gz*
