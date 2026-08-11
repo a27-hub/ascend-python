@@ -157,7 +157,7 @@ at::Tensor& scatter_reduce_(
      if (include_self && (reduce == "sum" || reduce == "add")) {	 
          if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {	 
              DO_COMPATIBILITY_COMMON(
-                aclnnInplaceScatterReduce, acl_op::scatter_add_(self, dim, index, src)
+                aclnnInplaceScatterReduce, scatter_reduce_inplace_cpu_fallback(self, dim, index, src, reduce, include_self)
              );	 
          }	 
      }	 
