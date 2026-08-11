@@ -266,6 +266,7 @@ stages:
           runs_on_spec: "2xlarge"
         strategy:
           matrix:
+            include:
               - branch: "master"
                 arch: "x64"
                 img: "pytorch_master_a1_x86_64_builder:20260704"
