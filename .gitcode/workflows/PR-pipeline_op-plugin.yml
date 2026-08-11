@@ -258,7 +258,6 @@ stages:
 
       Build:
         name: Build
-        needs: Detect_file_changes
         if: ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         with:
