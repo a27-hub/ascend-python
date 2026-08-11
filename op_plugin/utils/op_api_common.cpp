@@ -1622,10 +1622,11 @@ uint32_t CacheParams::GetAivNum() const
 CacheParams GetCacheParams()
 {
     CacheParams params;
-
-    if (c10_npu::is_core_control_enabled()) {
-        params.aic_num_ = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);
-        params.aiv_num_ = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);
+    auto stream = c10_npu::getCurrentNPUStream().stream(false);
+    auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(stream);
+    if (core_control_snapshot.enabled) {
+        params.aic_num_ = core_control_snapshot.aic_num;
+        params.aiv_num_ = core_control_snapshot.aiv_num;
     }
 
     return params;

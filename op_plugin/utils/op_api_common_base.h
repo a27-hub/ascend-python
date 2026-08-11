@@ -544,8 +544,9 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         CacheParams cache_params = GetCacheParams();                                                                   \
         /* 5.定义子线程执行函数 */                                                                                        \
         auto acl_call = [copied_params, acl_stream, cache_params, level]()->int {                                    \
-            /* 5.1.初始化子进程上下文 */                                                                                  \
-            InitExecSubTheadCtx(acl_stream);                                                                           \
+            /* 5.1.使用入队时保存的控核数值，不读取可能已经变化的 stream 配置 */                                         \
+            c10_npu::CoreControlGuard core_control_guard(                                                             \
+                cache_params.GetAicNum(), cache_params.GetAivNum());                                                   \
             int api_ret = 0;                                                                                           \
             /* 5.2.设置执行配置 */                                                                                       \
             bool deterministicAlgorithmsStatus = at::globalContext().deterministicAlgorithms();                         \

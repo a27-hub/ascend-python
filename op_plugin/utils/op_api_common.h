@@ -178,11 +178,12 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
     initPTACacheThreadLocalFunc();
     g_hash_offset = 0;
     auto deterministic_level = snapshot.effective_level;
-    if (c10_npu::is_core_control_enabled()) {
-        auto aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);
-        auto aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);
-        add_param_to_buf(aic_num);
-        add_param_to_buf(aiv_num);
+    auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);
+    if (core_control_snapshot.enabled &&
+        core_control_snapshot.aic_num != UINT32_MAX &&
+        core_control_snapshot.aiv_num != UINT32_MAX) {
+        add_param_to_buf(core_control_snapshot.aic_num);
+        add_param_to_buf(core_control_snapshot.aiv_num);
     }
     auto device = c10_npu::current_device();
     add_param_to_buf(deterministic_level);
@@ -334,7 +335,11 @@ auto DecodeDevice(Ts&... args) -> at::Device
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
         }                                                                                                              \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "1", acl_stream, __VA_ARGS__);                         \
+        auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                      \
+        const auto task_queue_mode =                                                                                   \
+            std::to_string(c10_npu::option::OptionsManager::GetTaskQueueEnable());                                    \
+        OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(#aclnn_api, "EXEC_NPU_CMD", task_queue_mode.c_str(),                    \
+            acl_stream, core_control_snapshot, __VA_ARGS__);                                                          \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
@@ -390,22 +395,21 @@ auto DecodeDevice(Ts&... args) -> at::Device
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
-        if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
-            c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
-        }                                                                                                              \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "2", acl_stream, __VA_ARGS__);                         \
+        auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                      \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         uint32_t aic_num = UINT32_MAX;                                                                                  \
         uint32_t aiv_num = UINT32_MAX;                                                                                  \
-        if (c10_npu::is_core_control_enabled()) {                                                            \
-            aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                           \
-            aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                         \
+        if (core_control_snapshot.enabled) {                                                                            \
+            aic_num = core_control_snapshot.aic_num;                                                                    \
+            aiv_num = core_control_snapshot.aiv_num;                                                                    \
         }                                                                                                              \
         auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                                \
-        auto acl_call = [copied_params, acl_stream, aic_num, aiv_num, snapshot]()->int {                     \
-            if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
-                c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
-            }                                                                                                          \
+        auto acl_call = [copied_params, acl_stream, aic_num, aiv_num, core_control_snapshot, snapshot]()->int {        \
+            c10_npu::CoreControlGuard core_control_guard(aic_num, aiv_num);                                            \
+            std::apply([&](const auto &...args) {                                                                      \
+                OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(#aclnn_api, "EXEC_NPU_CMD", "2", acl_stream,                  \
+                    core_control_snapshot, args...);                                                                   \
+            }, copied_params);                                                                                         \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
             aclOpExecutor *executor = nullptr;                                                                         \
@@ -474,7 +478,11 @@ auto DecodeDevice(Ts&... args) -> at::Device
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
         }                                                                                                              \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "1", acl_stream, __VA_ARGS__);         \
+        auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                      \
+        const auto task_queue_mode =                                                                                   \
+            std::to_string(c10_npu::option::OptionsManager::GetTaskQueueEnable());                                    \
+        OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD",                            \
+            task_queue_mode.c_str(), acl_stream, core_control_snapshot, __VA_ARGS__);                                 \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
@@ -537,16 +545,17 @@ auto DecodeDevice(Ts&... args) -> at::Device
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
-        if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
-            c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
-        }                                                                                                              \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream, __VA_ARGS__);         \
-        auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                                \
+        auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                      \
+        auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                       \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
-        auto acl_call = [copied_params, acl_stream, snapshot]()->int {                                                 \
-            if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
-                c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
-            }                                                                                                          \
+        auto acl_call = [copied_params, acl_stream, snapshot, core_control_snapshot]()->int {                          \
+            c10_npu::CoreControlGuard core_control_guard(                                                             \
+                core_control_snapshot.enabled, core_control_snapshot.aic_num, core_control_snapshot.aiv_num);          \
+            std::apply([&](const auto &...args) {                                                                      \
+                OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(                                                                 \
+                    #aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream,                                    \
+                    core_control_snapshot, args...);                                                                   \
+            }, copied_params);                                                                                         \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
             aclOpExecutor *executor = nullptr;                                                                         \
