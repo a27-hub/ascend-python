@@ -258,6 +258,8 @@ stages:
 
       Build:
         name: Build
+        needs: Detect_file_changes
+        if: ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         with:
           pytorch_branch: ${{ matrix.branch }}
@@ -267,40 +269,40 @@ stages:
         strategy:
           matrix:
             include:
-              - img: "pytorch_master_a1_x86_64_builder:20260704"
+              - branch: "master"
                 arch: "x64"
-                branch: "master"
-              - img: "pytorch_2.7.1_a1_x86_64_builder:20260704"
+                img: "pytorch_master_a1_x86_64_builder:20260704"
+              - branch: "v2.7.1"
                 arch: "x64"
-                branch: "v2.7.1"
-              - img: "pytorch_2.9.0_a1_x86_64_builder:20260704"
+                img: "pytorch_2.7.1_a1_x86_64_builder:20260704"
+              - branch: "v2.9.0"
                 arch: "x64"
-                branch: "v2.9.0"
-              - img: "pytorch_2.10.0_a1_x86_64_builder:20260704"
+                img: "pytorch_2.9.0_a1_x86_64_builder:20260704"
+              - branch: "v2.10.0"
                 arch: "x64"
-                branch: "v2.10.0"
-              - img: "pytorch_2.11.0_a1_x86_64_builder:20260704"
+                img: "pytorch_2.10.0_a1_x86_64_builder:20260704"
+              - branch: "v2.11.0"
                 arch: "x64"
-                branch: "v2.11.0"
-              - img: "pytorch_2.12.0_a1_x86_64_builder:20260704"
+                img: "pytorch_2.11.0_a1_x86_64_builder:20260704"
+              - branch: "v2.12.0"
                 arch: "x64"
-                branch: "v2.12.0"
-              - img: "pytorch_master_a2_aarch64_builder:20260704"
+                img: "pytorch_2.12.0_a1_x86_64_builder:20260704"
+              - branch: "master"
                 arch: "arm64"
-                branch: "master"
-              - img: "pytorch_2.7.1_a2_aarch64_builder:20260704"
+                img: "pytorch_master_a2_aarch64_builder:20260704"
+              - branch: "v2.7.1"
                 arch: "arm64"
-                branch: "v2.7.1"
-              - img: "pytorch_2.9.0_a2_aarch64_builder:20260704"
+                img: "pytorch_2.7.1_a2_aarch64_builder:20260704"
+              - branch: "v2.9.0"
                 arch: "arm64"
-                branch: "v2.9.0"
-              - img: "pytorch_2.10.0_a2_aarch64_builder:20260704"
+                img: "pytorch_2.9.0_a2_aarch64_builder:20260704"
+              - branch: "v2.10.0"
                 arch: "arm64"
-                branch: "v2.10.0"
-              - img: "pytorch_2.11.0_a2_aarch64_builder:20260704"
+                img: "pytorch_2.10.0_a2_aarch64_builder:20260704"
+              - branch: "v2.11.0"
                 arch: "arm64"
-                branch: "v2.11.0"
-              - img: "pytorch_2.12.0_a2_aarch64_builder:20260704"
+                img: "pytorch_2.11.0_a2_aarch64_builder:20260704"
+              - branch: "v2.12.0"
                 arch: "arm64"
-                branch: "v2.12.0"
+                img: "pytorch_2.12.0_a2_aarch64_builder:20260704"
 
