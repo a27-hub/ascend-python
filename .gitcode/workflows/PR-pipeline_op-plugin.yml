@@ -262,7 +262,7 @@ stages:
         uses: .gitcode/workflows/build_job.yml
         with:
           pytorch_branch: ${{ matrix.branch }}
-          CP_DOCKER_IMG: ${{ matrix.img }}
+          CP_DOCKER_IMG: ${{ env[format('img_{0}_{1}', replace(replace(matrix.branch, 'v', ''), '.', '_'), matrix.arch == 'x64' && 'x86' || 'arm')] }}
           runs_on_arch: ${{ matrix.arch }}
           runs_on_spec: "2xlarge"
         strategy:
@@ -270,38 +270,26 @@ stages:
             include:
               - branch: "master"
                 arch: "x64"
-                img: "pytorch_master_a1_x86_64_builder:20260704"
               - branch: "v2.7.1"
                 arch: "x64"
-                img: "pytorch_2.7.1_a1_x86_64_builder:20260704"
               - branch: "v2.9.0"
                 arch: "x64"
-                img: "pytorch_2.9.0_a1_x86_64_builder:20260704"
               - branch: "v2.10.0"
                 arch: "x64"
-                img: "pytorch_2.10.0_a1_x86_64_builder:20260704"
               - branch: "v2.11.0"
                 arch: "x64"
-                img: "pytorch_2.11.0_a1_x86_64_builder:20260704"
               - branch: "v2.12.0"
                 arch: "x64"
-                img: "pytorch_2.12.0_a1_x86_64_builder:20260704"
               - branch: "master"
                 arch: "arm64"
-                img: "pytorch_master_a2_aarch64_builder:20260704"
               - branch: "v2.7.1"
                 arch: "arm64"
-                img: "pytorch_2.7.1_a2_aarch64_builder:20260704"
               - branch: "v2.9.0"
                 arch: "arm64"
-                img: "pytorch_2.9.0_a2_aarch64_builder:20260704"
               - branch: "v2.10.0"
                 arch: "arm64"
-                img: "pytorch_2.10.0_a2_aarch64_builder:20260704"
               - branch: "v2.11.0"
                 arch: "arm64"
-                img: "pytorch_2.11.0_a2_aarch64_builder:20260704"
               - branch: "v2.12.0"
                 arch: "arm64"
-                img: "pytorch_2.12.0_a2_aarch64_builder:20260704"
 
