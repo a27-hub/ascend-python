@@ -114,18 +114,27 @@ at::Tensor scatter_reduce(
     c10::string_view reduce,
     bool include_self)
 {
-    if (include_self && (reduce == "sum" || reduce == "add")) {
-        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
-            DO_COMPATIBILITY(aclnnScatterReduce, acl_op::scatter_add(self, dim, index, src));
-        }
+    // 条件成立 → 优先尝试 NPU
+    if (include_self && (reduce == "sum" || reduce == "add") &&
+        c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
+        self.scalar_type() == at::kFloat
+        ) 
+    {
+        // 使用兼容宏尝试执行 NPU，若失败则自动回退 CPU
+        DO_COMPATIBILITY_COMMON(
+            aclnnScatterReduce,
+            scatter_reduce_cpu_fallback(self, dim, index, src, reduce, include_self)
+        );
+        // 后续的NPU处理
+        auto result = self.clone(at::MemoryFormat::Contiguous);
+        npu_preparation::CheckMemory({result, index, src}, {result});
+        int64_t reduction = get_reduce(reduce, "scatter_reduce()");
+        EXEC_NPU_CMD(aclnnScatterReduce, result, dim, index, src, reduction, include_self, result);
+        return result;
     }
-    DO_COMPATIBILITY_COMMON(
-        aclnnScatterReduce, scatter_reduce_cpu_fallback(self, dim, index, src, reduce, include_self));
-    auto result = self.clone(at::MemoryFormat::Contiguous);
-    npu_preparation::CheckMemory({result, index, src}, {result});
-    int64_t reduction = get_reduce(reduce, "scatter_reduce()");
-    EXEC_NPU_CMD(aclnnScatterReduce, result, dim, index, src, reduction, include_self, result);
-    return result;
+
+    // 条件不成立，直接 CPU 回退
+    return scatter_reduce_cpu_fallback(self, dim, index, src, reduce, include_self);
 }
 
 at::Tensor& scatter_reduce_out(
@@ -153,16 +162,26 @@ at::Tensor& scatter_reduce_(
     c10::string_view reduce,
     bool include_self)
 {
-    if (include_self && (reduce == "sum" || reduce == "add")) {
-        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
-            DO_COMPATIBILITY(aclnnInplaceScatterReduce, acl_op::scatter_add_(self, dim, index, src));
-        }
+    // 条件成立 → 优先尝试 NPU
+    if (include_self && (reduce == "sum" || reduce == "add") &&
+        c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
+        self.scalar_type() == at::kFloat
+        ) 
+    {
+        // 使用兼容宏尝试执行 NPU，若失败则自动回退 CPU
+        DO_COMPATIBILITY_COMMON(
+            aclnnInplaceScatterReduce,
+            scatter_reduce_inplace_cpu_fallback(self, dim, index, src, reduce, include_self)
+        );
+        // 后续的NPU处理
+        npu_preparation::CheckMemory({self, index, src}, {self});
+        int64_t reduction = get_reduce(reduce, "scatter_reduce_()");
+        EXEC_NPU_CMD(aclnnInplaceScatterReduce, self, dim, index, src, reduction, include_self);
+        return self;
     }
-    DO_COMPATIBILITY_COMMON(
-        aclnnInplaceScatterReduce, scatter_reduce_inplace_cpu_fallback(self, dim, index, src, reduce, include_self));
-    npu_preparation::CheckMemory({self, index, src}, {self});
-    int64_t reduction = get_reduce(reduce, "scatter_reduce_()");
-    EXEC_NPU_CMD(aclnnInplaceScatterReduce, self, dim, index, src, reduction, include_self);
-    return self;
+
+    // 条件不成立，直接 CPU 回退
+    return scatter_reduce_inplace_cpu_fallback(self, dim, index, src, reduce, include_self);
 }
+
 }
