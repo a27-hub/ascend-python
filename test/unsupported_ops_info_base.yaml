@@ -1216,6 +1216,15 @@ linalg.matrix_rank:
   test_variant_consistency_eager:
   - complex64
   - float32
+linalg.matrix_sqrth:
+  test_backward:
+  - float32
+  test_conj_view:
+  - complex64
+  test_neg_conj_view:
+  - complex128
+  test_variant_consistency_eager:
+  - complex64
 linalg.multi_dot:
   test_backward:
   - float32
@@ -1256,6 +1265,16 @@ linalg.solve:
   test_variant_consistency_eager:
   - float32
   - complex64
+linalg.polar:
+  test_backward:
+  - float32
+  test_conj_view:
+  - complex64
+  test_neg_conj_view:
+  - complex128
+  test_variant_consistency_eager:
+  - complex64
+  - float32
 linalg.pinv:
   test_backward:
   - float32
@@ -7553,6 +7572,8 @@ normal:
   - float32
   test_fake_crossref_backward_no_amp:
   - float32
+  test_neg_conj_view:
+  - complex128
   test_neg_view:
   - float64
   test_out:
