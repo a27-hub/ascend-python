@@ -117,7 +117,7 @@ at::Tensor scatter_reduce(
     // 条件成立 → 优先尝试 NPU
     if (include_self && (reduce == "sum" || reduce == "add") &&
         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
-        self.scalar_type() == at:kFloat
+        self.scalar_type() == at::kFloat
         ) 
     {
         // 使用兼容宏尝试执行 NPU，若失败则自动回退 CPU
@@ -165,7 +165,7 @@ at::Tensor& scatter_reduce_(
     // 条件成立 → 优先尝试 NPU
     if (include_self && (reduce == "sum" || reduce == "add") &&
         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
-        self.scalar_type() == at:kFloat
+        self.scalar_type() == at::kFloat
         ) 
     {
         // 使用兼容宏尝试执行 NPU，若失败则自动回退 CPU
