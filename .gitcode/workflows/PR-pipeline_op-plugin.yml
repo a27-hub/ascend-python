@@ -258,6 +258,8 @@ stages:
 
       Build:
         name: Build
+        needs: Detect_file_changes
+        if: ${{ needs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         with:
           pytorch_branch: ${{ matrix.branch }}
