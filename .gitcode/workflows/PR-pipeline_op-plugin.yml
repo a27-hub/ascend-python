@@ -257,6 +257,7 @@ stages:
       #     runs_on_spec: "2xlarge"
 
       Build:
+        name: Build
         if: ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         with:
