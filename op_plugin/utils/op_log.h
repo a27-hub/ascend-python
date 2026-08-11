@@ -36,7 +36,8 @@ extern std::shared_ptr<npu_logging::Logger> LOGGER;
 extern thread_local int log_depth;
 
 // Logging function for op execute with task queue.
-#define OP_EXEC_LOG_WITH_TASK_QUEUE(op_name, exec_cmd, task_queue, acl_stream, ...)                                 \
+#define OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(                                                                          \
+    op_name, exec_cmd, task_queue, acl_stream, core_control_snapshot, ...)                                             \
     do {                                                                                                               \
         if (op_plugin::logging::LOGGER->getAllowLevel() == npu_logging::LoggingLevel::INFO &&                          \
             op_plugin::logging::log_depth == 0) {                                                                      \
@@ -52,8 +53,8 @@ extern thread_local int log_depth;
             } else {                                                                                                   \
                 stream_id = reinterpret_cast<int64_t>(acl_stream);                                                     \
             }                                                                                                          \
-            const uint32_t aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);           \
-            const uint32_t aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);         \
+            const uint32_t aic_num = core_control_snapshot.aic_num;                                                    \
+            const uint32_t aiv_num = core_control_snapshot.aiv_num;                                                    \
             op_plugin::logging::LOGGER->long_info(                                                                     \
                 "%s %s stream_id=%ld, aic_num=%u aiv_num=%u with task_queue = %s%s",                                  \
                 op_name, exec_cmd, stream_id, aic_num, aiv_num, task_queue,                                           \
@@ -74,8 +75,8 @@ extern thread_local int log_depth;
             } else {                                                                                                   \
                 stream_id = reinterpret_cast<int64_t>(acl_stream);                                                     \
             }                                                                                                          \
-            const uint32_t aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);           \
-            const uint32_t aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);         \
+            const uint32_t aic_num = core_control_snapshot.aic_num;                                                    \
+            const uint32_t aiv_num = core_control_snapshot.aiv_num;                                                    \
             at_npu::native::OpCommand cmd;                                                                             \
             op_plugin::logging::LOGGER->long_info(                                                                     \
                 "%s %s stream_id=%ld, aic_num=%u aiv_num=%u with task_queue = %s%s",                                  \
@@ -85,6 +86,13 @@ extern thread_local int log_depth;
                 op_name, op_plugin::logging::generate_debug_log_infos(#__VA_ARGS__, ##__VA_ARGS__).c_str());             \
             op_plugin::logging::log_depth -= 1;                                                                        \
         }                                                                                                              \
+    } while (0);
+
+#define OP_EXEC_LOG_WITH_TASK_QUEUE(op_name, exec_cmd, task_queue, acl_stream, ...)                                   \
+    do {                                                                                                               \
+        const auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                \
+        OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(                                                                          \
+            op_name, exec_cmd, task_queue, acl_stream, core_control_snapshot, ##__VA_ARGS__);                         \
     } while (0);
 
 // Logging function for op execute.
