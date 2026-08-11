@@ -47,7 +47,7 @@ jobs:
     runs-on: [ self-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
     # runs-on: [ self-hosted, x86, cpu=8 ]
     container:
-      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      image: harbor-portal.test.osinfra.cn/north4-myhuaweicloud/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
     steps:
       - name: print env
         run: |
@@ -55,7 +55,7 @@ jobs:
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
           echo "py_version=${{ inputs.py_version }}"
           echo "pr_id=${{ inputs.pr_id }}"
-          echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
+          echo "CP_DOCKER_IMG=harbor-portal.test.osinfra.cn/north4-myhuaweicloud/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
           echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
           echo "inputs.TARGET_BRANCH=${{ inputs.TARGET_BRANCH }}"
 
@@ -80,3 +80,4 @@ jobs:
           name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
           path: |
             *.tar.gz*
+          overwrite: true

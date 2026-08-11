@@ -75,7 +75,7 @@ jobs:
           cd -
           # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
           cp -rf ../output/${{ inputs.pr_id }}/* ./
-          # bash cie/.ci/UT/op-plugin_ut_general.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
+          bash cie/.ci/UT/op-plugin_ut_general.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
           echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
           echo "py_version: ${{ inputs.py_version }}"
           echo "pr_id: ${{ env.pr_id }}"
