@@ -175,9 +175,8 @@ bool judge_mm_a16w4_int4(QuantContext &ctx) {
         if (!is_per_channel) {
             return false;
         }
-        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
-            "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        ctx.is_weight_trans = true;
+        // A16S4 INT4 NZ 路径不要求 weight 转置
+        ctx.is_weight_trans = false;
         return true;
     }
     return false;
@@ -369,10 +368,10 @@ static void execute_prepares(const std::vector<PrepareFunc> &prepares, QuantCont
 static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>> SOC_DATA_FLOW_CONFIG_MAP = {
     {c10_npu::SocVersion::Ascend950,
         {{judge_mm_mx_a8w4,
-             {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
+             {prepare_out_weight_nz<false, NZ_C0_32, ACL_FORMAT_FRACTAL_NZ_C0_32>,
                  prepare_out_weight_scale_mx<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_gmm_mx_a8w4,
-                {prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
+                {prepare_out_weight_nz<true, NZ_C0_32, ACL_FORMAT_FRACTAL_NZ_C0_32>,
                     prepare_out_weight_scale_mx<true>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16s4_nd_pertensor,
                 {prepare_out_weight_nd,

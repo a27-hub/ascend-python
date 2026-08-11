@@ -11,8 +11,11 @@ class TestNpuWeightQuantPreprocess(TestCase):
     @SupportedDevices(['Ascend950'])
     def test_npu_weight_quant_preprocess_a8w4(self):
         k, n = 128, 64
+        # weight 是 uint8，但 weight_dtype 是 float4_e2m1fn_x2 (4-bit)
+        # 每个 uint8 包含 2 个 4-bit 值，所以逻辑 K = 物理 K * 2 = 256
         weight = torch.zeros((n, k), dtype=torch.uint8).npu().transpose(0, 1)
-        weight_scale = torch.zeros((n, k // 64, 2), dtype=torch.uint8).npu().transpose(0, 1)
+        # weight_scale shape 应该是 {ceil(逻辑K/64), N, 2} = {ceil(256/64), 64, 2} = {4, 64, 2}
+        weight_scale = torch.zeros((n, (k * 2) // 64, 2), dtype=torch.uint8).npu().transpose(0, 1)
 
         out_weight, out_weight_scale, _, _ = torch_npu.npu_weight_quant_preprocess(
             weight,
