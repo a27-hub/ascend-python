@@ -51,6 +51,7 @@ struct QuantContext {
     int64_t k_group_size;
     c10_npu::SocVersion soc_version;
     bool is_weight_trans = false;
+    c10::optional<int64_t> out_weight_format;
 
     at::Tensor out_weight;
     at::Tensor out_weight_scale;
@@ -123,6 +124,29 @@ bool judge_gmm_mx_a8w4(QuantContext &ctx) {
             "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
         ctx.is_weight_trans = true;
         return true;
+    }
+    return false;
+}
+
+bool judge_mm_a16s4_nd_pertensor(QuantContext &ctx) {
+    aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+
+    bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
+    bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
+
+    if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2) {
+        int64_t scale_dim = ctx.weight_scale.dim();
+        bool is_per_channel = (scale_dim == DIMS_1) ||
+                              (scale_dim == DIMS_2 && ctx.weight_scale.size(0) == 1);
+        if (is_per_channel && ctx.out_weight_format.has_value() &&
+            ctx.out_weight_format.value() == ACL_FORMAT_ND) {
+            TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
+                "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
+            ctx.is_weight_trans = true;
+            return true;
+        }
     }
     return false;
 }
@@ -229,6 +253,11 @@ bool judge_mm_mx_a16w4(QuantContext &ctx) {
 template <bool IsGmm> static void prepare_out_weight_scale_per_channel(QuantContext &ctx) {
     auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
     ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
+}
+
+static void prepare_out_weight_nd(QuantContext &ctx) {
+    auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
+    ctx.out_weight = npu_preparation::apply_tensor_without_format(weight_view_shape, ctx.weight.options());
 }
 
 template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepare_out_weight_nz(QuantContext &ctx) {
@@ -345,6 +374,9 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
             {judge_gmm_mx_a8w4,
                 {prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
                     prepare_out_weight_scale_mx<true>, prepare_out_weight_offset, prepare_out_bias}},
+            {judge_mm_a16s4_nd_pertensor,
+                {prepare_out_weight_nd,
+                    prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16w4_int4,
                 {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_8>,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
@@ -364,7 +396,8 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_weight_quant_preprocess(const at::Tensor &weight,
     const at::Tensor &weight_scale, int64_t x_dtype, int64_t weight_dtype, int64_t weight_scale_dtype,
     const c10::optional<at::Tensor> &weight_offset, const c10::optional<at::Tensor> &bias,
-    c10::optional<int64_t> x_scale_dtype, c10::optional<int64_t> k_group_size) {
+    c10::optional<int64_t> x_scale_dtype, c10::optional<int64_t> k_group_size,
+    c10::optional<int64_t> out_weight_format) {
     auto soc_version = c10_npu::GetSocVersion();
     auto it = SOC_DATA_FLOW_CONFIG_MAP.find(soc_version);
     TORCH_CHECK(it != SOC_DATA_FLOW_CONFIG_MAP.end(),
@@ -374,8 +407,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_weight_quant_prep
     int64_t k_group_size_real = k_group_size.value_or(0);
 
     QuantContext ctx{weight, weight_scale, weight_offset, bias, x_dtype, weight_dtype, x_scale_dtype,
-        weight_scale_dtype, k_group_size_real, soc_version, false, at::Tensor(), at::Tensor(), at::Tensor(),
-        at::Tensor()};
+        weight_scale_dtype, k_group_size_real, soc_version, false, out_weight_format,
+        at::Tensor(), at::Tensor(), at::Tensor(), at::Tensor()};
 
     bool matched = false;
     for (const auto &[judge, prepares] : it->second) {
