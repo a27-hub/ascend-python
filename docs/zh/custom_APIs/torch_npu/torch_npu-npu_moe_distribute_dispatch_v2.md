@@ -140,7 +140,6 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - "": 配置HCCL\_INTRA\_PCIE\_ENABLE=1和HCCL\_INTRA\_ROCE\_ENABLE=0时，调用"hierarchy"算法，否则调用"fullmesh"算法。不推荐使用该方式。
         - "fullmesh": token数据直接通过RDMA方式发往topk个目标专家所在的卡。
         - "hierarchy": token数据经过跨机、机内两次发送，仅不同server同号卡之间使用RDMA通信，server内使用HCCS通信。
-        - 当`x`的数据类型为`int32`时，仅支持设置为"fullmesh"。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本支持""，"fullmesh_v1"，"fullmesh_v2"，"hierarchy"四种输入方式。
         - ""：默认值，启用fullmesh_v1模板；
         - "fullmesh_v1"：启用fullmesh_v1模板；
@@ -166,7 +165,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 ## 输出说明<a name="zh-cn_topic_0000002203575833_section22231435517"></a>
 
 - **expand\_x** (`Tensor`)：表示本卡收到的token数据，要求为2维张量，shape为\(A, H\)，A表示在EP通信域可能收到的最大token数，数据类型支持`bfloat16`、`float16`、`int8`、`int32`。量化时类型为`int8`，非量化时与`x`数据类型保持一致。`int32`仅支持<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>。数据格式为$ND$，支持非连续的Tensor。
-- **dynamic\_scales** (`Tensor`)：表示动态量化参数或随INT32 token通信的缩放参数。当`quant_mode`为2，或者`x`的数据类型为`int32`且`quant_mode`为0时有该输出，要求为1维张量，shape为\(A,\)，其中前实际接收token数量个元素有效。数据类型支持`float32`，数据格式支持$ND$，支持非连续的Tensor。
+- **dynamic\_scales** (`Tensor`)：表示动态量化参数或随数据类型为`int32`的token通信的缩放参数。当`quant_mode`为2，或者`x`的数据类型为`int32`且`quant_mode`为0时有该输出，要求为1维张量，shape为\(A,\)，其中前实际接收token数量个元素有效。数据类型支持`float32`，数据格式支持$ND$，支持非连续的Tensor。
 - **assist\_info\_for\_combine** (`Tensor`)：表示给同一专家发送的token个数，要求是一个1维张量，shape为\(A \* 128, \)。数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)的`assist_info_for_combine`输入。
 
 - **expert\_token\_nums** (`Tensor`)：本卡每个专家实际收到的token数量，要求为1维张量，shape为\(local\_expert\_num,\)，数据类型`int64`，数据格式支持$ND$，支持非连续的Tensor。
