@@ -41,10 +41,9 @@
         "not found.",                                                                                             \
         OPS_ERROR(ErrCode::PTR));                                                                                 \
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                               \
-    if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                            \
-      c10_npu::UseStreamResInCurrentThread(acl_stream);                                                           \
-    }                                                                                                             \
-    OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD", "1", acl_stream, __VA_ARGS__); \
+    auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                     \
+    OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(#aclnn_api, "EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD", "1",              \
+        acl_stream, core_control_snapshot, __VA_ARGS__);                                                         \
     aclOpExecutor* executor = nullptr;                                                                            \
     aclOpExecutor** executor_addr = &executor;                                                                    \
     InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);                   \
@@ -65,12 +64,13 @@
     uint64_t* workspace_size_addr = &fake_workspace_size;                                                         \
     auto converted_params = ConvertTypesV2(copied_params, workspace_size_addr, executor_addr);                    \
     static auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);            \
-    auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                         \
-    NPU_CHECK_ERROR(workspace_status, "call " #aclnn_api " failed");                                              \
+    {                                                                                                             \
+      c10_npu::CoreControlGuard core_control_guard(                                                             \
+          core_control_snapshot.enabled, core_control_snapshot.aic_num, core_control_snapshot.aiv_num);          \
+      auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                       \
+      NPU_CHECK_ERROR(workspace_status, "call " #aclnn_api " failed");                                            \
+    }                                                                                                             \
     auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor]() -> int {           \
-      if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                          \
-        c10_npu::UseStreamResInCurrentThread(acl_stream);                                                         \
-      }                                                                                                           \
       OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                           \
       auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                             \
       NPU_CHECK_ERROR(api_ret, "call " #aclnn_api " failed");                                                     \
@@ -109,16 +109,14 @@
         "not found.",                                                                                             \
         OPS_ERROR(ErrCode::PTR));                                                                                 \
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                               \
-    if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                            \
-      c10_npu::UseStreamResInCurrentThread(acl_stream);                                                           \
-    }                                                                                                             \
     auto snapshot = c10_npu::CaptureDeterministicSnapshot();                                                      \
+    auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                     \
     OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream, __VA_ARGS__); \
     auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                \
-    auto acl_call = [workspace_addr, workspace_size, copied_params, acl_stream, snapshot]() -> int {              \
-      if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                          \
-        c10_npu::UseStreamResInCurrentThread(acl_stream);                                                         \
-      }                                                                                                           \
+    auto acl_call =                                                                                               \
+        [workspace_addr, workspace_size, copied_params, acl_stream, snapshot, core_control_snapshot]() -> int {   \
+      c10_npu::CoreControlGuard core_control_guard(                                                              \
+          core_control_snapshot.enabled, core_control_snapshot.aic_num, core_control_snapshot.aiv_num);          \
       at_npu::native::ApplyDeterministicSnapshot(snapshot, true);                                                 \
       uint64_t fake_workspace_size = 0;                                                                           \
       uint64_t* workspace_size_addr = &fake_workspace_size;                                                       \
@@ -175,10 +173,11 @@
         "not found.",                                                                                  \
         OPS_ERROR(ErrCode::PTR));                                                                      \
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                    \
-    if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                 \
-      c10_npu::UseStreamResInCurrentThread(acl_stream);                                                \
-    }                                                                                                  \
-    OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_GET_MAX_WORKSPACE_CMD", "1", acl_stream);            \
+    auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                           \
+    c10_npu::CoreControlGuard core_control_guard(                                                       \
+        core_control_snapshot.enabled, core_control_snapshot.aic_num, core_control_snapshot.aiv_num);  \
+    OP_EXEC_LOG_WITH_TASK_QUEUE_SNAPSHOT(                                                               \
+        #aclnn_api, "EXEC_GET_MAX_WORKSPACE_CMD", "1", acl_stream, core_control_snapshot);            \
     uint64_t workspace_size = 0;                                                                       \
     uint64_t* workspace_size_addr = &workspace_size;                                                   \
     aclOpExecutor* executor = nullptr;                                                                 \

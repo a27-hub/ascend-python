@@ -496,6 +496,7 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         InitExecCommonCtx();                                                                                          \
         /* 3.获取NPU流 */                                                                                               \
         auto acl_stream = GetAclStream();                                                                              \
+        auto core_control_snapshot = c10_npu::GetCoreControlSnapshot(acl_stream);                                      \
         /* 4.缓存查询 */                                                                                                \
         uint32_t level = c10_npu::GetDeterministicLevel();                                                             \
         bool deterministicAlgorithmsStatus = at::globalContext().deterministicAlgorithms();                            \
@@ -511,15 +512,18 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         aclOpExecutor **executor_addr = &executor;                                                                     \
         auto converted_params = ConvertTypes(__VA_ARGS__, workspace_size_addr, executor_addr);                         \
         auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                    \
-        auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                          \
+        {                                                                                                              \
+            c10_npu::CoreControlGuard core_control_guard(                                                             \
+                core_control_snapshot.enabled, core_control_snapshot.aic_num, core_control_snapshot.aiv_num);          \
+            auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
+            NPU_CHECK_ERROR(workspace_status, "call " #aclnn_api " failed");                                           \
+        }                                                                                                              \
         void* workspace_addr = GetWorkSpaceAddr(workspace_size);                                                      \
         /* 7.定义子线程执行函数 */                                                                                        \
         auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor, opApiFuncAddr]()->int {\
-            /* 7.1.初始化子进程上下文 */                                                                                  \
-            InitExecSubTheadCtx(acl_stream);                                                                           \
-            /* 7.2.执行aclnn函数 */                                                                                     \
+            /* 7.1.执行aclnn函数；TQ1控核数已在Phase1保存到executor */                                                     \
             auto api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, workspace_addr, workspace_size, executor);        \
-            /* 7.3.清理参数、内存 */                                                                                     \
+            /* 7.2.清理参数、内存 */                                                                                     \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseExecCommonCtx();                                                                                    \
             return api_ret;                                                                                            \
@@ -544,8 +548,9 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         CacheParams cache_params = GetCacheParams();                                                                   \
         /* 5.定义子线程执行函数 */                                                                                        \
         auto acl_call = [copied_params, acl_stream, cache_params, level]()->int {                                    \
-            /* 5.1.初始化子进程上下文 */                                                                                  \
-            InitExecSubTheadCtx(acl_stream);                                                                           \
+            /* 5.1.使用入队时保存的控核数值，不读取可能已经变化的 stream 配置 */                                         \
+            c10_npu::CoreControlGuard core_control_guard(                                                             \
+                cache_params.GetAicNum(), cache_params.GetAivNum());                                                   \
             int api_ret = 0;                                                                                           \
             /* 5.2.设置执行配置 */                                                                                       \
             bool deterministicAlgorithmsStatus = at::globalContext().deterministicAlgorithms();                         \
