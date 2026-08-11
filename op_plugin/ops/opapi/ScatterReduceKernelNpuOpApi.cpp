@@ -125,6 +125,7 @@ at::Tensor scatter_reduce(
             aclnnScatterReduce,
             scatter_reduce_cpu_fallback(self, dim, index, src, reduce, include_self)
         );
+        // 后续的NPU处理
         auto result = self.clone(at::MemoryFormat::Contiguous);
         npu_preparation::CheckMemory({result, index, src}, {result});
         int64_t reduction = get_reduce(reduce, "scatter_reduce()");
@@ -172,6 +173,7 @@ at::Tensor& scatter_reduce_(
             aclnnInplaceScatterReduce,
             scatter_reduce_inplace_cpu_fallback(self, dim, index, src, reduce, include_self)
         );
+        // 后续的NPU处理
         npu_preparation::CheckMemory({self, index, src}, {self});
         int64_t reduction = get_reduce(reduce, "scatter_reduce_()");
         EXEC_NPU_CMD(aclnnInplaceScatterReduce, self, dim, index, src, reduction, include_self);
