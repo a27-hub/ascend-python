@@ -2176,7 +2176,7 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
                                                 value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
                                                 actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND",
                                                 layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
-                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None, sinks=None):
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, return_softmax_lse=False, key_dtype=None, value_dtype=None, sinks=None):
     require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
 
     for item_name, item in require_param.items():
@@ -2219,7 +2219,22 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
             False,
             lambda: "Not support layout of query:" + layout_query + ops_error(ErrCode.VALUE),
         )
-    return out
+
+    if return_softmax_lse:
+        if layout_query == "TND":
+            if layout_kv == "PA_BSND":
+                softmax_max = torch.empty([key.size(2), query.size(0), query.size(1) // key.size(2)], dtype=torch.float32, device='meta')
+                softmax_sum = torch.empty([key.size(2), query.size(0), query.size(1) // key.size(2)], dtype=torch.float32, device='meta')
+            else:
+                softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+                softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+        if layout_query == "BSND":
+            softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+            softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+    else:
+        softmax_max = torch.empty([0], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty([0], dtype=torch.float32, device='meta')
+    return (out, softmax_max, softmax_sum)
 
 
 # Keep in sync with torch_npu/csrc/core/npu/NpuVariables.h: SocVersion::Ascend950.
