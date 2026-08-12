@@ -36,7 +36,7 @@ on:
       TEST_RANK:
         required: false
         type: string
-      TEST_WORD_SIZE:
+      TEST_WORLD_SIZE:
         required: false
         type: string
 
@@ -52,7 +52,7 @@ jobs:
       options: --user root
     env:
       TEST_RANK: ${{ inputs.TEST_RANK }}
-      TEST_WORD_SIZE: ${{ inputs.TEST_WORD_SIZE }}
+      TEST_WORLD_SIZE: ${{ inputs.TEST_WORLD_SIZE }}
     steps:
       - name: print env
         run: |

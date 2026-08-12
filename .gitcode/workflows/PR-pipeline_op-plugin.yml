@@ -307,7 +307,7 @@ stages:
           runs_on_arch: "arm"
           runs_on_spec: "cpu=32"
           TEST_RANK: "1"
-          TEST_WORD_SIZE: "2"
+          TEST_WORLD_SIZE: "2"
 
       UT_master_ARM_02:
         name: UT_master_ARM_02
@@ -319,7 +319,7 @@ stages:
           runs_on_arch: "arm"
           runs_on_spec: "cpu=32"
           TEST_RANK: "2"
-          TEST_WORD_SIZE: "2"
+          TEST_WORLD_SIZE: "2"
 
       UT_v2_7_1_ARM:
         name: UT_v2_7_1_ARM
@@ -331,7 +331,7 @@ stages:
           runs_on_arch: "arm"
           runs_on_spec: "cpu=32"
           TEST_RANK: "1"
-          TEST_WORD_SIZE: "1"
+          TEST_WORLD_SIZE: "1"
 
       UT_v2_9_0_ARM:
         name: UT_v2_9_0_ARM
@@ -343,7 +343,7 @@ stages:
           runs_on_arch: "arm"
           runs_on_spec: "cpu=32"
           TEST_RANK: "1"
-          TEST_WORD_SIZE: "1"
+          TEST_WORLD_SIZE: "1"
 
       UT_v2_10_0_ARM:
         name: UT_v2_10_0_ARM
@@ -355,7 +355,7 @@ stages:
           runs_on_arch: "arm"
           runs_on_spec: "cpu=32"
           TEST_RANK: "1"
-          TEST_WORD_SIZE: "1"
+          TEST_WORLD_SIZE: "1"
 
       UT_v2_11_0_ARM:
         name: UT_v2_11_0_ARM
@@ -367,7 +367,7 @@ stages:
           runs_on_arch: "arm"
           runs_on_spec: "cpu=32"
           TEST_RANK: "1"
-          TEST_WORD_SIZE: "1"
+          TEST_WORLD_SIZE: "1"
 
       UT_v2_12_0_ARM:
         name: UT_v2_12_0_ARM
@@ -379,4 +379,4 @@ stages:
           runs_on_arch: "arm"
           runs_on_spec: "cpu=32"
           TEST_RANK: "1"
-          TEST_WORD_SIZE: "1"
+          TEST_WORLD_SIZE: "1"
