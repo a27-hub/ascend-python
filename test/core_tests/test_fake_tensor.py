@@ -5061,6 +5061,8 @@ class TestNpuDSA(TestCase):
             value_npu.requires_grad = True
             query_rope_npu.requires_grad = True
             key_rope_npu.requires_grad = True
+            if sinks_npu is not None:
+                sinks_npu.requires_grad = True
 
         params = {
             'query': query_npu,
@@ -5151,6 +5153,72 @@ class TestNpuDSA(TestCase):
             self.assertEqual(d_query_rope.shape, query_rope.shape)
             self.assertEqual(d_key_rope.dtype, key_rope.dtype)
             self.assertEqual(d_key_rope.shape, key_rope.shape)
+
+    def test_dsa_npu_sparse_flash_attention_grad_v2(self):
+        with FakeTensorMode():
+            params = self.setup_sparse_flash_attention_test_params(requires_grad=True)
+            npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            loss = npu_out.sum()
+            loss.backward()
+
+            query = params['query']
+            key = params['key']
+            value = params['value']
+            query_rope = params['query_rope']
+            key_rope = params['key_rope']
+            sinks = params['sinks']
+
+            d_query = query.grad
+            d_key = key.grad
+            d_value = value.grad
+            d_query_rope = query_rope.grad
+            d_key_rope = key_rope.grad
+
+            self.assertEqual(d_query.dtype, query.dtype)
+            self.assertEqual(d_query.shape, query.shape)
+            self.assertEqual(d_key.dtype, key.dtype)
+            self.assertEqual(d_key.shape, key.shape)
+            self.assertEqual(d_value.dtype, value.dtype)
+            self.assertEqual(d_value.shape, value.shape)
+            self.assertEqual(d_query_rope.dtype, query_rope.dtype)
+            self.assertEqual(d_query_rope.shape, query_rope.shape)
+            self.assertEqual(d_key_rope.dtype, key_rope.dtype)
+            self.assertEqual(d_key_rope.shape, key_rope.shape)
+            self.assertIsNone(sinks.grad)
+
+    def test_dsa_npu_sparse_flash_attention_grad_v2_with_sinks(self):
+        with FakeTensorMode():
+            params = self.setup_sparse_flash_attention_test_params(requires_grad=True, with_sinks=True)
+            npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            loss = npu_out.sum()
+            loss.backward()
+
+            query = params['query']
+            key = params['key']
+            value = params['value']
+            query_rope = params['query_rope']
+            key_rope = params['key_rope']
+            sinks = params['sinks']
+
+            d_query = query.grad
+            d_key = key.grad
+            d_value = value.grad
+            d_query_rope = query_rope.grad
+            d_key_rope = key_rope.grad
+            d_sinks = sinks.grad
+
+            self.assertEqual(d_query.dtype, query.dtype)
+            self.assertEqual(d_query.shape, query.shape)
+            self.assertEqual(d_key.dtype, key.dtype)
+            self.assertEqual(d_key.shape, key.shape)
+            self.assertEqual(d_value.dtype, value.dtype)
+            self.assertEqual(d_value.shape, value.shape)
+            self.assertEqual(d_query_rope.dtype, query_rope.dtype)
+            self.assertEqual(d_query_rope.shape, query_rope.shape)
+            self.assertEqual(d_key_rope.dtype, key_rope.dtype)
+            self.assertEqual(d_key_rope.shape, key_rope.shape)
+            self.assertEqual(d_sinks.dtype, torch.float32)
+            self.assertEqual(d_sinks.shape, sinks.shape)
 
     def setup_lightning_indexer_test(self, requires_grad=False, return_value=False):
         b = 1

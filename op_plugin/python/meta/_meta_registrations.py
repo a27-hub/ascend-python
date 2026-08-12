@@ -352,6 +352,17 @@ def npu_sparse_flash_attention_grad_meta(query, key, value, sparse_indices, d_ou
     return (d_query, d_key, d_value, d_query_rope, d_key_rope)
 
 
+@impl(m, "npu_sparse_flash_attention_grad_v2")
+def npu_sparse_flash_attention_grad_v2_meta(query, key, value, sparse_indices, d_out, out, softmax_max, softmax_sum, sinks, scale_value, sparse_block_size, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_kvlen=None, layout="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0):
+    d_query = query.new_empty(query.shape, dtype=query.dtype, device='meta')
+    d_key = key.new_empty(key.shape, dtype=key.dtype, device='meta')
+    d_value = value.new_empty(value.shape, dtype=value.dtype, device='meta')
+    d_query_rope = torch.empty([0], dtype=query.dtype, device='meta') if query_rope is None else query_rope.new_empty(query_rope.shape, dtype=query_rope.dtype, device='meta')
+    d_key_rope = torch.empty([0], dtype=key.dtype, device='meta') if key_rope is None else key_rope.new_empty(key_rope.shape, dtype=key_rope.dtype, device='meta')
+    d_sinks = torch.empty([0], dtype=torch.float32, device='meta') if sinks is None else sinks.new_empty(sinks.shape, dtype=torch.float32, device='meta')
+    return (d_query, d_key, d_value, d_query_rope, d_key_rope, d_sinks)
+
+
 @impl(m, "npu_mla_prolog")
 def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
                    rope_sin, rope_cos, cache_index, kv_cache, kr_cache, *, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
