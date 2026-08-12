@@ -122,6 +122,14 @@ function main()
         fi
     fi
 
+    # 修复 Ascend/pytorch 用 'op-plugin' in path 判断文件归属的缺陷：
+    # GitCode runner 工作目录含仓库名 op-plugin，导致 test/npu 用例被误判为 op-plugin 用例
+    if [ -f "${PYTORCH_PATH}/ci/split_by_time.py" ]; then
+        sed -i "s/'op-plugin' in str(Path(ut_file))/Path(ut_file).is_relative_to(NETWORK_OPS_DIR)/g" \
+            "${PYTORCH_PATH}"/ci/split_by_time.py \
+            "${PYTORCH_PATH}"/ci/access_control_test.py
+    fi
+
     # copy modify_files.txt to torch_adapter/ci
     cp ${CUR_DIR}/../modify_files.txt ${PYTORCH_PATH}/
     echo "copy common_files.txt for not master branch!"
