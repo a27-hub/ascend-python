@@ -164,146 +164,134 @@ stages:
   #             echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
-  stage_2:
-    name: stage_2
-    select: selected_by_default
-    jobs:
+  # stage_2:
+  #   name: stage_2
+  #   select: selected_by_default
+  #   jobs:
 
-      Build_master_x86:
-        name: Build_master_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: ${{ env.img_master_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_master_x86:
+  #       name: Build_master_x86
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: ${{ env.img_master_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
-      Build_v2_7_1_x86:
-        name: Build_v2_7_1_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.7.1"
-          CP_DOCKER_IMG: ${{ env.img_2_7_1_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_7_1_x86:
+  #       name: Build_v2_7_1_x86
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.7.1"
+  #         CP_DOCKER_IMG: ${{ env.img_2_7_1_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
 
-      Build_v2_9_0_x86:
-        name: Build_v2_9_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.9.0"
-          CP_DOCKER_IMG: ${{ env.img_2_9_0_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_9_0_x86:
+  #       name: Build_v2_9_0_x86
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.9.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_9_0_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
 
-      Build_v2_10_0_x86:
-        name: Build_v2_10_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.10.0"
-          CP_DOCKER_IMG: ${{ env.img_2_10_0_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_10_0_x86:
+  #       name: Build_v2_10_0_x86
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.10.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_10_0_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
 
-      Build_v2_11_0_x86:
-        name: Build_v2_11_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.11.0"
-          CP_DOCKER_IMG: ${{ env.img_2_11_0_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_11_0_x86:
+  #       name: Build_v2_11_0_x86
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.11.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_11_0_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
 
-      Build_v2_12_0_x86:
-        name: Build_v2_12_0_x86
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.12.0"
-          CP_DOCKER_IMG: ${{ env.img_2_12_0_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_12_0_x86:
+  #       name: Build_v2_12_0_x86
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.12.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_12_0_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
-      Build_master_ARM:
-        name: Build_master_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          runs_on_arch: "arm"
-          runs_on_spec: "cpu=32"
+  #     Build_master_ARM:
+  #       name: Build_master_ARM
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: ${{ env.img_master_arm }}
+  #         runs_on_arch: "arm"
+  #         runs_on_spec: "cpu=32"
 
-      Build_v2_7_1_ARM:
-        name: Build_v2_7_1_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.7.1"
-          CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
-          runs_on_arch: "arm"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_7_1_ARM:
+  #       name: Build_v2_7_1_ARM
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.7.1"
+  #         CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
+  #         runs_on_arch: "arm"
+  #         runs_on_spec: "cpu=32"
 
-      Build_v2_9_0_ARM:
-        name: Build_v2_9_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.9.0"
-          CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
-          runs_on_arch: "arm"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_9_0_ARM:
+  #       name: Build_v2_9_0_ARM
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.9.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_9_0_arm }}
+  #         runs_on_arch: "arm"
+  #         runs_on_spec: "cpu=32"
 
-      Build_v2_10_0_ARM:
-        name: Build_v2_10_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.10.0"
-          CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
-          runs_on_arch: "arm"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_10_0_ARM:
+  #       name: Build_v2_10_0_ARM
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.10.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_10_0_arm }}
+  #         runs_on_arch: "arm"
+  #         runs_on_spec: "cpu=32"
 
-      Build_v2_11_0_ARM:
-        name: Build_v2_11_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.11.0"
-          CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
-          runs_on_arch: "arm"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_11_0_ARM:
+  #       name: Build_v2_11_0_ARM
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.11.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_11_0_arm }}
+  #         runs_on_arch: "arm"
+  #         runs_on_spec: "cpu=32"
 
-      Build_v2_12_0_ARM:
-        name: Build_v2_12_0_ARM
-        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        continue-on-error: true
-        uses: .gitcode/workflows/build_job.yml
-        with:
-          pytorch_branch: "v2.12.0"
-          CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
-          runs_on_arch: "arm"
-          runs_on_spec: "cpu=32"
+  #     Build_v2_12_0_ARM:
+  #       name: Build_v2_12_0_ARM
+  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job.yml
+  #       with:
+  #         pytorch_branch: "v2.12.0"
+  #         CP_DOCKER_IMG: ${{ env.img_2_12_0_arm }}
+  #         runs_on_arch: "arm"
+  #         runs_on_spec: "cpu=32"
 
 
   stage_3:
@@ -311,7 +299,7 @@ stages:
     jobs:
       UT_master_ARM_01:
         name: UT_master_ARM_01
-        if : ${{ always() && jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "master"
@@ -323,7 +311,7 @@ stages:
 
       UT_master_ARM_02:
         name: UT_master_ARM_02
-        if : ${{ always() && jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "master"
@@ -335,7 +323,7 @@ stages:
 
       UT_v2_7_1_ARM:
         name: UT_v2_7_1_ARM
-        if : ${{ always() && jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.7.1"
@@ -345,7 +333,7 @@ stages:
 
       UT_v2_9_0_ARM:
         name: UT_v2_9_0_ARM
-        if : ${{ always() && jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.9.0"
@@ -355,7 +343,7 @@ stages:
 
       UT_v2_10_0_ARM:
         name: UT_v2_10_0_ARM
-        if : ${{ always() && jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.10.0"
@@ -365,7 +353,7 @@ stages:
 
       UT_v2_11_0_ARM:
         name: UT_v2_11_0_ARM
-        if : ${{ always() && jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.11.0"
@@ -375,7 +363,7 @@ stages:
 
       UT_v2_12_0_ARM:
         name: UT_v2_12_0_ARM
-        if : ${{ always() && jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
         uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: "v2.12.0"
