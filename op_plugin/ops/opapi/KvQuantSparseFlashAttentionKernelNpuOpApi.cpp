@@ -59,7 +59,7 @@ at::Tensor construct_quant_sparse_infer_output_tensor(
     return output;
 }
 
-at::Tensor npu_kv_quant_sparse_flash_attention(
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_kv_quant_sparse_flash_attention(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const at::Tensor &sparse_indices, double scale_value,
     int64_t key_quant_mode, int64_t value_quant_mode,
@@ -70,10 +70,13 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     const c10::optional<at::Tensor> &actual_seq_lengths_kv,
     int64_t sparse_block_size, c10::string_view layout_query, c10::string_view layout_kv,
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode,
-    int64_t tile_size, int64_t rope_head_dim,
+    int64_t tile_size, int64_t rope_head_dim, bool return_softmax_lse,
     c10::optional<int64_t> key_dtype, c10::optional<int64_t> value_dtype,
     const c10::optional<at::Tensor> &sinks)
 {
+    printf("[INFO] Enter npu_kv_quant_sparse_flash_attention opapi cpp entry\n");
+    printf("[INFO] return_softmax_lse = %d\n", (int)return_softmax_lse);
+    printf("[INFO] sinks.has_value = %d\n", (int)sinks.has_value());
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
     TORCH_CHECK(sparse_indices.numel() > 0, "Tensor sparse_indices is empty.")
@@ -89,14 +92,45 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     // construct the output tensor
     at::Tensor output = op_api::construct_quant_sparse_infer_output_tensor(
         query, layout_query_str, layout_kv_str, rope_head_dim);
+    at::Tensor softmax_max;
+    at::Tensor softmax_sum;
+    at::SmallVector<int64_t, SIZE> softmax_max_size;
+    at::SmallVector<int64_t, SIZE> softmax_sum_size;
+    if (return_softmax_lse) {
+         printf("[INFO] branch: need softmax‑lse buffer\n");
+        if (query.dim() == DIM_3) {
+            if (layout_kv_str  == "PA_BSND") {
+                softmax_max_size = {key.size(2), query.size(0), query.size(1) / key.size(2)};
+                softmax_sum_size = {key.size(2), query.size(0), query.size(1) / key.size(2)};
+            } else {
+                softmax_max_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
+                softmax_sum_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
+            }
+        } else {
+            softmax_max_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
+            softmax_sum_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
+        }
+    } else {
+        printf("[INFO] branch: disable softmax‑lse, alloc placeholder buffer\n");
+        softmax_max_size = {};
+        softmax_sum_size = {};
+    }
+    softmax_max = at::empty(softmax_max_size, query.options().dtype(at::kFloat));
+    softmax_sum = at::empty(softmax_sum_size, query.options().dtype(at::kFloat));
     // convert str
     char *layout_query_ptr = const_cast<char *>(layout_query_str.c_str());
     char *layout_kv_ptr = const_cast<char *>(layout_kv_str.c_str());
 
     bool is_hifloat8_kv = key_dtype.has_value() && c10_npu::GetAclDataType(key_dtype.value()) == aclDataType::ACL_HIFLOAT8;
     bool has_sinks = sinks.has_value() && sinks->defined();
-    if(!has_sinks) {
+    printf("[INFO] has_sinks=%d, is_hifloat8_kv=%d, return_softmax_lse=%d\n",
+        has_sinks,
+        is_hifloat8_kv,
+        return_softmax_lse);
+    if(!has_sinks && !return_softmax_lse) {
+        printf("[INFO] enter aclnnKvQuantSparseFlashAttention (no‑sink‑V2 branch)\n");
         if (is_hifloat8_kv) {
+            printf("[INFO] enter aclnnKvQuantSparseFlashAttention (no‑sink‑V2 branch 、 is_hifloat8_kv)\n");
             TensorWrapper key_wrapper = make_wrapper(key, key_dtype);
             TensorWrapper value_wrapper = make_wrapper(value, value_dtype);
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttention, query, key_wrapper,
@@ -105,6 +139,7 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
                 layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
                 rope_head_dim, output);
         } else {
+            printf("[INFO] enter aclnnKvQuantSparseFlashAttention (no‑sink‑V2 branch 、  no_is_hifloat8_kv)\n");
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttention, query,
                 key, value, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
                 actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
@@ -112,6 +147,7 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
                 rope_head_dim, output);
         }
     } else {
+        printf("[INFO] enter aclnnKvQuantSparseFlashAttentionV2 (sink‑token branch)\n");
         if (is_hifloat8_kv) {
             TensorWrapper key_wrapper = make_wrapper(key, key_dtype);
             TensorWrapper value_wrapper = make_wrapper(value, value_dtype);
@@ -119,17 +155,17 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
                 value_wrapper, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
                 actual_seq_lengths_kv, sinks, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
                 layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-                rope_head_dim, output);
+                rope_head_dim, return_softmax_lse, output, softmax_max, softmax_sum);
         } else {
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttentionV2, query,
                 key, value, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
                 actual_seq_lengths_kv, sinks, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
                 layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-                rope_head_dim, output);
+                rope_head_dim, return_softmax_lse, output, softmax_max, softmax_sum);
         }
     }
-
-    return output;
+    printf("[INFO] aclnn kernel execute finish, return tuple\n");
+    return std::tuple<at::Tensor, at::Tensor, at::Tensor>(output, softmax_max, softmax_sum);
 }
 
 } // namespace op_api
