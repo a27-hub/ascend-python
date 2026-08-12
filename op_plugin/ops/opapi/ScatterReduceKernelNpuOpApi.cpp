@@ -116,9 +116,7 @@ at::Tensor scatter_reduce(
 {
     if (include_self && (reduce == "sum" || reduce == "add") &&
         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
-        self.scalar_type() == at::kFloat
-        )
-    {
+        self.scalar_type() == at::kFloat){
         DO_COMPATIBILITY_COMMON(
             aclnnScatterReduce,
             scatter_reduce_cpu_fallback(self, dim, index, src, reduce, include_self)
@@ -160,9 +158,7 @@ at::Tensor& scatter_reduce_(
 {
     if (include_self && (reduce == "sum" || reduce == "add") &&
         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
-        self.scalar_type() == at::kFloat
-        )
-    {
+        self.scalar_type() == at::kFloat){
         DO_COMPATIBILITY_COMMON(
             aclnnInplaceScatterReduce,
             scatter_reduce_inplace_cpu_fallback(self, dim, index, src, reduce, include_self)
