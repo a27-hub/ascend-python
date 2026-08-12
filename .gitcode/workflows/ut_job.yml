@@ -70,7 +70,7 @@ jobs:
           bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
           pwd
           cd ./CODE
-          git diff-tree -r --name-only --no-commit-id origin/${TARGET_BRANCH} HEAD > ../modify_files.txt
+          git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
           cat ../modify_files.txt
           cd -
           # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
