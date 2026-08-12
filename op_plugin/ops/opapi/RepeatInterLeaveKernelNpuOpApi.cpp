@@ -215,5 +215,24 @@ at::Tensor repeat_interleave_symint(
     }
     return result;
 }
+
+
+at::Tensor repeat_interleave_symint(
+    const at::Tensor& repeats,
+    c10::optional<c10::SymInt> output_size) 
+{
+    at::Tensor cumsum = repeats.cumsum(0);
+    int64_t total = 0;
+    if (output_size.has_value()) {
+        total = output_size.value().expect_int();
+    } else {
+        total = cumsum[-1].item<int64_t>();
+        TORCH_CHECK((repeats >= 0).all().item<uint8_t>, "repeats can not be negative." + OPS_ERROR(ErrCode::PARAM));
+    }
+    at::Tensor result = at::empty({total}, repeats.options());
+    EXEC_NPU_CMD(aclnnRepeatInterleaveTensor, repeats, total, result);
+    return result;
+}
+
 #endif
 }
