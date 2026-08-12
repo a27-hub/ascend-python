@@ -62,6 +62,9 @@
   "op_api: torch_npu.npu_sparse_flash_attention_grad(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_sparse_flash_attention_grad_v2(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -507,6 +510,9 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_sparse_flash_attention_grad(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_sparse_flash_attention_grad_v2(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
