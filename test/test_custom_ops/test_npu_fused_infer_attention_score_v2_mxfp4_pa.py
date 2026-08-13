@@ -247,6 +247,32 @@ def _layout_predequant_kv(canonical_kv, layout):
     return physical.contiguous()
 
 
+def _packed_kv_with_storage_mode(packed, storage_mode, case_name, tensor_name):
+    packed_npu = torch.from_numpy(packed).npu()
+    if storage_mode == "direct":
+        return packed_npu
+
+    padded_shape = list(packed_npu.shape)
+    padded_shape[0] += 1
+    storage = torch.empty(padded_shape, dtype=packed_npu.dtype, device=packed_npu.device)
+    view = storage.narrow(0, 1, packed_npu.size(0))
+    view.copy_(packed_npu)
+    if storage_mode == "clone":
+        view = view.clone(memory_format=torch.contiguous_format)
+    elif storage_mode != "slice":
+        raise ValueError(f"unsupported packed KV storage mode: {storage_mode}")
+
+    print(f"[MXFP4_STORAGE_OFFSET_INPUT][{case_name}][{tensor_name}] mode={storage_mode} "
+          f"dtype={view.dtype} element_size={view.element_size()} shape={tuple(view.shape)} "
+          f"stride={view.stride()} storage_offset={view.storage_offset()} "
+          f"is_contiguous={str(view.is_contiguous()).lower()}")
+    if storage_mode == "slice":
+        assert view.is_contiguous() and view.storage_offset() > 0
+    else:
+        assert view.is_contiguous() and view.storage_offset() == 0
+    return view
+
+
 def _paged_to_contiguous_kv(case, canonical_kv):
     s2_max = max(case.kv_lens)
     contiguous = torch.zeros((case.b, case.kv_heads, s2_max, case.d), dtype=case.q_dtype)
@@ -349,12 +375,14 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
             self.fail("Ascend950 MXFP4 PA prerequisite missing dtype: float8_e8m0fnu/float8_e8m0")
         return torch_npu.float4_e2m1fn_x2, e8m0_dtype
 
-    def _run_case(self, case, override_key_scale=None):
+    def _run_case(self, case, override_key_scale=None, kv_storage_mode="direct"):
         fp4_dtype, e8m0_dtype = self._logical_dtypes()
         canonical = _canonical_inputs(case)
         query, key_codes, value_codes, key_scale, value_scale, key_offset, value_offset = canonical
-        key_bytes = torch.from_numpy(_pack_kv(key_codes, case.layout)).npu()
-        value_bytes = torch.from_numpy(_pack_kv(value_codes, case.layout)).npu()
+        key_bytes = _packed_kv_with_storage_mode(
+            _pack_kv(key_codes, case.layout), kv_storage_mode, case.name, "key")
+        value_bytes = _packed_kv_with_storage_mode(
+            _pack_kv(value_codes, case.layout), kv_storage_mode, case.name, "value")
         key_scale_physical = _layout_param(key_scale, case.layout) if override_key_scale is None else override_key_scale
         key_scale_npu = torch.from_numpy(key_scale_physical).npu()
         value_scale_npu = torch.from_numpy(_layout_param(value_scale, case.layout)).npu()
@@ -557,6 +585,21 @@ class TestFusedInferAttentionScoreV2Mxfp4Pa(TestCase):
             print(f"[MXFP4_PTA_EQUIV][{peer_group}] PASS layouts=nz,bnbd,bbh bitwise_exact=yes")
         if not tested_group:
             self.skipTest("layout equivalence needs a complete peer group; use MXFP4_PA_PTA_GROUP")
+
+    @SupportedDevices(["Ascend950", "Ascend950P"])
+    def test_mxfp4_mode6_page_attention_nonzero_storage_offset(self, device="npu"):
+        if os.getenv("MXFP4_PA_PTA_STORAGE_OFFSET") != "1":
+            self.skipTest("nonzero storage_offset regression requires MXFP4_PA_PTA_STORAGE_OFFSET=1")
+        for case in _selected_cases():
+            with self.subTest(case=case.name):
+                sliced, _ = self._run_case(case, kv_storage_mode="slice")
+                cloned, _ = self._run_case(case, kv_storage_mode="clone")
+                exact = torch.equal(sliced, cloned)
+                max_abs = float((sliced.to(torch.float32) - cloned.to(torch.float32)).abs().max().item())
+                print(f"[MXFP4_STORAGE_OFFSET_RESULT][{case.name}] "
+                      f"{'PASS' if exact else 'FAIL'} slice_vs_clone_bitwise_exact={str(exact).lower()} "
+                      f"max_abs_difference={max_abs:.7f}")
+                self.assertTrue(exact, f"{case.name}: nonzero storage_offset output differs from clone")
 
     @SupportedDevices(["Ascend950", "Ascend950P"])
     def test_mxfp4_mode6_page_attention_rejects_wrong_param_layout(self, device="npu"):

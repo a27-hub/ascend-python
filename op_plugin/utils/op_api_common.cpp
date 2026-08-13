@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <limits>
 #include <pwd.h>
 #include <sys/stat.h>
 #include "op_api_common_base.h"
@@ -853,6 +854,32 @@ inline bool Is4BitDtype(const aclDataType acl_data_type)
     return acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4;
 }
 
+inline int64_t Convert4BitStorageOffsetToAclUnits(
+    const aclDataType acl_data_type, const int64_t torch_storage_offset, const char *conversion_path)
+{
+    if (!Is4BitDtype(acl_data_type)) {
+        return torch_storage_offset;
+    }
+
+    TORCH_CHECK(torch_storage_offset >= 0,
+                "storage_offset must be non-negative for a 4-bit tensor, but got ", torch_storage_offset,
+                OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(torch_storage_offset <= std::numeric_limits<int64_t>::max() / FP4_IN_INT8,
+                "storage_offset is too large to convert from packed-byte units to 4-bit element units: ",
+                torch_storage_offset, OPS_ERROR(ErrCode::VALUE));
+
+    const int64_t acl_storage_offset = torch_storage_offset * FP4_IN_INT8;
+    const char *debug_offset = std::getenv("OP_PLUGIN_DEBUG_4BIT_STORAGE_OFFSET");
+    if (torch_storage_offset != 0 && debug_offset != nullptr && std::string(debug_offset) == "1") {
+        TORCH_WARN("[OP_PLUGIN_4BIT_OFFSET] path=", conversion_path,
+                   " acl_dtype=", static_cast<int64_t>(acl_data_type),
+                   " torch_storage_offset=", torch_storage_offset,
+                   " acl_storage_offset=", acl_storage_offset,
+                   " multiplier=", FP4_IN_INT8);
+    }
+    return acl_storage_offset;
+}
+
 void *GetOpApiFuncAddr(const char *apiName)
 {
     if (!g_custom_lib_path.empty()) {
@@ -993,9 +1020,11 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
                                storageDims.size(), const_cast<void *>(aclInput.storage().data()));
     }
 
+    const int64_t acl_storage_offset =
+        Convert4BitStorageOffsetToAclUnits(acl_data_type, at_tensor.storage_offset(), "ConvertType(at::Tensor)");
     auto acl_tensor =
         aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
-                        at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+                        acl_storage_offset, format, storageDims.data(), storageDims.size(),
                         const_cast<void *>(at_tensor.storage().data()));
     return acl_tensor;
 }
@@ -1222,9 +1251,11 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
         }
     }
 
+    const int64_t acl_storage_offset = Convert4BitStorageOffsetToAclUnits(
+        acl_data_type, at_tensor.storage_offset(), "ConvertType(TensorWrapper)");
     auto acl_tensor =
         aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
-                        at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+                        acl_storage_offset, format, storageDims.data(), storageDims.size(),
                         const_cast<void *>(at_tensor.storage().data()));
     return acl_tensor;
 }
@@ -1329,9 +1360,11 @@ aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
         }
     }
 
+    const int64_t acl_storage_offset = Convert4BitStorageOffsetToAclUnits(
+        acl_data_type, (*at_tensor).storage_offset, "ConvertTypeV2(TensorStruct)");
     auto acl_tensor = aclCreateTensor(
         wrapperShape.data(), (*at_tensor).sizes.size(), acl_data_type, wrapperStride.data(),
-        (*at_tensor).storage_offset, format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
+        acl_storage_offset, format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
     return acl_tensor;
 }
 
