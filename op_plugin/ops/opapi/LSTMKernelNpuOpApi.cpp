@@ -251,21 +251,18 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     double dropout,
     bool train,
     bool bidirectional) {
-  auto batch_sizes_npu = batch_sizes;
-  if (batch_sizes_npu.device() != data.device()) {
-    batch_sizes_npu = batch_sizes_npu.to(data.device());
-  }
-
   // If bf16 or mixed dtype, fallback to acl_op
   if (ShouldFallbackToAclOp(data, hx, params)) {
-    return reshape_packed_lstm_output(
-        acl_op::lstm(data, batch_sizes_npu, hx, params, has_biases, num_layers, dropout, train, bidirectional));
+    return acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional);
   }
 
   DO_COMPATIBILITY(
       aclnnLSTM,
-      reshape_packed_lstm_output(
-          acl_op::lstm(data, batch_sizes_npu, hx, params, has_biases, num_layers, dropout, train, bidirectional)));
+      acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional));
+  auto batch_sizes_npu = batch_sizes;
+  if (batch_sizes_npu.device() != data.device()) {
+    batch_sizes_npu = batch_sizes_npu.to(data.device());
+  }
   auto output = at_npu::native::custom_ops::_lstm_npu(
       data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes_npu);
   return reshape_packed_lstm_output(std::make_tuple(
