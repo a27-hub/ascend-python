@@ -813,6 +813,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
           data, batch_sizes_cpu, hx, params, has_biases, num_layers, dropout, train, bidirectional);
     }
   }
+  y = y.reshape({-1, y.size(-1)});
   return std::tie(y, h, c);
 }
 
