@@ -31,6 +31,7 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
     const at::Tensor& x2,
     const at::Tensor& gamma,
     const c10::optional<at::Tensor>& beta,
+    const c10::optional<at::Tensor>& x0,
     double epsilon,
     int64_t scale_alg,
     c10::string_view round_mode,
@@ -40,6 +41,12 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
   at::Tensor x_out;
   at::Tensor mxscale;
   at::Tensor rstd;
+
+  // 芯片型号校验：该算子仅支持 Ascend 950PR/Ascend 950DT（A5）及后续芯片
+  TORCH_CHECK(
+      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
+      "npu_add_rms_norm_dynamic_mx_quant is only supported on Ascend 950PR/Ascend 950DT (A5) and later chips"
+          + OPS_ERROR(ErrCode::NOT_SUPPORT));
 
   // 参数检查
   TORCH_CHECK(
@@ -55,6 +62,22 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
       x1.requires_grad() == x2.requires_grad(),
       "The requires_grad of x1 and x2 must be consistent" +
           OPS_ERROR(ErrCode::PARAM));
+
+  // x0 可选输入参数检查
+  bool has_x0 = x0.has_value() && x0->defined();
+  if (has_x0) {
+    TORCH_CHECK(
+        x0->sizes() == x1.sizes(),
+        "The shape of x0 and x1 must be the same" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        x0->scalar_type() == x1.scalar_type(),
+        "The dtype of x0 and x1 must be the same" + OPS_ERROR(ErrCode::PARAM));
+    // x0 仅在 CANN >= 9.2.0 时支持，老版本 CANN 无含 x0 的 aclnn 接口
+    TORCH_CHECK(
+        op_plugin::utils::is_gte_cann_version_920(),
+        "x0 is only supported on CANN >= 9.2.0, please update CANN or do not pass x0" +
+            OPS_ERROR(ErrCode::NOT_SUPPORT));
+  }
 
   static const bool is_available =
       check_aclnn_kernel_available("aclnnAddRmsNormDynamicMxQuant");
@@ -113,6 +136,9 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
 
   // rstd shape 推导
   bool output_rstd = x1.requires_grad() && x2.requires_grad();
+  if (has_x0) {
+    output_rstd = output_rstd || x0->requires_grad();
+  }
   if (output_rstd) {
     auto output_size = rms_norm_npu_output_size(x1, gamma);
     rstd = npu_preparation::apply_tensor_without_format(
@@ -126,21 +152,40 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
   TensorWrapper y_wrapper = {y, y_acltype};
   TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
 
-  EXEC_NPU_CMD(
-      aclnnAddRmsNormDynamicMxQuant,
-      x1,
-      x2,
-      gamma,
-      beta,
-      epsilon,
-      scale_alg,
-      round_mode_ptr,
-      y_acltype,
-      output_rstd,
-      y_wrapper,
-      x_out,
-      mxscale_wrapper,
-      rstd);
+  if (has_x0) {
+    EXEC_NPU_CMD(
+        aclnnAddRmsNormDynamicMxQuantV2,
+        x1,
+        x2,
+        gamma,
+        beta,
+        x0,
+        epsilon,
+        scale_alg,
+        round_mode_ptr,
+        y_acltype,
+        output_rstd,
+        y_wrapper,
+        x_out,
+        mxscale_wrapper,
+        rstd);
+  } else {
+    EXEC_NPU_CMD(
+        aclnnAddRmsNormDynamicMxQuant,
+        x1,
+        x2,
+        gamma,
+        beta,
+        epsilon,
+        scale_alg,
+        round_mode_ptr,
+        y_acltype,
+        output_rstd,
+        y_wrapper,
+        x_out,
+        mxscale_wrapper,
+        rstd);
+  }
 
   return std::make_tuple(y, x_out, mxscale, rstd);
 }
