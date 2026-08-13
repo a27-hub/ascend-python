@@ -62,7 +62,7 @@ jobs:
         with:
           name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
           path: ../output/${{ inputs.pr_id }}
-      - name: UT
+      - name: "UT (debug: setup only, skip full tests)"
         run: |
           rm -rf *
           # .ci/ 仅存在于默认分支，需先拉取
@@ -75,10 +75,101 @@ jobs:
           cd -
           # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
           cp -rf ../output/${{ inputs.pr_id }}/* ./
-          bash cie/.ci/UT/op-plugin_ut_general.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          # 临时调试：跳过完整 UT，只安装 torch/torch_npu 供 Debug 步骤使用
+          source /usr/local/Ascend/cann/set_env.sh
+          source /usr/local/Ascend/nnal/atb/set_env.sh
+          PIP=$(command -v pip3.10 || echo /opt/_internal/cpython-3.10.20/bin/pip3.10)
+          TARBALL=$(ls torch_npu_*.tar.gz 2>/dev/null | head -1)
+          if [ -n "$TARBALL" ]; then
+            tar -zxvf "$TARBALL"
+            TORCH_VER=$(ls torch_npu-*.whl 2>/dev/null | head -1 | sed -E 's/torch_npu-([0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+)-.*/\1/')
+            echo "TORCH_VER=$TORCH_VER"
+            "$PIP" install -U "torch==$TORCH_VER"
+            "$PIP" install -U ./torch_npu-*.whl --force-reinstall --no-deps
+          else
+            echo "WARNING: torch_npu tarball not found, debug env may be incomplete"
+          fi
           echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
           echo "py_version: 3.10"
           echo "pr_id: ${{ env.pr_id }}"
           echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
+      - name: Debug set_device concurrency
+        run: |
+          set +e
+          source /usr/local/Ascend/cann/set_env.sh >/dev/null 2>&1 || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh >/dev/null 2>&1 || true
+          PYTHON=$(command -v python3.10 || echo /opt/_internal/cpython-3.10.20/bin/python3.10)
+          echo "===== env info ====="
+          nproc
+          lscpu 2>/dev/null | grep -E 'Model name|CPU\(s\)|Thread|Core' || true
+          npu-smi info 2>/dev/null | head -40 || true
+          cat /usr/local/Ascend/cann-9.1.0/version.cfg 2>/dev/null || true
+          env | grep -E 'ASCEND|LD_PRELOAD|NPU|OMP' || true
+          echo "===== experiment 0: original helper stderr ====="
+          if [ -f CODE/pytorch_ut/test/npu/_fault_mode_cases/error_set_device.py ]; then
+            "$PYTHON" CODE/pytorch_ut/test/npu/_fault_mode_cases/error_set_device.py >/tmp/helper_stdout.log 2>/tmp/helper_stderr.log
+            echo "helper exit=$?"
+            echo "helper stderr size=$(wc -c < /tmp/helper_stderr.log)"
+            echo "_npu_setDevice count=$(grep -c '_npu_setDevice' /tmp/helper_stderr.log)"
+            echo "Traceback count=$(grep -c 'Traceback' /tmp/helper_stderr.log)"
+            head -30 /tmp/helper_stderr.log
+          else
+            echo "helper not found"
+          fi
+          echo "===== experiment 1: 100 processes failure count ====="
+          "$PYTHON" - <<'PYEOF'
+          import multiprocessing
+          import subprocess
+          import sys
 
+          CHILD = r'''
+          import sys
+          try:
+              import torch_npu
+              torch_npu.npu.set_device(0)
+              print("OK", flush=True)
+          except Exception as e:
+              print("FAIL", repr(e), flush=True)
+              sys.exit(1)
+          '''
 
+          def run_one(i):
+              p = subprocess.run([sys.executable, "-c", CHILD],
+                                 capture_output=True, text=True, timeout=180)
+              tail = (p.stdout.strip().splitlines() or [""])[-1]
+              return i, p.returncode, tail, p.stderr[-300:]
+
+          if __name__ == "__main__":
+              multiprocessing.set_start_method("spawn", force=True)
+              with multiprocessing.Pool(100) as pool:
+                  results = pool.map(run_one, range(100))
+              failed = [r for r in results if r[1] != 0 or "FAIL" in r[2]]
+              print("TOTAL=100 FAILED=", len(failed))
+              for r in failed[:10]:
+                  print(r)
+          PYEOF
+          echo "===== experiment 2: barrier synchronized ====="
+          "$PYTHON" - <<'PYEOF'
+          import multiprocessing
+          import sys
+
+          def worker(i, barrier):
+              try:
+                  import torch_npu
+                  barrier.wait()
+                  torch_npu.npu.set_device(0)
+                  return i, "OK"
+              except Exception as e:
+                  return i, "FAIL: %r" % (e,)
+
+          if __name__ == "__main__":
+              multiprocessing.set_start_method("spawn", force=True)
+              ctx = multiprocessing.get_context("spawn")
+              barrier = ctx.Barrier(100)
+              with ctx.Pool(100) as pool:
+                  results = pool.starmap(worker, [(i, barrier) for i in range(100)])
+              failed = [r for r in results if r[1] != "OK"]
+              print("TOTAL=100 FAILED=", len(failed))
+              for r in failed[:10]:
+                  print(r)
+          PYEOF
