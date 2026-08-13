@@ -211,13 +211,6 @@ inline bool ShouldFallbackToAclOp(const at::Tensor& input, const at::TensorList 
   return HasBf16Tensor(input, hx, params) || HasMixedFloatDtype(input, hx, params);
 }
 
-inline std::tuple<at::Tensor, at::Tensor, at::Tensor> reshape_packed_lstm_output(
-    std::tuple<at::Tensor, at::Tensor, at::Tensor> output) {
-  const auto& output_y = std::get<0>(output);
-  std::get<0>(output) = output_y.reshape({-1, output_y.size(-1)});
-  return output;
-}
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     const at::Tensor& input,
     const at::TensorList hx,
@@ -265,7 +258,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
   }
   auto output = at_npu::native::custom_ops::_lstm_npu(
       data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes_npu);
-  return reshape_packed_lstm_output(std::make_tuple(
-      std::get<0>(output), std::get<1>(output), std::get<2>(output))); // 0 for output_y, 1 for output_h, 2 for output_c
+  const auto& output_y = std::get<0>(output);
+  return std::make_tuple(
+      output_y.reshape({-1, output_y.size(-1)}),
+      std::get<1>(output),
+      std::get<2>(output)); // 0 for output_y, 1 for output_h, 2 for output_c
 }
 } // namespace op_api
