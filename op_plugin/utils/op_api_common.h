@@ -869,4 +869,13 @@ inline bool is_ascend950_path()
            op_plugin::utils::is_gte_cann_version_910();
 }
 
+// Check if npu_sparse_flash_attention supports value=None: CANN >= 9.2.0.
+inline bool IsSupportSparseFlashAttentionNoneValue()
+{
+    static const bool is_support = []() -> bool {
+        return op_plugin::utils::is_gte_cann_version_920();
+    }();
+    return is_support;
+}
+
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
