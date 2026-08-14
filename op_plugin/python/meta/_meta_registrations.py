@@ -4088,6 +4088,17 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
     dim_m = x.size(0)
     if (weight.dtype == torch.int32 or weight.dtype == torch.float32) and weight.is_contiguous():
         dim_n = weight.size(1) * 8
+    elif weight.dtype == torch.uint8 and weight_dtype == torch_npu.int4:
+        # 4-bit 紧凑 uint8 载体：转置视图末维已是逻辑 N；
+        # 非转置时 NZ 逻辑视图 [K,N] 与 ND 打包 [K,N/2] 统一以 scale 末维为逻辑 N，
+        # scale 为标量（per-tensor）时仅 ND 打包场景存在，逻辑 N 为末维 x2
+        if weight.is_contiguous():
+            if antiquant_scale is not None and antiquant_scale.size(-1) > 1:
+                dim_n = antiquant_scale.size(-1)
+            else:
+                dim_n = weight.size(1) * 2
+        else:
+            dim_n = weight.size(1)
     else:
         dim_n = weight.size(1)
     if quant_scale is not None:
