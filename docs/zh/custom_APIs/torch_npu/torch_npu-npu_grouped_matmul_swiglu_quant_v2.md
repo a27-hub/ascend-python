@@ -92,7 +92,11 @@
         $$
 
         $$
-        S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+        S_{i}=Swish(C_{i,act})\odot gate_{i}
+        $$
+
+        $$
+        Swish(x)=\frac{x}{1+e^{-x}}
         $$
 
       4. 量化输出结果：
