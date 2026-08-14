@@ -31,6 +31,7 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
     const at::Tensor& x2,
     const at::Tensor& gamma,
     const c10::optional<at::Tensor>& beta,
+    const c10::optional<at::Tensor>& x0,
     double epsilon,
     int64_t scale_alg,
     c10::string_view round_mode,
@@ -41,27 +42,49 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
   at::Tensor mxscale;
   at::Tensor rstd;
 
+  // 芯片型号校验：该算子仅支持 Ascend 950PR/Ascend 950DT（A5）及后续芯片
+  TORCH_CHECK(
+      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
+      "npu_add_rms_norm_dynamic_mx_quant is only supported on Ascend 950PR/Ascend 950DT (A5) and later chips" +
+          OPS_ERROR(ErrCode::NOT_SUPPORT));
+
   // 参数检查
   TORCH_CHECK(
-      x1.dim() >= MIN_INPUT_DIM && x1.dim() <= MAX_INPUT_DIM,
-      "The x1 should be in 1~7D" + OPS_ERROR(ErrCode::PARAM));
+      x1.dim() >= MIN_INPUT_DIM && x1.dim() <= MAX_INPUT_DIM, "The x1 should be in 1~7D" + OPS_ERROR(ErrCode::PARAM));
   TORCH_CHECK(
-      x2.dim() >= MIN_INPUT_DIM && x2.dim() <= MAX_INPUT_DIM,
-      "The x2 should be in 1~7D" + OPS_ERROR(ErrCode::PARAM));
-  TORCH_CHECK(
-      x1.sizes() == x2.sizes(),
-      "The shape of x1 and x2 must be the same" + OPS_ERROR(ErrCode::PARAM));
+      x2.dim() >= MIN_INPUT_DIM && x2.dim() <= MAX_INPUT_DIM, "The x2 should be in 1~7D" + OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(x1.sizes() == x2.sizes(), "The shape of x1 and x2 must be the same" + OPS_ERROR(ErrCode::PARAM));
   TORCH_CHECK(
       x1.requires_grad() == x2.requires_grad(),
-      "The requires_grad of x1 and x2 must be consistent" +
-          OPS_ERROR(ErrCode::PARAM));
+      "The requires_grad of x1 and x2 must be consistent" + OPS_ERROR(ErrCode::PARAM));
 
-  static const bool is_available =
-      check_aclnn_kernel_available("aclnnAddRmsNormDynamicMxQuant");
+  // x0 可选输入参数检查
+  bool has_x0 = x0.has_value() && x0->defined();
+  if (has_x0) {
+    TORCH_CHECK(x0->sizes() == x1.sizes(), "The shape of x0 and x1 must be the same" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        x0->scalar_type() == x1.scalar_type(), "The dtype of x0 and x1 must be the same" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        x0->requires_grad() == x1.requires_grad(),
+        "The requires_grad of x0 and x1 must be consistent" + OPS_ERROR(ErrCode::PARAM));
+  }
+
+  static const bool is_available = check_aclnn_kernel_available("aclnnAddRmsNormDynamicMxQuant");
   TORCH_CHECK(
       is_available,
       "Current CANN version do not support this api. Please try to update the version of CANN." +
           OPS_ERROR(ErrCode::PARAM));
+
+  // x0 requires V2 aclnn symbol; dlsym check is more authoritative than version string
+  if (has_x0) {
+    static const bool is_v2_available = check_aclnn_kernel_available("aclnnAddRmsNormDynamicMxQuantV2");
+    TORCH_CHECK(
+        is_v2_available,
+        "aclnnAddRmsNormDynamicMxQuantV2 is not available in current CANN version. "
+        "x0 input requires CANN >= 9.2.0 with V2 kernel registered, please update "
+        "CANN or do not pass x0." +
+            OPS_ERROR(ErrCode::NOT_SUPPORT));
+  }
 
   // 类型推断
   auto y_shape = array_to_small_vector(x1.sizes());
@@ -73,9 +96,7 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
   bool special_output_type =
       (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
        dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
-  ASCEND_LOGI(
-      "[npu_add_rms_norm_dynamic_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld",
-      dst_type);
+  ASCEND_LOGI("[npu_add_rms_norm_dynamic_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
   if (special_output_type) {
     int64_t y_last_dim_val = y_shape[x1.dim() - 1];
     TORCH_CHECK(
@@ -85,38 +106,32 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
             OPS_ERROR(ErrCode::PARAM));
     // Pytorch2.8之前最小单位是8位，不支持FP4类型，就将两个FP4合成一个FP8
     y_shape[x1.dim() - 1] = y_last_dim_val / FP4_IN_UINT8_NUM;
-    y = npu_preparation::apply_tensor_without_format(
-        y_shape, c10::ScalarType::Byte);
+    y = npu_preparation::apply_tensor_without_format(y_shape, c10::ScalarType::Byte);
     y_acltype = c10_npu::GetAclDataType(dst_type);
   } else {
     y_acltype = c10_npu::GetAclDataType(dst_type);
-    at::ScalarType scalar_dtype =
-        npu_preparation::convert_to_scalar_type(y_acltype);
-    y = npu_preparation::apply_tensor_without_format(
-        y_shape, c10::dtype(scalar_dtype));
+    at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
+    y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(scalar_dtype));
   }
 
   // x_out shape 推导
   auto x_out_shape = x1.sizes();
   auto x_out_dtype = x1.scalar_type();
-  x_out = npu_preparation::apply_tensor_without_format(
-      x_out_shape, x1.options().dtype(x_out_dtype));
+  x_out = npu_preparation::apply_tensor_without_format(x_out_shape, x1.options().dtype(x_out_dtype));
 
   // mxscale shape 推导
   int64_t last_axis_change = x1.dim() - 1;
-  int64_t last_dim_size =
-      CeilDiv(mxscale_shape[last_axis_change], BLOCK_SIZE_BASE_NUM);
+  int64_t last_dim_size = CeilDiv(mxscale_shape[last_axis_change], BLOCK_SIZE_BASE_NUM);
   last_dim_size = (last_dim_size + ALIGN_NUM - 1) / ALIGN_NUM;
   mxscale_shape[last_axis_change] = last_dim_size;
-  mxscale = npu_preparation::apply_tensor_without_format(
-      mxscale_shape, c10::dtype(at::ScalarType::Byte));
+  mxscale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(at::ScalarType::Byte));
 
   // rstd shape 推导
+  // x0.requires_grad 已校验与 x1.requires_grad 一致，无需额外判断
   bool output_rstd = x1.requires_grad() && x2.requires_grad();
   if (output_rstd) {
     auto output_size = rms_norm_npu_output_size(x1, gamma);
-    rstd = npu_preparation::apply_tensor_without_format(
-        output_size[1], x1.options().dtype(at::kFloat));
+    rstd = npu_preparation::apply_tensor_without_format(output_size[1], x1.options().dtype(at::kFloat));
   } else {
     rstd = at::empty({0}, x1.options().dtype(at::kFloat));
   }
@@ -126,21 +141,40 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
   TensorWrapper y_wrapper = {y, y_acltype};
   TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
 
-  EXEC_NPU_CMD(
-      aclnnAddRmsNormDynamicMxQuant,
-      x1,
-      x2,
-      gamma,
-      beta,
-      epsilon,
-      scale_alg,
-      round_mode_ptr,
-      y_acltype,
-      output_rstd,
-      y_wrapper,
-      x_out,
-      mxscale_wrapper,
-      rstd);
+  if (has_x0) {
+    EXEC_NPU_CMD(
+        aclnnAddRmsNormDynamicMxQuantV2,
+        x1,
+        x2,
+        gamma,
+        beta,
+        x0,
+        epsilon,
+        scale_alg,
+        round_mode_ptr,
+        y_acltype,
+        output_rstd,
+        y_wrapper,
+        x_out,
+        mxscale_wrapper,
+        rstd);
+  } else {
+    EXEC_NPU_CMD(
+        aclnnAddRmsNormDynamicMxQuant,
+        x1,
+        x2,
+        gamma,
+        beta,
+        epsilon,
+        scale_alg,
+        round_mode_ptr,
+        y_acltype,
+        output_rstd,
+        y_wrapper,
+        x_out,
+        mxscale_wrapper,
+        rstd);
+  }
 
   return std::make_tuple(y, x_out, mxscale, rstd);
 }
