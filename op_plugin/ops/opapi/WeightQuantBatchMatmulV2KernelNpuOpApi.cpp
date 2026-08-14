@@ -39,16 +39,30 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     TORCH_CHECK(!(std::min(x_dim_num, weight_dim_num) > MINIMUM_SHAPE_SIZE && x_dim_num != weight_dim_num),
                 "x dim is not the same as weight dim", OPS_ERROR(ErrCode::PARAM));
     auto x_k_dim = x.size(x_dim_num - 1);
-    
+
     // 计算 weight 的 K 维度
     // 对于 INT32/FLOAT 类型的 4-bit 打包（INT4_NUMS_IN_INT32 = 8）
-    // 注：uint8 4-bit 紧凑排布的 weight view shape 即逻辑 [K, N]
-    // （A16S4 链路约定，与 aclnnWeightQuantBatchMatmulV2 的 tensor 视图一致），无需再缩放
+    // uint8 载体 4-bit 紧凑排布（A16S4 链路）：NZ_C0_8/NZ_C0_16 的 view 已是逻辑 [K, N]，无需缩放；
+    // ND 的 view 是物理打包形状——非转置 [K, N/2]（沿 N 打包，stride(-1)==1）、
+    // 转置 [K/2, N]（沿 K 打包，stride(-2)==1），K/N 需按打包方向还原
     bool is_int32_float_packed = (weight.dtype() == at::kInt || weight.dtype() == at::kFloat);
+
+    int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
+    aclDataType weight_acl_dtype =
+        weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value()) : ACL_DT_UNDEFINED;
+    bool is_4bit_acl_dtype = (weight_acl_dtype == ACL_INT4 || weight_acl_dtype == ACL_FLOAT4_E2M1 ||
+                              weight_acl_dtype == ACL_FLOAT4_E1M2);
+    bool is_uint8_4bit_nd =
+        (weight.dtype() == at::kByte) && is_4bit_acl_dtype && (weight_format == ACL_FORMAT_ND);
+    bool uint8_pack_along_n = is_uint8_4bit_nd && weight.stride(weight_dim_num - 1) == 1;
+    bool uint8_pack_along_k =
+        is_uint8_4bit_nd && !uint8_pack_along_n && weight.stride(weight_dim_num - MINIMUM_SHAPE_SIZE) == 1;
 
     int64_t weight_k_dim = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE);
     if (is_int32_float_packed && trans_weight) {
         weight_k_dim *= INT4_NUMS_IN_INT32;  // 8
+    } else if (uint8_pack_along_k) {
+        weight_k_dim *= FP4_IN_INT8;  // 沿 K 打包，K 按每字节 2 个 4-bit 还原
     }
 
     TORCH_CHECK(x_k_dim == weight_k_dim, "The k of x and weight should be equal. but x_k_dim is ", x_k_dim,
@@ -57,10 +71,13 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     auto output_size = op_infer::array_to_small_vector(x.sizes());
     output_size[out_dim_num - MINIMUM_SHAPE_SIZE] = x.size(x_dim_num - MINIMUM_SHAPE_SIZE);
     auto weight_size_base = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE + 1);
-    output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] =
-        ((weight.dtype() == at::kInt || weight.dtype() == at::kFloat) && !trans_weight)
-            ? weight_size_base * INT4_NUMS_IN_INT32
-            : weight_size_base;
+    if (is_int32_float_packed && !trans_weight) {
+        output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * INT4_NUMS_IN_INT32;
+    } else if (uint8_pack_along_n) {
+        output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * FP4_IN_INT8;
+    } else {
+        output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base;
+    }
     if (x_dim_num == weight_dim_num) {
         for (auto i = 0; i < out_dim_num - MINIMUM_SHAPE_SIZE; i++) {
             TORCH_CHECK(x.size(i) == weight.size(i), "batch of x is diff from batch of weight",
@@ -94,7 +111,6 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
         quant_scale.has_value() ? x.options().dtype(at::kChar) : x.options().dtype(x.scalar_type());
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
-    int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
     const bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) ||
                               (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_2);
     const bool is_weight_nz_4bit_compact = (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8) ||

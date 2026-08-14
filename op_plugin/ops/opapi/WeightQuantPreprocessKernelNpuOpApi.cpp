@@ -142,9 +142,8 @@ bool judge_mm_a16s4_nd_pertensor(QuantContext &ctx) {
                               (scale_dim == DIMS_2 && ctx.weight_scale.size(0) == 1);
         if (is_per_channel && ctx.out_weight_format.has_value() &&
             ctx.out_weight_format.value() == ACL_FORMAT_ND) {
-            TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
-                "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-            ctx.is_weight_trans = true;
+            // A16S4 ND pertensor 路径转置/非转置均支持（ND 直拷为物理透传，与转置状态无关）
+            ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
             return true;
         }
     }
@@ -195,9 +194,29 @@ bool judge_mm_a16s4_pergroup(QuantContext &ctx) {
     if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 &&
         x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 &&
         ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1) {
-        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight, 0),
-            "Input weight tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        ctx.is_weight_trans = true;
+        // A16S4 per-group NZ 路径仅支持非转置 weight（registry 侧 CheckWeightNotTrans 校验）
+        ctx.is_weight_trans = false;
+        return true;
+    }
+    return false;
+}
+
+bool judge_mm_a16s4_nd_pergroup(QuantContext &ctx) {
+    aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+    aclDataType x_scale_acl_dtype =
+        ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
+
+    bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
+    bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
+
+    // A16S4 ND per-group：INT4 + per-group scale [G, N]（G > 1）+ ND out_weight，转置/非转置均支持
+    if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 &&
+        x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 &&
+        ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1 &&
+        ctx.out_weight_format.has_value() && ctx.out_weight_format.value() == ACL_FORMAT_ND) {
+        ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
         return true;
     }
     return false;
@@ -252,11 +271,17 @@ bool judge_mm_mx_a16w4(QuantContext &ctx) {
 template <bool IsGmm> static void prepare_out_weight_scale_per_channel(QuantContext &ctx) {
     auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
     ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
+    // 保持与输入 scale 相同的 strides（ND per-group 转置场景需配转置 scale），连续输入时为空操作
+    ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape,
+        op_infer::array_to_small_vector(ctx.weight_scale.strides()));
 }
 
 static void prepare_out_weight_nd(QuantContext &ctx) {
     auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
     ctx.out_weight = npu_preparation::apply_tensor_without_format(weight_view_shape, ctx.weight.options());
+    // ND 直拷是物理透传，out_weight 必须与 weight 保持相同的 sizes/strides（转置场景尤为关键）
+    ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape,
+        op_infer::array_to_small_vector(ctx.weight.strides()));
 }
 
 template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepare_out_weight_nz(QuantContext &ctx) {
@@ -405,8 +430,11 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
             {judge_mm_a16w4_int4,
                 {prepare_out_weight_nz_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
+            {judge_mm_a16s4_nd_pergroup,
+                {prepare_out_weight_nd,
+                    prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16s4_pergroup,
-                {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_8>,
+                {prepare_out_weight_nz_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16w4_fp4,
                 {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_8>,
