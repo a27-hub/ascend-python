@@ -3,7 +3,6 @@ import torch
 import numpy as np
 import torch_npu
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
-from torch_npu.testing.common_utils import SupportedDevices
 from torch_npu.testing.testcase import TestCase, run_tests
 
 
@@ -86,7 +85,6 @@ class TestLstm(TestCase):
     def test_lstm_packed_mixed_dtype_fallback(self):
         self._assert_packed_fallback(torch.float32, torch.float16)
 
-    @SupportedDevices(['Ascend910B'])
     def test_lstm_packed_bf16_fallback(self):
         self._assert_packed_fallback(torch.bfloat16, torch.bfloat16)
 
