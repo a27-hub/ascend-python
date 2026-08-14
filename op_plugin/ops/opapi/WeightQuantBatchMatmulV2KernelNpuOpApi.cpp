@@ -42,19 +42,15 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     
     // 计算 weight 的 K 维度
     // 对于 INT32/FLOAT 类型的 4-bit 打包（INT4_NUMS_IN_INT32 = 8）
-    // 对于 uint8 类型的 4-bit 紧凑排布（每字节 2 个 4-bit 值，需要除以 2）
+    // 注：uint8 4-bit 紧凑排布的 weight view shape 即逻辑 [K, N]
+    // （A16S4 链路约定，与 aclnnWeightQuantBatchMatmulV2 的 tensor 视图一致），无需再缩放
     bool is_int32_float_packed = (weight.dtype() == at::kInt || weight.dtype() == at::kFloat);
-    bool is_uint8_4bit_compact = (weight.dtype() == at::kByte);
-    
+
     int64_t weight_k_dim = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE);
     if (is_int32_float_packed && trans_weight) {
         weight_k_dim *= INT4_NUMS_IN_INT32;  // 8
-    } else if (is_uint8_4bit_compact) {
-        // 对于 4-bit 紧凑排布，weight 的 shape 已经被乘以 2 了
-        // 所以需要除以 2 来得到实际的 K 维度
-        weight_k_dim /= 2;
     }
-    
+
     TORCH_CHECK(x_k_dim == weight_k_dim, "The k of x and weight should be equal. but x_k_dim is ", x_k_dim,
                 ", weight_k_dim is ", weight_k_dim, OPS_ERROR(ErrCode::PARAM));
     auto out_dim_num = std::max(x_dim_num, weight_dim_num);

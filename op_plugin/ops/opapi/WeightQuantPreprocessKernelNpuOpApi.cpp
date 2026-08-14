@@ -321,6 +321,32 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
         ctx.out_weight.strides(), static_cast<aclFormat>(OutWeightFormat));
 }
 
+// A16S4 INT4 NZ（非转置）专用 prepare：torch 侧 uint8 [K, N/2] 非转置输入
+// （CollectB4ShapeInfo 将其转为 ACL INT4 [K, N]，打包方向沿 N，低 nibble 为偶数 n）
+// out_weight: ACL view [K, N]、storage [N/16, K/16, 16, 16]（INT4 逻辑元素）、格式 NZ_C0_8（经
+// FORMAT_FAKE_TO_REAL 映射为 NZ_C0_16），与 ops-math weight_quant_preprocess 的校验完全一致。
+static void prepare_out_weight_nz_a16s4(QuantContext &ctx) {
+    auto weight_sizes = ctx.weight.sizes();
+    int64_t weight_dim = ctx.weight.dim();
+    int64_t k = weight_sizes[weight_dim - IDX_2];
+    int64_t n_logical = weight_sizes[weight_dim - IDX_1] * 2; // uint8 每字节 2 个 INT4
+
+    c10::SmallVector<int64_t, DIMS_MAX> storage_shape = {ceil_div(n_logical, NZ_16), ceil_div(k, NZ_16), NZ_16, NZ_16};
+
+    int64_t storage_size = 1;
+    for (auto dim : storage_shape) {
+        storage_size *= dim;
+    }
+
+    ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
+
+    c10::SmallVector<int64_t, DIMS_MAX> out_view_shape = {k, n_logical};
+    ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(out_view_shape);
+
+    at_npu::native::StorageDescHelper::SetDesc(ctx.out_weight, ctx.out_weight.sizes(), storage_shape,
+        ctx.out_weight.strides(), ACL_FORMAT_FRACTAL_NZ_C0_8);
+}
+
 template <bool IsGmm> static void prepare_out_weight_scale_mx(QuantContext &ctx) {
     constexpr int64_t expected_dim = IsGmm ? DIMS_4 : DIMS_3;
     TORCH_CHECK(ctx.weight_scale.dim() == expected_dim, "Input weight scale tensor should be ", expected_dim,
@@ -377,7 +403,7 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
                 {prepare_out_weight_nd,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16w4_int4,
-                {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_8>,
+                {prepare_out_weight_nz_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16s4_pergroup,
                 {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_8>,
@@ -428,12 +454,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_weight_quant_prep
     aclDataType x_acl_type = c10_npu::GetAclDataType(x_dtype);
     aclDataType x_scale_acl_type =
         x_scale_dtype.has_value() ? c10_npu::GetAclDataType(x_scale_dtype.value()) : ACL_DT_UNDEFINED;
-    aclDataType weight_acl_type = c10_npu::GetAclDataType(ctx.weight_dtype);
 
     at::Tensor weight_offset_tensor = weight_offset.value_or(at::Tensor());
     at::Tensor bias_tensor = bias.value_or(at::Tensor());
     EXEC_NPU_CMD(aclnnWeightQuantPreprocess, weight_wrapper, scale_wrapper, weight_offset_tensor, bias_tensor,
-        x_acl_type, x_scale_acl_type, weight_acl_type, ctx.k_group_size, out_weight_wrapper, out_scale_wrapper, ctx.out_weight_offset,
+        x_acl_type, x_scale_acl_type, ctx.k_group_size, out_weight_wrapper, out_scale_wrapper, ctx.out_weight_offset,
         ctx.out_bias);
 
     return std::make_tuple(ctx.out_weight, ctx.out_weight_scale, ctx.out_weight_offset, ctx.out_bias);
