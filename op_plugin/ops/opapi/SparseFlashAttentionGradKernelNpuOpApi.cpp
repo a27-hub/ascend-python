@@ -66,12 +66,23 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
             "The shapes of the input key_rope should be 3 or 4 dimensional, but got ",
             key_rope_const.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
     }
-    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
-        "The shapes of the input value should be 3 or 4 dimensional, but got ",
-        value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    if (value.defined()) {
+        TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
+            "The shapes of the input value should be 3 or 4 dimensional, but got ",
+            value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    } else {
+        TORCH_CHECK(IsSupportSparseFlashAttentionNoneValue(),
+            "npu_sparse_flash_attention_grad: value=None is only supported when CANN >= 9.2.0 "
+            "and SoC is not Ascend950.", OPS_ERROR(ErrCode::NOT_SUPPORT));
+    }
     at::Tensor d_query = OpPreparation::apply_tensor_without_format(query);
     at::Tensor d_key = OpPreparation::apply_tensor_without_format(key);
-    at::Tensor d_value = OpPreparation::apply_tensor_without_format(value);
+    at::Tensor d_value;
+    if (value.defined()) {
+        d_value = OpPreparation::apply_tensor_without_format(value);
+    } else {
+        d_value = at::empty({0}, query.options());
+    }
     at::Tensor d_query_rope;
     at::Tensor d_key_rope;
     if (query_rope_const.defined()) {
