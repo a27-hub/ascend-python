@@ -74,7 +74,11 @@
       2. 将左矩阵int8拆为高低4bit两部分：
 
         $$
-        X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor$，$X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8
+        X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor
+        $$
+
+        $$
+        X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8
         $$
 
       3. 分别与权重做矩阵乘并应用perchannel或pergroup量化缩放，合并高低位结果：
@@ -129,7 +133,11 @@
         $$
 
         $$
-        S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+        S_{i}=Swish(C_{i,act})\odot gate_{i}
+        $$
+
+        $$
+        Swish(x)=\frac{x}{1+e^{-x}}
         $$
 
         $$
@@ -165,7 +173,11 @@
          $$
 
          $$
-         S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+         S_{i}=Swish(C_{i,act})\odot gate_{i}
+         $$
+
+         $$
+         Swish(x)=\frac{x}{1+e^{-x}}
          $$
 
       2. 量化输出结果：
@@ -208,7 +220,11 @@
          $$
 
          $$
-         S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+         S_{i}=Swish(C_{i,act})\odot gate_{i}
+         $$
+
+         $$
+         Swish(x)=\frac{x}{1+e^{-x}}
          $$
 
          其中，$x\_scale_{i}$表示对应token的量化因子。
