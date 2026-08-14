@@ -260,19 +260,19 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - 支持A8W8、A8W4、A4W4量化场景，输入和输出Tensor支持的数据类型组合如下：
 
-        |量化场景|x|weight|weight\_scale|x\_scale|smooth\_scale|output|output\_scale|
-        |--------|--------|--------|--------|--------|--------|--------|--------|
-        |A8W8|`int8`|`int8`|`float32`、`float16`、`bfloat16`|`float32`|-|`int8`|`float32`|
-        |A8W4|`int8`|`int4`、`int32`|`uint64`|`float32`|-|`int8`|`float32`|
-        |A4W4|`int4`、`int32`|`int4`、`int32`|`float32`|`float32`|`float32`|`int8`|`float32`|
+    |量化场景|x|weight|weight\_scale|x\_scale|smooth\_scale|output|output\_scale|
+    |--------|--------|--------|--------|--------|--------|--------|--------|
+    |A8W8|`int8`|`int8`|`float32`、`float16`、`bfloat16`|`float32`|-|`int8`|`float32`|
+    |A8W4|`int8`|`int4`、`int32`|`uint64`|`float32`|-|`int8`|`float32`|
+    |A4W4|`int4`、`int32`|`int4`、`int32`|`float32`|`float32`|`float32`|`int8`|`float32`|
 
   - shape约束如下：
 
-        |量化场景|x|weight|weight\_scale|x\_scale|smooth\_scale|output|output\_scale|
-        |--------|--------|--------|--------|--------|--------|--------|--------|
-        |A8W8|(M, K)|NZ格式shape形如{(E, N/32, K/16, 16, 32)}|{(E, N)}|(M,)|-|(M, N/2)|(M,)|
-        |A8W4|(M, K)|$ND$格式{(E, K, N)}或NZ格式|perchannel:{(E, N)}; pergroup:{(E, K\_group\_num, N)}|(M,)|-|(M, N/2)|(M,)|
-        |A4W4|(M, K)|$ND$格式{(E, K, N)}或NZ格式|{(E, N)}|(M,)|(E, N/2)或(E,)|(M, N/2)|(M,)|
+    |量化场景|x|weight|weight\_scale|x\_scale|smooth\_scale|output|output\_scale|
+    |--------|--------|--------|--------|--------|--------|--------|--------|
+    |A8W8|(M, K)|NZ格式shape形如{(E, N/32, K/16, 16, 32)}|{(E, N)}|(M,)|-|(M, N/2)|(M,)|
+    |A8W4|(M, K)|$ND$格式{(E, K, N)}或NZ格式|perchannel:{(E, N)}; pergroup:{(E, K\_group\_num, N)}|(M,)|-|(M, N/2)|(M,)|
+    |A4W4|(M, K)|$ND$格式{(E, K, N)}或NZ格式|{(E, N)}|(M,)|(E, N/2)或(E,)|(M, N/2)|(M,)|
 
   - A8W8场景下，不支持N轴长度超过10240，不支持`x`的尾轴长度大于等于65536。
   - A8W4场景下，不支持N轴长度超过10240，不支持`x`的尾轴长度大于等于20000。
