@@ -27,19 +27,32 @@
       - $Q∈\mathbb{Z_8}^{M \times N / 2}$：量化后的输出矩阵。
       - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
     - **计算过程**：
-        1. 根据groupList\[i\]确定当前分组的token，$i \in [0,Len(groupList)]$。
-        2. 根据分组确定的入参进行如下计算：
+      1. 根据groupList\[i\]确定当前分组的token，$i \in [0,Len(groupList)]$。
+      2. 根据分组确定的入参进行如下计算：
 
-          $C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}$
+        $$
+        C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}
+        $$
 
-          $C_{i,act}, gate_{i} = split(C_{i})$
+        $$
+        C_{i,act}, gate_{i} = split(C_{i})
+        $$
 
-          $S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$
-        3. 量化输出结果：
+        $$
+        S_{i}=Swish(C_{i,act})\odot gate_{i}
+        $$
 
-          $Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$
+        其中$Swish(x)=\frac{x}{1+e^{-x}}$
 
-          $Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil$
+      3. 量化输出结果：
+
+        $$
+        Q\_scale_{i} = \frac{max(|S_{i}|)}{127}
+        $$
+
+        $$
+        Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+        $$
 
     </details>
 
@@ -57,22 +70,36 @@
       - $Q∈\mathbb{Z_8}^{M \times N / 2}$：量化后的输出矩阵。
       - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
     - **计算过程**：
-        1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
-        2. 将左矩阵int8拆为高低4bit两部分：
+      1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
+      2. 将左矩阵int8拆为高低4bit两部分：
 
-          $X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor$，$X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8$
-        3. 分别与权重做矩阵乘并应用perchannel或pergroup量化缩放，合并高低位结果：
+        $$
+        X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor$，$X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8
+        $$
 
-          $C_{i} = (C\_high_{i} * 16 + C\_low_{i} + weightAssistMatrix_{i}) \odot x\_scale_{i}$
+      3. 分别与权重做矩阵乘并应用perchannel或pergroup量化缩放，合并高低位结果：
 
-          $C_{i,act}, gate_{i} = split(C_{i})$
+        $$
+        C_{i} = (C\_high_{i} * 16 + C\_low_{i} + weightAssistMatrix_{i}) \odot x\_scale_{i}
+        $$
 
-          $S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$
-        4. 量化输出结果：
+        $$
+        C_{i,act}, gate_{i} = split(C_{i})
+        $$
 
-          $Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$
+        $$
+        S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+        $$
 
-          $Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil$
+      4. 量化输出结果：
+
+        $$
+        Q\_scale_{i} = \frac{max(|S_{i}|)}{127}
+        $$
+
+        $$
+        Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+        $$
 
     </details>
 
@@ -90,23 +117,36 @@
       - $Q∈\mathbb{Z_8}^{M \times N / 2}$：量化后的输出矩阵。
       - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
     - **计算过程**：
-        1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
-        2. 根据分组确定的入参进行如下计算：
+      1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
+      2. 根据分组确定的入参进行如下计算：
 
-          $C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}$
+        $$
+        C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}
+        $$
 
-          $C_{i,act}, gate_{i} = split(C_{i})$
+        $$
+        C_{i,act}, gate_{i} = split(C_{i})
+        $$
 
-          $S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$
+        $$
+        S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+        $$
 
-          $S_{i} = S_{i} \odot smoothScale_{i\ Broadcast}$
+        $$
+        S_{i} = S_{i} \odot smoothScale_{i\ Broadcast}
+        $$
 
-          注：当smoothScale形状为(E,)时，会对其进行广播，使其与$S_{i}$的形状匹配。
-        3. 量化输出结果：
+        注：当smoothScale形状为(E,)时，会对其进行广播，使其与$S_{i}$的形状匹配。
 
-          $Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$
+      3. 量化输出结果：
 
-          $Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil$
+        $$
+        Q\_scale_{i} = \frac{max(|S_{i}|)}{127}
+        $$
+
+        $$
+        Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+        $$
 
     </details>
 
@@ -116,19 +156,31 @@
 
       1. 根据分组确定的入参进行如下计算：
 
-         $C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}$
+         $$
+         C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}
+         $$
 
-         $C_{i,act}, gate_{i} = split(C_{i})$
+         $$
+         C_{i,act}, gate_{i} = split(C_{i})
+         $$
 
-         $S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$
+         $$
+         S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+         $$
 
       2. 量化输出结果：
 
-         $shared\_exp = \left\lfloor \log_2(max_i(|S_i|)) \right\rceil - emax$
+         $$
+         shared\_exp = \left\lfloor \log_2(max_i(|S_i|)) \right\rceil - emax
+         $$
 
-         $Q\_scale = 2 ^ {shared\_exp}$
+         $$
+         Q\_scale = 2 ^ {shared\_exp}
+         $$
 
-         $Q_i = quantize\_to\_element\_format(S_i/Q\_scale), \space i\space from\space 1\space to\space blocksize$
+         $$
+         Q_i = quantize\_to\_element\_format(S_i/Q\_scale), \space i\space from\space 1\space to\space blocksize
+         $$
 
          其中，$emax$表示对应数据类型的最大正则数的指数位：
 
@@ -147,19 +199,29 @@
 
       1. 根据分组确定的入参进行如下计算：
 
-         $C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i} \odot w\_scale_{i}$
+         $$
+         C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i} \odot w\_scale_{i}
+         $$
 
-         $C_{i,act}, gate_{i} = split(C_{i})$
+         $$
+         C_{i,act}, gate_{i} = split(C_{i})
+         $$
 
-         $S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$
+         $$
+         S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}
+         $$
 
          其中，$x\_scale_{i}$表示对应token的量化因子。
 
       2. 量化输出结果：
 
-         $Q\_scale_{i} = \frac{max(|S_{i}|)}{max(type)}$
+         $$
+         Q\_scale_{i} = \frac{max(|S_{i}|)}{max(type)}
+         $$
 
-         $Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil$
+         $$
+         Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+         $$
 
     </details>
 
