@@ -3019,10 +3019,21 @@ def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, sm
 
 
 @impl(m, "npu_add_rms_norm_dynamic_mx_quant")
-def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, epsilon=1e-6, scale_alg=0, round_mode='rint', dst_type=296):
+def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, x0=None, epsilon=1e-6, scale_alg=0, round_mode='rint', dst_type=296):
     if scale_alg not in [0, 1]:
         raise RuntimeError(f"Invalid scale_alg value: {scale_alg}. Expected 0 or 1." +
                             ops_error(ErrCode.PARAM))
+
+    if x0 is not None:
+        if x0.shape != x1.shape:
+            raise RuntimeError("The shape of x0 and x1 must be the same" +
+                                ops_error(ErrCode.PARAM))
+        if x0.dtype != x1.dtype:
+            raise RuntimeError("The dtype of x0 and x1 must be the same" +
+                                ops_error(ErrCode.PARAM))
+        if x0.requires_grad != x1.requires_grad:
+            raise RuntimeError("The requires_grad of x0 and x1 must be consistent" +
+                                ops_error(ErrCode.PARAM))
 
     dim_num = x1.dim()
 
@@ -3061,14 +3072,19 @@ def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, epsilon=
     mxscale = x1.new_empty(mxscale_shape, dtype=torch.uint8)
 
     # rstd
-    rstd_dim = dim_num - gamma.dim()
-    ret = []
-    for i in range(dim_num):
-        if i < rstd_dim:
-            ret.append(x1.size(i))
-        else:
-            ret.append(1)
-    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    # x0.requires_grad 已校验与 x1.requires_grad 一致，无需额外判断
+    output_rstd = x1.requires_grad and x2.requires_grad
+    if output_rstd:
+        rstd_dim = dim_num - gamma.dim()
+        ret = []
+        for i in range(dim_num):
+            if i < rstd_dim:
+                ret.append(x1.size(i))
+            else:
+                ret.append(1)
+        rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    else:
+        rstd = torch.empty(0, dtype=torch.float32, device='meta')
     return (y, x_out, mxscale, rstd)
 
 

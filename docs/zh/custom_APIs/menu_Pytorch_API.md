@@ -165,6 +165,7 @@
         -   [torch_npu.batch_norm_reduce](./torch_npu/torch_npu-batch_norm_reduce.md)
         -   [torch_npu.npu_add_rms_norm](./torch_npu/torch_npu-npu_add_rms_norm.md)
         -   [torch_npu.npu_add_rms_norm_dynamic_quant](./torch_npu/torch_npu-npu_add_rms_norm_dynamic_quant.md)
+        -   [torch_npu.npu_add_rms_norm_dynamic_mx_quant](./torch_npu/torch_npu-npu_add_rms_norm_dynamic_mx_quant.md)
         -   [torch_npu.npu_fused_floyd_attention](./torch_npu/torch_npu-npu_fused_floyd_attention.md)
         -   [torch_npu.npu_masked_causal_conv1d](./torch_npu/torch_npu-npu_masked_causal_conv1d.md)
         -   [torch_npu.npu_clipped_swiglu](./torch_npu/torch_npu-npu_clipped_swiglu.md)
