@@ -90,6 +90,20 @@ tensor_list npu_add_rms_norm_dynamic_mx_quant(
       "Current CANN version do not support this api. Please try to update the version of CANN." +
           OPS_ERROR(ErrCode::PARAM));
 
+  // When x0 is provided, verify the V2 aclnn symbol is available (not just the
+  // CANN version number). This catches the case where CANN >= 9.2.0 is installed
+  // but the V2 kernel is not registered (e.g. partial install, missing op binary).
+  if (has_x0) {
+    static const bool is_v2_available =
+        check_aclnn_kernel_available("aclnnAddRmsNormDynamicMxQuantV2");
+    TORCH_CHECK(
+        is_v2_available,
+        "aclnnAddRmsNormDynamicMxQuantV2 is not available in current CANN version. "
+        "x0 input requires CANN >= 9.2.0 with V2 kernel registered, please update "
+        "CANN or do not pass x0." +
+            OPS_ERROR(ErrCode::NOT_SUPPORT));
+  }
+
   // 类型推断
   auto y_shape = array_to_small_vector(x1.sizes());
   auto mxscale_shape = array_to_small_vector(x1.sizes());

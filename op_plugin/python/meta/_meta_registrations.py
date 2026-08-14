@@ -3078,15 +3078,22 @@ def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, x0=None,
     mxscale_shape[last_axis_change] = last_dim_size
     mxscale = x1.new_empty(mxscale_shape, dtype=torch.uint8)
 
-    # rstd
-    rstd_dim = dim_num - gamma.dim()
-    ret = []
-    for i in range(dim_num):
-        if i < rstd_dim:
-            ret.append(x1.size(i))
-        else:
-            ret.append(1)
-    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    # rstd — conditional on requires_grad, matching C++ op-plugin logic:
+    #   output_rstd = x1.requires_grad && x2.requires_grad || x0.requires_grad
+    output_rstd = x1.requires_grad and x2.requires_grad
+    if x0 is not None:
+        output_rstd = output_rstd or x0.requires_grad
+    if output_rstd:
+        rstd_dim = dim_num - gamma.dim()
+        ret = []
+        for i in range(dim_num):
+            if i < rstd_dim:
+                ret.append(x1.size(i))
+            else:
+                ret.append(1)
+        rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    else:
+        rstd = torch.empty(0, dtype=torch.float32, device='meta')
     return (y, x_out, mxscale, rstd)
 
 
