@@ -84,11 +84,7 @@ jobs:
             tar -zxvf "$TARBALL"
             TORCH_VER=$(ls torch_npu-*.whl 2>/dev/null | head -1 | sed -E 's/torch_npu-([0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+)-.*/\1/')
             echo "TORCH_VER=$TORCH_VER"
-            NIGHTLY_DATE=${TORCH_VER:10:8}
-            TORCH_WHL="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${NIGHTLY_DATE}/torch-${TORCH_VER}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl"
-            echo "TORCH_WHL=$TORCH_WHL"
-            wget --no-check-certificate -q -O torch-debug.whl "$TORCH_WHL" || curl -fsSL -o torch-debug.whl "$TORCH_WHL"
-            "$PIP" install -U ./torch-debug.whl
+            "$PIP" install -U "torch==$TORCH_VER"
             "$PIP" install -U ./torch_npu-*.whl --force-reinstall --no-deps
           else
             echo "WARNING: torch_npu tarball not found, debug env may be incomplete"
