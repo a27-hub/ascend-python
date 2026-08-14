@@ -24,9 +24,11 @@ from torch.testing import assert_close
 class TestAddRmsNormDynamicMxQuant(TestCase):
 
     # 此处传递的是已经.npu()后的
-    def npu_op_exec(self, x1, x2, gamma, beta=None, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2):
-        return torch_npu.npu_add_rms_norm_dynamic_mx_quant(x1, x2, gamma, beta=beta, epsilon=epsilon,
-                                                           scale_alg=scale_alg, round_mode=round_mode, dst_type=dst_type)
+    def npu_op_exec(self, x1, x2, gamma, beta=None, x0=None, epsilon=1e-6,
+                    scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2):
+        return torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+            x1, x2, gamma, beta=beta, x0=x0, epsilon=epsilon,
+            scale_alg=scale_alg, round_mode=round_mode, dst_type=dst_type)
 
     def golden_op_exec(self, input_tensor):
         if torch.all(torch.eq(input_tensor, 0.0)) and input_tensor.shape == torch.Size([1, 2, 2]):
@@ -74,6 +76,178 @@ class TestAddRmsNormDynamicMxQuant(TestCase):
         assert torch.all(x == golden_output[1].view(torch.bfloat16))
         assert_close(golden_output[2], mxscale, atol=0.01, rtol=0.001)
         assert torch.all(rstd == golden_output[3].view(torch.float32))
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_add_rms_norm_quant_float8_e5m2_with_x0(self, device="npu"):
+        """x0 存在时，x = x0 + x1 + x2，用非零值验证 x0 真正参与计算。"""
+        x1 = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], dtype=torch.bfloat16)
+        x2 = torch.tensor([[[0.5, 1.0], [1.5, 2.0]]], dtype=torch.bfloat16)
+        x0 = torch.tensor([[[0.25, 0.25], [0.25, 0.25]]], dtype=torch.bfloat16)
+        C = x1.shape[-1]
+        gamma = torch.ones(C, dtype=torch.float32)
+        beta = torch.zeros(C, dtype=torch.float32)
+        x1 = x1.to(device).requires_grad_(True)
+        x2 = x2.to(device).requires_grad_(True)
+        x0 = x0.to(device).requires_grad_(True)
+        gamma = gamma.to(device)
+        beta = beta.to(device)
+        eps = 1e-6
+        scale_alg = 0
+        round_mode = "rint"
+        out_dtype = 23
+
+        npu_output = self.npu_op_exec(x1, x2, gamma, beta=beta, x0=x0,
+                                      epsilon=eps, scale_alg=scale_alg,
+                                      round_mode=round_mode, dst_type=out_dtype)
+        x = npu_output[1].view([1, 2, 2]).view(torch.bfloat16)
+        rstd = npu_output[3].view([1, 2, 1]).to(torch.float32)
+
+        expected_x = torch.tensor([[[1.75, 3.25], [4.75, 6.25]]], dtype=torch.bfloat16, device=device)
+        assert torch.allclose(x, expected_x, atol=0.01), f"x_out mismatch: got {x}, expected {expected_x}"
+        assert rstd.numel() > 0 and torch.all(rstd > 0), f"rstd should be positive when requires_grad=True, got {rstd}"
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_add_rms_norm_quant_float8_e5m2_x0_absent(self, device="npu"):
+        """x0 缺省时（x0=None），行为与原有算子一致，验证向后兼容。"""
+        x1 = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], dtype=torch.bfloat16)
+        x2 = torch.tensor([[[0.5, 1.0], [1.5, 2.0]]], dtype=torch.bfloat16)
+        C = x1.shape[-1]
+        gamma = torch.ones(C, dtype=torch.float32)
+        beta = torch.zeros(C, dtype=torch.float32)
+        x1 = x1.to(device).requires_grad_(True)
+        x2 = x2.to(device).requires_grad_(True)
+        gamma = gamma.to(device)
+        beta = beta.to(device)
+        eps = 1e-6
+        scale_alg = 0
+        round_mode = "rint"
+        out_dtype = 23
+
+        npu_output = self.npu_op_exec(x1, x2, gamma, beta=beta, x0=None,
+                                      epsilon=eps, scale_alg=scale_alg,
+                                      round_mode=round_mode, dst_type=out_dtype)
+        x = npu_output[1].view([1, 2, 2]).view(torch.bfloat16)
+        rstd = npu_output[3].view([1, 2, 1]).to(torch.float32)
+
+        expected_x = torch.tensor([[[1.5, 3.0], [4.5, 6.0]]], dtype=torch.bfloat16, device=device)
+        assert torch.allclose(x, expected_x, atol=0.01), f"x_out mismatch: got {x}, expected {expected_x}"
+        assert rstd.numel() > 0 and torch.all(rstd > 0), f"rstd should be positive when requires_grad=True, got {rstd}"
+
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_add_rms_norm_quant_float8_e5m2_no_grad(self, device="npu"):
+        """requires_grad=False 时 rstd 应为空 (numel=0)，x0 仍参与计算。"""
+        x1 = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], dtype=torch.bfloat16)
+        x2 = torch.tensor([[[0.5, 1.0], [1.5, 2.0]]], dtype=torch.bfloat16)
+        x0 = torch.tensor([[[0.25, 0.25], [0.25, 0.25]]], dtype=torch.bfloat16)
+        C = x1.shape[-1]
+        gamma = torch.ones(C, dtype=torch.float32)
+        beta = torch.zeros(C, dtype=torch.float32)
+        x1 = x1.to(device)
+        x2 = x2.to(device)
+        x0 = x0.to(device)
+        gamma = gamma.to(device)
+        beta = beta.to(device)
+        eps = 1e-6
+        scale_alg = 0
+        round_mode = "rint"
+        out_dtype = 23
+
+        npu_output = self.npu_op_exec(x1, x2, gamma, beta=beta, x0=x0,
+                                      epsilon=eps, scale_alg=scale_alg,
+                                      round_mode=round_mode, dst_type=out_dtype)
+        x = npu_output[1].view([1, 2, 2]).view(torch.bfloat16)
+        rstd = npu_output[3]
+
+        expected_x = torch.tensor([[[1.75, 3.25], [4.75, 6.25]]], dtype=torch.bfloat16, device=device)
+        assert torch.allclose(x, expected_x, atol=0.01), f"x_out mismatch: got {x}, expected {expected_x}"
+        assert rstd.numel() == 0, f"rstd should be empty when requires_grad=False, got numel={rstd.numel()}"
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_add_rms_norm_quant_fp4_e2m1(self, device="npu"):
+        """FP4 (float4_e2m1) output path: verify x_out correctness and y shape (uint8, last dim halved)."""
+        x1 = torch.tensor([[[1.0, 2.0, 3.0, 4.0]]], dtype=torch.bfloat16)
+        x2 = torch.tensor([[[0.5, 1.0, 1.5, 2.0]]], dtype=torch.bfloat16)
+        C = x1.shape[-1]
+        gamma = torch.ones(C, dtype=torch.float32)
+        x1 = x1.to(device).requires_grad_(True)
+        x2 = x2.to(device).requires_grad_(True)
+        gamma = gamma.to(device)
+        eps = 1e-6
+
+        npu_output = self.npu_op_exec(x1, x2, gamma, beta=None, epsilon=eps,
+                                      scale_alg=0, round_mode="rint",
+                                      dst_type=torch_npu.float4_e2m1fn_x2)
+        y = npu_output[0]
+        x = npu_output[1].view([1, 1, 4]).view(torch.bfloat16)
+        rstd = npu_output[3].view([1, 1, 1]).to(torch.float32)
+
+        expected_x = torch.tensor([[[1.5, 3.0, 4.5, 6.0]]], dtype=torch.bfloat16, device=device)
+        assert torch.allclose(x, expected_x, atol=0.01), f"x_out mismatch: got {x}, expected {expected_x}"
+        assert y.dtype == torch.uint8, f"FP4 y should be stored as uint8, got {y.dtype}"
+        assert y.shape[-1] == 2, f"FP4 y last dim should be halved (4/2=2), got shape {y.shape}"
+        assert rstd.numel() > 0 and torch.all(rstd > 0), f"rstd should be positive when requires_grad=True"
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_add_rms_norm_quant_scale_alg_cublas(self, device="npu"):
+        """scale_alg=1 (cuBLAS) path: verify x_out unaffected by scale algorithm choice."""
+        x1 = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], dtype=torch.bfloat16)
+        x2 = torch.tensor([[[0.5, 1.0], [1.5, 2.0]]], dtype=torch.bfloat16)
+        C = x1.shape[-1]
+        gamma = torch.ones(C, dtype=torch.float32)
+        beta = torch.zeros(C, dtype=torch.float32)
+        x1 = x1.to(device).requires_grad_(True)
+        x2 = x2.to(device).requires_grad_(True)
+        gamma = gamma.to(device)
+        beta = beta.to(device)
+
+        npu_output = self.npu_op_exec(x1, x2, gamma, beta=beta, epsilon=1e-6,
+                                      scale_alg=1, round_mode="rint",
+                                      dst_type=torch_npu.float8_e5m2)
+        x = npu_output[1].view([1, 2, 2]).view(torch.bfloat16)
+
+        expected_x = torch.tensor([[[1.5, 3.0], [4.5, 6.0]]], dtype=torch.bfloat16, device=device)
+        assert torch.allclose(x, expected_x, atol=0.01), f"x_out mismatch with scale_alg=1: got {x}, expected {expected_x}"
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_add_rms_norm_quant_fp16_input(self, device="npu"):
+        """fp16 input dtype path: verify x_out with fp16 inputs (vs bf16 in other tests)."""
+        x1 = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], dtype=torch.float16)
+        x2 = torch.tensor([[[0.5, 1.0], [1.5, 2.0]]], dtype=torch.float16)
+        C = x1.shape[-1]
+        gamma = torch.ones(C, dtype=torch.float16)
+        x1 = x1.to(device).requires_grad_(True)
+        x2 = x2.to(device).requires_grad_(True)
+        gamma = gamma.to(device)
+
+        npu_output = self.npu_op_exec(x1, x2, gamma, beta=None, epsilon=1e-6,
+                                      scale_alg=0, round_mode="rint",
+                                      dst_type=torch_npu.float8_e5m2)
+        x = npu_output[1].view([1, 2, 2]).view(torch.float16)
+
+        expected_x = torch.tensor([[[1.5, 3.0], [4.5, 6.0]]], dtype=torch.float16, device=device)
+        assert torch.allclose(x, expected_x, atol=0.01), f"x_out mismatch with fp16: got {x}, expected {expected_x}"
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_add_rms_norm_quant_no_beta_no_grad(self, device="npu"):
+        """beta=None + requires_grad=False: rstd should be empty, x_out still correct."""
+        x1 = torch.tensor([[[2.0, 4.0], [6.0, 8.0]]], dtype=torch.bfloat16)
+        x2 = torch.tensor([[[1.0, 1.0], [1.0, 1.0]]], dtype=torch.bfloat16)
+        C = x1.shape[-1]
+        gamma = torch.ones(C, dtype=torch.float32)
+        x1 = x1.to(device)
+        x2 = x2.to(device)
+        gamma = gamma.to(device)
+
+        npu_output = self.npu_op_exec(x1, x2, gamma, beta=None, x0=None,
+                                      epsilon=1e-6, scale_alg=0,
+                                      round_mode="rint", dst_type=torch_npu.float8_e5m2)
+        x = npu_output[1].view([1, 2, 2]).view(torch.bfloat16)
+        rstd = npu_output[3]
+
+        expected_x = torch.tensor([[[3.0, 5.0], [7.0, 9.0]]], dtype=torch.bfloat16, device=device)
+        assert torch.allclose(x, expected_x, atol=0.01), f"x_out mismatch: got {x}, expected {expected_x}"
+        assert rstd.numel() == 0, f"rstd should be empty when no requires_grad, got numel={rstd.numel()}"
 
 
 if __name__ == "__main__":
