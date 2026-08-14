@@ -384,5 +384,39 @@ class TestSparseFlashAttention(TestCase):
             print("correct ratio of cpu vs npu is:", true_ratio * 100, "%")
         self.assertTrue(true_ratio > 0.99, "precision compare fail")
 
+    def test_sfa_value_none(self, device = "npu"):
+        from torch_npu.npu.utils import get_cann_version
+        from torch_npu.npu._backends import get_soc_version
+
+        scale_value = 0.041666666666666664
+        sparse_block_count = 2048
+        b = 4
+        s1 = 1
+        s2 = 8192
+        n1 = 128
+        n2 = 1
+        dn = 512
+        s2_act = 4096
+
+        query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(torch.float16)
+        key = torch.tensor(np.random.uniform(-5, 10, (b, s2, n2, dn))).to(torch.float16)
+        idxs = random.sample(range(s2_act - s1 + 1), sparse_block_count)
+        sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(b, s1, n2, sparse_block_count). \
+            to(torch.int32)
+
+        query = query.npu()
+        key = key.npu()
+        sparse_indices = sparse_indices.npu()
+
+        support_value_none = get_cann_version() >= "9.2.0" and get_soc_version() < 260
+        if support_value_none:
+            npu_out, npu_softmax_max, npu_softmax_sum = torch_npu.npu_sparse_flash_attention(
+                query, key, None, sparse_indices, scale_value, sparse_mode=3)
+            self.assertTrue(npu_out.shape == (b, s1, n1, dn))
+        else:
+            with self.assertRaises(RuntimeError) as cm:
+                torch_npu.npu_sparse_flash_attention(query, key, None, sparse_indices, scale_value, sparse_mode=3)
+            self.assertIn("only supported", str(cm.exception))
+
 if __name__ == "__main__":
     run_tests()
