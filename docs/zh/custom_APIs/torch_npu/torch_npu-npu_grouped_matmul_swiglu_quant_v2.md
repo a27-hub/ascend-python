@@ -202,9 +202,9 @@
 
          |   DataType    | emax |
          | :-----------: | :--: |
-         | FLOAT8_E4M3FN |  8   |
-         |  FLOAT8_E5M2  |  15  |
-         |  FLOAT4_E2M1  |  2   |
+         | float8_e4m3fn |  8   |
+         |  float8_e5m2  |  15  |
+         |  float4_e2m1  |  2   |
 
          其中，$blocksize$表示每次量化的元素个数，仅支持32。
 
