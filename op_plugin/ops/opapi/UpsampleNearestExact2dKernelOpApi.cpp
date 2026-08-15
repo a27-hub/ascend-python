@@ -15,6 +15,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -25,6 +26,9 @@ at::Tensor& upsample_nearest_exact2d_out_slow(
     c10::optional<double> scales_h,
     c10::optional<double> scales_w,
     at::Tensor& result) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_nearest_exact2d.out",
+      "aclnnUpsampleNearestExact2d is unavailable");
   at::Tensor result_slow = at::_upsample_nearest_exact2d(self.cpu(), output_size, scales_h, scales_w);
   result.copy_(result_slow);
   return result;
@@ -35,6 +39,9 @@ at::Tensor upsample_nearest_exact2d_slow(
     at::IntArrayRef output_size,
     c10::optional<double> scales_h,
     c10::optional<double> scales_w) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_nearest_exact2d",
+      "aclnnUpsampleNearestExact2d is unavailable");
   auto outputSize = op_infer::upsample_nearest_exact2d_output_size_npu(self, output_size);
   at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options());
 

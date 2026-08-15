@@ -15,6 +15,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -34,6 +35,10 @@ std::tuple<at::Tensor, at::Tensor> _native_multi_head_attention(
     bool average_attn_weights,
     const c10::optional<int64_t> mask_type)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::_native_multi_head_attention",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     return at::native::native_multi_head_attention_cpu(
         query, key, value, embed_dim, num_head, qkv_weight, qkv_bias,
         proj_weight, proj_bias, mask, need_weights, average_attn_weights, mask_type);

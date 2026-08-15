@@ -4,6 +4,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -25,6 +26,9 @@ inline bool _logit_fallback_condition() {
 
 at::Tensor logit(const at::Tensor& self, c10::optional<double> eps) {
   if (_logit_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit",
+        "aclnnLogit is unavailable or the SoC does not support it");
     at::Tensor self_cpu = self.cpu();
     at::Tensor out_cpu = at::native::logit(self_cpu, eps);
     return out_cpu.to(self.device());
@@ -43,6 +47,9 @@ at::Tensor& logit_(at::Tensor& self, c10::optional<double> eps) {
 
 at::Tensor& logit_out(const at::Tensor& self, c10::optional<double> eps, at::Tensor& out) {
   if (_logit_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit.out",
+        "aclnnLogit is unavailable or the SoC does not support it");
     at::Tensor self_cpu = self.cpu();
     at::Tensor out_cpu = out.cpu();
     out_cpu = at::native::logit_out(self_cpu, eps, out_cpu);
