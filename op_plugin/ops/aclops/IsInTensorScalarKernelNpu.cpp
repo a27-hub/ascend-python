@@ -14,12 +14,17 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor isin(const at::Tensor &elements, const at::Scalar &test_elements, bool assume_unique, bool invert)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::isin.Tensor_Scalar",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     const auto elements_cpu = elements.cpu();
     at::Tensor result = at::isin(elements_cpu, test_elements, assume_unique, invert);
     result = result.to(elements.device());
@@ -29,6 +34,10 @@ at::Tensor isin(const at::Tensor &elements, const at::Scalar &test_elements, boo
 at::Tensor &isin_out(const at::Tensor &elements, const at::Scalar &test_elements, bool assume_unique, bool invert,
                      at::Tensor &result)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::isin.Tensor_Scalar_out",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     npu_preparation::CheckOut({elements}, result, npu_preparation::get_tensor_npu_format(elements),
                               at::ScalarType::Bool, elements.sizes());
     const auto elements_cpu = elements.cpu();

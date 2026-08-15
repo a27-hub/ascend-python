@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "op_plugin/AclOpsInterface.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 at::Tensor _embedding_bag_per_sample_weights_backward(
@@ -24,6 +25,10 @@ at::Tensor _embedding_bag_per_sample_weights_backward(
     const at::Tensor& offset2bag,
     int64_t mode,
     int64_t padding_idx) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_embedding_bag_per_sample_weights_backward",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   at::Tensor grad_cpu = grad.to("cpu");
   at::Tensor weight_cpu = weight.to("cpu");
   at::Tensor indices_cpu = indices.to("cpu");

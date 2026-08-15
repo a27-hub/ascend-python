@@ -15,10 +15,15 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 
 at::Tensor& sinc_out(const at::Tensor& self, at::Tensor& result) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::sinc.out",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_NPU_WARN_ONCE("Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
   const auto self_cpu = self.to("cpu");
   auto result_cpu = result.to("cpu");
@@ -28,6 +33,10 @@ at::Tensor& sinc_out(const at::Tensor& self, at::Tensor& result) {
 }
 
 at::Tensor sinc(const at::Tensor& self) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::sinc",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_NPU_WARN_ONCE("Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
   const auto self_cpu = self.to("cpu");
   at::sinc(self_cpu);
@@ -35,6 +44,10 @@ at::Tensor sinc(const at::Tensor& self) {
 }
 
 at::Tensor& sinc_(at::Tensor& self) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::sinc_",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_NPU_WARN_ONCE("Warning: kernel [sinc] is not supported by NPU currently. Now this kernel is running on CPU.");
   auto self_cpu = self.to("cpu");
   at::sinc_(self_cpu);

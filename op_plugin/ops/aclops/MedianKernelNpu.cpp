@@ -15,6 +15,7 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -143,6 +144,10 @@ std::tuple<at::Tensor, at::Tensor> median(const at::Tensor& self, int64_t dim, b
 }
 
 at::Tensor nanmedian(const at::Tensor& self) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::nanmedian",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_NPU_WARN_ONCE(
       "Warning: kernel [nanmedian] is not supported by NPU currently. Now this kernel is running on CPU.");
   at::Tensor self_cpu = self.to("cpu");
@@ -152,6 +157,10 @@ at::Tensor nanmedian(const at::Tensor& self) {
 }
 
 std::tuple<at::Tensor, at::Tensor> nanmedian(const at::Tensor& self, int64_t dim, bool keepdim) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::nanmedian.dim",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_WARN_ONCE(
       "Warning: kernel [nanmedian.dim] is not supported by NPU currently. Now this kernel is running on CPU.");
   auto output_size = median_npu_output_size(self, dim, keepdim);

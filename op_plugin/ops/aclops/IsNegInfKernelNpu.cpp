@@ -16,11 +16,16 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 
 at::Tensor isneginf(const at::Tensor &self)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::isneginf",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     // convert args to cpu in order to use at kernel
     TORCH_NPU_WARN_ONCE(
         "Warning: kernel [isneginf] is not supported by NPU currently. Now this kernel is running on CPU.");
@@ -31,6 +36,10 @@ at::Tensor isneginf(const at::Tensor &self)
 
 at::Tensor& isneginf_out(const at::Tensor &self, at::Tensor &out)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::isneginf.out",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     // convert args to cpu in order to use at kernel
     TORCH_NPU_WARN_ONCE(
         "Warning: kernel [isneginf.out] is not supported by NPU currently. Now this kernel is running on CPU.");
