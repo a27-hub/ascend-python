@@ -4,6 +4,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -15,10 +16,6 @@ inline bool _unfold_backward_fallback_condition() {
       (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_9391);
   static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_830rc1();
   if (!is_aclnn_kernel_available || !is_support_soc || !is_cann_ready) {
-    TORCH_NPU_WARN_ONCE(
-        "CAUTION: The operator aten::unfold_backward is currently "
-        "not supported on the NPU backend. Now this operator will fallback to run on the CPU "
-        "and may have performance implications.");
     return true;
   }
   return false;
@@ -31,6 +28,10 @@ at::Tensor unfold_backward(
     int64_t size,
     int64_t step) {
   if (_unfold_backward_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::unfold_backward",
+        "aclnnUnfoldGrad",
+        "aclnnUnfoldGrad is unavailable or the SoC/CANN version does not support it");
     at::Tensor grad_in_cpu = grad_in.cpu();
     at::Tensor result = at::unfold_backward(grad_in_cpu, input_sizes, dim, size, step);
     return result.to(grad_in.device());

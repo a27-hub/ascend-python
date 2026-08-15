@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -36,8 +37,12 @@ std::tuple<at::Tensor&, at::Tensor&> adaptive_max_pool3d_out(
     at::Tensor& out,
     at::Tensor& indices) {
   if (!is_npu_supported(self.scalar_type())) {
-    TORCH_WARN_ONCE(
-        "adaptive_max_pool3d.out is not supported by NPU currently. Now this kernel is running on CPU.");
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::adaptive_max_pool3d.out",
+        "aclnnAdaptiveMaxPool3d",
+        self.scalar_type() == at::kDouble
+            ? "float64 is unsupported by the NPU kernel"
+            : "aclnnAdaptiveMaxPool3d is unavailable");
     auto out_cpu = out.cpu();
     auto indices_cpu = indices.cpu();
     auto cpuout = at::adaptive_max_pool3d_out(
@@ -64,8 +69,12 @@ std::tuple<at::Tensor, at::Tensor> adaptive_max_pool3d(
     const at::Tensor& self,
     at::IntArrayRef output_size) {
   if (!is_npu_supported(self.scalar_type())) {
-    TORCH_WARN_ONCE(
-        "adaptive_max_pool3d is not supported by NPU currently. Now this kernel is running on CPU.");
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::adaptive_max_pool3d",
+        "aclnnAdaptiveMaxPool3d",
+        self.scalar_type() == at::kDouble
+            ? "float64 is unsupported by the NPU kernel"
+            : "aclnnAdaptiveMaxPool3d is unavailable");
     auto result = at::adaptive_max_pool3d(self.cpu(), output_size);
     auto out_npu = std::get<0>(result).to(self.device());
     auto indices_npu = std::get<1>(result).to(self.device());

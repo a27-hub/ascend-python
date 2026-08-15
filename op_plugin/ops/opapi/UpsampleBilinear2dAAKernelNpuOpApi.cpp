@@ -17,6 +17,7 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/UpsampleConstants.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -45,6 +46,11 @@ bool checkBilinearUseFast(const at::Tensor &self, at::IntArrayRef output_size, b
 at::Tensor &upsample_bilinear2d_aa_out_slow(const at::Tensor &self, at::IntArrayRef output_size, bool align_corners,
     c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &result)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::_upsample_bilinear2d_aa.out",
+        "aclnnUpsampleBilinear2dAA",
+        "aclnnUpsampleBilinear2dAA is unavailable or the NPU fast-path "
+        "constraints are not satisfied");
     auto scalar_type = self.scalar_type();
     at::Tensor self_slow = self.cpu().to(at::ScalarType::Float);
 
@@ -56,6 +62,11 @@ at::Tensor &upsample_bilinear2d_aa_out_slow(const at::Tensor &self, at::IntArray
 at::Tensor upsample_bilinear2d_aa_slow(const at::Tensor &self, at::IntArrayRef output_size, bool align_corners,
     c10::optional<double> scales_h, c10::optional<double> scales_w)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::_upsample_bilinear2d_aa",
+        "aclnnUpsampleBilinear2dAA",
+        "aclnnUpsampleBilinear2dAA is unavailable or the NPU fast-path "
+        "constraints are not satisfied");
     auto scalar_type = self.scalar_type();
     auto outputSize =
         op_infer::upsample_bilinear2d_npu_output_size(self, output_size);

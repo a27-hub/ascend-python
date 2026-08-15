@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -26,6 +27,11 @@ std::tuple<at::Tensor, at::Tensor> std_mean(
     const c10::optional<at::Scalar>& correction,
     bool keepdim) {
   if (!correction_fits_aclnn_int64(correction)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::std_mean",
+        "aclnnStdMeanCorrection",
+        "the correction value does not fit in aclnn int64 and the NPU kernel "
+        "is unavailable");
     auto cpu_tup = at::std_mean(self.cpu(), dim, correction, keepdim);
     return std::make_tuple(std::get<0>(cpu_tup).to(self.options()), std::get<1>(cpu_tup).to(self.options()));
   }

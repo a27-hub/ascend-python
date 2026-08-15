@@ -4,6 +4,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -14,10 +15,6 @@ inline bool _logit_fallback_condition() {
                                       c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
       (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
   if (!is_aclnn_kernel_available || !is_support_soc) {
-    TORCH_NPU_WARN_ONCE(
-        "CAUTION: The operator aten::logit, aten::logit_ and aten::logit.out is currently "
-        "not supported on the NPU backend. Now this operator will fallback to run on the CPU "
-        "and may have performance implications.");
     return true;
   }
   return false;
@@ -25,6 +22,10 @@ inline bool _logit_fallback_condition() {
 
 at::Tensor logit(const at::Tensor& self, c10::optional<double> eps) {
   if (_logit_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit",
+        "aclnnLogit",
+        "aclnnLogit is unavailable or the SoC does not support it");
     at::Tensor self_cpu = self.cpu();
     at::Tensor out_cpu = at::native::logit(self_cpu, eps);
     return out_cpu.to(self.device());
@@ -43,6 +44,10 @@ at::Tensor& logit_(at::Tensor& self, c10::optional<double> eps) {
 
 at::Tensor& logit_out(const at::Tensor& self, c10::optional<double> eps, at::Tensor& out) {
   if (_logit_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit.out",
+        "aclnnLogit",
+        "aclnnLogit is unavailable or the SoC does not support it");
     at::Tensor self_cpu = self.cpu();
     at::Tensor out_cpu = out.cpu();
     out_cpu = at::native::logit_out(self_cpu, eps, out_cpu);

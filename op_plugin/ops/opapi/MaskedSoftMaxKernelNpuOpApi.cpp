@@ -13,6 +13,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -46,19 +47,10 @@ inline bool _masked_softmax_fallback_condition(
     const c10::optional<int64_t> mask_type_) {
   static const bool is_aclnn_kernel_available = check_aclnn_kernel_available("aclnnScaledMaskedSoftmax");
   if (!is_aclnn_kernel_available) {
-    TORCH_NPU_WARN_ONCE(
-        "CAUTION: The operator aten::_masked_softmax is currently not supported on the NPU backend."
-        "Now this operator will fallback to run on the CPU and may have performance implications. "
-        "Please try to update your CANN version.");
     return true;
   }
   bool dim_use_npu = (!dim.has_value()) || (dim.value() == -1) || (dim.value() == self.dim() - 1);
   if ((self.dim() != 4) || (!dim_use_npu) || (!mask_type_.has_value()) || (mask_type_ != 2)) {
-    TORCH_NPU_WARN_ONCE(
-        "CAUTION: The operator aten::_masked_softmax need to be met the following conditions to "
-        "run on the NPU backend: 1. dim = None/dim = -1/dim = input.dim()-1; 2. mask_type = 2; 3. input.dim() = 4. "
-        "Now this operator will fallback to run on the CPU and may have performance implications. "
-        "Please check your params.");
     return true;
   }
   return false;
@@ -70,6 +62,10 @@ at::Tensor _masked_softmax(
     const c10::optional<int64_t> dim_,
     const c10::optional<int64_t> mask_type_) {
   if (_masked_softmax_fallback_condition(self_, dim_, mask_type_)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::_masked_softmax",
+        "aclnnScaledMaskedSoftmax",
+        "aclnnScaledMaskedSoftmax is unavailable or the SoC does not support it");
     at::Tensor self_cpu = self_.cpu();
     at::Tensor mask_cpu = mask_.cpu();
     at::Tensor result = at::_masked_softmax(self_cpu, mask_cpu, dim_, mask_type_);

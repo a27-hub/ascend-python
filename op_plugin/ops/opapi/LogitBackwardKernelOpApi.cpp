@@ -4,6 +4,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -14,10 +15,6 @@ inline bool _logit_backward_fallback_condition() {
                                       c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
       (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
   if (!is_aclnn_kernel_available || !is_support_soc) {
-    TORCH_NPU_WARN_ONCE(
-        "CAUTION: The operator aten::logit_backward and aten::logit_backward.out is currently "
-        "not supported on the NPU backend. Now this operator will fallback to run on the CPU "
-        "and may have performance implications.");
     return true;
   }
   return false;
@@ -29,6 +26,10 @@ at::Tensor& logit_backward_out(
     c10::optional<double> eps,
     at::Tensor& grad_input) {
   if (_logit_backward_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit_backward.grad_input",
+        "aclnnLogitGrad",
+        "aclnnLogitGrad is unavailable or the SoC does not support it");
     at::Tensor grad_output_cpu = grad_output.cpu();
     at::Tensor self_cpu = self.cpu();
     at::Tensor grad_input_cpu = grad_input.cpu();
@@ -46,6 +47,10 @@ at::Tensor& logit_backward_out(
 
 at::Tensor logit_backward(const at::Tensor& grad_output, const at::Tensor& self, c10::optional<double> eps) {
   if (_logit_backward_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit_backward",
+        "aclnnLogitGrad",
+        "aclnnLogitGrad is unavailable or the SoC does not support it");
     at::Tensor grad_output_cpu = grad_output.cpu();
     at::Tensor self_cpu = self.cpu();
     at::Tensor out_cpu = at::logit_backward(grad_output_cpu, self_cpu, eps);
