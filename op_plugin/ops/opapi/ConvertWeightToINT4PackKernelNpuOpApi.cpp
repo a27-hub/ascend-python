@@ -18,6 +18,7 @@
 #include "op_plugin/utils/OpAdapter.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
 #include "op_plugin/utils/OpUtils.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -291,6 +292,10 @@ at::Tensor npu_convert_weight_to_b4pack(const at::Tensor& weight) {
 
 at::Tensor npu_convert_weight_to_int4pack(const at::Tensor& weight, int64_t inner_k_tiles) {
   int4pack_params_check(weight);
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "npu_convert_weight_to_int4pack",
+      "the current NPU implementation delegates the main computation "
+      "to CPU-side weight packing");
   if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
     return npu_convert_weight_to_b4pack(weight);
   }

@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 #include <utility>
 
@@ -65,6 +66,9 @@ at::Tensor scatter_reduce_cpu_fallback(
     const at::Tensor& src,
     c10::string_view reduce,
     bool include_self) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::scatter_reduce",
+      "aclnnScatterReduce is unavailable or the input constraints are not satisfied");
   at::Tensor self_cpu = self.cpu();
   at::Tensor index_cpu = index.cpu();
   at::Tensor src_cpu = src.cpu();
@@ -79,6 +83,9 @@ at::Tensor& scatter_reduce_out_cpu_fallback(
     c10::string_view reduce,
     bool include_self,
     at::Tensor& out) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::scatter_reduce.out",
+      "aclnnScatterReduce is unavailable or the input constraints are not satisfied");
   at::Tensor self_cpu = self.cpu();
   at::Tensor index_cpu = index.cpu();
   at::Tensor src_cpu = src.cpu();
@@ -95,6 +102,9 @@ at::Tensor& scatter_reduce_inplace_cpu_fallback(
     const at::Tensor& src,
     c10::string_view reduce,
     bool include_self) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::scatter_reduce_",
+      "aclnnScatterReduce is unavailable or the input constraints are not satisfied");
   at::Tensor self_cpu = self.cpu();
   at::Tensor index_cpu = index.cpu();
   at::Tensor src_cpu = src.cpu();
