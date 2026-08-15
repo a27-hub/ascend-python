@@ -18,6 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/UpsampleConstants.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -57,6 +58,11 @@ at::Tensor& upsample_bilinear2d_aa_backward_out_slow(
     c10::optional<double> scales_h,
     c10::optional<double> scales_w,
     at::Tensor& grad_input) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_bilinear2d_aa_backward.grad_input",
+      "aclnnUpsampleBilinear2dAABackward",
+      "aclnnUpsampleBilinear2dAABackward is unavailable or the NPU fast-path "
+      "constraints are not satisfied");
   auto scalar_type = grad_output.scalar_type();
   at::Tensor grad_output_slow = grad_output.cpu().to(at::ScalarType::Float);
 
@@ -73,6 +79,11 @@ at::Tensor upsample_bilinear2d_aa_backward_slow(
     bool align_corners,
     c10::optional<double> scales_h,
     c10::optional<double> scales_w) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_bilinear2d_aa_backward",
+      "aclnnUpsampleBilinear2dAABackward",
+      "aclnnUpsampleBilinear2dAABackward is unavailable or the NPU fast-path "
+      "constraints are not satisfied");
   auto scalar_type = grad_output.scalar_type();
   at::Tensor grad_input = npu_preparation::apply_tensor_without_format(grad_output, input_size);
   at::Tensor grad_output_slow = grad_output.cpu().to(at::ScalarType::Float);
