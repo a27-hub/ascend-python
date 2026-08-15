@@ -98,7 +98,7 @@ class TestDropout(TestCase):
         output_cpu = torch.ops.aten.native_dropout_backward(grad_output, bits, 3.0).to(torch.bfloat16)
         grad_bf16 = grad_output.to(torch.bfloat16)
         output_npu = torch.ops.aten.native_dropout_backward(grad_bf16.npu(), packed.npu(), 3.0)
-        self.assertRtolEqual(output_cpu.numpy(), output_npu.cpu().numpy(), 0.004)
+        self.assertRtolEqual(output_cpu.float().numpy(), output_npu.cpu().float().numpy(), 0.004)
 
     @SupportedDevices(['Ascend950'])
     def test_native_dropout_backward_empty_mask(self, device="npu"):
