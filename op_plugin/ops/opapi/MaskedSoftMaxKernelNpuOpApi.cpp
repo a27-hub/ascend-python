@@ -13,6 +13,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -70,6 +71,9 @@ at::Tensor _masked_softmax(
     const c10::optional<int64_t> dim_,
     const c10::optional<int64_t> mask_type_) {
   if (_masked_softmax_fallback_condition(self_, dim_, mask_type_)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::_masked_softmax",
+        "aclnnScaledMaskedSoftmax is unavailable or the input constraints are not satisfied");
     at::Tensor self_cpu = self_.cpu();
     at::Tensor mask_cpu = mask_.cpu();
     at::Tensor result = at::_masked_softmax(self_cpu, mask_cpu, dim_, mask_type_);

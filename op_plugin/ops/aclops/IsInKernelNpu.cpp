@@ -14,6 +14,7 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -21,6 +22,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor& isin_out(const at::Scalar& element, const at::Tensor &test_element,
                      bool assume_unique, bool invert, at::Tensor& result)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::isin.Scalar_Tensor_out",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     c10::SmallVector<int64_t, SIZE> shape_small_vec;
     npu_preparation::CheckOut({test_element}, result, npu_preparation::get_tensor_npu_format(test_element),
                               at::ScalarType::Bool, shape_small_vec);

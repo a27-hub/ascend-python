@@ -16,11 +16,16 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 
 at::Tensor isposinf(const at::Tensor &self)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::isposinf",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     // convert args to cpu in order to use at kernel
     TORCH_NPU_WARN_ONCE(
         "Warning: kernel [isposinf] is not supported by NPU currently. Now this kernel is running on CPU.");
@@ -31,6 +36,10 @@ at::Tensor isposinf(const at::Tensor &self)
 
 at::Tensor& isposinf_out(const at::Tensor &self, at::Tensor &out)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::isposinf.out",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     // convert args to cpu in order to use at::native kernel
     TORCH_NPU_WARN_ONCE(
         "Warning: kernel [isposinf.out] is not supported by NPU currently. Now this kernel is running on CPU.");

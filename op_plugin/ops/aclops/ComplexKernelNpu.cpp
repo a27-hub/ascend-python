@@ -15,9 +15,14 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 at::Tensor complex(const at::Tensor& real, const at::Tensor& imag) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::complex",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_NPU_WARN_ONCE(
       "Warning: kernel [complex] is not supported by NPU currently. Now this kernel is running on CPU.");
   at::Tensor real_cpu = real.to("cpu");
@@ -28,6 +33,10 @@ at::Tensor complex(const at::Tensor& real, const at::Tensor& imag) {
 }
 
 at::Tensor& complex_out(const at::Tensor& real, const at::Tensor& imag, at::Tensor& out) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::complex.out",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_NPU_WARN_ONCE(
       "Warning: kernel [complex_out] is not supported by NPU currently. Now this kernel is running on CPU.");
   at::Tensor real_cpu = real.to("cpu");

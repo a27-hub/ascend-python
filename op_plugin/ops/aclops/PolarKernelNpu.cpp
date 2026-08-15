@@ -16,10 +16,15 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 
 at::Tensor& polar_out(const at::Tensor& abs, const at::Tensor& angle, at::Tensor& out) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::polar.out",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_WARN_ONCE("Warning: kernel [polar.out] is not supported by NPU currently. Now this kernel is running on CPU.");
   auto abs_cpu = abs.cpu();
   auto angle_cpu = angle.cpu();
@@ -31,6 +36,10 @@ at::Tensor& polar_out(const at::Tensor& abs, const at::Tensor& angle, at::Tensor
 }
 
 at::Tensor polar(const at::Tensor& abs, const at::Tensor& angle) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::polar",
+      "the current NPU implementation delegates the main computation "
+      "to the CPU native kernel");
   TORCH_WARN_ONCE("Warning: kernel [polar] is not supported by NPU currently. Now this kernel is running on CPU.");
 
   auto abs_cpu = abs.cpu();

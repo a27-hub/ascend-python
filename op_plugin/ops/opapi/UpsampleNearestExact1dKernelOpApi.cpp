@@ -15,6 +15,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -24,6 +25,10 @@ at::Tensor& upsample_nearest_exact1d_out_slow(
     at::IntArrayRef output_size,
     c10::optional<double> scales,
     at::Tensor& result) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_nearest_exact1d.out",
+      "aclnnUpsampleNearestExact1d is unavailable or the NPU fast-path "
+      "constraints are not satisfied");
   at::Tensor result_slow = at::_upsample_nearest_exact1d(self.cpu(), output_size, scales);
   result.copy_(result_slow);
   return result;
@@ -33,6 +38,10 @@ at::Tensor upsample_nearest_exact1d_slow(
     const at::Tensor& self,
     at::IntArrayRef output_size,
     c10::optional<double> scales) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_nearest_exact1d",
+      "aclnnUpsampleNearestExact1d is unavailable or the NPU fast-path "
+      "constraints are not satisfied");
   auto outputSize = op_infer::upsample_linear1d_npu_output_size(self, output_size);
   at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options());
 

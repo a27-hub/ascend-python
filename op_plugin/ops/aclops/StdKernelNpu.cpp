@@ -17,6 +17,7 @@
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/StdVarCorrectionUtils.h"
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -76,6 +77,9 @@ at::Tensor& std_out(
     bool keepdim,
     at::Tensor& result) {
   if (!correction_fits_aclnn_int64(correction)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::std.out",
+        "correction does not fit in aclnn int64");
     at::Tensor cpu_out = result.cpu();
     at::std_out(cpu_out, self.cpu(), dim, correction, keepdim);
     result.copy_(cpu_out);
@@ -108,6 +112,9 @@ at::Tensor std(
     const c10::optional<c10::Scalar>& correction,
     bool keepdim) {
   if (!correction_fits_aclnn_int64(correction)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::std",
+        "correction does not fit in aclnn int64");
     return at::std(self.cpu(), dim, correction, keepdim).to(self.options());
   }
   c10::SmallVector<int64_t, SIZE> dims = op_plugin::utils::get_dimlist_for_tensor(self);
@@ -130,6 +137,9 @@ std::tuple<at::Tensor, at::Tensor> std_mean(
     const c10::optional<c10::Scalar>& correction,
     bool keepdim) {
   if (!correction_fits_aclnn_int64(correction)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::std_mean",
+        "correction does not fit in aclnn int64");
     auto cpu_tup = at::std_mean(self.cpu(), dim, correction, keepdim);
     return std::make_tuple(std::get<0>(cpu_tup).to(self.options()), std::get<1>(cpu_tup).to(self.options()));
   }

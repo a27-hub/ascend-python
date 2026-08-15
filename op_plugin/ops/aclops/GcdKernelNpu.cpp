@@ -16,10 +16,15 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 at::Tensor& gcd_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &out)
 {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::gcd.out",
+        "the current NPU implementation delegates the main computation "
+        "to the CPU native kernel");
     // convert args to cpu in order to use at::native kernel
     TORCH_NPU_WARN_ONCE("Warning: kernel [gcd.out] is not supported by NPU currently."
                         "Now this kernel is running on CPU.");

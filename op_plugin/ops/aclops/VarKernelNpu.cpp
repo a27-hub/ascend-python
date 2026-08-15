@@ -17,6 +17,7 @@
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/StdVarCorrectionUtils.h"
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace acl_op {
 at::Tensor& var_out(
@@ -26,6 +27,9 @@ at::Tensor& var_out(
     bool keepdim,
     at::Tensor& result) {
   if (!correction_fits_aclnn_int64(correction)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::var.out",
+        "correction does not fit in aclnn int64");
     at::Tensor cpu_out = result.cpu();
     at::var_out(cpu_out, self.cpu(), dim, correction, keepdim);
     result.copy_(cpu_out);
@@ -42,6 +46,9 @@ at::Tensor var(
     const c10::optional<c10::Scalar>& correction,
     bool keepdim) {
   if (!correction_fits_aclnn_int64(correction)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::var",
+        "correction does not fit in aclnn int64");
     return at::var(self.cpu(), dim, correction, keepdim).to(self.options());
   }
   bool unbiased = !(correction.has_value() && correction.value().toLong() == 0);
@@ -55,6 +62,9 @@ std::tuple<at::Tensor, at::Tensor> var_mean(
     const c10::optional<c10::Scalar>& correction,
     bool keepdim) {
   if (!correction_fits_aclnn_int64(correction)) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::var_mean",
+        "correction does not fit in aclnn int64");
     auto cpu_tup = at::var_mean(self.cpu(), dim, correction, keepdim);
     return std::make_tuple(std::get<0>(cpu_tup).to(self.options()), std::get<1>(cpu_tup).to(self.options()));
   }

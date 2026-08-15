@@ -4,6 +4,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -31,6 +32,9 @@ at::Tensor unfold_backward(
     int64_t size,
     int64_t step) {
   if (_unfold_backward_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::unfold_backward",
+        "aclnnUnfoldGrad is unavailable or the SoC/CANN version does not support it");
     at::Tensor grad_in_cpu = grad_in.cpu();
     at::Tensor result = at::unfold_backward(grad_in_cpu, input_sizes, dim, size, step);
     return result.to(grad_in.device());
