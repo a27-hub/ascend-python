@@ -150,12 +150,12 @@ bool judge_mm_a16s4_nd_pertensor(QuantContext &ctx) {
     return false;
 }
 
-bool judge_mm_a16w4_int4(QuantContext &ctx) {
+bool judge_mm_a16s4_nz_perchannel(QuantContext &ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
 
-    OP_LOG_DEBUG("judge_mm_a16w4_int4: x_acl_dtype=%d, weight_acl_dtype=%d, weight_scale_acl_dtype=%d, "
+    OP_LOG_DEBUG("judge_mm_a16s4_nz_perchannel: x_acl_dtype=%d, weight_acl_dtype=%d, weight_scale_acl_dtype=%d, "
                  "weight_dim=%d, weight_stride=[%d,%d], weight_size=[%d,%d]",
         static_cast<int>(x_acl_dtype), static_cast<int>(weight_acl_dtype),
         static_cast<int>(weight_scale_acl_dtype), static_cast<int>(ctx.weight.dim()),
@@ -181,7 +181,7 @@ bool judge_mm_a16w4_int4(QuantContext &ctx) {
     return false;
 }
 
-bool judge_mm_a16s4_pergroup(QuantContext &ctx) {
+bool judge_mm_a16s4_nz_pergroup(QuantContext &ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
@@ -427,13 +427,13 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
             {judge_mm_a16s4_nd_pertensor,
                 {prepare_out_weight_nd,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
-            {judge_mm_a16w4_int4,
+            {judge_mm_a16s4_nz_perchannel,
                 {prepare_out_weight_nz_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16s4_nd_pergroup,
                 {prepare_out_weight_nd,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
-            {judge_mm_a16s4_pergroup,
+            {judge_mm_a16s4_nz_pergroup,
                 {prepare_out_weight_nz_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16w4_fp4,
