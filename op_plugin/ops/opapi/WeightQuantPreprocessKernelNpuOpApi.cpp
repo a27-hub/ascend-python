@@ -201,6 +201,48 @@ bool judge_mm_a16s4_nz_pergroup(QuantContext &ctx) {
     return false;
 }
 
+bool judge_mm_a16f4_nz_pergroup(QuantContext &ctx) {
+    aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+    aclDataType x_scale_acl_dtype =
+        ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
+
+    bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
+    bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
+
+    // A16F4 per-group NZ：FP4 weight + per-group scale [G, N]（G > 1），仅支持非转置 weight
+    if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 &&
+        x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 &&
+        ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1 &&
+        !is_transpose_certain_two_dims(ctx.weight, 0)) {
+        ctx.is_weight_trans = false;
+        return true;
+    }
+    return false;
+}
+
+bool judge_mm_a16f4_mx(QuantContext &ctx) {
+    aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+    aclDataType x_scale_acl_dtype =
+        ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
+
+    bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
+
+    // A16 MXFP4：FP4 weight + MX scale（E8M0，2D [K/32, N] 连续），仅支持非转置 weight
+    if (x_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 &&
+        weight_scale_acl_dtype == ACL_FLOAT8_E8M0 &&
+        x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 &&
+        ctx.weight_scale.dim() == DIMS_2 &&
+        !is_transpose_certain_two_dims(ctx.weight, 0)) {
+        ctx.is_weight_trans = false;
+        return true;
+    }
+    return false;
+}
+
 bool judge_mm_a16s4_nd_pergroup(QuantContext &ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
@@ -434,6 +476,12 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
                 {prepare_out_weight_nd,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16s4_nz_pergroup,
+                {prepare_out_weight_nz_a16s4,
+                    prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
+            {judge_mm_a16f4_nz_pergroup,
+                {prepare_out_weight_nz_a16s4,
+                    prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
+            {judge_mm_a16f4_mx,
                 {prepare_out_weight_nz_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16w4_fp4,
