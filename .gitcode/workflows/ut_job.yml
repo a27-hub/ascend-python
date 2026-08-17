@@ -48,7 +48,7 @@ jobs:
     # runs-on: [ self-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
     runs-on: [ self-hosted, npu=1 ]
     container:
-      image: harbor-portal.test.osinfra.cn/north4-myhuaweicloud/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
     env:
       TEST_RANK: ${{ inputs.TEST_RANK }}
