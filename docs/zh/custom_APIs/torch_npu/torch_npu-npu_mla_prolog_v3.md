@@ -120,7 +120,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **weight_uq_qr**（`Tensor`）：必选参数，公式中用于计算Query的上采样权重矩阵$W^{UQ}$和位置编码权重矩阵$W^{QR}$。不支持非连续，数据格式支持FRACTAL_NZ，数据类型支持`bfloat16`、`int8`、`float8_e4m3fn`、`hifloat8`，shape为[Hcq, N*(D+Dr)]。
 
-- **weight_uk**（`Tensor`）：必选参数，公式中用于计算Key的上采样权重$W^{UK}$。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`，shape为[N, D, Hckv]。
+- **weight_uk**（`Tensor`）：必选参数，公式中用于计算Query的上采样权重$W^{UK}$。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`，shape为[N, D, Hckv]。
 
 - **weight_dkv_kr**（`Tensor`）：必选参数，公式中用于计算Key的下采样权重矩阵$W^{DKV}$和位置编码权重矩阵$W^{KR}$。不支持非连续，数据格式支持FRACTAL_NZ，数据类型支持`bfloat16`、`int8`、`float8_e4m3fn`、`hifloat8`，shape为[He, Hckv+Dr]。
 
@@ -248,7 +248,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
   >
   > <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
   > 
-  > - 当前不支持 fp8/hif8/mxfp8 全量化场景
+  > - 当前不支持 fp8/hif8/mxfp8 全量化场景。
 
   <table style="table-layout: auto;" border="1">
     <tr>

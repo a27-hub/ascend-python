@@ -2,6 +2,7 @@ import os
 import sys
 import sysconfig
 import subprocess
+import re
 from setuptools import setup, Extension, find_packages
 import torch
 import torch_npu
@@ -18,6 +19,17 @@ os.environ["PYTORCH_CUSTOM_DERIVATIVES_PATH"] = os.path.join(os.path.dirname(__f
 os.environ["ACNN_EXTENSION_PATH"] = os.path.dirname(__file__)
 os.environ["ACNN_EXTENSION_SWITCH"] = "TRUE"
 
+# Get PyTorch version macro
+version_macro = os.getenv('CURRENT_VERSION_MACRO')
+if version_macro:
+    current_version_macro = f'-DCURRENT_VERSION={version_macro}'
+else:
+    match = re.match(r'(\d+)\.(\d+)', PYTORCH_VERSION)
+    if match:
+        major, minor = match.groups()
+        current_version_macro = f'-DCURRENT_VERSION=V{major}R{minor}'
+    else:
+        raise RuntimeError(f"无法解析 PyTorch 版本号: {PYTORCH_VERSION}")
 
 # Get all source files that need to be compiled
 def get_sources():
@@ -35,12 +47,25 @@ def get_sources():
         for root, _, files in os.walk(ops_dir):
             for file in files:
                 if file.endswith(".cpp") or file.endswith(".cc"):
+                    # ========== 新增过滤逻辑：排除会导致重复定义的文件 ==========
+                    # 排除主文件（分片文件中已包含这些函数）
+                    if file == "StructKernelNpuOpApi.cpp":
+                        continue
+                    if file == "OpInterface.cpp":
+                        continue
+                    # 排除 Everything 文件（包含所有函数，导致重复定义）
+                    if file == "StructKernelNpuOpApiEverything.cpp":
+                        continue
+                    if file == "OpInterfaceEverything.cpp":
+                        continue
                     sources.append(os.path.join(root, file))
 
-    BUILD_EXCLUDE_LIST = [f"{aten_dir}/VariableTypeEverything.cpp",
+    BUILD_EXCLUDE_LIST = [
+        f"{aten_dir}/VariableTypeEverything.cpp",
         f"{aten_dir}/ADInplaceOrViewTypeEverything.cpp",
         f"{aten_dir}/python_functionsEverything.cpp",
-        f"{aten_dir}/RegisterFunctionalizationEverything.cpp"]
+        f"{aten_dir}/RegisterFunctionalizationEverything.cpp"
+    ]
 
     sources_new = [cur_file for cur_file in sources if cur_file not in BUILD_EXCLUDE_LIST]
     print("====sources_new:", sources_new)
@@ -71,11 +96,13 @@ def get_include_dirs():
     include_dirs.append(os.path.join(torch_npu_dir, 'include', 'third_party', 'acl', 'inc'))
     include_dirs.append(os.path.join(torch_npu_dir, 'include', 'third_party', 'hccl', 'inc'))
     include_dirs.append(os.path.join(torch_npu_dir, 'include', 'third_party', 'op-plugin'))
+
     return include_dirs
 
 
 def get_compile_args():
     compile_args = ["-std=c++17"]
+    compile_args.append(current_version_macro)
     # for Windows
     if sys.platform == "win32":
         compile_args.append("/MD")

@@ -1,6 +1,6 @@
 # 适配开发及调用（AscendC）
 
-基于C++ extensions方式，通过torch_npu框架调用AscendC自定义算子的完整适配开发流程。本样例展示了如何将AscendC算子集成到PyTorch生态中，实现高效的NPU加速计算。
+基于C++ extensions方式，通过TorchNPU框架调用AscendC自定义算子的完整适配开发流程。本样例展示了如何将AscendC算子集成到Ascend for PyTorch生态中，实现高效的NPU加速计算。
 
 ## 算子适配开发
 
@@ -8,17 +8,17 @@
 
 在开始之前，请确保您已完成以下环境的安装。
 
-1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
-2. 请参考《[Ascend Extension for PyTorch 软件安装指南](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
+1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
+2. 请参考[源码编译](https://gitcode.com/Ascend/pytorch/blob/master/docs/zh/installation_guide/references/building_from_source.md)完成PyTorch和TorchNPU的安装。
 
 ### 适配文件结构
 
 ```text
 ├── build_and_run.sh                // 自定义算子wheel包编译安装并执行用例的脚本
-├── csrc                            // 算子适配层C++代码目录
+├── csrc                            // 算子适配层c++代码目录
 │   ├── add_custom.asc              // 自定义add算子适配代码、ATen IR注册以及绑定
 │   └── trig_inplace_custom.asc     // 自定义trig算子适配代码、ATen IR注册以及绑定
-├── cpp_extension_acs               // 自定义算子包python侧代码
+├── cpp_extension_asc               // 自定义算子包python侧代码
 │   ├── _load.py                    // 调用so
 │   └── __init__.py                 // python初始化文件
 ├── setup.py                        // wheel包编译文件
@@ -35,7 +35,7 @@
 
 以下步骤均以add算子为例。
 
-1. 在算子适配层C++代码目录（csrc）中的`*.asc`文件（如add_custom.asc）中编写C++侧算子代码与适配代码，并完成自定义算子schema的注册及具体实现的绑定。在add_custom.asc中定义了一个名为cpp_extension_acs的命名空间，并在其中注册了ascendc_add函数。在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。PyTorch提供TORCH_LIBRARY宏来定义新的命名空间，并在该命名空间里注册schema。注意命名空间的名字必须是唯一的。具体示例如下：
+1. 在算子适配层C++代码目录（csrc）中的*.asc文件（如add_custom.asc）完成C++侧算子代码、适配代码、注册自定义算子schema及绑定具体实现。在add_custom.asc中定义了一个名为cpp_extension_asc的命名空间，并在其中注册了ascendc_add函数。在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。PyTorch提供TORCH_LIBRARY宏来定义新的命名空间，并在该命名空间里注册schema。注意命名空间的名字必须是唯一的。具体示例如下：
 <!-- 代码中没有const c10::OptionalDeviceGuard device_guard(device_of(Tensor))，是否需要增加 -->
     > [!NOTE]
     > 
@@ -114,7 +114,7 @@
         op.Process();
     }
 
-    namespace cpp_extension_acs {
+    namespace cpp_extension_asc {
     at::Tensor ascendc_add(const at::Tensor &x, const at::Tensor &y)
     {
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(true);
@@ -130,7 +130,7 @@
         return z;
     }
 
-    }  // namespace cpp_extension_acs
+    }  // namespace cpp_extension_asc
 
     at::Tensor add_impl_meta(const at::Tensor& x, const at::Tensor& y)
     {
@@ -138,26 +138,26 @@
     }
 
     // Define a new operator
-    TORCH_LIBRARY_FRAGMENT(cpp_extension_acs, m)
+    TORCH_LIBRARY_FRAGMENT(cpp_extension_asc, m)
     {
         m.def("ascendc_add(Tensor x, Tensor y) -> Tensor");
     }
 
     // Register implementation for the "PrivateUse1" backend
-    TORCH_LIBRARY_IMPL(cpp_extension_acs, PrivateUse1, m)
+    TORCH_LIBRARY_IMPL(cpp_extension_asc, PrivateUse1, m)
     {
-        m.impl("ascendc_add", TORCH_FN(cpp_extension_acs::ascendc_add));
+        m.impl("ascendc_add", TORCH_FN(cpp_extension_asc::ascendc_add));
     }
 
     // Define a simple model using the custom operation
-    TORCH_LIBRARY_IMPL(cpp_extension_acs, Meta, m)
+    TORCH_LIBRARY_IMPL(cpp_extension_asc, Meta, m)
     {
         m.impl("ascendc_add", &add_impl_meta);
     }
 
     ```
 
-2. 在`cpp_extension_acs`目录下的`__init__.py`及`_load.py`文件中，添加ops调用及读取so文件，具体示例如下：
+2. 在`cpp_extension_asc`目录下的`__init__.py`及`_load.py`文件中，添加ops调用及读取so文件，具体示例如下：
 
     ```Python
     # __init__.py
@@ -183,7 +183,7 @@
 
 完成了算子适配开发后，即可通过C++ extensions的方式调用自定义算子。
 
-1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发指南](https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0002.html)》。
+1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E5%85%A5%E9%97%A8%E6%95%99%E7%A8%8B/Ascend-C%E6%A6%82%E8%BF%B0%E4%B8%8E%E5%AD%A6%E4%B9%A0%E8%B7%AF%E5%BE%84.md)》。
 2. 下载示例代码。
 
     ```bash

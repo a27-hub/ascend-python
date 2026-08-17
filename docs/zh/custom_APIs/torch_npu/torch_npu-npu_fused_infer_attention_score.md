@@ -4,8 +4,8 @@
 
 | 产品 | 是否支持 |
 | ---- | :------: |
-| <term>Atlas A3训练系列产品/Atlas A3推理系列产品</term> | √ |
-| <term>Atlas A2训练系列产品/Atlas A2推理系列产品</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
 
 ## 功能说明
 
@@ -75,7 +75,7 @@ torch_npu.npu_fused_infer_attention_score(
 | B | Batch Size | ≤ 65536 | ≤ 65536 | — |
 | N (Q_N) | query head数 | ≤ 256 | ≤ 256 | — |
 | N (KV_N) | key/value head数 | ≤ 256 | ≤ 256 | — |
-| D | Head Dim | ≤ 512 | ≤ 512 | `float16`/`bfloat16`: 16字节对齐; `int8`: 32字节对齐; `int4`: 64字节对齐 |
+| D | Head Dim | ≤ 512 | ≤ 512 | `float16`/`bfloat16`： 16字节对齐、 `int8`： 32字节对齐、 `int4`： 64字节对齐 |
 | S (Q_S) | query序列长度 | ≤ 20971520 (20M) | = 1 | — |
 | S (KV_S) | key/value序列长度 | ≤ 20971520 (20M) | ≤ 262144 | — |
 
@@ -91,7 +91,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 #### 位置编码参数
 
-- **pse_shift** (`Tensor`,可选)：位置编码参数。数据类型：`float16`、`bfloat16`（需与`query`类型满足推导规则），数据格式：ND，不支持非连续，认值：None。Q_S > 1时：shape为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S)；KV_S非32字节对齐建议padding到32字节。Q_S = 1时：shape为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S)；仅支持D轴16整除。
+- **pse_shift** (`Tensor`,可选)：位置编码参数。数据类型：`float16`、`bfloat16`（需与`query`类型满足推导规则），数据格式：ND，不支持非连续，默认值：None。Q_S > 1时：shape为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S)；KV_S非32字节对齐建议padding到32字节。Q_S = 1时：shape为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S)；仅支持D轴16整除。
   
 #### Mask与序列长度参数
 
@@ -234,7 +234,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 > [!NOTE]
 >
->`bfloat16`和`int8`不区分高精度/高性能（bit0无效）。行无效修正对`float16`、`bfloat16`、`int8`均生效。当mask存在整行全1时精度可能损失，可尝试配置2或3。Q_S = 1时仅支持0和1。若算子可判断出存在无效行场景（如sparse_mode=3且Sq > Skv），会 自动开启行无效计算。
+>`bfloat16`和`int8`不区分高精度/高性能（bit0无效）。行无效修正对`float16`、`bfloat16`、`int8`均生效。当mask存在整行全1时精度可能损失，可尝试配置2或3。Q_S = 1时仅支持0和1。若算子可判断出存在无效行场景（如sparse_mode=3且Q_S > KV_S），会自动开启行无效计算。
 
 - **softmax_lse_flag** (`bool`,可选)：是否额外输出softmax_lse（用于Ring Attention分布式合并）。默认值：False。
 
@@ -368,7 +368,7 @@ torch_npu.npu_fused_infer_attention_score(
 - 搬运终点= KV_S − kv_padding_size（Q_S > 1时须 ≤ KV_S；Q_S = 1时若< 0则返回全0）。
 - 需与`actual_seq_lengths_kv`一起开启。
 - 不支持PageAttention。
-- <term>Atlas A2/A3</term>：不支持Q为`bfloat16`/`float16`、KV为`int4`的场景。
+- 不支持Q为`bfloat16`/`float16`、KV为`int4`的场景。
 
 ### <a id="tnd_constraints"></a>TND布局约束
 
@@ -489,7 +489,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 >
 > - `input_layout="BNSD"`：表示输入为(B,N,S,D)。
 >
-> -此场景命中Q_S > 1，走PromptFlashAttention分支。
+> - 此场景命中Q_S > 1，走PromptFlashAttention分支。
 
 ### 示例2：GQA + Decode + PageAttention
 
@@ -833,9 +833,7 @@ print(out.shape)  # torch.Size([1, 8, 164, 128])
 
 ### 示例9：ACL Graph模式（torch_npu.npu.NPUGraph）
 
-"""
-通过NPUGraph捕获计算图，实现图模式执行和参数更新
-"""
+通过NPUGraph捕获计算图，实现图模式执行和参数更新。
 
 ```python
 import torch

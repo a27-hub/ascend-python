@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-API级的打点，可自定义选择目标代码段或目标函数进行耗时采集。
+API级别的打点，可自定义选择目标代码段或目标函数进行耗时采集。
 
 ## 函数原型
 
@@ -27,10 +27,7 @@ torch_npu.npu.mstx.annotate(message: str = '', stream=None, domain: str = 'defau
 
   使用with语句调用本接口时，该参数必选；使用装饰器调用本接口时，该参数可选，默认使用函数名作为message。
 
-  传入的message字符串长度要求：
-
-  - msPTI场景：不能超过255字节。
-  - msProf或torch_npu.profiler采集场景：不能超过156字节。
+  传入的message字符串长度要求：msPTI场景不能超过255字节。
 
 - **stream** (`torch_npu.npu.Stream`)：可选参数，用于执行打点任务的stream，默认为None。
   

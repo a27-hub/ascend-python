@@ -1,4 +1,4 @@
-all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13, v2.14]
+all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13, v2.14, v2.15]
 backward:
 - name: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor
   self: cholesky_backward(grad, upper, result)
@@ -199,6 +199,11 @@ backward:
   input, hx, params: _lstm_npu_backward(grads[0], grads[1], grads[2], input, hx, params, result3, result4, result5, result6, result7, result8, result9, has_biases, num_layers, dropout, train, bidirectional, batch_first, batch_sizes)
   version: all_version
 
+- name: _gru_npu(Tensor input, Tensor hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, true, false, false, false, false, false]
+  input, hx, params: _gru_npu_backward(grads[0], grads[1], input, hx, params, result2, result3, result4, result5, result6, has_biases, num_layers, dropout, train, bidirectional, batch_first, batch_sizes)
+  version: all_version
+
 - name: npu_max.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)
   self: npu_max_backward(grad, dim, indices, self.sym_sizes(), keepdim)
   version: [v2.1, newest]
@@ -351,7 +356,7 @@ backward:
   x2: _cdist_backward(grad.mT().contiguous(), x2, x1, p, result.mT().contiguous())
   version: all_version
 
-- name: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+- name: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0, int inner_precise=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
   output_differentiability: [true, true, true, false, false, false]
   x, phi, alpha, bias, gamma: 'npu_mhc_pre_backward(x, phi, alpha, grads[0], grads[1], grads[2], result3, result4, result5, result1, gamma, hc_eps, c10::nullopt)'
   version: all_version

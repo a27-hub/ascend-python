@@ -183,7 +183,7 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
 
 
 @impl(m, "npu_mhc_pre")
-def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0):
+def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0, inner_precise=0):
     torch._check(
         x.numel() > 0,
         lambda: "Input x should not be empty." + ops_error(ErrCode.VALUE),
@@ -208,6 +208,13 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
     torch._check(
         out_flag == 0 or out_flag == 1,
         lambda: f"Input out_flag must be 0 or 1, but got {out_flag}." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        inner_precise == 0 or inner_precise == 1,
+        lambda: (
+            f"Input inner_precise must be 0 (Cube uses FP32) or 1 (Cube uses HF32), but got {inner_precise}."
+            + ops_error(ErrCode.VALUE)
+        ),
     )
 
     has_resi = alpha.numel() == 3
@@ -1287,11 +1294,28 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
                                  x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None):
     if world_size <= 0:
         raise RuntimeError("world_size must be bigger than zero")
+
+    is_mxfp4 = (x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2)
+    if is_mxfp4:
+        _mxfp4_dim_checks = [(self, "x1", 2), (x2, "x2", 2), (x1_scale, "x1_scale", 3), (x2_scale, "x2_scale", 3)]
+        for tensor, name, expected_dim in _mxfp4_dim_checks:
+            torch._check(
+                tensor is not None,
+                lambda: f"{name} should not be None in mxfp4 quant scene" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                tensor.dim() == expected_dim,
+                lambda: f"{name} dim should be {expected_dim} in mxfp4 quant scene, but got {tensor.dim()}D" + ops_error(ErrCode.VALUE),
+            )
+
     # out_gather_mm
     out_x = self.size(0)
     if gather_index == 0:
         out_x = self.size(0) * world_size
+    x2_trans = (x2.stride(0) == 1 and x2.stride(1) == x2.size(0))
     out_y = x2.size(1)
+    if is_mxfp4 and x2_trans is not True:
+        out_y = x2.size(1) * 2
     # out_gather
     out_gather_x = x2.size(0) * world_size
     out_gather_y = x2.size(1)
@@ -2152,7 +2176,7 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
                                                 value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
                                                 actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND",
                                                 layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
-                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None):
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None, sinks=None):
     require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
 
     for item_name, item in require_param.items():
@@ -2243,8 +2267,32 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
     seed = 0
     offset = 0
     numels = 0
+
+    if input_layout == "BSH":
+        H = query.size(2)
+        D = H / head_num
+        D2 = 0 if D == 0 or key.size(2) == 0 else value.size(2) / (key.size(2) / D)
+        aten_score_shape = [B, S1, int(head_num * D2)]
+    elif input_layout == "SBH":
+        H = query.size(2)
+        D = H / head_num
+        D2 = 0 if D == 0 or key.size(2) == 0 else value.size(2) / (key.size(2) / D)
+        aten_score_shape = [S1, B, int(head_num * D2)]
+    elif input_layout == "BNSD":
+        D2 = value.size(3)
+        aten_score_shape = [B, N, S1, D2]
+    elif input_layout == "BSND":
+        D2 = value.size(3)
+        aten_score_shape = [B, S1, N, D2]
+    elif input_layout == "TND":
+        D2 = value.size(2)
+        T = query.size(0)
+        aten_score_shape = [T, N, D2]
+    else:
+        aten_score_shape = query.shape
+
     attention_score = query.new_empty(
-        query.shape, dtype=query.dtype, device='meta')
+        aten_score_shape, dtype=query.dtype, device='meta')
     if input_layout == "TND":
         softmax_max = torch.empty(
             [B, head_num, 8], dtype=torch.float32, device='meta')
@@ -2936,21 +2984,45 @@ def npu_add_rms_norm_cast_meta(x1, x2, gamma, epsilon=1e-6):
 @impl(m, "npu_add_rms_norm_dynamic_quant")
 def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, smooth_scale2=None, beta=None, epsilon=1e-6, output_mask=None, y_dtype=None):
     # y_dtype: None or torch.int8 -> int8 (same shape); torch.quint4x2 -> int4 (int32 packed, last_dim/8)
-    if y_dtype is None or y_dtype == torch.int8:
-        y_shape = x1.size()
+    is_out_y1 = True
+    is_out_y2 = False
+    if output_mask is None:
+        scale1_exists = smooth_scale1 is not None
+        scale2_exists = smooth_scale2 is not None
+        is_out_y2 = scale1_exists and scale2_exists
+    else:
+        if output_mask[0] == False and output_mask[1] == False:
+            raise RuntimeError("When the output_mask is not empty, at least one of y1 and y2 must be output. " + ops_error(ErrCode.NOT_SUPPORT))
+
+        is_out_y1 = output_mask[0]
+        is_out_y2 = output_mask[1]
+
+    y_shape = x1.size()
+    if y_dtype is None:
         y_dtype_actual = torch.int8
     else:
-        # int4: aclnn uses int32 with 8 int4 per int32
-        y_shape = list(x1.size())
-        y_shape[-1] = y_shape[-1] // 8
-        y_dtype_actual = torch.int32
-    # when output_mask[1] is False, y2 has shape [0] (empty, 1-dim size 0)
-    y2_shape = y_shape if (output_mask is None or (len(output_mask) > 1 and output_mask[1])) else (0,)
-    return (torch.empty(y_shape, dtype=y_dtype_actual, device=x1.device),
+        y_dtype_actual = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(y_dtype)
+        if y_dtype_actual is None:
+             raise RuntimeError("Parameter y_dtype enum value:{} not found in TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP".format(y_dtype) +
+                                ops_error(ErrCode.PARAM))
+
+        if y_dtype == torch_npu.int4 or y_dtype_actual == torch.quint4x2:
+            y_shape_list = list(y_shape)
+            y_shape_list[-1] = y_shape_list[-1] // 8
+            y_shape = torch.Size(y_shape_list)
+            y_dtype_actual = torch.int32
+        elif y_dtype == 290:
+            y_dtype_actual = torch.uint8
+
+    y1_shape = y_shape if is_out_y1 else (0,)
+    y2_shape = y_shape if is_out_y2 else (0,)
+    scale1_shape = x1.size()[:-1] if is_out_y1 else (0,)
+    scale2_shape = x1.size()[:-1] if is_out_y2 else (0,)
+    return (torch.empty(y1_shape, dtype=y_dtype_actual, device=x1.device),
             torch.empty(y2_shape, dtype=y_dtype_actual, device=x1.device),
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device),
-            torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
-            torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
+            torch.empty(scale1_shape, dtype=torch.float32, device=x1.device),
+            torch.empty(scale2_shape, dtype=torch.float32, device=x1.device))
 
 
 @impl(m, "npu_add_rms_norm_dynamic_mx_quant")
@@ -3189,9 +3261,15 @@ def get_dispatch_dynamic_scales_dtype(x, scales, quant_mode):
     return dynamic_scales_dtype
 
 
-def get_dispatch_dynamic_shape(scales, quant_mode, a, h):
+def get_dispatch_dynamic_shape(x, scales, quant_mode, a, h):
     shape = tuple([a])
     if quant_mode == 0 and scales is not None:
+        if x.dtype == torch.int32:
+            if scales.dim() != 1:
+                raise RuntimeError(
+                    f"Expected scales to be 1-d when x dtype is int32, but got {scales.dim()}-d."
+                )
+            return shape
         if scales.dim() < 2:
             raise RuntimeError(f"Expected scales to be at least 2-d, but got {scales.dim()}-d.")
         shape = tuple([a, scales.shape[1]])
@@ -3301,7 +3379,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
         expand_x = x.new_empty(tuple([max(a, a * tp_world_size), h]), dtype=outDtype)
     dynamic_scales_dtype = get_dispatch_dynamic_scales_dtype(x, scales, quant_mode)
     if tp_world_size <= 1:
-        dynamic_scales_shape = get_dispatch_dynamic_shape(scales, quant_mode, a, h)
+        dynamic_scales_shape = get_dispatch_dynamic_shape(x, scales, quant_mode, a, h)
         dynamic_scales = x.new_empty(dynamic_scales_shape, dtype=dynamic_scales_dtype)
     else:
         dynamic_scales = x.new_empty((a * tp_world_size), dtype=dynamic_scales_dtype)
@@ -3310,8 +3388,9 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
     tp_recv_counts = x.new_empty((tp_world_size), dtype=torch.int32)
     expand_scales = x.new_empty((0), dtype=torch.float32)
     if expert_scales is not None:
-        ep_recv_cnt_num = ep_world_size * local_moe_expert_num + global_bs_real * 2 * k * (ep_world_size // 8)
-        ep_recv_counts = x.new_empty((ep_recv_cnt_num), dtype=torch.int32)
+        if get_soc_version() < _ASCEND950_SOC_VERSION:
+            ep_recv_cnt_num = ep_world_size * local_moe_expert_num + global_bs_real * 2 * k * (ep_world_size // 8)
+            ep_recv_counts = x.new_empty((ep_recv_cnt_num), dtype=torch.int32)
         expand_scales = x.new_empty((a), dtype=torch.float32)
     return (expand_x, dynamic_scales, expand_idx, expert_token_nums, ep_recv_counts, tp_recv_counts, expand_scales)
 
@@ -7070,6 +7149,8 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
 
 @impl(m, "npu_chunk_gated_delta_rule")
 def npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None):
+    torch._check(value is not None, lambda: "value cannot be empty.")
+    torch._check(value.numel() > 0, lambda: "value cannot be empty.")
     torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
     state_shape = (initial_state.size(0), initial_state.size(1), initial_state.size(2), initial_state.size(3))
     out_shape = (value.size(0), value.size(1), value.size(2))

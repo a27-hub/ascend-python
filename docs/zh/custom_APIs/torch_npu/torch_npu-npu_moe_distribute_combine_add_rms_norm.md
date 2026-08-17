@@ -67,7 +67,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 - **moe\_expert\_num**（`int`）：必选参数，MoE专家数量，取值范围\[1, 1024\]，并且满足`moe_expert_num`%\(`ep_world_size`-`shared_expert_rank_num`\)=0。
 - **tp\_send\_counts**（`Tensor`）：可选参数，表示本卡每个专家发给TP（Tensor Parallelism，张量并行）通信域每个卡的数据量。当前版本不支持TP域通信，该参数为预留参数，使用默认值即可。对应`torch_npu.npu_moe_distribute_dispatch`的`tp_recv_counts`输出。
 
-- **x\_active\_mask**（`Tensor`）：Tensor类型，
+- **x\_active\_mask**（`Tensor`）：Tensor类型。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：要求是一个1D或者2D Tensor。当输入为1D时，shape为\(BS, \); 当输入为2D时，shape为\(BS, K\)。数据类型支持bool，数据格式要求为ND，支持非连续的Tensor。当输入为1D时，参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入；当输入为2D时，参数为true表示当前token对应的`expert_ids`参与通信，若当前token对应的K个`bool`值全为false，表示当前token不会参与通信。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
 
 - **activation\_scale**（`Tensor`）：可选参数，**预留参数暂未使用，使用默认值即可。**
@@ -141,7 +141,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 
     - K：表示选取topK个专家，取值范围为0<K≤8，同时满足0 < K ≤ moe\_expert\_num + zero_expert_num + copy_expert_num + const_expert_num。
     - local\_expert\_num：表示本卡专家数量。
-        - 对于共享专家卡，local\_expert\_num=1
+        - 对于共享专家卡，local\_expert\_num=1。
         - 对于MoE专家卡，local\_expert\_num=moe\_expert\_num/\(ep\_world\_size-shared\_expert\_rank\_num\)。
 
 - HCCL通信域缓存区大小:

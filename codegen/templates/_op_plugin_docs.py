@@ -4003,7 +4003,7 @@ _add_torch_npu_docstr(
     "npu_mhc_pre",
     """
 接口原型：
-torch_npu.npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0, int inner_precise=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 
 功能描述：
 通过一系列计算，可得到 MHC (流形约束超连接)架构中 hidden 层对应的投影矩阵 Hres 和 Hpost，以及作为 Atten 或 MLP 层输入的矩阵 Hin。
@@ -4017,6 +4017,7 @@ gamma: Tensor类型，可选输入，表示进行 RMSNorm 计算时的缩放因�
 norm_eps: Float类型，可选输入，RMSNorm 的防除零参数。
 hc_eps: Float类型，可选输入，H_pre 经过 sigmoid 运算后的 eps 参数。
 out_flag: Int类型，可选输入，表示是否输出中间结果标识，默认值为0(仅输出最终变换结果)。
+inner_precise: Int类型，可选输入，指定MhcPre算子的计算模式，默认值为0。0表示在Cube中使用FP32模式计算；1表示在Cube中使用HF32模式计算。
 n：shape 中的 n 常取 4、6、8。
 
 输出说明:
@@ -4596,22 +4597,22 @@ _add_torch_npu_docstr(
     "npu_mhc_post_backward",
     """
 接口原型：
-torch_npu.npu_mhc_post_backward(Tensor grad_output, Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> (Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_mhc_post_backward(Tensor grad_y, Tensor x, Tensor h_res=None, Tensor h_out, Tensor h_post) -> (Tensor, Tensor, Tensor, Tensor)
 
 功能描述
 算子功能: MhcPostBackward是MhcPost的反向算子. 融合主分支特征h_out与残差分支特征x_l（或residual），通过门控h_post和经sinkhorn投影后的双随机矩阵h_res机制实现信息流动.
 
 参数说明
-grad_output: Tensor类型, 必选输入, 表示前向输出的梯度张量. 数据格式为ND, 支持的数据类型为BFLOAT16和FLOAT16, 数据维度可为3维[T, n, D]和4维[B, S, n, D].
+grad_y: Tensor类型, 必选输入, 表示前向输出的梯度张量. 数据格式为ND, 支持的数据类型为BFLOAT16和FLOAT16, 数据维度可为3维[T, n, D]和4维[B, S, n, D].
 x: Tensor类型, 必选输入, 待计算数据, 代表网络中mHC层的输入数据. 数据格式为ND, 支持的数据类型为BFLOAT16和FLOAT16, 数据维度可为3维[T, n, D]和4维[B, S, n, D].
-h_res: Tensor类型, 必选输入, mHC的h_res变换矩阵, 是做完sinkhorn变换之后的双随机矩阵. 数据格式为ND, 支持的数据类型为FLOAT32, 数据维度可为3维[T, n, n]和4维[B, S, n, n].
+h_res: Tensor类型, 可选输入, mHC的h_res变换矩阵, 是做完sinkhorn变换之后的双随机矩阵. 数据格式为ND, 支持的数据类型为FLOAT32, 数据维度可为3维[T, n, n]和4维[B, S, n, n]. 不传入时, grad_h_res仍正常输出, 由x推导shape.
 h_out: Tensor类型, 必选输入, Attn/MLP层输出. 数据格式为ND, 支持的数据类型为BFLOAT16和FLOAT16, 数据维度可为3维[B, S, D]和2维[T, D].
 h_post: Tensor类型, 必选输入, mHC的h_post变换矩阵. 数据格式为ND, 支持的数据类型为FLOAT32, 数据维度可为3维[B, S, n]和2维[T, n].
 n: shape中n仅支持4, 6, 8.
 
 输出说明
 grad_x: Tensor类型, 对前向输入x的梯度, shape和数据类型与x一致, 数据格式为ND.
-grad_h_res: Tensor类型, 对前向输入h_res的梯度, shape和数据类型与h_res一致, 数据格式为ND.
+grad_h_res: Tensor类型, 对前向输入h_res的梯度, shape由x推导得出(将x最后一维D替换为n, 即[T, n, n]或[B, S, n, n]), 数据类型为FLOAT32, 数据格式为ND.
 grad_h_out: Tensor类型, 对前向输入h_out的梯度, shape和数据类型与h_out一致, 数据格式为ND.
 grad_h_post: Tensor类型, 对前向输入h_post的梯度, shape和数据类型与h_post一致, 数据格式为ND.
 
@@ -14789,6 +14790,7 @@ out(Tensor)：表示公式中的f(x)，即原地更新后的input张量。
 PyTorch 2.6及更高版本
 
 支持的型号:
+Ascend 950PR/Ascend 950DT
 Atlas A2训练系列产品
 Atlas A3训练系列产品
 
