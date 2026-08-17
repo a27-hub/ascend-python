@@ -1,6 +1,6 @@
 # 适配开发及调用（AscendC）
 
-基于C++ extensions方式，通过torch_npu框架调用AscendC自定义算子的完整适配开发流程。本样例展示了如何将AscendC算子集成到PyTorch生态中，实现高效的NPU加速计算。
+基于C++ extensions方式，通过TorchNPU框架调用AscendC自定义算子的完整适配开发流程。本样例展示了如何将AscendC算子集成到Ascend for PyTorch生态中，实现高效的NPU加速计算。
 
 ## 算子适配开发
 
@@ -9,7 +9,7 @@
 在开始之前，请确保您已完成以下环境的安装。
 
 1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
-2. 请参考《[软件安装](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
+2. 请参考[源码编译](https://gitcode.com/Ascend/pytorch/blob/master/docs/zh/installation_guide/references/building_from_source.md)完成PyTorch和TorchNPU的安装。
 
 ### 适配文件结构
 

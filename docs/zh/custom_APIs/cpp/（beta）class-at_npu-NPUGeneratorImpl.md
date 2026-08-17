@@ -80,7 +80,7 @@ NPUGeneratorImpl是一个随机数生成器类，实现了NPU设备随机数的�
 
     NPUGeneratorImpl设备类型获取，返回值类型DeviceType，与c10::DeviceType at::CUDAGeneratorImpl::device_type()相同。
 
-Pytorch2.5.1及以上版本，移除以下成员函数，Pytorch2.5.1之前版本以下成员函数仍旧存在：
+PyTorch2.5.1及以上版本，移除以下成员函数，PyTorch2.5.1之前版本以下成员函数仍旧存在：
 
 - **void at_npu::NPUGeneratorImpl::capture_prologue()**
 
@@ -90,7 +90,7 @@ Pytorch2.5.1及以上版本，移除以下成员函数，Pytorch2.5.1之前版�
 
     NPUGeneratorImpl结束图捕获，返回值类型uint64_t，关闭图捕获并返回预留区域大小offset_extragraph，与uint64_t at::CUDAGeneratorImpl::capture_epilogue()相同。
 
-Pytorch2.5.1及以上版本，新增以下成员函数：
+PyTorch2.5.1及以上版本，新增以下成员函数：
 
 - **void graphsafe_set_state(const c10::intrusive_ptr& state)**
 
@@ -102,10 +102,10 @@ Pytorch2.5.1及以上版本，新增以下成员函数：
     在capture状态下为aclgraph查询随机数生成对象，与c10::intrusive_ptr\<c10::GeneratorImpl> at::CUDAGeneratorImpl::graphsafe_get_state()功能相同。
     
     返回值为c10::GeneratorImpl对象。
-- **void register_graph(c10_npu::NPUGraph* graph)**
+- **void register_graph(c10_npu::NPUGraph\* graph)**
 
     为NPUGeneratorImpl对象注册aclgraph图对象，进行统一管理，与void at::CUDAGeneratorImpl::register_graph(CUDAGraph* graph)功能相同。
-- **void unregister_graph(c10_npu::NPUGraph* graph)**
+- **void unregister_graph(c10_npu::NPUGraph\* graph)**
 
     为NPUGeneratorImpl对象移除aclgraph图对象，在图对象的析构时会调用，与void at::CUDAGeneratorImpl::unregister_graph(CUDAGraph* graph)功能相同。
 

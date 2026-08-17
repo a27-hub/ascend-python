@@ -1,4 +1,4 @@
-all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13, v2.14]
+all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13, v2.14, v2.15]
 official:
   - func: __ilshift__.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
@@ -4294,6 +4294,9 @@ official:
     acl_op: v2.1
     op_api: v2.1
 
+  - func: repeat_interleave.Tensor(Tensor repeats, *, SymInt? output_size=None) -> Tensor
+    op_api: [v2.2, newest]
+
   - func: replication_pad1d(Tensor self, SymInt[2] padding) -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
@@ -5616,7 +5619,7 @@ custom:
   - func: attention_worker_scheduler(Tensor self) -> Tensor
     op_api: [v2.1, newest]
 
-  - func: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0, int inner_precise=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
     internal_format_opapi: all_version
 
@@ -7698,6 +7701,9 @@ symint:
 
   - func: repeat_interleave.self_Tensor(Tensor self, Tensor repeats, int? dim=None, *, SymInt? output_size=None) -> Tensor
     acl_op: [v2.2, newest]
+    op_api: [v2.2, newest]
+
+  - func: repeat_interleave.Tensor(Tensor repeats, *, SymInt? output_size=None) -> Tensor
     op_api: [v2.2, newest]
 
   - func: repeat_interleave.self_int(Tensor self, SymInt repeats, int? dim=None, *, SymInt? output_size=None) -> Tensor

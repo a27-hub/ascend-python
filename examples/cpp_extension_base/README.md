@@ -1,6 +1,6 @@
 # 适配开发及调用（基础样例）
 
-本文档基于C++ extensions方式，使用torch_npu单算子API进行适配开发的完整流程。流程涵盖了算子定义、算子适配、ATen IR注册绑定，最终实现调用自定义算子。
+本文档基于C++ extensions方式，使用TorchNPU单算子API进行适配开发的完整流程。流程涵盖了算子定义、算子适配、ATen IR注册绑定，最终实现调用自定义算子。
 
 ## 算子适配开发
 
@@ -9,7 +9,7 @@
 在开始之前，请确保您已完成以下环境的安装。
 
 1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
-2. 请参考《[软件安装](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/installation_guide/installation_description.md)》完成PyTorch框架的安装。
+2. 请参考[源码编译](https://gitcode.com/Ascend/pytorch/blob/master/docs/zh/installation_guide/references/building_from_source.md)完成PyTorch和TorchNPU的安装。
 
 ### 适配文件结构
 

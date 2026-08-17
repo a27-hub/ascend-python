@@ -183,7 +183,7 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
 
 
 @impl(m, "npu_mhc_pre")
-def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0):
+def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0, inner_precise=0):
     torch._check(
         x.numel() > 0,
         lambda: "Input x should not be empty." + ops_error(ErrCode.VALUE),
@@ -208,6 +208,13 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
     torch._check(
         out_flag == 0 or out_flag == 1,
         lambda: f"Input out_flag must be 0 or 1, but got {out_flag}." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        inner_precise == 0 or inner_precise == 1,
+        lambda: (
+            f"Input inner_precise must be 0 (Cube uses FP32) or 1 (Cube uses HF32), but got {inner_precise}."
+            + ops_error(ErrCode.VALUE)
+        ),
     )
 
     has_resi = alpha.numel() == 3
@@ -3254,9 +3261,15 @@ def get_dispatch_dynamic_scales_dtype(x, scales, quant_mode):
     return dynamic_scales_dtype
 
 
-def get_dispatch_dynamic_shape(scales, quant_mode, a, h):
+def get_dispatch_dynamic_shape(x, scales, quant_mode, a, h):
     shape = tuple([a])
     if quant_mode == 0 and scales is not None:
+        if x.dtype == torch.int32:
+            if scales.dim() != 1:
+                raise RuntimeError(
+                    f"Expected scales to be 1-d when x dtype is int32, but got {scales.dim()}-d."
+                )
+            return shape
         if scales.dim() < 2:
             raise RuntimeError(f"Expected scales to be at least 2-d, but got {scales.dim()}-d.")
         shape = tuple([a, scales.shape[1]])
@@ -3366,7 +3379,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
         expand_x = x.new_empty(tuple([max(a, a * tp_world_size), h]), dtype=outDtype)
     dynamic_scales_dtype = get_dispatch_dynamic_scales_dtype(x, scales, quant_mode)
     if tp_world_size <= 1:
-        dynamic_scales_shape = get_dispatch_dynamic_shape(scales, quant_mode, a, h)
+        dynamic_scales_shape = get_dispatch_dynamic_shape(x, scales, quant_mode, a, h)
         dynamic_scales = x.new_empty(dynamic_scales_shape, dtype=dynamic_scales_dtype)
     else:
         dynamic_scales = x.new_empty((a * tp_world_size), dtype=dynamic_scales_dtype)
