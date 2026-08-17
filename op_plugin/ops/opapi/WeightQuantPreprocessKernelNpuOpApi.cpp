@@ -51,7 +51,6 @@ struct QuantContext {
     int64_t k_group_size;
     c10_npu::SocVersion soc_version;
     bool is_weight_trans = false;
-    c10::optional<int64_t> out_weight_format;
 
     at::Tensor out_weight;
     at::Tensor out_weight_scale;
@@ -128,7 +127,7 @@ bool judge_gmm_mx_a8w4(QuantContext &ctx) {
     return false;
 }
 
-bool judge_mm_a16s4_nd_pertensor(QuantContext &ctx) {
+bool judge_mm_a16s4_per_tensor(QuantContext &ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
@@ -136,26 +135,22 @@ bool judge_mm_a16s4_nd_pertensor(QuantContext &ctx) {
     bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
     bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
-    if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2) {
-        int64_t scale_dim = ctx.weight_scale.dim();
-        bool is_per_channel = (scale_dim == DIMS_1) ||
-                              (scale_dim == DIMS_2 && ctx.weight_scale.size(0) == 1);
-        if (is_per_channel && ctx.out_weight_format.has_value() &&
-            ctx.out_weight_format.value() == ACL_FORMAT_ND) {
-            // A16S4 ND pertensor 路径转置/非转置均支持（ND 直拷为物理透传，与转置状态无关）
-            ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
-            return true;
-        }
+    // A16S4 per-tensor：scale 仅含单个元素（{1}/{1,1}），不支持 NZ，一律 ND 直拷（转置/非转置均支持，
+    // ND 直拷为物理透传，与转置状态无关）
+    if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2 &&
+        ctx.weight_scale.numel() == 1) {
+        ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
+        return true;
     }
     return false;
 }
 
-bool judge_mm_a16s4_nz_perchannel(QuantContext &ctx) {
+bool judge_mm_a16s4_per_channel(QuantContext &ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
 
-    OP_LOG_DEBUG("judge_mm_a16s4_nz_perchannel: x_acl_dtype=%d, weight_acl_dtype=%d, weight_scale_acl_dtype=%d, "
+    OP_LOG_DEBUG("judge_mm_a16s4_per_channel: x_acl_dtype=%d, weight_acl_dtype=%d, weight_scale_acl_dtype=%d, "
                  "weight_dim=%d, weight_stride=[%d,%d], weight_size=[%d,%d]",
         static_cast<int>(x_acl_dtype), static_cast<int>(weight_acl_dtype),
         static_cast<int>(weight_scale_acl_dtype), static_cast<int>(ctx.weight.dim()),
@@ -171,17 +166,16 @@ bool judge_mm_a16s4_nz_perchannel(QuantContext &ctx) {
         int64_t scale_dim = ctx.weight_scale.dim();
         bool is_per_channel = (scale_dim == DIMS_1) ||
                               (scale_dim == DIMS_2 && ctx.weight_scale.size(0) == 1);
-        if (!is_per_channel) {
-            return false;
+        // 转置状态内部分流：转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
+        if (is_per_channel && ctx.weight_scale.numel() > 1) {
+            ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
+            return true;
         }
-        // A16S4 INT4 NZ 路径不要求 weight 转置
-        ctx.is_weight_trans = false;
-        return true;
     }
     return false;
 }
 
-bool judge_mm_a16s4_nz_pergroup(QuantContext &ctx) {
+bool judge_mm_a16s4_per_group(QuantContext &ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
@@ -191,11 +185,11 @@ bool judge_mm_a16s4_nz_pergroup(QuantContext &ctx) {
     bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
     bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
+    // A16S4 per-group：转置状态内部分流，转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
     if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 &&
         x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 &&
         ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1) {
-        // A16S4 per-group NZ 路径仅支持非转置 weight（registry 侧 CheckWeightNotTrans 校验）
-        ctx.is_weight_trans = false;
+        ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
         return true;
     }
     return false;
@@ -238,27 +232,6 @@ bool judge_mm_a16f4_mx(QuantContext &ctx) {
         ctx.weight_scale.dim() == DIMS_2 &&
         !is_transpose_certain_two_dims(ctx.weight, 0)) {
         ctx.is_weight_trans = false;
-        return true;
-    }
-    return false;
-}
-
-bool judge_mm_a16s4_nd_pergroup(QuantContext &ctx) {
-    aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
-    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-    aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
-    aclDataType x_scale_acl_dtype =
-        ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
-
-    bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
-    bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
-
-    // A16S4 ND per-group：INT4 + per-group scale [G, N]（G > 1）+ ND out_weight，转置/非转置均支持
-    if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 &&
-        x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 &&
-        ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1 &&
-        ctx.out_weight_format.has_value() && ctx.out_weight_format.value() == ACL_FORMAT_ND) {
-        ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
         return true;
     }
     return false;
@@ -414,6 +387,15 @@ static void prepare_out_weight_nz_a16s4(QuantContext &ctx) {
         ctx.out_weight.strides(), ACL_FORMAT_FRACTAL_NZ_C0_8);
 }
 
+// A16S4 内部分流：转置 weight → ND 直拷（物理透传，与转置状态无关）；非转置 → NZ 转换
+static void prepare_out_weight_a16s4(QuantContext &ctx) {
+    if (ctx.is_weight_trans) {
+        prepare_out_weight_nd(ctx);
+    } else {
+        prepare_out_weight_nz_a16s4(ctx);
+    }
+}
+
 template <bool IsGmm> static void prepare_out_weight_scale_mx(QuantContext &ctx) {
     constexpr int64_t expected_dim = IsGmm ? DIMS_4 : DIMS_3;
     TORCH_CHECK(ctx.weight_scale.dim() == expected_dim, "Input weight scale tensor should be ", expected_dim,
@@ -466,17 +448,14 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
             {judge_gmm_mx_a8w4,
                 {prepare_out_weight_nz<true, NZ_C0_32, ACL_FORMAT_FRACTAL_NZ_C0_32>,
                     prepare_out_weight_scale_mx<true>, prepare_out_weight_offset, prepare_out_bias}},
-            {judge_mm_a16s4_nd_pertensor,
+            {judge_mm_a16s4_per_tensor,
                 {prepare_out_weight_nd,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
-            {judge_mm_a16s4_nz_perchannel,
-                {prepare_out_weight_nz_a16s4,
+            {judge_mm_a16s4_per_channel,
+                {prepare_out_weight_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
-            {judge_mm_a16s4_nd_pergroup,
-                {prepare_out_weight_nd,
-                    prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
-            {judge_mm_a16s4_nz_pergroup,
-                {prepare_out_weight_nz_a16s4,
+            {judge_mm_a16s4_per_group,
+                {prepare_out_weight_a16s4,
                     prepare_out_weight_scale_per_channel<false>, prepare_out_weight_offset, prepare_out_bias}},
             {judge_mm_a16f4_nz_pergroup,
                 {prepare_out_weight_nz_a16s4,
@@ -497,8 +476,7 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_weight_quant_preprocess(const at::Tensor &weight,
     const at::Tensor &weight_scale, int64_t x_dtype, int64_t weight_dtype, int64_t weight_scale_dtype,
     const c10::optional<at::Tensor> &weight_offset, const c10::optional<at::Tensor> &bias,
-    c10::optional<int64_t> x_scale_dtype, c10::optional<int64_t> k_group_size,
-    c10::optional<int64_t> out_weight_format) {
+    c10::optional<int64_t> x_scale_dtype, c10::optional<int64_t> k_group_size) {
     auto soc_version = c10_npu::GetSocVersion();
     auto it = SOC_DATA_FLOW_CONFIG_MAP.find(soc_version);
     TORCH_CHECK(it != SOC_DATA_FLOW_CONFIG_MAP.end(),
@@ -508,7 +486,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_weight_quant_prep
     int64_t k_group_size_real = k_group_size.value_or(0);
 
     QuantContext ctx{weight, weight_scale, weight_offset, bias, x_dtype, weight_dtype, x_scale_dtype,
-        weight_scale_dtype, k_group_size_real, soc_version, false, out_weight_format,
+        weight_scale_dtype, k_group_size_real, soc_version, false,
         at::Tensor(), at::Tensor(), at::Tensor(), at::Tensor()};
 
     bool matched = false;
