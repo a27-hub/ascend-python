@@ -4095,6 +4095,8 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
         if weight.is_contiguous():
             if antiquant_scale is not None and antiquant_scale.size(-1) > 1:
                 dim_n = antiquant_scale.size(-1)
+            elif antiquant_scale is None:
+                raise RuntimeError("antiquant_scale must not be None for 4-bit weight")
             else:
                 dim_n = weight.size(1) * 2
         else:

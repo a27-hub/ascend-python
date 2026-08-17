@@ -42,8 +42,8 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
 
     // 计算 weight 的 K 维度
     // 对于 INT32/FLOAT 类型的 4-bit 打包（INT4_NUMS_IN_INT32 = 8）
-    // uint8 载体 4-bit 紧凑排布（A16S4 链路）：NZ_C0_8/NZ_C0_16 的 view 已是逻辑 [K, N]，无需缩放；
-    // ND 的 view 是物理打包形状——非转置 [K, N/2]（沿 N 打包，stride(-1)==1）、
+    // uint8 载体 4-bit 紧凑排布（A16S4 链路）：NZ_C0_16 的 view 是逻辑 [K, N]，NZ_C0_8 的 view 是
+    // 物理打包形状 [K, N/2]；ND 的 view 是物理打包形状——非转置 [K, N/2]（沿 N 打包，stride(-1)==1）、
     // 转置 [K/2, N]（沿 K 打包，stride(-2)==1），K/N 需按打包方向还原
     bool is_int32_float_packed = (weight.dtype() == at::kInt || weight.dtype() == at::kFloat);
 
@@ -54,6 +54,8 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
                               weight_acl_dtype == ACL_FLOAT4_E1M2);
     bool is_uint8_4bit_nd =
         (weight.dtype() == at::kByte) && is_4bit_acl_dtype && (weight_format == ACL_FORMAT_ND);
+    bool is_uint8_4bit_nz_c08 =
+        (weight.dtype() == at::kByte) && is_4bit_acl_dtype && (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8);
     bool uint8_pack_along_n = is_uint8_4bit_nd && weight.stride(weight_dim_num - 1) == 1;
     bool uint8_pack_along_k =
         is_uint8_4bit_nd && !uint8_pack_along_n && weight.stride(weight_dim_num - MINIMUM_SHAPE_SIZE) == 1;
@@ -73,7 +75,7 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     auto weight_size_base = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE + 1);
     if (is_int32_float_packed && !trans_weight) {
         output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * INT4_NUMS_IN_INT32;
-    } else if (uint8_pack_along_n) {
+    } else if (uint8_pack_along_n || is_uint8_4bit_nz_c08) {
         output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * FP4_IN_INT8;
     } else {
         output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base;

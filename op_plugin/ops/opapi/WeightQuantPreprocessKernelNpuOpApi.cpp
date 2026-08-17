@@ -362,16 +362,17 @@ template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat> static void prepa
 }
 
 // A16S4 INT4 NZ（非转置）专用 prepare：torch 侧 uint8 [K, N/2] 非转置输入
-// （CollectB4ShapeInfo 将其转为 ACL INT4 [K, N]，打包方向沿 N，低 nibble 为偶数 n）
-// out_weight: ACL view [K, N]、storage [N/16, K/16, 16, 16]（INT4 逻辑元素）、格式 NZ_C0_8（经
-// FORMAT_FAKE_TO_REAL 映射为 NZ_C0_16），与 ops-math weight_quant_preprocess 的校验完全一致。
+// out_weight: torch 侧保持 uint8 物理打包视图 [K, N/2] + NZ_C0_8 标签（C0=8 字节=16 个 INT4），
+// storage 为物理分形 [N/16, K/16, 16, 8]（uint8 字节数精确）；经 ConvertType 统一 ×2 还原为
+// ACL INT4 view [K, N]、storage [N/16, K/16, 16, 16]、format NZ_C0_16，与 ops-math 校验一致。
 static void prepare_out_weight_nz_a16s4(QuantContext &ctx) {
     auto weight_sizes = ctx.weight.sizes();
     int64_t weight_dim = ctx.weight.dim();
     int64_t k = weight_sizes[weight_dim - IDX_2];
-    int64_t n_logical = weight_sizes[weight_dim - IDX_1] * 2; // uint8 每字节 2 个 INT4
+    int64_t n_packed = weight_sizes[weight_dim - IDX_1]; // uint8 物理打包字节数（N/2）
+    int64_t n_logical = n_packed * 2; // 每字节 2 个 INT4
 
-    c10::SmallVector<int64_t, DIMS_MAX> storage_shape = {ceil_div(n_logical, NZ_16), ceil_div(k, NZ_16), NZ_16, NZ_16};
+    c10::SmallVector<int64_t, DIMS_MAX> storage_shape = {ceil_div(n_logical, NZ_16), ceil_div(k, NZ_16), NZ_16, NZ_C0_8};
 
     int64_t storage_size = 1;
     for (auto dim : storage_shape) {
@@ -380,7 +381,8 @@ static void prepare_out_weight_nz_a16s4(QuantContext &ctx) {
 
     ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
 
-    c10::SmallVector<int64_t, DIMS_MAX> out_view_shape = {k, n_logical};
+    // 物理打包视图 [K, N/2]：4-bit 的 dtype/format 语义由 ConvertType 与 fake format 标签承担
+    c10::SmallVector<int64_t, DIMS_MAX> out_view_shape = {k, n_packed};
     ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(out_view_shape);
 
     at_npu::native::StorageDescHelper::SetDesc(ctx.out_weight, ctx.out_weight.sizes(), storage_shape,
