@@ -227,7 +227,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             y.reserve(num_weight);
             for (size_t i = 0; i < num_weight; i++) {
                 size_t ni = singleWeight ? n0 : weight[i].size(dim_num_w - 1);
-                create_new_tensor(y, x[0].size(1), ni, options);
+                create_new_tensor(y, x[0].size(0), ni, options);
             }
         } else if (num_group_list > 0) {
             y.reserve(num_group_list);

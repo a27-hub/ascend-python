@@ -3737,7 +3737,7 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
             weight_i = weight[0] if singleWeight else weight[i]
             ni = n if singleWeight else weight_i.shape[1]
             dim_n = ni * INT4_IN_INT32 if weight_i.dtype == torch.int32 else ni
-            y.append(x[0].new_empty((x[0].shape[1], dim_n), dtype=output_dtype))
+            y.append(x[0].new_empty((x[0].shape[0], dim_n), dtype=output_dtype))
     elif split_item == 0:
         for i in range(num_x):
             ni = n if singleWeight else weight[i].shape[1]
