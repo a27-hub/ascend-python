@@ -38,7 +38,6 @@ torch_npu.npu_moe_compute_expert_tokens(sorted_expert_for_source_row, num_expert
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
-- Ascend 950PR/Ascend 950DT（A5）支持该接口，输入和输出均需满足上述参数及返回值约束。
 
 ## 调用示例
 

@@ -10551,7 +10551,6 @@ expertTokens: Tensor类型, 公式中的输出, 要求的是一个1D的Tensor, s
 约束说明
 该接口支持推理场景下使用.
 该接口支持图模式.
-Ascend 950PR/Ascend 950DT(A5)支持该接口, 输入和输出均需满足上述参数及返回值约束.
 
 支持的PyTorch版本
 PyTorch 2.3
