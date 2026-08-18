@@ -27,12 +27,7 @@ c10::SmallVector<int64_t, SIZE> kthvalue_npu_output_size(const at::Tensor& self,
   return op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
 }
 
-void kthvalue_shape_modify(
-    at::Tensor& values,
-    at::Tensor& indices,
-    const at::Tensor& self,
-    int64_t dim,
-    bool keepdim) {
+void kthvalue_shape_modify(at::Tensor& values, at::Tensor& indices, const at::Tensor& self, int64_t dim, bool keepdim) {
 #if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
   at::Tensor self_rename = self.rename(c10::nullopt);
 #else
@@ -41,27 +36,19 @@ void kthvalue_shape_modify(
   auto output_size = kthvalue_npu_output_size(self, dim, keepdim);
   if (values.defined()) {
     TORCH_CHECK(
-        values.dtype() == self.dtype(),
-        "output values must be of same type as input"
-        + OPS_ERROR(ErrCode::TYPE));
+        values.dtype() == self.dtype(), "output values must be of same type as input" + OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(
-        values.device() == self.device(),
-        "output values must be on same values as input"
-        + OPS_ERROR(ErrCode::PARAM));
+        values.device() == self.device(), "output values must be on same values as input" + OPS_ERROR(ErrCode::PARAM));
     values.resize_(output_size);
   } else {
     values = at::empty(output_size, self_rename.options());
   }
 
   if (indices.defined()) {
-    TORCH_CHECK(
-        indices.dtype() == at::kLong,
-        "output indices must be of scalar type Long"
-        + OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(indices.dtype() == at::kLong, "output indices must be of scalar type Long" + OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(
         indices.device() == self.device(),
-        "output indices must be on same device as input"
-        + OPS_ERROR(ErrCode::PARAM));
+        "output indices must be on same device as input" + OPS_ERROR(ErrCode::PARAM));
     indices.resize_(output_size);
   } else {
     indices = at::empty(output_size, self_rename.options().dtype(at::kLong));
@@ -98,12 +85,13 @@ void kthvalue_calculate(
 }
 
 void check_self_dim(const at::Tensor& self, int64_t k, int64_t dim) {
-  TORCH_CHECK(self.scalar_type() == at::kHalf || self.scalar_type() == at::kFloat || self.scalar_type() == at::kInt,
-      "the type of input must be float16, float32, or int32"
-      + OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(
+      self.scalar_type() == at::kHalf || self.scalar_type() == at::kFloat || self.scalar_type() == at::kInt,
+      "the type of input must be float16, float32, or int32" + OPS_ERROR(ErrCode::TYPE));
   dim = op_plugin::utils::make_warp_dim(dim, self.dim());
-  TORCH_CHECK(k >= 0 && k <= (self.dim() > 0 ? self.size(dim) : 1), "selected index k out of range"
-      + OPS_ERROR(ErrCode::VALUE));
+  TORCH_CHECK(
+      k >= 0 && k <= (self.dim() > 0 ? self.size(dim) : 1),
+      "selected index k out of range" + OPS_ERROR(ErrCode::VALUE));
 }
 
 std::tuple<at::Tensor, at::Tensor> kthvalue_out_nocheck(
@@ -161,18 +149,9 @@ std::tuple<at::Tensor&, at::Tensor&> kthvalue_out(
   at::SmallVector<int64_t, SIZE> dims = {dim};
   auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
   npu_preparation::CheckOut(
-      {self},
-      values,
-      npu_preparation::get_tensor_npu_format(values),
-      self.scalar_type(),
-      output_size);
+      {self}, values, npu_preparation::get_tensor_npu_format(values), self.scalar_type(), output_size);
 
-  npu_preparation::CheckOut(
-      {self},
-      indices,
-      ACL_FORMAT_ND,
-      at::ScalarType::Long,
-      output_size);
+  npu_preparation::CheckOut({self}, indices, ACL_FORMAT_ND, at::ScalarType::Long, output_size);
 
   kthvalue_out_nocheck(values, indices, self, k, dim, keepdim);
   return std::tuple<at::Tensor&, at::Tensor&>(values, indices);

@@ -20,22 +20,16 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
-namespace{
+namespace {
 at::Tensor& floor_out_npu_nocheck(at::Tensor& result, const at::Tensor& self) {
   at_npu::native::OpCommand cmd;
-  cmd.Name("Floor")
-      .Input(self)
-      .Output(result)
-      .Run();
+  cmd.Name("Floor").Input(self).Output(result).Run();
   return result;
 }
 } // namespace
 
 at::Tensor& floor_out(const at::Tensor& self, at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+  npu_preparation::CheckOut({self}, result, self);
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
     floor_out_npu_nocheck(contiguous_result, self);
