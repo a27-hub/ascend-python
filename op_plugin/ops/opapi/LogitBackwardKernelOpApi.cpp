@@ -4,6 +4,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -29,6 +30,10 @@ at::Tensor& logit_backward_out(
     c10::optional<double> eps,
     at::Tensor& grad_input) {
   if (_logit_backward_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit_backward.grad_input",
+        "aclnnLogitGrad",
+        "aclnnLogitGrad is unavailable or the SoC does not support it");
     at::Tensor grad_output_cpu = grad_output.cpu();
     at::Tensor self_cpu = self.cpu();
     at::Tensor grad_input_cpu = grad_input.cpu();
@@ -46,6 +51,10 @@ at::Tensor& logit_backward_out(
 
 at::Tensor logit_backward(const at::Tensor& grad_output, const at::Tensor& self, c10::optional<double> eps) {
   if (_logit_backward_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::logit_backward",
+        "aclnnLogitGrad",
+        "aclnnLogitGrad is unavailable or the SoC does not support it");
     at::Tensor grad_output_cpu = grad_output.cpu();
     at::Tensor self_cpu = self.cpu();
     at::Tensor out_cpu = at::logit_backward(grad_output_cpu, self_cpu, eps);

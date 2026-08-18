@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -36,6 +37,12 @@ at::Tensor& adaptive_max_pool3d_backward_out(
     const at::Tensor& indices,
     at::Tensor& grad_input) {
   if (!is_npu_supported(self.scalar_type())) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::adaptive_max_pool3d_backward.grad_input",
+        "aclnnAdaptiveMaxPool3dBackward",
+        self.scalar_type() == at::kDouble
+            ? "float64 is unsupported by the NPU kernel"
+            : "aclnnAdaptiveMaxPool3dBackward is unavailable");
     TORCH_WARN_ONCE(
         "adaptive_max_pool3d_backward.grad_input is not supported by NPU currently. Now this kernel is "
         "running on CPU.");
@@ -62,6 +69,12 @@ at::Tensor adaptive_max_pool3d_backward(
     const at::Tensor& self,
     const at::Tensor& indices) {
   if (!is_npu_supported(self.scalar_type())) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::adaptive_max_pool3d_backward",
+        "aclnnAdaptiveMaxPool3dBackward",
+        self.scalar_type() == at::kDouble
+            ? "float64 is unsupported by the NPU kernel"
+            : "aclnnAdaptiveMaxPool3dBackward is unavailable");
     TORCH_WARN_ONCE(
         "adaptive_max_pool3d_backward is not supported by NPU currently. Now this kernel is running on CPU.");
     auto grad_input_cpu = at::adaptive_max_pool3d_backward(

@@ -13,6 +13,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -51,6 +52,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _transform_bias_rescale_qkv(
     const at::Tensor& qkv_bias,
     const int64_t num_heads) {
   if (_transform_bias_rescale_qkv_fallback_condition()) {
+    OP_PLUGIN_CPU_FALLBACK_CHECK(
+        "aten::_transform_bias_rescale_qkv",
+        "aclnnTransformBiasRescaleQkv",
+        "aclnnTransformBiasRescaleQkv is unavailable");
     at::Tensor qkv_cpu = qkv.cpu();
     at::Tensor qkv_bias_cpu = qkv_bias.cpu();
     std::tuple<at::Tensor, at::Tensor, at::Tensor> result_cpu =

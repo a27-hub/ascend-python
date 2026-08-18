@@ -15,6 +15,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/CpuFallbackUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -27,6 +28,10 @@ at::Tensor& upsample_nearest_exact3d_backward_out_slow(
     c10::optional<double> scales_h,
     c10::optional<double> scales_w,
     at::Tensor& grad_input) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_nearest_exact3d_backward.grad_input",
+      "aclnnUpsampleNearestExact3dBackward",
+      "aclnnUpsampleNearestExact3dBackward is unavailable");
   at::Tensor grad_input_slow =
       at::_upsample_nearest_exact3d_backward(grad_output.cpu(), output_size, input_size, scales_d, scales_h, scales_w);
   grad_input.copy_(grad_input_slow);
@@ -40,6 +45,10 @@ at::Tensor upsample_nearest_exact3d_backward_slow(
     c10::optional<double> scales_d,
     c10::optional<double> scales_h,
     c10::optional<double> scales_w) {
+  OP_PLUGIN_CPU_FALLBACK_CHECK(
+      "aten::_upsample_nearest_exact3d_backward",
+      "aclnnUpsampleNearestExact3dBackward",
+      "aclnnUpsampleNearestExact3dBackward is unavailable");
   at::Tensor grad_input = npu_preparation::apply_tensor_without_format(grad_output, input_size);
 
   at::Tensor grad_input_slow =
