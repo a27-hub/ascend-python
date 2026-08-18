@@ -5,16 +5,8 @@ from torch_npu.testing.common_utils import SupportedDevices
 import random
 import numpy as np
 
+
 class TestDropout(TestCase):
-    def _test_native_dropout_backward(self, dtype, p):
-        grad_output = torch.tensor(1.2,dtype=dtype)
-        b = np.random.randint(0,100,size=(0)).astype(np.uint8)
-        mask = torch.tensor(b).to(torch.uint8)
-        output_cpu = torch.ops.aten.native_dropout_backward(grad_output, mask, p)
-        output_npu = torch.ops.aten.native_dropout_backward(grad_output.npu(), mask.npu(), p)
-        self.assertEqual(output_cpu, output_npu)
-
-
     @SupportedDevices(['Ascend910A', 'Ascend910B'])
     def test_native_dropout_backward_fp32(self):
         torch.manual_seed(0)
@@ -24,22 +16,6 @@ class TestDropout(TestCase):
     def test_native_dropout_backward_fp16(self):
         torch.manual_seed(0)
         self._test_native_dropout_backward(torch.float16, 3)
-
-    def _packed_bit_mask(self, grad_shape, pattern):
-        """Build a UINT8 bit mask with align(numel(grad), 128) / 8 elements, LSB-first per byte."""
-        numel = 1
-        for s in grad_shape:
-            numel *= s
-        packed_len = (numel + 127) // 128 * 16
-        return torch.tensor([pattern] * packed_len, dtype=torch.uint8)
-
-    def _expand_bit_mask(self, packed_mask, grad_shape):
-        """Expand a packed UINT8 bit mask to a bool mask of grad_shape (LSB-first, CPU golden side)."""
-        numel = 1
-        for s in grad_shape:
-            numel *= s
-        bits = (packed_mask.unsqueeze(1) >> torch.arange(8, dtype=torch.uint8)) & 1
-        return bits.bool().reshape(-1)[:numel].reshape(grad_shape)
 
     @SupportedDevices(['Ascend950'])
     def test_native_dropout_backward_scale_zero(self, device="npu"):
@@ -118,6 +94,31 @@ class TestDropout(TestCase):
         mask = self._packed_bit_mask((4, 32), 0xAA).npu()
         with self.assertRaisesRegex(RuntimeError, "scale has to be 0"):
             torch.ops.aten.native_dropout_backward(grad_output, mask, 0.5)
+
+    def _test_native_dropout_backward(self, dtype, p):
+        grad_output = torch.tensor(1.2, dtype=dtype)
+        b = np.random.randint(0, 100, size=(0)).astype(np.uint8)
+        mask = torch.tensor(b).to(torch.uint8)
+        output_cpu = torch.ops.aten.native_dropout_backward(grad_output, mask, p)
+        output_npu = torch.ops.aten.native_dropout_backward(grad_output.npu(), mask.npu(), p)
+        self.assertEqual(output_cpu, output_npu)
+
+    def _packed_bit_mask(self, grad_shape, pattern):
+        """Build a UINT8 bit mask with align(numel(grad), 128) / 8 elements, LSB-first per byte."""
+        numel = 1
+        for s in grad_shape:
+            numel *= s
+        packed_len = (numel + 127) // 128 * 16
+        return torch.tensor([pattern] * packed_len, dtype=torch.uint8)
+
+    def _expand_bit_mask(self, packed_mask, grad_shape):
+        """Expand a packed UINT8 bit mask to a bool mask of grad_shape (LSB-first, CPU golden side)."""
+        numel = 1
+        for s in grad_shape:
+            numel *= s
+        bits = (packed_mask.unsqueeze(1) >> torch.arange(8, dtype=torch.uint8)) & 1
+        return bits.bool().reshape(-1)[:numel].reshape(grad_shape)
+
 
 if __name__ == '__main__':
     run_tests()
