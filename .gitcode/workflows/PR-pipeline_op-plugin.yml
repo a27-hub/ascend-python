@@ -240,8 +240,8 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          runs_on_arch: "arm64"
-          runs_on_spec: "2xlarge"
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=32"
 
       # Build_v2_7_1_ARM:
       #   name: Build_v2_7_1_ARM
