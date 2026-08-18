@@ -159,11 +159,10 @@ bool judge_mm_a16s4_per_tensor(QuantContext& ctx) {
   aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
 
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
-  bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
   // A16S4 per-tensor：scale 仅含单个元素（{1}/{1,1}），不支持 NZ，一律 ND 直拷（转置/非转置均支持，
   // ND 直拷为物理透传，与转置状态无关）
-  if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2 &&
+  if (x_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2 &&
       ctx.weight_scale.numel() == 1) {
     ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
     return true;
@@ -189,9 +188,8 @@ bool judge_mm_a16s4_per_channel(QuantContext& ctx) {
       ctx.weight.dim() >= 2 ? static_cast<int>(ctx.weight.size(1)) : -1);
 
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
-  bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
-  if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2) {
+  if (x_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2) {
     int64_t scale_dim = ctx.weight_scale.dim();
     bool is_per_channel = (scale_dim == DIMS_1) || (scale_dim == DIMS_2 && ctx.weight_scale.size(0) == 1);
     // 转置状态内部分流：转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
@@ -211,10 +209,9 @@ bool judge_mm_a16s4_per_group(QuantContext& ctx) {
       ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
 
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
-  bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
   // A16S4 per-group：转置状态内部分流，转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
-  if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_INT4 && x_scale_acl_dtype == ACL_DT_UNDEFINED &&
+  if (x_dtype_match && weight_acl_dtype == ACL_INT4 && x_scale_acl_dtype == ACL_DT_UNDEFINED &&
       ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1) {
     ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
     return true;
