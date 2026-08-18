@@ -27,7 +27,6 @@ namespace {
 constexpr int64_t NZ_16 = 16;
 constexpr int64_t NZ_C0_8 = 8;
 constexpr int64_t NZ_C0_16 = 16;
-constexpr int64_t NZ_C0_32 = 32;
 constexpr int64_t DIMS_1 = 1;
 constexpr int64_t DIMS_2 = 2;
 constexpr int64_t DIMS_3 = 3;
@@ -262,60 +261,6 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
   return false;
 }
 
-bool judge_mm_a16w4_fp4(QuantContext& ctx) {
-  aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
-  aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-  aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
-  aclDataType x_scale_acl_dtype =
-      ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
-
-  bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
-  bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
-
-  if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 &&
-      x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2) {
-    // A16W4 需要转置 weight（和 MxA8W4 一样）
-    TORCH_CHECK(
-        is_transpose_certain_two_dims(ctx.weight, 0),
-        "Input weight tensor should be transposed, please check input.",
-        OPS_ERROR(ErrCode::PARAM));
-    ctx.is_weight_trans = true;
-    return true;
-  }
-  return false;
-}
-
-bool judge_mm_mx_a16w4(QuantContext& ctx) {
-  aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
-  aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-  aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
-  aclDataType x_scale_acl_dtype =
-      ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
-
-  bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
-
-  if (x_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 && weight_scale_acl_dtype == ACL_FLOAT8_E8M0 &&
-      x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2) {
-    TORCH_CHECK(
-        ctx.weight_scale.dim() == DIMS_3,
-        "Input weight scale tensor should be 3D, but got ",
-        ctx.weight_scale.dim(),
-        OPS_ERROR(ErrCode::PARAM));
-    // A16W4 需要转置 weight（和 MxA8W4 一样）
-    TORCH_CHECK(
-        is_transpose_certain_two_dims(ctx.weight, 0),
-        "Input weight tensor should be transposed, please check input.",
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(
-        is_transpose_certain_two_dims(ctx.weight_scale, 0),
-        "Input weight scale tensor should be transposed, please check input.",
-        OPS_ERROR(ErrCode::PARAM));
-    ctx.is_weight_trans = true;
-    return true;
-  }
-  return false;
-}
-
 template <bool IsGmm>
 static void prepare_out_weight_scale_per_channel(QuantContext& ctx) {
   auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
@@ -491,12 +436,12 @@ static void execute_prepares(const std::vector<PrepareFunc>& prepares, QuantCont
 static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>> SOC_DATA_FLOW_CONFIG_MAP = {
     {c10_npu::SocVersion::Ascend950,
      {{judge_mm_mx_a8w4,
-       {prepare_out_weight_nz<false, NZ_C0_32, ACL_FORMAT_FRACTAL_NZ_C0_32>,
+       {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
         prepare_out_weight_scale_mx<false>,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_gmm_mx_a8w4,
-       {prepare_out_weight_nz<true, NZ_C0_32, ACL_FORMAT_FRACTAL_NZ_C0_32>,
+       {prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
         prepare_out_weight_scale_mx<true>,
         prepare_out_weight_offset,
         prepare_out_bias}},
@@ -523,16 +468,6 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
       {judge_mm_a16f4_mx,
        {prepare_out_weight_nz_a16s4,
         prepare_out_weight_scale_per_channel<false>,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
-      {judge_mm_a16w4_fp4,
-       {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_8>,
-        prepare_out_weight_scale_per_channel<false>,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
-      {judge_mm_mx_a16w4,
-       {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_8>,
-        prepare_out_weight_scale_mx<false>,
         prepare_out_weight_offset,
         prepare_out_bias}}}},
 };

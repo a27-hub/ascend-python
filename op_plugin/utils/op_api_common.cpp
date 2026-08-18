@@ -907,17 +907,8 @@ aclTensor* ConvertType(const at::Tensor& at_tensor) {
           at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
       storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
       if (Is4BitDtype(acl_data_type)) {
-        // NZ 格式约定：NZ/C0_2/C0_4/C0_16/C0_32 为逻辑视图（storage 已是正确物理布局），无需还原；
-        // NZ_C0_8 为 uint8 载体的物理打包视图（view [K, N/2]、storage 末维按字节计），
-        // 与 ND 一样需要 ×2 还原为逻辑 4-bit 视图
-        bool is_nz_format =
-            (format == ACL_FORMAT_FRACTAL_NZ || format == ACL_FORMAT_FRACTAL_NZ_C0_2 ||
-             format == ACL_FORMAT_FRACTAL_NZ_C0_4 || format == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
-             format == ACL_FORMAT_FRACTAL_NZ_C0_32);
-        if (!is_nz_format) {
-          storageDims.back() *= FP4_IN_INT8;
-          CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
-        }
+        storageDims.back() *= FP4_IN_INT8;
+        CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
         auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
         TORCH_CHECK(
             realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".", OPS_ERROR(ErrCode::VALUE));
@@ -1149,17 +1140,8 @@ aclTensor* ConvertType(const TensorWrapper& tensor_r) {
           at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
       storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
       if (Is4BitDtype(acl_data_type)) {
-        // NZ 格式约定：NZ/C0_2/C0_4/C0_16/C0_32 为逻辑视图（storage 已是正确物理布局），无需还原；
-        // NZ_C0_8 为 uint8 载体的物理打包视图（view [K, N/2]、storage 末维按字节计），
-        // 与 ND 一样需要 ×2 还原为逻辑 4-bit 视图
-        bool is_nz_format =
-            (format == ACL_FORMAT_FRACTAL_NZ || format == ACL_FORMAT_FRACTAL_NZ_C0_2 ||
-             format == ACL_FORMAT_FRACTAL_NZ_C0_4 || format == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
-             format == ACL_FORMAT_FRACTAL_NZ_C0_32);
-        if (!is_nz_format) {
-          storageDims.back() *= FP4_IN_INT8;
-          CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
-        }
+        storageDims.back() *= FP4_IN_INT8;
+        CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
         auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
         TORCH_CHECK(
             realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".", OPS_ERROR(ErrCode::VALUE));
@@ -1247,17 +1229,8 @@ aclTensor* ConvertTypeV2(TensorStructPtr at_tensor) {
           (*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.", OPS_ERROR(ErrCode::VALUE));
       storageDims = (*at_tensor).storage_sizes;
       if (Is4BitDtype(acl_data_type)) {
-        // NZ 格式约定：NZ/C0_2/C0_4/C0_16/C0_32 为逻辑视图（storage 已是正确物理布局），无需还原；
-        // NZ_C0_8 为 uint8 载体的物理打包视图（view [K, N/2]、storage 末维按字节计），
-        // 与 ND 一样需要 ×2 还原为逻辑 4-bit 视图
-        bool is_nz_format =
-            (format == ACL_FORMAT_FRACTAL_NZ || format == ACL_FORMAT_FRACTAL_NZ_C0_2 ||
-             format == ACL_FORMAT_FRACTAL_NZ_C0_4 || format == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
-             format == ACL_FORMAT_FRACTAL_NZ_C0_32);
-        if (!is_nz_format) {
-          storageDims.back() *= FP4_IN_INT8;
-          CollectB4ShapeInfo(static_cast<int64_t>(dimNum), wrapperStride, wrapperShape);
-        }
+        storageDims.back() *= FP4_IN_INT8;
+        CollectB4ShapeInfo(static_cast<int64_t>(dimNum), wrapperStride, wrapperShape);
         auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
         TORCH_CHECK(
             realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".", OPS_ERROR(ErrCode::VALUE));
