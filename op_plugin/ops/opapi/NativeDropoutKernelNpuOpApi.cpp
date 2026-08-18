@@ -171,7 +171,7 @@ at::Tensor native_dropout_backward(const at::Tensor& grad_output, const at::Tens
     // Branch on scale: scale == 1 (p == 0, no dropout) returns grad_output itself;
     // scale == 0 or scale == inf (p == 1, all dropped) returns zeros;
     // otherwise aclnnDropoutV3Grad receives the original scale.
-    double p = (scale == NUMBER_ZERO) ? 1 : (1 - 1 / scale);
+    double p = (scale == 0.0) ? 1 : (1 - 1 / scale);
     if (p == 0) {
       return grad_output.clone();
     }
