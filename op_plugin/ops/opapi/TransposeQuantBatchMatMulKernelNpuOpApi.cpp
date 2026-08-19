@@ -28,11 +28,24 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(
     at::IntArrayRef perm_x1_real,
     at::IntArrayRef perm_x2_real,
     at::IntArrayRef perm_y_real,
-    int64_t batch_split_factor_value) {
+    int64_t batch_split_factor_value,
+    c10::optional<int64_t> x1_dtype,
+    c10::optional<int64_t> x2_dtype) {
   c10::SmallVector<int64_t, SIZE> output_size;
+  aclDataType x1_acl_type = x1_dtype.has_value() ? c10_npu::GetAclDataType(x1_dtype.value())
+                                                 : at_npu::native::OpPreparation::convert_to_acl_data_type(x1.scalar_type());
+  aclDataType x2_acl_type = x2_dtype.has_value() ? c10_npu::GetAclDataType(x2_dtype.value())
+                                                 : at_npu::native::OpPreparation::convert_to_acl_data_type(x2.scalar_type());
+  const bool x2_is_fp4 = (x2_acl_type == ACL_FLOAT4_E2M1 || x2_acl_type == ACL_FLOAT4_E1M2 || x2_acl_type == ACL_INT4);
+  const int64_t x2_last_dim = static_cast<int64_t>(x2.sizes().size()) - 1;
+  constexpr int64_t FP4_IN_INT8 = 2;
+  
   auto m_dim = x1.size(perm_x1_real[1]);
   auto batch_dim = x1.size(perm_x1_real[0]);
   auto n_dim = x2.size(perm_x2_real[2]);
+  if (x2_is_fp4 && perm_x2_real[2] == x2_last_dim) {
+    n_dim *= FP4_IN_INT8;
+  }
 
   output_size = {m_dim, batch_dim, n_dim};
 
@@ -86,7 +99,9 @@ at::Tensor npu_transpose_quant_batchmatmul(
       perm_x1_real,
       perm_x2_real,
       perm_y_real,
-      batch_split_factor_value);
+      batch_split_factor_value,
+      x1_dtype,
+      x2_dtype);
 
   aclDataType dtype_value = c10_npu::GetAclDataType(dtype);
   at::ScalarType scalar_type = npu_preparation::convert_to_scalar_type(dtype_value);
