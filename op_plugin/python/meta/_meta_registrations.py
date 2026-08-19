@@ -4167,8 +4167,8 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
     dim_m = x.size(0)
     if (weight.dtype == torch.int32 or weight.dtype == torch.float32) and weight.is_contiguous():
         dim_n = weight.size(1) * 8
-    elif weight.dtype in (torch.uint8, torch.int8) and weight_dtype in (torch_npu.int4, torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2):
-        # 4-bit 紧凑打包载体（uint8/int8）：非转置视图末维为 N/2，逻辑 N 需 ×2；
+    elif weight.dtype == torch.uint8 and weight_dtype in (torch_npu.int4, torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2):
+        # 4-bit 紧凑打包载体（仅 uint8，与 C++ 侧 at::kByte 判定一致）：非转置视图末维为 N/2，逻辑 N 需 ×2；
         # 转置视图末维已是逻辑 N
         if weight.is_contiguous():
             dim_n = weight.size(1) * 2
