@@ -156,7 +156,6 @@ bool judge_gmm_mx_a8w4(QuantContext& ctx) {
 bool judge_mm_a16s4_per_tensor(QuantContext& ctx) {
   aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
   aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-  aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
 
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
 
@@ -204,7 +203,6 @@ bool judge_mm_a16s4_per_channel(QuantContext& ctx) {
 bool judge_mm_a16s4_per_group(QuantContext& ctx) {
   aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
   aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-  aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
   aclDataType x_scale_acl_dtype =
       ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
 
@@ -258,10 +256,22 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
   return false;
 }
 
-template <bool IsGmm>
+// 校验镜像 strides 的寻址包络不超出按 numel 最小分配的 buffer；
+// 连续/确定转置视图必过，padding/重叠/expand 视图直接拒绝而不是写出界
+static void check_strides_envelope(c10::IntArrayRef sizes, c10::IntArrayRef strides, int64_t numel) {
+  int64_t max_offset = 0;
+  for (size_t i = 0; i < sizes.size(); ++i) {
+    TORCH_CHECK(strides[i] > 0, "expanded/overlapped view is not supported here", OPS_ERROR(ErrCode::PARAM));
+    max_offset += (sizes[i] - 1) * strides[i];
+  }
+  TORCH_CHECK(max_offset < numel, "mirrored strides exceed output allocation: max offset ", max_offset,
+              " vs numel ", numel, OPS_ERROR(ErrCode::PARAM));
+}
+
 static void prepare_out_weight_scale_per_channel(QuantContext& ctx) {
   auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
   ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
+  check_strides_envelope(ctx.weight_scale.sizes(), ctx.weight_scale.strides(), ctx.out_weight_scale.numel());
   // 保持与输入 scale 相同的 strides（ND per-group 转置场景需配转置 scale），连续输入时为空操作
   ctx.out_weight_scale =
       ctx.out_weight_scale.as_strided_(scale_view_shape, op_infer::array_to_small_vector(ctx.weight_scale.strides()));
@@ -270,6 +280,7 @@ static void prepare_out_weight_scale_per_channel(QuantContext& ctx) {
 static void prepare_out_weight_nd(QuantContext& ctx) {
   auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
   ctx.out_weight = npu_preparation::apply_tensor_without_format(weight_view_shape, ctx.weight.options());
+  check_strides_envelope(ctx.weight.sizes(), ctx.weight.strides(), ctx.out_weight.numel());
   // ND 直拷是物理透传，out_weight 必须与 weight 保持相同的 sizes/strides（转置场景尤为关键）
   ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, op_infer::array_to_small_vector(ctx.weight.strides()));
 }
@@ -444,27 +455,27 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
         prepare_out_bias}},
       {judge_mm_a16s4_per_tensor,
        {prepare_out_weight_nd,
-        prepare_out_weight_scale_per_channel<false>,
+        prepare_out_weight_scale_per_channel,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_channel,
        {prepare_out_weight_a16s4,
-        prepare_out_weight_scale_per_channel<false>,
+        prepare_out_weight_scale_per_channel,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_group,
        {prepare_out_weight_a16s4,
-        prepare_out_weight_scale_per_channel<false>,
+        prepare_out_weight_scale_per_channel,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16f4_nz_pergroup,
        {prepare_out_weight_nz_a16s4,
-        prepare_out_weight_scale_per_channel<false>,
+        prepare_out_weight_scale_per_channel,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16f4_mx,
        {prepare_out_weight_nz_a16s4,
-        prepare_out_weight_scale_per_channel<false>,
+        prepare_out_weight_scale_per_channel,
         prepare_out_weight_offset,
         prepare_out_bias}}}},
 };

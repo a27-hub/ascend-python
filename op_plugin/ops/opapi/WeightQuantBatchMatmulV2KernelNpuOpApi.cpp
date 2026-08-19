@@ -85,6 +85,8 @@ at::Tensor npu_weight_quant_batchmatmul(
       OPS_ERROR(ErrCode::PARAM));
   auto out_dim_num = std::max(x_dim_num, weight_dim_num);
   auto output_size = op_infer::array_to_small_vector(x.sizes());
+  // weight.dim() > x.dim() 时 output_size 需预留 batch 维（batch 维由下方较长 tensor 填充），否则越界写
+  output_size.resize(out_dim_num, 1);
   output_size[out_dim_num - MINIMUM_SHAPE_SIZE] = x.size(x_dim_num - MINIMUM_SHAPE_SIZE);
   auto weight_size_base = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE + 1);
   if (is_int32_float_packed && !trans_weight) {
