@@ -331,8 +331,12 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
 
     if return_softmax_lse:
         if layout_query == "TND":
-            softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
-            softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+            if layout_kv == "PA_BSND":
+                softmax_max = torch.empty([key.size(2), query.size(0), query.size(1) // key.size(2)], dtype=torch.float32, device='meta')
+                softmax_sum = torch.empty([key.size(2), query.size(0), query.size(1) // key.size(2)], dtype=torch.float32, device='meta')
+            else:
+                softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+                softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
         if layout_query == "BSND":
             softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
             softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
