@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ATen/NamedTensorUtils.h>
+#include "op_plugin/utils/NamedTensorCompat.h"
 
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
@@ -261,6 +261,7 @@ at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type)
 NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
 {
     NameVector names;
+#if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
     bool has_names = false;
 
     for (auto tensor : tensor_list) {
@@ -281,6 +282,7 @@ NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
             names = NameVector(at::unify_from_right(names, tensor.names()));
         }
     }
+#endif
     return names;
 }
 
@@ -359,7 +361,7 @@ bool check_foreach_tensor_dtype_spport_base_and_int(at::ScalarType tensorDtype)
 
 bool check_foreach_scalar_dtype_spport(at::ScalarType scalarDtype)
 {
-    return at::isIntegralType(scalarDtype) || at::isFloatingType(scalarDtype);
+    return at::isIntegralType(scalarDtype, false) || at::isFloatingType(scalarDtype);
 }
 
 bool check_mapping_between_tensor_and_scalar_list(at::ScalarType tensorDtype, at::ScalarType scalarDtype, ForeachMappingType mapping)
@@ -370,7 +372,7 @@ bool check_mapping_between_tensor_and_scalar_list(at::ScalarType tensorDtype, at
 
     switch (mapping) {
         case ForeachMappingType::MAP_SCALARLIST_DEFAULT:
-            return (at::isIntegralType(scalarDtype) && at::isIntegralType(tensorDtype)) ||
+            return (at::isIntegralType(scalarDtype, false) && at::isIntegralType(tensorDtype, false)) ||
                    (at::isFloatingType(scalarDtype) && at::isFloatingType(tensorDtype));
         default:
             TORCH_CHECK(false, "Invalid  ForeachMappingType Parm Between Tensor And ScalarList", OPS_ERROR(ErrCode::PARAM));
@@ -385,7 +387,7 @@ bool check_mapping_between_tensor_and_scalar(at::ScalarType tensorDtype, at::Sca
 
     switch (mapping) {
         case ForeachMappingType::MAP_SCALAR_DEFAULT:
-            return !at::isIntegralType(tensorDtype) && at::isFloatingType(scalarDtype);
+            return !at::isIntegralType(tensorDtype, false) && at::isFloatingType(scalarDtype);
         case ForeachMappingType::MAP_POW_SCALAR_AND_TENSOR:
             return true;
         default:
@@ -457,6 +459,17 @@ bool is_gte_cann_version_900()
     return result;
 }
 
+bool is_gte_cann_version_910()
+{
+    const static bool result = IsGteCANNVersion("9.1.0", "CANN");
+    return result;
+}
+
+bool is_gte_cann_version_920() {
+  const static bool result = IsGteCANNVersion("9.2.0", "CANN");
+  return result;
+}
+
 const std::string DTypeToString(int64_t input_type)
 {
     return c10_npu::IsCustomDType(input_type) ?
@@ -472,7 +485,7 @@ aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at
                 at_npu::native::OpPreparation::convert_to_acl_data_type(scales.value().scalar_type()) : ACL_FLOAT;
         dynamic_scale_dtype = (x.scalar_type() == at::kBFloat16 || x.scalar_type() == at::kHalf) ? ACL_FLOAT :
            (scales_dtype.has_value() ? c10_npu::GetAclDataType(scales_dtype.value()) : scale_value_type);
-    } else if (quant_mode == QuantMode::QUANT_MODE_MX) {
+    } else if (quant_mode == QuantMode::QUANT_MODE_MX || quant_mode == QuantMode::QUANT_MODE_MX_CLIP) {
         dynamic_scale_dtype = c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0);
     }
     return dynamic_scale_dtype;
@@ -491,7 +504,7 @@ std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, 
         shape = {a};
     } else if (quant_mode == QuantMode::QUANT_MODE_PERGROUP) {
         shape = {a, (h + PER_GROUP_SIZE - 1) / PER_GROUP_SIZE};
-    } else if (quant_mode == QuantMode::QUANT_MODE_MX) {
+    } else if (quant_mode == QuantMode::QUANT_MODE_MX || quant_mode == QuantMode::QUANT_MODE_MX_CLIP) {
         // ensure the ceiling of h divided by MX_QUANT_SIZE is even
         shape = {a, ((h + MX_QUANT_SIZE - 1) / MX_QUANT_SIZE + 1) / 2 * 2};
     }
@@ -517,7 +530,7 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
                                   (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
     return groups;
 }
-    
+
 int8_t get_cube_math_type_with_passthrough()
 {
     int8_t cube_math_type = at_npu::native::OpPreparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());

@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_indexing
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -23,7 +26,7 @@ torch_npu.npu_indexing(self, begin, end, strides, begin_mask=0, end_mask=0, elli
 
 - **self** (`Tensor`)：必选参数，输入张量。
 - **begin** (`List[int]`)：必选参数，待选择的第一个值的index。
-- **end** (`List[int]`)：必选参数，待选择的最后一个值的index。
+- **end** (`List[int]`)：必选参数，结束索引（不包含该位置），即索引区间为左闭右开`[begin, end)`。
 - **strides** (`List[int]`)：必选参数，index增量。
 - **begin_mask** (`int`)：可选参数，位掩码（bitmask），其中位“i”为“1”意味着忽略开始值，尽可能使用最大间隔。默认值为0。
 - **end_mask** (`int`)：可选参数，类似于“begin_mask”。默认值为0。
@@ -37,11 +40,11 @@ torch_npu.npu_indexing(self, begin, end, strides, begin_mask=0, end_mask=0, elli
 >>> import torch
 >>> import torch_npu
 >>> input = torch.tensor([[1, 2, 3, 4],[5, 6, 7, 8]], dtype=torch.int32).to("npu")
->>> input
+>>> print(input)
 tensor([[1, 2, 3, 4],
         [5, 6, 7, 8]], device='npu:0', dtype=torch.int32)
 >>> output = torch_npu.npu_indexing(input, [0, 0], [2, 2], [1, 1])
->>> output
+>>> print(output)
 tensor([[1, 2],
         [5, 6]], device='npu:0', dtype=torch.int32)
 ```

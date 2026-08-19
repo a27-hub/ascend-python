@@ -15,7 +15,7 @@
 
   **MRoPE模式**：
   
-  positions的shape输入是[m, num_tokens], m为mropeSection的元素数，支持3或4：
+  positions的shape输入是[m, num_tokens]，m为mropeSection的元素数，支持3或4：
     
   $$
   cosSin[i] = cosSinCache[positions[i]]
@@ -254,9 +254,9 @@ torch_npu.npu_mrope(positions, query, key, cos_sin_cache, head_size, *, mrope_se
 - **key**（`Tensor`）：必选参数，待施加RoPE的Key。2维张量，shape`(num_tokens, num_k_heads * head_size)`，类型与`query`一致，格式$ND$，支持非连续张量。
 - **cos_sin_cache**（`Tensor`）：必选参数，预计算的位置编码cache，对应公式中的$cosSinCache$。2维张量，shape`(max_seq_len, rotary_dim)`。最后一维经`chunk(2, dim=-1)`拆成cos、sin两半。`query`、`key`、`cos_sin_cache`的浮点类型须一致。
 - **head_size**（`int`）：必选参数，单头维度大小，即每个注意力头的特征维长度。
-- **mrope_section**（`int[]`）：可选参数，MRoPE各段在half旋转维度上的长度配置。不传或`[0, 0, 0]`表示RoPE模式；传`[16, 24, 24]`、`[24, 20, 20]`、`[8, 12, 12]`、`[16, 16, 16, 16]`表示MRoPE模式，MRoPE时需与`positions`的行数一致。
+- **mrope_section**（`int[]`）：可选参数，MRoPE各段在half旋转维度上的长度配置，对应公式中的$mropeSection$。不传或`[0, 0, 0]`表示RoPE模式；传`[16, 24, 24]`、`[24, 20, 20]`、`[8, 12, 12]`、`[16, 16, 16, 16]`表示MRoPE模式，MRoPE时需与`positions`的行数一致。
 - **rotary_mode**（`str`）：可选参数，`half`表示NeoX风格，`interleaved`表示GPT-J风格。默认值为`half`。
-- **cache_mode**（`str`）：可选参数，`default`对应分段式cos/sin拼接；`interleave`对应交错式拼接。默认值为`default`。RoPE下仅支持`default`;MRoPE下支持`default`与`interleave`.
+- **cache_mode**（`str`）：可选参数，`default`对应分段式cos/sin拼接；`interleave`对应交错式拼接。默认值为`default`。RoPE下仅支持`default`；MRoPE下支持`default`与`interleave`。
 
 ## 返回值说明
 
@@ -342,7 +342,7 @@ query_out, key_out = torch_npu.npu_mrope(
 
 - RoPE示例：
 
-  使用一维`positions`，shape为`(num_tokens,)`；`mrope_section`置为`[0, 0, 0]`表示不使能MRoPE（与当前`torch_npu`默认行为一致）。
+  使用一维`positions`，shape为`(num_tokens,)`；`mrope_section`置为`[0, 0, 0]`表示不开启MRoPE（与当前`torch_npu`默认行为一致）。
 
 ```python
 import torch

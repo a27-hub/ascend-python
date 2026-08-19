@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：MoE计算中，对输入x做Sigmoid/SoftMax计算，对计算结果分组进行排序，最后根据分组排序的结果选取前k个专家。
+- API功能：MoE计算中，对输入x做Sigmoid/Softmax计算，对计算结果分组进行排序，最后根据分组排序的结果选取前k个专家。
 - 计算公式：
 
     对输入做sigmoid（`bias`可选）：
@@ -23,11 +23,11 @@
 
     对计算结果按照`group_count`进行分组：
     
-    - 如果`group_select_mode`为1，每组按照topk2的sum值对group进行排序，取前kGroup个组：
+    - 如果`group_select_mode`为1，每组按照topk2的sum值对group进行排序，取前`k_group`个组：
 
       ![](../../figures/zh-cn_formulaimage_0000002219010398.png)
 
-    - 如果`group_select_mode`为0，每组按照组内的最大值对group进行排序，取前kGroup个组：
+    - 如果`group_select_mode`为0，每组按照组内的最大值对group进行排序，取前`k_group`个组：
 
       ![](../../figures/zh-cn_formulaimage_0000002347834049.png)
 
@@ -120,7 +120,7 @@
 ## 函数原型
 
 ```python
-npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
+npu_moe_gating_top_k(x, k, *, bias=None, input_ids=None, tid2eid=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -129,9 +129,13 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
 
 - **k**（`int`）：必选参数，表示每个token最终筛选得到的专家个数，数据类型为`int64`。要求`1 <= k <= x_shape[-1] / group_count * k_group`。
 
-- <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
  
 - **bias**（`Tensor`）：可选参数，表示与输入`x`进行计算的bias值。要求是1D的Tensor，要求shape值与`x`的最后一维相等。数据类型支持`float16`、`bfloat16`、`float32`，数据类型需要与`x`保持一致，数据格式要求为ND。支持非连续`Tensor`。
+
+- **input_ids**（`Tensor`）：可选参数，表示Hash模式的输入索引，用于从`tid2eid`中查找专家索引。要求是1D的Tensor，要求shape值与`x`的第一维相等。数据类型支持`int32`、`int64`，数据格式要求为ND。支持非连续`Tensor`。
+
+- **tid2eid**（`Tensor`）：可选参数，表示Hash映射表，存储预计算的专家索引。要求是2D的Tensor，要求shape值的最后一维与`k`相等。数据类型支持`int32`、`int64`，数据格式要求为ND。支持非连续`Tensor`。
 
 - **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
 

@@ -20,17 +20,17 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
 
 - **x** (`Tensor`)：必选参数，表示计算使用的token数据，需根据`expert_ids`和`expert_rank_table`来发送给其他卡。要求为3维张量，shape为\(X, BS, H\)，表示有X个microBatch，每个microBatch里有BS个token，数据类型支持`bfloat16`、`float16`，数据格式为$ND$，支持非连续的Tensor。
 - **session\_id** (`Tensor`)：必选参数，Attention域本卡ID，要求为1维张量，shape为\(X, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。
-- **micro\_batch\_id** (`Tensor`)：必选参数，当前microBatch组的ID，，要求为1维张量，shape为\(X, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。
+- **micro\_batch\_id** (`Tensor`)：必选参数，当前microBatch组的ID，要求为1维张量，shape为\(X, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。
 - **layer\_id** (`Tensor`)：必选参数，模型层数ID，要求为1维张量，shape为\(X, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。
-- **expert\_ids** (`Tensor`)：必选参数，每个micro batch组中每个token的topK个专家索引，决定每个token要发给哪些专家。要求为3维张量，shape为\(X, BS, K\)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, moe\_expert\_num\)，且同一行中的K个value不能重复。
-- **expert\_rank\_table** (`Tensor`)：必选参数，每个micro batch组中专家Id到FFN卡专家部署的映射表，外部需保证值正确。要求为3维张量，shape为\(L, shared\_expert\_num + moe\_expert\_num, M\)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。
+- **expert\_ids** (`Tensor`)：必选参数，每个micro batch组中每个token的topK个专家索引，决定每个token要发给哪些专家。要求为3维张量，shape为\(X, BS, K\)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, moe\_expert\_num\)，且同一行（同一个token）中的K个value不能重复。
+- **expert\_rank\_table** (`Tensor`)：必选参数，每个micro batch组中专家ID到FFN卡专家部署的映射表，外部需保证值正确。要求为3维张量，shape为\(L, shared\_expert\_num + moe\_expert\_num, M\)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。
 - **group** (`str`)：必选参数，通信域名称，专家并行的通信域。字符串长度范围为\[1,128\)。
 - **world\_size**(`int`)：必选参数，通信域size。取值支持\[2, 768\]。
-- **ffn\_token\_info\_table\_shape** (`List(int)`)：必选参数，表示FFN卡上token信息表格shape大小，长度为3，包括Attention节点的数量、microBatchSize的大小以及每个token对应的相关发送状态信息shape的大小。
-- **ffn\_token\_data\_shape** (`List(int)`)：必选参数，表示FFN卡上token数据表格shape大小，长度为5，包括Attention节点的数量、microBatchSize的大小、batchSize大小、每个token需发送的专家数量（包括共享专家）、单个token的长度。
-- **attn\_token\_info\_table\_shape** (`List(int)`)：必选参数，表示Attention卡上token信息表格shape大小，长度为3，包括microBatchSize的大小、batchSize大小、每个token需发送的专家数量（包括共享专家）。
+- **ffn\_token\_info\_table\_shape** (`List[int]`)：必选参数，表示FFN卡上token信息表格shape大小，长度为3，包括Attention节点的数量、microBatchSize的大小以及每个token对应的相关发送状态信息shape的大小。
+- **ffn\_token\_data\_shape** (`List[int]`)：必选参数，表示FFN卡上token数据表格shape大小，长度为5，包括Attention节点的数量、microBatchSize的大小、batchSize大小、每个token需发送的专家数量（包括共享专家）、单个token的长度。
+- **attn\_token\_info\_table\_shape** (`List[int]`)：必选参数，表示Attention卡上token信息表格shape大小，长度为3，包括microBatchSize的大小、batchSize大小、每个token需发送的专家数量（包括共享专家）。
 - **moe\_expert\_num** (`int`)：必选参数，MoE专家数量，取值范围\[1, 1024\]。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **scales** (`Tensor`)：可选参数，表示每个专家的权重，非量化场景不传，动态量化场景可传可不传。若传值要求为3维张量，shape为\(L, shared\_expert\_num + moe\_expert\_num, H\)，数据类型支持`float`，数据格式为$ND$，不支持非连续的Tensor。当`quant_mode`为2，`scales`可不为None；当`quant_mode`为0，`scales`必须为None。
 - **active\_mask** (`Tensor`)：可选参数，表示token是否参与通信。要求是一个2维张量，shape为\(X, BS\)。数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入。默认所有token都会参与通信。
 - **quant\_mode** (`int`)：可选参数，表示量化模式。支持取值：0表示非量化（默认），2表示动态量化。
@@ -60,7 +60,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
 
     - shared_expert_num：表示共享专家数量（一个共享专家可以复制部署到多个FFN节点上），取值范围为\[0, 4\]。
 
-- HCCL通信域缓存区大小:调用本接口前需检查通信域缓存区大小取值是否合理，单位MB，不配置时默认为200MB。
+- HCCL通信域缓存区大小：调用本接口前需检查通信域缓存区大小取值是否合理，单位MB，不配置时默认为200MB。
 
 ## 调用示例
 
@@ -87,7 +87,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
     server_index = 0
     port = 50001
     master_ip = '127.0.0.1'
-    dev_num = 16
+    dev_num = 4
     world_size = server_num * dev_num
     rank_per_dev = int(world_size / server_num)  # 每个host有几个die
     micro_batch_num = 1
@@ -101,8 +101,8 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
     shared_expert_num = 1  # 共享专家数
     rank_num_per_shared_expert = 1
     shared_ffn_rank_num = shared_expert_num * rank_num_per_shared_expert
-    moe_expert_per_rank = 2  # 各ffn卡moe专家数
-    moe_ffn_rank_num = 4    #FFN卡数
+    moe_expert_per_rank = 2  # 各FFN卡上的MoE专家数
+    moe_ffn_rank_num = 2  # MoE FFN卡数
     moe_expert_num = moe_ffn_rank_num * moe_expert_per_rank
     ffn_worker_num = moe_ffn_rank_num + shared_ffn_rank_num
     attention_worker_num = world_size - ffn_worker_num
@@ -129,12 +129,12 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             # 当前 rank 属于前半部分，需与后面 rank 通信
             target_ranks = list(range(ffn_worker_num, world_size))
         window_size = 120 * 1024 * 200
-        comm_group._get_backend(torch.device('npu')._window_register_and_exchange(window_size, target_ranks))
+        comm_group._get_backend(torch.device('npu'))._window_register_and_exchange(window_size, target_ranks)
 
 
     def run_npu_process(rank):
         torch_npu.npu.set_device(rank)
-        rank = rank + 16 * server_index
+        rank = rank + dev_num * server_index
         dist.init_process_group(backend='hccl', rank=rank, world_size=world_size, init_method=f'tcp://{master_ip}:{port}')
         rank_list = list(range(world_size))
         comm_group = dist.new_group(backend="hccl", ranks=rank_list)
@@ -146,23 +146,19 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
         session_id = torch.tensor([rank - ffn_worker_num], dtype=torch.int32).npu()
         micro_batch_id = torch.tensor([0], dtype=torch.int32).npu()
         layer_id = torch.tensor([0], dtype=torch.int32).npu()
-        expert_ids = torch.tensor([[[5, 7, 1, 4],
-                                [0, 2, 3, 5],
-                                [6, 3, 1, 7],
-                                [4, 0, 5, 7],
-                                [0, 6, 1, 3],
-                                [2, 5, 7, 6],
-                                [1, 6, 2, 4],
-                                [6, 4, 5, 0]]], dtype=torch.int32).npu()
-        expert_rank_table = torch.tensor([[[4, 2, 4, 3, 7, 1, 3, 2, 5],
-                                        [2, 2, 5, 1, 2, 0, 0, 0, 0],
-                                        [3, 2, 5, 0, 0, 3, 7, 0, 0],
-                                        [4, 1, 3, 0, 1, 2, 4, 3, 7],
-                                        [4, 0, 0, 3, 6, 1, 3, 2, 5],
-                                        [3, 3, 7, 2, 4, 1, 2, 0, 0],
-                                        [2, 2, 5, 0, 0, 0, 0, 0, 0],
-                                        [3, 3, 6, 2, 5, 3, 7, 0, 0],
-                                        [1, 4, 8, 0, 0, 0, 0, 0, 0]]], dtype=torch.int32).npu()
+        expert_ids = torch.tensor([[[0, 1, 2, 3],
+                                [1, 2, 3, 0],
+                                [2, 3, 0, 1],
+                                [3, 0, 1, 2],
+                                [0, 2, 1, 3],
+                                [1, 3, 2, 0],
+                                [2, 0, 3, 1],
+                                [3, 1, 0, 2]]], dtype=torch.int32).npu()
+        expert_rank_table = torch.tensor([[[1, 0, 0],
+                                        [1, 0, 1],
+                                        [1, 1, 2],
+                                        [1, 1, 3],
+                                        [1, 2, 4]]], dtype=torch.int32).npu()
 
         scales_shape = (L, shared_expert_num + moe_expert_num, h)
         if is_attn2ffn_scales:
@@ -217,6 +213,10 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
         for p in p_list:
             p.join()
 
+        for p in p_list:
+            if p.exitcode != 0:
+                raise RuntimeError(f"subprocess {p.pid} failed with exitcode {p.exitcode}")
+
         print("run npu success.")
     ```
 
@@ -246,7 +246,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
     server_index = 0
     port = 50001
     master_ip = '127.0.0.1'
-    dev_num = 16
+    dev_num = 4
     world_size = server_num * dev_num
     rank_per_dev = int(world_size / server_num)  # 每个host有几个die
     micro_batch_num = 1
@@ -255,13 +255,13 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
     bs = 8  # token数量
     h = 7168  # 每个token的长度
     k = 4
-    hs = h +128
+    hs = h + 128
     random_seed = 0
     shared_expert_num = 1  # 共享专家数
     rank_num_per_shared_expert = 1
     shared_ffn_rank_num = shared_expert_num * rank_num_per_shared_expert
-    moe_expert_per_rank = 2  # 各ffn卡moe专家数
-    moe_ffn_rank_num = 4    #FFN卡数
+    moe_expert_per_rank = 2  # 各FFN卡上的MoE专家数
+    moe_ffn_rank_num = 2  # MoE FFN卡数
     moe_expert_num = moe_ffn_rank_num * moe_expert_per_rank
     ffn_worker_num = moe_ffn_rank_num + shared_ffn_rank_num
     attention_worker_num = world_size - ffn_worker_num
@@ -318,12 +318,12 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             # 当前 rank 属于前半部分，需与后面 rank 通信
             target_ranks = list(range(ffn_worker_num, world_size))
         window_size = 120 * 1024 * 200
-        comm_group._get_backend(torch.device('npu')._window_register_and_exchange(window_size, target_ranks))
+        comm_group._get_backend(torch.device('npu'))._window_register_and_exchange(window_size, target_ranks)
 
 
     def run_npu_process(rank):
         torch_npu.npu.set_device(rank)
-        rank = rank + 16 * server_index
+        rank = rank + dev_num * server_index
         dist.init_process_group(
             backend='hccl',
             rank=rank,
@@ -340,23 +340,19 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
         session_id = torch.tensor([rank - ffn_worker_num], dtype=torch.int32).npu()
         micro_batch_id = torch.tensor([0], dtype=torch.int32).npu()
         layer_id = torch.tensor([0], dtype=torch.int32).npu()
-        expert_ids = torch.tensor([[[5, 7, 1, 4],
-                                [0, 2, 3, 5],
-                                [6, 3, 1, 7],
-                                [4, 0, 5, 7],
-                                [0, 6, 1, 3],
-                                [2, 5, 7, 6],
-                                [1, 6, 2, 4],
-                                [6, 4, 5, 0]]], dtype=torch.int32).npu()
-        expert_rank_table = torch.tensor([[[4, 2, 4, 3, 7, 1, 3, 2, 5],
-                                        [2, 2, 5, 1, 2, 0, 0, 0, 0],
-                                        [3, 2, 5, 0, 0, 3, 7, 0, 0],
-                                        [4, 1, 3, 0, 1, 2, 4, 3, 7],
-                                        [4, 0, 0, 3, 6, 1, 3, 2, 5],
-                                        [3, 3, 7, 2, 4, 1, 2, 0, 0],
-                                        [2, 2, 5, 0, 0, 0, 0, 0, 0],
-                                        [3, 3, 6, 2, 5, 3, 7, 0, 0],
-                                        [1, 4, 8, 0, 0, 0, 0, 0, 0]]], dtype=torch.int32).npu()
+        expert_ids = torch.tensor([[[0, 1, 2, 3],
+                                [1, 2, 3, 0],
+                                [2, 3, 0, 1],
+                                [3, 0, 1, 2],
+                                [0, 2, 1, 3],
+                                [1, 3, 2, 0],
+                                [2, 0, 3, 1],
+                                [3, 1, 0, 2]]], dtype=torch.int32).npu()
+        expert_rank_table = torch.tensor([[[1, 0, 0],
+                                        [1, 0, 1],
+                                        [1, 1, 2],
+                                        [1, 1, 3],
+                                        [1, 2, 4]]], dtype=torch.int32).npu()
 
         scales_shape = (L, shared_expert_num + moe_expert_num, h)
         if is_attn2ffn_scales:
@@ -402,6 +398,10 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             p.start()
         for p in p_list:
             p.join()
+
+        for p in p_list:
+            if p.exitcode != 0:
+                raise RuntimeError(f"subprocess {p.pid} failed with exitcode {p.exitcode}")
 
         print("run npu success.")
     ```

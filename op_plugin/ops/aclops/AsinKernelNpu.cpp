@@ -23,21 +23,13 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 at::Tensor& asin_out_npu_nocheck(at::Tensor& result, const at::Tensor& self) {
   at_npu::native::OpCommand cmd;
-  cmd.Name("Asin")
-      .Input(self)
-      .Output(result)
-      .Run();
+  cmd.Name("Asin").Input(self).Output(result).Run();
   return result;
 }
 } // namespace
 
-at::Tensor& asin_out(
-    const at::Tensor& self,
-    at::Tensor& result) {
-  npu_preparation::CheckOut(
-      {self},
-      result,
-      self);
+at::Tensor& asin_out(const at::Tensor& self, at::Tensor& result) {
+  npu_preparation::CheckOut({self}, result, self);
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
     asin_out_npu_nocheck(contiguous_result, self);

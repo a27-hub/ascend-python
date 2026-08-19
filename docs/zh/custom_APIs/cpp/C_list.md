@@ -1,6 +1,10 @@
 # C++接口列表
 
-本章节包含Ascend Extension for PyTorch中提供的C++拓展接口，供深度优化使用。
+本章节包含TorchNPU中提供的C++拓展接口，供深度优化使用。
+
+## 常规C++接口
+
+常规C++接口覆盖了NPU设备初始化与释放、设备/流管理、事件与随机数管理、Tensor格式处理以及分布式通信等基础能力，详细接口见表1。这些接口符号统一由`libtorch_npu.so`导出。
 
 **表1** C++ API
 <a name="table1728514451512"></a>
@@ -32,7 +36,7 @@
 </tr>
 <tr id="row7285114101517"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p12850416158"><a name="p12850416158"></a><a name="p12850416158"></a><a href="（beta）at-Device.md">（beta）at::Device</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p6285046154"><a name="p6285046154"></a><a name="p6285046154"></a>在安装torch_npu后，Device类型新增支持NPU字段，可以从字符串描述中指示设备。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p6285046154"><a name="p6285046154"></a><a name="p6285046154"></a>在安装TorchNPU后，Device类型新增支持NPU字段，可以从字符串描述中指示设备。</p>
 </td>
 </tr>
 <tr id="row1482153472113"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p197043314361"><a name="p197043314361"></a><a name="p197043314361"></a><a href="（beta）struct-c10_npu-NPUEvent.md">（beta）struct c10_npu::NPUEvent</a></p>
@@ -52,7 +56,7 @@
 </tr>
 <tr id="row124831534202119"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p15593155612361"><a name="p15593155612361"></a><a name="p15593155612361"></a><a href="（beta）at_npu-detail-createNPUGenerator.md">（beta）at_npu::detail::createNPUGenerator</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p1059375683612"><a name="p1059375683612"></a><a name="p1059375683612"></a>NPU设备默认生成器创建，返回值类型at::Generator，与at::Generator at::cuda::detail::createCUDAGenerator(c10::DeviceIndex <em id="i5642556194214"><a name="i5642556194214"></a><a name="i5642556194214"></a>device_index</em> = -1)相同。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p1059375683612"><a name="p1059375683612"></a><a name="p1059375683612"></a>用于创建NPU设备默认生成器，返回值类型Generator，与at::Generator at::cuda::detail::createCUDAGenerator(c10::DeviceIndex <em>device_index</em> = -1)相同。</p>
 </td>
 </tr>
 <tr id="row1582212372214"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p1145460103719"><a name="p1145460103719"></a><a name="p1145460103719"></a><a href="（beta）class-c10_npu-NPUStream.md">（beta）class c10_npu::NPUStream</a></p>
@@ -67,12 +71,12 @@
 </tr>
 <tr id="row11822183742111"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p145511016377"><a name="p145511016377"></a><a name="p145511016377"></a><a href="（beta）c10_npu-getDefaultNPUStream.md">（beta）c10_npu::getDefaultNPUStream</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p245530143713"><a name="p245530143713"></a><a name="p245530143713"></a>获取默认NPU流，返回值类型NPUStream，与c10::cuda::CUDAStream c10::cuda::getDefaultCUDAStream(c10::DeviceIndex <em id="i1692521216432"><a name="i1692521216432"></a><a name="i1692521216432"></a>device_index</em> = -1)相同。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p245530143713"><a name="p245530143713"></a><a name="p245530143713"></a>获取默认NPU流，返回值类型NPUStream，其功能和使用方式与c10::cuda::CUDAStream c10::cuda::getDefaultCUDAStream(c10::DeviceIndex <em id="i1692521216432"><a name="i1692521216432"></a><a name="i1692521216432"></a>device_index</em> = -1)相同。</p>
 </td>
 </tr>
 <tr id="row6822103772114"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p2455402378"><a name="p2455402378"></a><a name="p2455402378"></a><a href="（beta）c10_npu-getCurrentNPUStream.md">（beta）c10_npu::getCurrentNPUStream</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p104551505370"><a name="p104551505370"></a><a name="p104551505370"></a>获取当前NPU流，返回值类型NPUStream，与c10::CUDA::CUDAStream c10::CUDA::getCurrentCUDAStream(c10::DeviceIndex <em id="i1444171610436"><a name="i1444171610436"></a><a name="i1444171610436"></a>device_index</em> = -1)相同。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p104551505370"><a name="p104551505370"></a><a name="p104551505370"></a>通过设备ID获取当前NPU流，返回值类型NPUStream，与c10::CUDA::CUDAStream c10::cuda::getCurrentCUDAStream(c10::DeviceIndex <em>device_index</em> = -1)相同。</p>
 </td>
 </tr>
 <tr id="row1324644442114"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p10455150143713"><a name="p10455150143713"></a><a name="p10455150143713"></a><a href="（beta）c10_npu-setCurrentNPUStream.md">（beta）c10_npu::setCurrentNPUStream</a></p>
@@ -112,7 +116,7 @@
 </tr>
 <tr id="row166762910245"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p186712293248"><a name="p186712293248"></a><a name="p186712293248"></a><a href="（beta）c10_npu-current_device.md">（beta）c10_npu::current_device</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p06702919248"><a name="p06702919248"></a><a name="p06702919248"></a>NPU设备id获取，返回值类型DeviceIndex，为获取到的设备id，与c10::DeviceIndex c10::cuda::current_device()相同，与c10_npu::GetDevice主要区别是增加了错误检查。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p06702919248"><a name="p06702919248"></a><a name="p06702919248"></a>NPU设备id获取，返回值类型DeviceIndex，表示获取到的设备id，与PyTorch的1.11.0版本中c10::DeviceIndex c10::cuda::current_device()相同，与c10_npu::GetDevice主要区别是增加了错误检查。</p>
 </td>
 </tr>
 <tr id="row193943155249"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p93941215142414"><a name="p93941215142414"></a><a name="p93941215142414"></a><a href="（beta）c10_npu-set_device.md">（beta）c10_npu::set_device</a></p>
@@ -132,7 +136,7 @@
 </tr>
 <tr id="row36118212415"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p76215262419"><a name="p76215262419"></a><a name="p76215262419"></a><a href="（beta）at_npu-native-get_npu_format.md">（beta）at_npu::native::get_npu_format</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p49191458195"><a name="p49191458195"></a><a name="p49191458195"></a>获取NPU tensor格式信息，返回值类型int64_t，表示获取的NPU tensor格式信息。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p49191458195"><a name="p49191458195"></a><a name="p49191458195"></a>获取NPU tensor的格式信息，返回值为int64_t类型。</p>
 </td>
 </tr>
 <tr id="row395820517240"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p1495814522412"><a name="p1495814522412"></a><a name="p1495814522412"></a><a href="（beta）at_npu-native-get_npu_storage_sizes.md">（beta）at_npu::native::get_npu_storage_sizes</a></p>
@@ -161,12 +165,12 @@
 </td>
 </tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="at_npu-native-empty_with_swapped_memory.md">at_npu.native-empty_with_swapped_memory</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊Tensor。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊tensor。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard.md">c10_npu::NPUStreamGuard</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>NPU设备流guard，保障作用域内的设备流，与`c10::cuda::CUDAStreamGuard`相同。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>NPU设备流guard，保障作用域内的设备流，与c10::cuda::CUDAStreamGuard相同。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-current_device.md">c10_npu::NPUStreamGuard::current_device</a></p>
@@ -191,7 +195,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-original_stream.md">c10_npu::NPUStreamGuard::original_stream</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>返回guard构造时设置的流。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>返回guard构造时设置的NPU流。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-reset_stream.md">c10_npu::NPUStreamGuard::reset_stream</a></p>
@@ -201,12 +205,12 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-stream_synchronize.md">c10_npu::stream_synchronize</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>NPU设备流同步，与`c10::cuda::stream_synchronize`相同。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>NPU设备流同步，与c10::cuda::stream_synchronize相同。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10d_npu-ProcessGroupHCCL.md">c10d_npu::ProcessGroupHCCL</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>ProcessGroupHCCL继承自`c10d::Backend`，实现`HCCL`后端的相关接口，用于通信算子调用。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>ProcessGroupHCCL继承自c10d::Backend，实现HCCL后端的相关接口，用于通信算子调用。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10d_npu-ProcessGroupHCCL-batch_isend_irecv.md">c10d_npu::ProcessGroupHCCL::batch_isend_irecv</a></p>
@@ -216,3 +220,21 @@
 </tr>
 </tbody>
 </table>
+
+## LibTorch Stable ABI接口
+
+PyTorch原生社区已提供LibTorch Stable ABI能力，提供一组稳定的二进制接口，让自定义算子和C++扩展无需绑定特定PyTorch版本也能跨版本兼容。TorchNPU在此基础上补充NPU侧能力，对外提供以下接口：
+
+- [`torch_npu/csrc/inductor/aoti_torch/c/shim.h`](https://gitcode.com/Ascend/pytorch/blob/master/torch_npu/csrc/inductor/aoti_torch/c/shim.h)：补充NPU设备类型及NPU相关Stable ABI接口。
+- [`torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h`](https://gitcode.com/Ascend/pytorch/blob/master/torch_npu/csrc/inductor/aoti_torch/generated/v2r13/c_shim_npu.h)：提供NPU算子的Stable ABI声明，接口名形如`aoti_torch_npu_*`。
+- `libtorch_npu.so`：导出上述NPU新增Stable ABI接口符号。
+
+## ATB C++接口说明
+
+TorchNPU提供了一组ATB C++接口，用于在C++侧调用已暴露的ATB能力。这组接口通过统一入口头文件对外提供。
+
+- [`op_plugin/include/atb_ops.h`](../../../../op_plugin/include/atb_ops.h)：ATB C++接口统一入口头文件。
+- [`op_plugin/config/atb_ops.yaml`](../../../../op_plugin/config/atb_ops.yaml)：当前对外暴露接口列表。
+- `libop_plugin_atb.so`：导出上述ATB C++接口对应符号。
+
+相关接口可通过`at_npu::native::atb`命名空间访问。

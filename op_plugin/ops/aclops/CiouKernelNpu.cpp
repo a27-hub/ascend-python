@@ -22,16 +22,19 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-c10::SmallVector<int64_t, N> ciou_output_size(
-    const at::Tensor& self,
-    const at::Tensor& gtboxes,
-    bool is_cross) {
-    TORCH_CHECK(self.dim() == 2, "ciou expected input in 2D, "
-        "but input self has sizes ", self.dim(),
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(gtboxes.dim() == 2, "ciou expected input in 2D, "
-        "but input gtboxes has sizes ", gtboxes.dim(),
-        OPS_ERROR(ErrCode::PARAM));
+c10::SmallVector<int64_t, N> ciou_output_size(const at::Tensor& self, const at::Tensor& gtboxes, bool is_cross) {
+  TORCH_CHECK(
+      self.dim() == 2,
+      "ciou expected input in 2D, "
+      "but input self has sizes ",
+      self.dim(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      gtboxes.dim() == 2,
+      "ciou expected input in 2D, "
+      "but input gtboxes has sizes ",
+      gtboxes.dim(),
+      OPS_ERROR(ErrCode::PARAM));
   c10::SmallVector<int64_t, N> output_size;
   if (is_cross) {
     output_size = {gtboxes.size(1), self.size(1)};
@@ -123,7 +126,7 @@ std::tuple<at::Tensor, at::Tensor> npu_ciou_backward(
     bool trans,
     bool is_cross,
     int64_t mode) {
-  const at::Tensor& atan_sub = c10::value_or_else(atan_sub_opt, [] {return at::Tensor();});
+  const at::Tensor& atan_sub = c10::value_or_else(atan_sub_opt, [] { return at::Tensor(); });
   at::Tensor grad_cp = at::squeeze(grad, 0);
   if (grad_cp.scalar_type() == at::kHalf) {
     grad_cp = at_npu::native::custom_ops::_npu_dtype_cast(grad_cp, at::kFloat);

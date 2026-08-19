@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_slice
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，建议使用torch.slice。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -37,7 +40,7 @@ torch_npu.npu_slice(self, offsets, size) -> Tensor
 >>> offsets = [0, 0]
 >>> size = [2, 2]
 >>> output = torch_npu.npu_slice(input, offsets, size)
->>> output
+>>> print(output)
 tensor([[1., 2.],
         [6., 7.]], device='npu:0', dtype=torch.float16)
 ```

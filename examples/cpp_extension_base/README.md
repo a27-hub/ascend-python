@@ -1,19 +1,21 @@
 # 适配开发及调用（基础样例）
 
-本文档基于C++ extensions方式，使用torch_npu单算子API进行适配开发的完整流程。流程涵盖了算子定义、算子适配、ATen IR注册绑定，最终实现调用自定义算子。
+本文档基于C++ extensions方式，使用TorchNPU单算子API进行适配开发的完整流程。流程涵盖了算子定义、算子适配、ATen IR注册绑定，最终实现调用自定义算子。
 
 ## 算子适配开发
 
 ### 前提条件
 
 在开始之前，请确保您已完成以下环境的安装。
-1. 完成CANN软件的安装具体请参见《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html)》（商用版）或《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html)》（社区版）。
-2. 完成PyTorch框架的安装具体请参见《[Ascend Extension for PyTorch 软件安装指南](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/zh/installation_guide/installation_description.md)》。
+
+1. 请参考《[CANN 软件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/softwareinst/instg/instg_0000.html?OS=openEuler&InstallType=netyum)》，安装NPU驱动固件和CANN软件（Toolkit、ops和NNAL）。
+2. 请参考[源码编译](https://gitcode.com/Ascend/pytorch/blob/master/docs/zh/installation_guide/references/building_from_source.md)完成PyTorch和TorchNPU的安装。
 
 ### 适配文件结构
+
 ```text
 ├── build_and_run.sh                // 自定义算子wheel包编译安装并执行用例的脚本
-├── csrc                            // 算子适配层c++代码目录
+├── csrc                            // 算子适配层C++代码目录
 │   └── add_custom.cpp              // 自定义算子正反向适配代码、aten ir注册以及绑定
 ├── cpp_extension_base              // 自定义算子包python侧代码
 │   ├── ops.py                      // 定义ops调用
@@ -25,9 +27,7 @@
 
 ### 操作步骤
 
-
-
-1. 在算子适配层c++代码目录（csrc）中，通过`add_custom.cpp`文件完成C++侧的算子代码适配、注册自定义算子schema及具体实现的绑定。PyTorch提供的TORCH_LIBRARY宏用于定义唯一命名空间（该命名空间的名称必须保证全局唯一性），并在该命名空间中注册算子schema。具体示例如下：
+1. 在算子适配层C++代码目录（csrc）中，通过`add_custom.cpp`文件完成C++侧的算子代码适配、注册自定义算子schema及具体实现的绑定。PyTorch提供的TORCH_LIBRARY宏用于定义唯一命名空间（该命名空间的名称必须保证全局唯一性），并在该命名空间中注册算子schema。具体示例如下：
 
     > [!NOTE]
     > 
@@ -88,7 +88,7 @@
 
 完成了算子适配开发后，即可通过C++ extensions的方式调用自定义算子。
 
-1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发指南](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0002.html)》。
+1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E5%85%A5%E9%97%A8%E6%95%99%E7%A8%8B/Ascend-C%E6%A6%82%E8%BF%B0%E4%B8%8E%E5%AD%A6%E4%B9%A0%E8%B7%AF%E5%BE%84.md)》。
 2. 下载示例代码。
 
     ```bash
@@ -97,6 +97,7 @@
     # 进入代码目录
     cd examples/cpp_extension_base
     ```
+
 3. 完成算子适配，具体可参考[算子适配开发](#算子适配开发)。
 4. 执行如下命令，完成编译、安装、测试。
 
@@ -105,7 +106,9 @@
     ```
 
     得到结果如下即为执行成功。
+
     ```bash
     Ran xx tests in xx s
     OK
     ```
+    

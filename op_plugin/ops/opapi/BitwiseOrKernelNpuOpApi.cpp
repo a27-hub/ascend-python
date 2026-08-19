@@ -79,4 +79,4 @@ at::Tensor bitwise_or(const at::Tensor& self, const at::Tensor& other) {
   bitwise_or_out_nocheck(result, self, other);
   return result;
 }
-}
+} // namespace op_api

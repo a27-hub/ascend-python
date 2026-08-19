@@ -1,8 +1,10 @@
 # Copyright (c) 2024, Huawei Technologies Co., Ltd.  All rights reserved.
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) Microsoft Corporation.
 from typing import Dict, List
 import torch
 import torch_npu
+from torch_npu.testing.common_utils import SupportedDevices
 from torch_npu.contrib import transfer_to_npu
 import pytest
 
@@ -147,7 +149,7 @@ class TestNpuFusedPermuteAndUnpermute():
         sorted_indices_ori = torch.argsort(sorted_indices_ori, stable=True).to(sorted_indices_fused.dtype)
         assert torch.equal(sorted_indices_ori, sorted_indices_fused)
 
-        # test the grad output for permute backward 
+        # test the grad output for permute backward
         grad_output = torch.ones_like(permuted_tokens_fused).to(dtype)
 
         permuted_tokens_ori.backward(grad_output)
@@ -184,13 +186,13 @@ class TestNpuFusedPermuteAndUnpermute():
             permuted_tokens_fused, sorted_indices_fused, probs=probs_fused)
 
         assert torch.allclose(unpermuted_tokens_ori, unpermuted_tokens_fused, **tols)
-       
-        # test the grad output for unpermute backward       
+
+        # test the grad output for unpermute backward
         grad_output = torch.ones_like(unpermuted_tokens_fused).to(dtype)
-        
+
         unpermuted_tokens_ori.backward(grad_output)
         unpermuted_tokens_fused.backward(grad_output)
-        
+
         assert torch.allclose(permuted_tokens_ori.grad, permuted_tokens_fused.grad, **tols), "Gradient mismatch for permuted_tokens!"
 
         if topk > 1:
@@ -261,3 +263,63 @@ class TestNpuFusedPermuteAndUnpermute():
 
         assert permuted_tokens.grad is not None
         assert permuted_tokens.grad.dtype == token_dtype
+
+    @staticmethod
+    def _storage_data_ptr(tensor):
+        return tensor.untyped_storage().data_ptr()
+
+    def _run_unpermute_saved_tensor_case(self, num_tokens, hidden_size, topk, num_experts, use_probs):
+        token_dtype = torch.bfloat16
+        tokens = torch.randn(num_tokens, hidden_size).npu().to(token_dtype).requires_grad_(True)
+        indices = torch.randint(0, num_experts, (num_tokens, topk)).npu()
+
+        probs = None
+        if use_probs:
+            probs = (torch.ones(num_tokens, topk) / topk).npu().to(torch.float32).requires_grad_(True)
+
+        permuted_tokens, sorted_indices = npu_moe_token_permute(tokens, indices)
+        permuted_tokens.retain_grad()
+
+        saved_storage_ptrs = []
+
+        def pack_hook(tensor):
+            saved_storage_ptrs.append(self._storage_data_ptr(tensor))
+            return tensor
+
+        def unpack_hook(tensor):
+            return tensor
+
+        with torch.autograd.graph.saved_tensors_hooks(pack_hook, unpack_hook):
+            unpermuted_tokens = npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
+
+        grad_output = torch.ones_like(unpermuted_tokens).to(token_dtype)
+        unpermuted_tokens.backward(grad_output)
+
+        assert tokens.grad is not None
+        assert permuted_tokens.grad is not None
+        if use_probs:
+            assert probs.grad is not None
+
+        return {
+            "saved_storage_ptrs": saved_storage_ptrs,
+            "permuted_storage_ptr": self._storage_data_ptr(permuted_tokens),
+            "probs_storage_ptr": None if probs is None else self._storage_data_ptr(probs),
+        }
+
+    @SupportedDevices(['Ascend910B', 'Ascend910C'])
+    def test_unpermute_backward_saved_tensors_probs_none(self):
+        saved = self._run_unpermute_saved_tensor_case(
+            num_tokens=64, hidden_size=128, topk=1, num_experts=8, use_probs=False)
+
+        assert saved["permuted_storage_ptr"] not in saved["saved_storage_ptrs"], \
+            "permuted_tokens should not be saved for backward when probs is None"
+
+    @SupportedDevices(['Ascend910B', 'Ascend910C'])
+    def test_unpermute_backward_saved_tensors_with_probs(self):
+        saved = self._run_unpermute_saved_tensor_case(
+            num_tokens=32, hidden_size=64, topk=4, num_experts=8, use_probs=True)
+
+        assert saved["permuted_storage_ptr"] in saved["saved_storage_ptrs"], \
+            "permuted_tokens should still be saved for backward when probs is provided"
+        assert saved["probs_storage_ptr"] in saved["saved_storage_ptrs"], \
+            "probs should still be saved for backward when probs is provided"

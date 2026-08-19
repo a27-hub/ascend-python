@@ -19,10 +19,10 @@ torch_npu.npu.stress_detect(detect_type="aic")
 
 ## 参数说明
 
-**detect_type** (`str`)：可选参数，可支持配置为aic或hccs，分别表示硬件在线精度检测和HCCS链路在线精度检测。配置其他值时直接返回1（表示执行失败），默认值为aic。
+**detect_type** (`str`)：可选参数，可配置为`aic`或`hccs`，分别表示硬件在线精度检测和HCCS链路在线精度检测。配置其他值时直接返回1（表示执行失败），默认值为`aic`。
 
 > [!NOTE]  
-> 当`detect_type`配置为hccs时，首先基于全局通信域创建本机所有卡的子通信域，然后对该子通信域进行HCCS链路压测。
+> 当`detect_type`配置为`hccs`时，首先基于全局通信域创建本机所有卡的子通信域，然后对该子通信域进行HCCS链路压测。
 
 ## 返回值说明
 
@@ -34,7 +34,7 @@ torch_npu.npu.stress_detect(detect_type="aic")
 
     - 2：在线精度检测不通过，硬件故障。
 
-- 若报如下异常，则表示电压恢复失败，需参见[LINK](https://www.hiascend.com/document/detail/zh/canncommercial/850/maintenref/troubleshooting/troubleshooting_0505.html)手动恢复电压或reboot。
+- 若出现如下异常，则表示电压恢复失败，需参见[《CANN 故障处理》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/maintenref/troubleshooting/troubleshooting_0505.html)中的“综合检查”章节手动恢复电压或reboot。
 
     ```shell
     Stress detect error. Error code is 574007. Error message is Voltage recovery failed.
@@ -42,7 +42,7 @@ torch_npu.npu.stress_detect(detect_type="aic")
 
 ## 约束说明
 
-- 精度在线检测的使用需要修改用户的模型训练脚本，建议在训练开始前、结束后以及两个step之间调用，同时需要预留10G大小的内存供压测接口使用。
+- 精度在线检测的使用需要修改用户的模型训练脚本，建议在训练开始前、结束后以及两个step之间调用，同时需要预留10GB大小的内存供压测接口使用。
 - HCCS链路在线检测（`detect_type="hccs"`）需要初始化全局通信域后才能进行调用。
 - 精度在线检测用例，不支持在同一节点运行多个训练作业场景下使用，同时调压功能不支持算力切分场景。
 - 不建议使用多线程运行在线精度检测用例。

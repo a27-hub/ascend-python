@@ -51,11 +51,7 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> bert_apply_adam_out_npu_nochec
   if (step_size.has_value()) {
     cmd.Input(step_size.value(), var.scalar_type());
   }
-  cmd.Output(var)
-      .Output(m)
-      .Output(v)
-      .Attr("adam_mode", adamMode)
-      .Run();
+  cmd.Output(var).Output(m).Output(v).Attr("adam_mode", adamMode).Run();
   return std::tie(var, m, v);
 }
 } // namespace
@@ -71,8 +67,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_bert_apply_adam(
     const c10::Scalar& weight_decay,
     const c10::optional<at::Scalar>& step_size,
     int64_t adam_mode) {
-  TORCH_CHECK(false, "npu_bert_apply_adam is not implemented for Tensor"
-      + OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(false, "npu_bert_apply_adam is not implemented for Tensor" + OPS_ERROR(ErrCode::PARAM));
 }
 
 std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> npu_bert_apply_adam_out(
@@ -97,8 +92,19 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> npu_bert_apply_adam_out(
     at::Tensor contiguous_m = m_match ? m : npu_utils::format_contiguous(m);
     at::Tensor contiguous_v = v_match ? v : npu_utils::format_contiguous(v);
     bert_apply_adam_out_npu_nocheck(
-        contiguous_var, contiguous_m, contiguous_v, lr, beta1, beta2, epsilon, grad,
-        max_grad_norm, global_grad_norm, weight_decay, step_size, adam_mode);
+        contiguous_var,
+        contiguous_m,
+        contiguous_v,
+        lr,
+        beta1,
+        beta2,
+        epsilon,
+        grad,
+        max_grad_norm,
+        global_grad_norm,
+        weight_decay,
+        step_size,
+        adam_mode);
     if (!var_match) {
       npu_utils::format_fresh_view(var, contiguous_var);
     }
@@ -110,8 +116,19 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> npu_bert_apply_adam_out(
     }
   } else {
     bert_apply_adam_out_npu_nocheck(
-        var, m, v, lr, beta1, beta2, epsilon, grad,
-        max_grad_norm, global_grad_norm, weight_decay, step_size, adam_mode);
+        var,
+        m,
+        v,
+        lr,
+        beta1,
+        beta2,
+        epsilon,
+        grad,
+        max_grad_norm,
+        global_grad_norm,
+        weight_decay,
+        step_size,
+        adam_mode);
   }
   return std::tie(var, m, v);
 }

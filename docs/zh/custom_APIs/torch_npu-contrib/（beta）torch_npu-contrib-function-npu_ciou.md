@@ -1,7 +1,7 @@
 # （beta）torch_npu.contrib.function.npu_ciou
 
 > [!NOTICE]  
-> 该接口计划废弃，可以使用`torch_npu.npu_ciou`接口进行替换。
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
 
@@ -14,7 +14,7 @@
 
 ## 功能说明
 
-应用基于NPU的CIoU操作。在DIoU的基础上增加了penalty term，并propose CIoU。
+基于NPU的CIoU操作，计算预测边界框与真实边界框之间的CIoU（Complete Intersection over Union）损失。
 
 ## 函数原型
 
@@ -38,11 +38,13 @@ torch_npu.contrib.function.npu_ciou(boxes1, boxes2, trans=True, is_cross=False, 
 
 ## 约束说明
 
-到目前为止，CIoU向后只支持当前版本中的trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
+到目前为止，CIoU反向只支持当前版本中的trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
 
 ## 调用示例
 
 ```python
+>>> import torch
+>>> import torch_npu
 >>> from torch_npu.contrib.function import npu_ciou
 >>> box1 = torch.randn(4, 32).npu()
 >>> box1.requires_grad = True

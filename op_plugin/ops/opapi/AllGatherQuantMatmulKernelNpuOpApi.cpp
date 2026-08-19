@@ -21,97 +21,181 @@ namespace op_api {
 const int32_t MIN_SUPPORT_WORLD_SIZE = 2;
 const int32_t MAX_SUPPORT_WORLD_SIZE = 64;
 using npu_preparation = at_npu::native::OpPreparation;
-static c10::SmallVector<int64_t, op_infer::SIZE> get_y_size(const at::Tensor& x1, const at::Tensor& x2,
-                                                            int64_t world_size, int64_t gather_index)
-{
-    auto out_x = gather_index == 0 ? x1.size(0) * world_size : x1.size(0);
-    auto out_y = x2.size(1);
-    return {out_x, out_y};
+static c10::SmallVector<int64_t, op_infer::SIZE> get_y_size(
+    const at::Tensor& x1,
+    const at::Tensor& x2,
+    int64_t world_size,
+    int64_t gather_index) {
+  auto out_x = gather_index == 0 ? x1.size(0) * world_size : x1.size(0);
+  auto out_y = x2.size(1);
+  return {out_x, out_y};
 }
 
-static c10::SmallVector<int64_t, op_infer::SIZE> get_gather_out_size(const at::Tensor& x1, const at::Tensor& x2,
-                                                                     int64_t world_size, int64_t gather_index)
-{
-    const at::Tensor& gather_out = gather_index == 0 ? x1 : x2;
-    return {gather_out.size(0) * world_size, gather_out.size(1)};
+static c10::SmallVector<int64_t, op_infer::SIZE> get_gather_out_size(
+    const at::Tensor& x1,
+    const at::Tensor& x2,
+    int64_t world_size,
+    int64_t gather_index) {
+  const at::Tensor& gather_out = gather_index == 0 ? x1 : x2;
+  return {gather_out.size(0) * world_size, gather_out.size(1)};
+}
+
+static void check_dtype_itemsize_compatible(
+    const at::Tensor& tensor,
+    c10::optional<int64_t> tensor_dtype,
+    const char* param_name) {
+  if (!tensor.defined() || !tensor_dtype.has_value()) {
+    return;
+  }
+  aclDataType tensor_acltype = c10_npu::GetAclDataType(tensor_dtype.value());
+  int acl_item_size = npu_preparation::GetAclDataTypeItemSize(tensor_acltype);
+  TORCH_CHECK(
+      tensor.itemsize() == acl_item_size,
+      "The itemsize of ",
+      param_name,
+      " (dtype:",
+      tensor.dtype(),
+      ", itemsize:",
+      tensor.itemsize(),
+      ") must be equal to the itemsize of ",
+      param_name,
+      "_dtype (",
+      c10_npu::CustomDataTypeToString(tensor_dtype.value()),
+      ", itemsize:",
+      acl_item_size,
+      "). Try use ",
+      param_name,
+      "_dtype=None, or use same itemsize dtype instead.",
+      OPS_ERROR(ErrCode::PARAM));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
-    const at::Tensor& self, const at::Tensor& x2, c10::string_view hcom, int64_t world_size,
-    const c10::optional<at::Tensor>& bias, const c10::optional<at::Tensor>& x1_scale,
-    const c10::optional<at::Tensor>& x2_scale, const c10::optional<at::Tensor>& quant_scale, int64_t block_size,
-    int64_t gather_index, bool gather_output, int64_t comm_turn, c10::OptionalIntArrayRef group_sizes,
-    bool amax_output, c10::optional<int64_t> y_dtype, c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
-    c10::optional<int64_t> x1_scale_dtype, c10::optional<int64_t> x2_scale_dtype)
-{
-    TORCH_CHECK(world_size >= MIN_SUPPORT_WORLD_SIZE && world_size <= MAX_SUPPORT_WORLD_SIZE &&
-                (world_size & (world_size - 1)) == 0,
-                "world_size should be in [2, 4, 8, 16, 32, 64], but actual value is ", world_size,
-                OPS_ERROR(ErrCode::PARAM));
-    at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
-    int64_t group_size = op_plugin::utils::check_and_get_group_size(group_size_list);
-    TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
-    int64_t stream_mode = 1;
-    std::string hcom_str = std::string(hcom);
-    char *hcom_value = const_cast<char *>(hcom_str.c_str());
-    const at::Tensor& bias_value = bias.value_or(at::Tensor());
-    const at::Tensor& x1_scale_value = x1_scale.value_or(at::Tensor());
-    const at::Tensor& x2_scale_value = x2_scale.value_or(at::Tensor());
-    const at::Tensor& quant_scale_value = quant_scale.value_or(at::Tensor());
-    c10::SmallVector<int64_t, op_infer::SIZE> y_size = get_y_size(self, x2, world_size, gather_index);
-    auto gather_out_size = gather_output ? get_gather_out_size(self, x2, world_size, gather_index)
-                                         : c10::SmallVector<int64_t, op_infer::SIZE>{0};
-    auto amax_size =
-        amax_output ? c10::SmallVector<int64_t, op_infer::SIZE>{1} : c10::SmallVector<int64_t, op_infer::SIZE>{0};
-    auto gather_out_dtype = gather_index == 0 ? x1_dtype : x2_dtype;
-    auto gather_out_scalar_type = gather_index == 0 ? self.scalar_type() : x2.scalar_type();
-    auto amax_dtype = at::kFloat;
-    auto y_scalar_type = gather_index == 0 ? self.scalar_type() : x2.scalar_type();
-    if (y_scalar_type == at::kBFloat16 || y_scalar_type == at::kHalf) {
-        if (y_dtype.has_value()) {
-            y_scalar_type = npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(y_dtype.value()));
-            std::string selfType = c10::getDtypeNames(self.scalar_type()).first;
-            std::string yType = c10::getDtypeNames(y_scalar_type).first;
-            TORCH_CHECK(y_scalar_type == self.scalar_type(), "When input is float16 or bfloat16, output should ",
-                        "be the same as input dtype. Expected output dtype:", selfType,
-                        ", but got:", yType,
-                        OPS_ERROR(ErrCode::PARAM));
-        }
-    } else {
-        TORCH_CHECK(y_dtype.has_value(), "y_dtype should be provided when input dtype is not bf16 or fp16",
-                    OPS_ERROR(ErrCode::PARAM));
-        y_scalar_type = npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(y_dtype.value()));
+    const at::Tensor& self,
+    const at::Tensor& x2,
+    c10::string_view hcom,
+    int64_t world_size,
+    const c10::optional<at::Tensor>& bias,
+    const c10::optional<at::Tensor>& x1_scale,
+    const c10::optional<at::Tensor>& x2_scale,
+    const c10::optional<at::Tensor>& quant_scale,
+    int64_t block_size,
+    int64_t gather_index,
+    bool gather_output,
+    int64_t comm_turn,
+    c10::OptionalIntArrayRef group_sizes,
+    bool amax_output,
+    c10::optional<int64_t> y_dtype,
+    c10::optional<int64_t> x1_dtype,
+    c10::optional<int64_t> x2_dtype,
+    c10::optional<int64_t> x1_scale_dtype,
+    c10::optional<int64_t> x2_scale_dtype,
+    c10::optional<c10::string_view> comm_mode) {
+  TORCH_CHECK(
+      world_size >= MIN_SUPPORT_WORLD_SIZE &&
+          world_size <= MAX_SUPPORT_WORLD_SIZE &&
+          (world_size & (world_size - 1)) == 0,
+      "world_size should be in [2, 4, 8, 16, 32, 64], but actual value is ",
+      world_size,
+      OPS_ERROR(ErrCode::PARAM));
+  at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
+  int64_t group_size =
+      op_plugin::utils::check_and_get_group_size(group_size_list);
+  TORCH_CHECK(
+      group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
+  int64_t stream_mode = 1;
+  std::string hcom_str = std::string(hcom);
+  char* hcom_value = const_cast<char*>(hcom_str.c_str());
+  const at::Tensor& bias_value = bias.value_or(at::Tensor());
+  const at::Tensor& x1_scale_value = x1_scale.value_or(at::Tensor());
+  const at::Tensor& x2_scale_value = x2_scale.value_or(at::Tensor());
+  const at::Tensor& quant_scale_value = quant_scale.value_or(at::Tensor());
+  c10::SmallVector<int64_t, op_infer::SIZE> y_size =
+      get_y_size(self, x2, world_size, gather_index);
+  auto gather_out_size = gather_output
+      ? get_gather_out_size(self, x2, world_size, gather_index)
+      : c10::SmallVector<int64_t, op_infer::SIZE>{0};
+  auto amax_size = amax_output ? c10::SmallVector<int64_t, op_infer::SIZE>{1}
+                               : c10::SmallVector<int64_t, op_infer::SIZE>{0};
+  auto gather_out_dtype = gather_index == 0 ? x1_dtype : x2_dtype;
+  auto gather_out_scalar_type =
+      gather_index == 0 ? self.scalar_type() : x2.scalar_type();
+  auto amax_dtype = at::kFloat;
+  auto y_scalar_type =
+      gather_index == 0 ? self.scalar_type() : x2.scalar_type();
+  if (y_scalar_type == at::kBFloat16 || y_scalar_type == at::kHalf) {
+    if (y_dtype.has_value()) {
+      y_scalar_type = npu_preparation::convert_to_scalar_type(
+          c10_npu::GetAclDataType(y_dtype.value()));
+      auto selfType = c10::getDtypeNames(self.scalar_type()).first;
+      auto yType = c10::getDtypeNames(y_scalar_type).first;
+      TORCH_CHECK(
+          y_scalar_type == self.scalar_type(),
+          "When input is float16 or bfloat16, output should ",
+          "be the same as input dtype. Expected output dtype:",
+          selfType,
+          ", but got:",
+          yType,
+          OPS_ERROR(ErrCode::PARAM));
     }
-    at::Tensor y =
-        npu_preparation::apply_tensor_without_format(y_size, self.options().dtype(y_scalar_type));
-    at::Tensor gather_out = gather_output ? npu_preparation::apply_tensor_without_format(
-        gather_out_size, self.options().dtype(gather_out_scalar_type)) : at::empty({0}, self.options());
-    at::Tensor amax = amax_output ? npu_preparation::apply_tensor_without_format(
-        amax_size, self.options().dtype(amax_dtype)) : at::Tensor();
-    TensorWrapper x1_wrapper = {
-        self, (x1_dtype.has_value()) ? c10_npu::GetAclDataType(x1_dtype.value())
-                                     : npu_preparation::convert_to_acl_data_type(self.scalar_type())};
-    TensorWrapper x2_wrapper = {x2, (x2_dtype.has_value())
-                                        ? c10_npu::GetAclDataType(x2_dtype.value())
-                                        : npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
-    TensorWrapper gather_out_wrapper = {
-        gather_out, (gather_out_dtype.has_value())
-                        ? c10_npu::GetAclDataType(gather_out_dtype.value())
-                        : npu_preparation::convert_to_acl_data_type(gather_out_scalar_type)};
-    auto x1_scale_scalar_dtype = x1_scale.has_value() ? x1_scale.value().scalar_type() : at::kFloat;
-    auto x2_scale_scalar_dtype = x2_scale.has_value() ? x2_scale.value().scalar_type() : at::kFloat;
-    TensorWrapper x1_scale_wrapper = {x1_scale.value_or(at::Tensor()),
-                                      (x1_scale_dtype.has_value())
-                                          ? c10_npu::GetAclDataType(x1_scale_dtype.value())
-                                          : npu_preparation::convert_to_acl_data_type(x1_scale_scalar_dtype)};
-    TensorWrapper x2_scale_wrapper = {x2_scale.value_or(at::Tensor()),
-                                      (x2_scale_dtype.has_value())
-                                          ? c10_npu::GetAclDataType(x2_scale_dtype.value())
-                                          : npu_preparation::convert_to_acl_data_type(x2_scale_scalar_dtype)};
-    const char* comm_mode = "ccu";
-    EXEC_NPU_CMD(aclnnAllGatherMatmulV2, x1_wrapper, x2_wrapper, bias_value, x1_scale_wrapper, x2_scale_wrapper,
-                 quant_scale_value, block_size, hcom_value, gather_index, comm_turn, stream_mode, group_size, comm_mode,
-                 y, gather_out_wrapper, amax);
-    return std::tie(y, gather_out, amax);
+  } else {
+    TORCH_CHECK(
+        y_dtype.has_value(),
+        "y_dtype should be provided when input dtype is not bf16 or fp16",
+        OPS_ERROR(ErrCode::PARAM));
+    y_scalar_type = npu_preparation::convert_to_scalar_type(
+        c10_npu::GetAclDataType(y_dtype.value()));
+  }
+  at::Tensor y = npu_preparation::apply_tensor_without_format(
+      y_size, self.options().dtype(y_scalar_type));
+  at::Tensor gather_out = gather_output
+      ? npu_preparation::apply_tensor_without_format(
+            gather_out_size, self.options().dtype(gather_out_scalar_type))
+      : at::empty({0}, self.options());
+  at::Tensor amax = amax_output
+      ? npu_preparation::apply_tensor_without_format(
+            amax_size, self.options().dtype(amax_dtype))
+      : at::Tensor();
+  check_dtype_itemsize_compatible(self, x1_dtype, "x1");
+  TensorWrapper x1_wrapper = make_wrapper(self, x1_dtype);
+  check_dtype_itemsize_compatible(x2, x2_dtype, "x2");
+  TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
+  TensorWrapper gather_out_wrapper = make_wrapper(gather_out, gather_out_dtype);
+  const at::Tensor& x1_scale_real = x1_scale.value_or(at::Tensor());
+  const at::Tensor& x2_scale_real = x2_scale.value_or(at::Tensor());
+  if (x1_scale_dtype.has_value() && x1_wrapper.dtype == ACL_FLOAT4_E2M1) {
+    TORCH_CHECK(c10_npu::GetAclDataType(x1_scale_dtype.value()) == ACL_FLOAT8_E8M0,
+      "When x1 dtype is float4_e2m1, x1_scale must be float8_e8m0, but got x1_scale_dtype: ",
+      c10_npu::CustomDataTypeToString(x1_scale_dtype.value()), ".", OPS_ERROR(ErrCode::VALUE));
+  }
+  if (x2_scale_dtype.has_value() && x2_wrapper.dtype == ACL_FLOAT4_E2M1) {
+    TORCH_CHECK(c10_npu::GetAclDataType(x2_scale_dtype.value()) == ACL_FLOAT8_E8M0,
+      "When x2 dtype is float4_e2m1, x2_scale must be float8_e8m0, but got x2_scale_dtype: ",
+      c10_npu::CustomDataTypeToString(x2_scale_dtype.value()), ".", OPS_ERROR(ErrCode::VALUE));
+  }
+  check_dtype_itemsize_compatible(x1_scale_real, x1_scale_dtype, "x1_scale");
+  TensorWrapper x1_scale_wrapper = make_wrapper(x1_scale_real, x1_scale_dtype);
+  check_dtype_itemsize_compatible(x2_scale_real, x2_scale_dtype, "x2_scale");
+  TensorWrapper x2_scale_wrapper = make_wrapper(x2_scale_real, x2_scale_dtype);
+  c10::string_view comm_mode_value = comm_mode.value_or("ai_cpu");
+  char* comm_mode_ptr = const_cast<char*>(comm_mode_value.data());
+  EXEC_NPU_CMD(
+      aclnnAllGatherMatmulV2,
+      x1_wrapper,
+      x2_wrapper,
+      bias_value,
+      x1_scale_wrapper,
+      x2_scale_wrapper,
+      quant_scale_value,
+      block_size,
+      hcom_value,
+      gather_index,
+      comm_turn,
+      stream_mode,
+      group_size,
+      comm_mode_ptr,
+      y,
+      gather_out_wrapper,
+      amax);
+  return std::tie(y, gather_out, amax);
 }
-}  // namespace op_api
+} // namespace op_api

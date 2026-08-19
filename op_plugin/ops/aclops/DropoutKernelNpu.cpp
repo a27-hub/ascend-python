@@ -28,11 +28,7 @@ namespace {
 const static int64_t LENGTH_DATA_ALIGN = 128;
 const static int64_t LENGTH_BOLCK_ALIGN = 8;
 const static int64_t INCREMENT = 10;
-at::Tensor& dropout_do_mask(
-    at::Tensor& result,
-    const at::Tensor& self,
-    const at::Tensor& mask,
-    at::Scalar prob) {
+at::Tensor& dropout_do_mask(at::Tensor& result, const at::Tensor& self, const at::Tensor& mask, at::Scalar prob) {
   at_npu::native::OpCommand cmd;
   cmd.Name("DropOutDoMask")
       .Input(self)
@@ -43,10 +39,7 @@ at::Tensor& dropout_do_mask(
   return result;
 }
 
-std::tuple<at::Tensor, at::Tensor> dropout_do_mask_npu(
-    const at::Tensor& self,
-    const at::Tensor& mask,
-    double p) {
+std::tuple<at::Tensor, at::Tensor> dropout_do_mask_npu(const at::Tensor& self, const at::Tensor& mask, double p) {
   at::Scalar prob = at::Scalar(1. - p);
   at::Tensor result = npu_preparation::apply_tensor(self);
   at_npu::native::OpCommand cmd;
@@ -66,9 +59,7 @@ at::Tensor dropout_gen_mask(const at::Tensor& self, at::Scalar prob) {
 
   uint64_t length = (static_cast<uint64_t>(numels) + LENGTH_DATA_ALIGN - 1) / LENGTH_DATA_ALIGN * LENGTH_DATA_ALIGN;
   at::Tensor mask = npu_preparation::apply_tensor_with_format(
-      {length / LENGTH_BOLCK_ALIGN},
-      self.options().dtype(at::kByte),
-      ACL_FORMAT_ND);
+      {length / LENGTH_BOLCK_ALIGN}, self.options().dtype(at::kByte), ACL_FORMAT_ND);
 
   at::IntArrayRef self_shape = is_not_jit_compile ? desc_.storage_sizes_ : self.sizes();
 
@@ -98,15 +89,10 @@ at::Tensor dropout_gen_mask(const at::Tensor& self, at::Scalar prob) {
   return mask;
 }
 
-std::tuple<at::Tensor, at::Tensor> dropout_v1_out_nocheck(
-    at::Tensor result,
-    const at::Tensor& self,
-    double p) {
+std::tuple<at::Tensor, at::Tensor> dropout_v1_out_nocheck(at::Tensor result, const at::Tensor& self, double p) {
   at::Tensor self_cp = npu_utils::format_contiguous(self);
   TORCH_CHECK(
-      p >= 0 && p <= 1,
-      "dropout probability has to be between 0 and 1, but got ",
-      p, OPS_ERROR(ErrCode::VALUE));
+      p >= 0 && p <= 1, "dropout probability has to be between 0 and 1, but got ", p, OPS_ERROR(ErrCode::VALUE));
   TORCH_CHECK(
       at::isFloatingType(self_cp.scalar_type()),
       "dropout only supports floating-point dtypes" + OPS_ERROR(ErrCode::TYPE));
@@ -132,32 +118,27 @@ std::tuple<at::Tensor, at::Tensor> dropout_v1_out_nocheck(
 }
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor> _npu_dropout(
-    const at::Tensor& self,
-    double p) {
+std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p) {
   at::Tensor result = npu_preparation::apply_tensor(self);
   return dropout_v1_out_nocheck(result, self, p);
 }
 
 at::Tensor npu_dropout_gen_mask(
-    at::IntArrayRef size, double p,
+    at::IntArrayRef size,
+    double p,
     c10::optional<at::ScalarType> dtype_opt,
     c10::optional<c10::Layout> layout_opt,
     c10::optional<c10::Device> device_opt,
     c10::optional<bool> pin_memory_opt) {
-  c10::TensorOptions options = c10::TensorOptions().dtype(dtype_opt)
-      .device(device_opt)
-      .layout(layout_opt)
-      .pinned_memory(pin_memory_opt);
+  c10::TensorOptions options =
+      c10::TensorOptions().dtype(dtype_opt).device(device_opt).layout(layout_opt).pinned_memory(pin_memory_opt);
 
   at::Scalar prob = at::Scalar(1. - p);
   int64_t numels = c10::multiply_integers(size);
 
   uint64_t length = (static_cast<uint64_t>(numels) + 128 - 1) / 128 * 128;
-  at::Tensor mask = npu_preparation::apply_tensor_with_format(
-      at::IntArrayRef{length / 8},
-      options.dtype(at::kByte),
-      ACL_FORMAT_ND);
+  at::Tensor mask =
+      npu_preparation::apply_tensor_with_format(at::IntArrayRef{length / 8}, options.dtype(at::kByte), ACL_FORMAT_ND);
 
   at_npu::native::OpCommand cmd;
   // If either seed or seed1 are set to be non-zero, the random number generator
@@ -182,16 +163,12 @@ at::Tensor npu_dropout_gen_mask(
   return mask;
 }
 
-at::Tensor npu_dropout_backward(
-    const at::Tensor& grad_output,
-    const at::Tensor& mask,
-    double scale) {
+at::Tensor npu_dropout_backward(const at::Tensor& grad_output, const at::Tensor& mask, double scale) {
   TORCH_CHECK(
       at::isFloatingType(grad_output.scalar_type()),
       "dropoutbackward only supports floating-point dtypes" + OPS_ERROR(ErrCode::TYPE));
   TORCH_CHECK(
-      mask.scalar_type() == at::ScalarType::Byte,
-      "mask should be torch.uint8 dtype" + OPS_ERROR(ErrCode::TYPE));
+      mask.scalar_type() == at::ScalarType::Byte, "mask should be torch.uint8 dtype" + OPS_ERROR(ErrCode::TYPE));
   double retain = 1. - scale;
   at::Tensor result = npu_preparation::apply_tensor(grad_output);
 
@@ -206,10 +183,7 @@ at::Tensor npu_dropout_backward(
   return result;
 }
 
-std::tuple<at::Tensor, at::Tensor> npu_dropout_do_mask(
-    const at::Tensor& self,
-    const at::Tensor& mask,
-    double p) {
+std::tuple<at::Tensor, at::Tensor> npu_dropout_do_mask(const at::Tensor& self, const at::Tensor& mask, double p) {
   return dropout_do_mask_npu(self, mask, p);
 }
 

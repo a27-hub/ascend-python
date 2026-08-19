@@ -20,7 +20,7 @@ torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_po
 ## 参数说明
 
 - **input** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，维数只能是3~8维。
-    - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持`int8`.
+    - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品：数据类型支持`int8`。
 - **indices** (`Tensor`)：必选输入，索引张量，数据类型支持`int32`，数据格式支持$ND$，支持非连续的Tensor。
 - **updates** (`Tensor`)：必选输入，更新数据张量，数据格式支持$ND$，支持非连续的Tensor。
     - <term>Atlas 推理系列产品</term>：数据类型支持`float16`。
@@ -55,16 +55,11 @@ torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_po
 - `axis`不能为`updates`的第1维或最后1维。
 - `quant_axis`只能为`updates`的最后1维。
 
-## 支持的型号
-
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
-- <term>Atlas 推理系列产品</term>
-
 ## 调用示例
 
 - 单算子模式调用
 
-    ```python
+   ```python
    >>> import torch
    >>> import torch_npu
    >>> import numpy as np
@@ -89,11 +84,11 @@ torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_po
    >>> reduce = "update"
    >>>
    >>> out = torch_npu.npu_quant_scatter(var, indices, updates, quant_scales, quant_zero_points, axis=axis, quant_axis=quant_axis, reduce=reduce)
-   >>> out.shape
+   >>> print(out.shape)
    torch.Size([24, 4096, 128])
-   >>> out.dtype
+   >>> print(out.dtype)
    torch.int8
-   >>> out
+   >>> print(out)
    tensor([[[2, 2, 2,  ..., 4, 9, 2],
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0],
@@ -143,7 +138,7 @@ torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_po
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0]]], device='npu:0', dtype=torch.int8)
-    ```
+   ```
 
 - 图模式调用
 

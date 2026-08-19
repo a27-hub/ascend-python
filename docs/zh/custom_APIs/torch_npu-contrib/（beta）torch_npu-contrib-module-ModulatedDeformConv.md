@@ -30,13 +30,13 @@ torch_npu.contrib.module.ModulatedDeformConv(in_channels, out_channels, kernel_s
 - **padding** (`int`或`Tuple`)：添加到输入两侧的零填充。默认值为0。
 - **dilation** (`int`或`Tuple`)：内核元素间距。默认值为1。
 - **groups** (`int`)：从输入通道到输出通道的阻塞连接数。默认值为1。
-- **deformable_groups** (`int`)：可变形组分区的数量。
-- **bias** (`bool`)：如果值为True，则向输出添加可学习偏差。默认值为False。
+- **deformable_groups** (`int`)：可变形分组的数量。
+- **bias** (`bool`)：如果值为True，则向输出添加可学习偏差。默认值为True。
 - **pack** (`bool`)：如果值为True，此模块将包括conv_offset和掩码。默认值为True。
 
 **计算输入**
 
-- **x**(`Tensor`): 输入张量。
+- **x**(`Tensor`)：输入张量。
 
 ## 返回值说明
 
@@ -56,6 +56,6 @@ ModulatedDeformConv仅实现float32数据类型的操作。conv_offset中权重�
 >>> m = ModulatedDeformConv(32, 32, 1).npu()
 >>> input_tensor = torch.randn(2, 32, 5, 5).npu()
 >>> output = m(input_tensor)
->>> output.shape
+>>> print(output.shape)
 torch.Size([2, 32, 5, 5])
 ```

@@ -17,14 +17,14 @@
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="p243410273524"><a name="p243410273524"></a><a name="p243410273524"></a>-</p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p6494173775514"><a name="p6494173775514"></a><a name="p6494173775514"></a>bert自注意力与层归一化的融合实现。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p6494173775514"><a name="p6494173775514"></a><a name="p6494173775514"></a>BERT自注意力与层归一化的融合实现。</p>
 </td>
 </tr>
 <tr id="row20494037175516"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p1349410376553"><a name="p1349410376553"></a><a name="p1349410376553"></a><a href="（beta）torch_npu-contrib-npu_fused_attention.md">（beta）torch_npu.contrib.npu_fused_attention</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="p143412710527"><a name="p143412710527"></a><a name="p143412710527"></a>-</p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1549443765519"><a name="p1549443765519"></a><a name="p1549443765519"></a>bert自注意力的融合实现。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1549443765519"><a name="p1549443765519"></a><a name="p1549443765519"></a>BERT自注意力的融合实现。</p>
 </td>
 </tr>
 <tr id="row52986599558"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p19298185917556"><a name="p19298185917556"></a><a name="p19298185917556"></a><a href="（beta）torch_npu-contrib-Prefetcher.md">（beta）torch_npu.contrib.Prefetcher</a></p>
@@ -38,7 +38,7 @@
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="p14344279524"><a name="p14344279524"></a><a name="p14344279524"></a>-</p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p8298559105514"><a name="p8298559105514"></a><a name="p8298559105514"></a>应用基于NPU的调制可变形2D卷积操作。ModulationDeformConv的实现主要是基于mmcv的实现进行设计和重构。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p8298559105514"><a name="p8298559105514"></a><a name="p8298559105514"></a>应用基于NPU的调制可变形2D卷积操作。DCNv2的实现主要是基于mmcv的实现进行设计和重构。</p>
 </td>
 </tr>
 <tr id="row1829825935515"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p829895965516"><a name="p829895965516"></a><a name="p829895965516"></a><a href="（beta）torch_npu-contrib-BiLSTM.md">（beta）torch_npu.contrib.BiLSTM</a></p>
@@ -52,7 +52,7 @@
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="p1543482795211"><a name="p1543482795211"></a><a name="p1543482795211"></a>-</p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p182983598556"><a name="p182983598556"></a><a name="p182983598556"></a>应用基于NPU的Sigmoid线性单元（SiLU）函数，按元素方向。SiLU函数也称为swish函数。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p182983598556"><a name="p182983598556"></a><a name="p182983598556"></a>在NPU上按元素方向应用Sigmoid线性单元（SiLU）。SiLU函数也称为Swish函数。</p>
 </td>
 </tr>
 <tr id="row152981459165519"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p729815915510"><a name="p729815915510"></a><a name="p729815915510"></a><a href="（beta）torch_npu-contrib-NpuFairseqDropout.md">（beta）torch_npu.contrib.NpuFairseqDropout</a></p>
@@ -92,16 +92,16 @@
 </tr>
 <tr id="row10299659105519"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p0299165913557"><a name="p0299165913557"></a><a name="p0299165913557"></a><a href="（beta）torch_npu-contrib-function-npu_diou.md">（beta）torch_npu.contrib.function.npu_diou</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p137511352014"><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p137511352014"></a><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p137511352014"></a><a href="https://gitee.com/link?target=https://arxiv.org/abs/1902.09630" target="_blank" rel="noopener noreferrer">def bboexs_diou()</a></p>
+<td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p137511352014"><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p137511352014"></a><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p137511352014"></a><a href="https://gitee.com/link?target=https://arxiv.org/abs/1902.09630" target="_blank" rel="noopener noreferrer">def bboxes_diou()</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p10299559135513"><a name="p10299559135513"></a><a name="p10299559135513"></a>应用基于NPU的DIoU操作。考虑到目标之间距离，以及距离和范围的重叠率，不同目标或边界需趋于稳定。</p>
 </td>
 </tr>
 <tr id="row42991659205514"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p229916594553"><a name="p229916594553"></a><a name="p229916594553"></a><a href="（beta）torch_npu-contrib-function-npu_ciou.md">（beta）torch_npu.contrib.function.npu_ciou</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p67513316205"><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p67513316205"></a><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p67513316205"></a><a href="https://gitee.com/link?target=https://arxiv.org/abs/1902.09630" target="_blank" rel="noopener noreferrer">def bboexs_giou()</a></p>
+<td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p67513316205"><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p67513316205"></a><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p67513316205"></a><a href="https://gitee.com/link?target=https://arxiv.org/abs/1902.09630" target="_blank" rel="noopener noreferrer">def bboxes_ciou()</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1929945945518"><a name="p1929945945518"></a><a name="p1929945945518"></a>应用基于NPU的CIoU操作。在DIoU的基础上增加了penalty term，并propose CIoU。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1929945945518"><a name="p1929945945518"></a><a name="p1929945945518"></a>基于NPU的CIoU操作，计算预测边界框与真实边界框之间的CIoU（Complete Intersection over Union）损失。</p>
 </td>
 </tr>
 <tr id="row181123135613"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p381113175618"><a name="p381113175618"></a><a name="p381113175618"></a><a href="（beta）torch_npu-contrib-module-NpuCachedDropout.md">（beta）torch_npu.contrib.module.NpuCachedDropout</a></p>
@@ -171,7 +171,7 @@
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p107710352010"><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p107710352010"></a><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p107710352010"></a><a href="https://gitee.com/link?target=https://github.com/digantamisra98/Mish/blob/master/Mish/Torch/mish.py" target="_blank" rel="noopener noreferrer">class Mish()</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p581212365619"><a name="p581212365619"></a><a name="p581212365619"></a>应用基于NPU的Mish操作。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p581212365619"><a name="p581212365619"></a><a name="p581212365619"></a>该接口用于在NPU上执行Mish操作。</p>
 </td>
 </tr>
 <tr id="row16812163115611"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p1281210314562"><a name="p1281210314562"></a><a name="p1281210314562"></a><a href="（beta）torch_npu-contrib-module-SiLU.md">（beta）torch_npu.contrib.module.SiLU</a></p>
@@ -192,12 +192,12 @@
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="p2435152716524"><a name="p2435152716524"></a><a name="p2435152716524"></a><a href="https://gitee.com/link?target=https://arxiv.org/pdf/1512.00567.pdf" target="_blank" rel="noopener noreferrer">class LabelSmoothingCrossEntropy()</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1481373195615"><a name="p1481373195615"></a><a name="p1481373195615"></a>使用NPU API进行LabelSmoothing Cross Entropy。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1481373195615"><a name="p1481373195615"></a><a name="p1481373195615"></a>使用NPU API进行Label Smoothing Cross Entropy。</p>
 </td>
 </tr>
 <tr id="row1681363165615"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p15813735564"><a name="p15813735564"></a><a name="p15813735564"></a><a href="（beta）torch_npu-contrib-module-ModulatedDeformConv.md">（beta）torch_npu.contrib.module.ModulatedDeformConv</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p97983152013"><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p97983152013"></a><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p97983152013"></a><a href="https://gitee.com/link?target=https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/modulated_deform_conv.py" target="_blank" rel="noopener noreferrer">class ModulatedDeformConv2dFunciton()</a></p>
+<td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p97983152013"><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p97983152013"></a><a name="zh-cn_topic_0000001678826450_zh-cn_topic_0000001606524122_zh-cn_topic_0000001390596206_zh-cn_topic_0000001385999112_p97983152013"></a><a href="https://gitee.com/link?target=https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/modulated_deform_conv.py" target="_blank" rel="noopener noreferrer">class ModulatedDeformConv2dFunction()</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p88131233567"><a name="p88131233567"></a><a name="p88131233567"></a>应用基于NPU的Modulated Deformable 2D卷积操作。</p>
 </td>
@@ -241,7 +241,7 @@
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001606524122_p13353211123217"><a name="zh-cn_topic_0000001606524122_p13353211123217"></a><a name="zh-cn_topic_0000001606524122_p13353211123217"></a><a href="https://github.com/open-mmlab/mmdetection/blob/master/mmdet/core/bbox/coder/delta_xywh_bbox_coder.py#L164" target="_blank" rel="noopener noreferrer">def npu_bbox_coder_decode_xywh2xyxy()</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p829965916557"><a name="p829965916557"></a><a name="p829965916557"></a>应用基于NPU的bbox格式编码操作，将格式从xywh编码为xyxy。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p829965916557"><a name="p829965916557"></a><a name="p829965916557"></a>该函数基于NPU实现bbox格式解码操作，将格式从xywh转换为xyxy。</p>
 </td>
 </tr>
 <tr id="row182991559155515"><td class="cellrowborder" valign="top" width="22.84%" headers="mcps1.2.4.1.1 "><p id="p182991959195516"><a name="p182991959195516"></a><a name="p182991959195516"></a><a href="（beta）torch_npu-contrib-function-npu_bbox_coder_encode_yolo.md">（beta）torch_npu.contrib.function.npu_bbox_coder_encode_yolo</a></p>
@@ -290,7 +290,7 @@
 </td>
 <td class="cellrowborder" valign="top" width="18.38%" headers="mcps1.2.4.1.2 "><p id="p157710131475"><a name="p157710131475"></a><a name="p157710131475"></a>-</p>
 </td>
-<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1057719133712"><a name="p1057719133712"></a><a name="p1057719133712"></a>QuantConv2d是对torch_npu.npu_quant_conv2d接口的封装类，为用户提供Conv2d算子量化相关功能。</p>
+<td class="cellrowborder" valign="top" width="58.78%" headers="mcps1.2.4.1.3 "><p id="p1057719133712"><a name="p1057719133712"></a><a name="p1057719133712"></a>为用户提供Conv2d算子量化相关功能。</p>
 </td>
 </tr>
 </tbody>

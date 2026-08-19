@@ -32,15 +32,9 @@ at::Tensor npu_bounding_box_encode(
     double stds3) {
   at::Tensor result = npu_preparation::apply_tensor(anchor_box, {anchor_box.size(0), 4});
   c10::SmallVector<float, SIZE> means = {
-      static_cast<float>(means0),
-      static_cast<float>(means1),
-      static_cast<float>(means2),
-      static_cast<float>(means3)};
+      static_cast<float>(means0), static_cast<float>(means1), static_cast<float>(means2), static_cast<float>(means3)};
   c10::SmallVector<float, SIZE> stds = {
-      static_cast<float>(stds0),
-      static_cast<float>(stds1),
-      static_cast<float>(stds2),
-      static_cast<float>(stds3)};
+      static_cast<float>(stds0), static_cast<float>(stds1), static_cast<float>(stds2), static_cast<float>(stds3)};
   at_npu::native::OpCommand cmd;
   cmd.Name("BoundingBoxEncode")
       .Input(anchor_box)

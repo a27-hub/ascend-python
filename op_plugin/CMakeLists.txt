@@ -10,6 +10,9 @@ FILE(GLOB _OPPLUGIN_BASE_OPS_SRCS
     ops/aclops/*.cpp
     ops/opapi/*.cpp)
 
+FILE(GLOB _OPPLUGIN_DVM_SRCS ops/dvm/*.cpp)
+LIST(APPEND _OPPLUGIN_BASE_OPS_SRCS ${_OPPLUGIN_DVM_SRCS})
+
 FILE(GLOB _OPPLUGIN_UTILS_SRCS
     *.cpp
     utils/*.cpp
@@ -17,6 +20,13 @@ FILE(GLOB _OPPLUGIN_UTILS_SRCS
     utils/custom_functions/opapi/*.cpp)
 
 LIST(APPEND OPS_PLUGIN_SRCS ${_OPS_PLUGIN_SRCS} ${_OPPLUGIN_BASE_OPS_SRCS} ${_OPPLUGIN_UTILS_SRCS})
+
+FILE(GLOB _OPPLUGIN_EXCLUDE
+    ops/opapi/StructKernelNpuOpApiEverything.cpp
+    OpInterfaceEverything.cpp)
+FOREACH(ITEM ${_OPPLUGIN_EXCLUDE})
+    LIST(REMOVE_ITEM OPS_PLUGIN_SRCS ${ITEM})
+ENDFOREACH()
 
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" MATCHED_TORCH_VERSION "${TORCH_VERSION}")
 set(OPS_VERSION_NAME "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")

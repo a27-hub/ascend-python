@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_rotated_overlaps
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -21,8 +24,8 @@ torch_npu.npu_rotated_overlaps(self, query_boxes, trans=False) -> Tensor
 
 ## 参数说明
 
-- **self** (`Tensor`)：必选参数，梯度增量数据，shape为(B, 5, N)数据类型为`float32`的3D张量。
-- **query_boxes** (`Tensor`)：必选参数，标注框，shape为(B, 5, K)数据类型为`float32`的3D张量。
+- **self** (`Tensor`)：必选参数，梯度增量数据，shape为(B, 5, N)，数据类型为`float32`的3D张量。
+- **query_boxes** (`Tensor`)：必选参数，标注框，shape为(B, 5, K)，数据类型为`float32`的3D张量。
 - **trans** (`bool`)：可选参数，值为True表示“xyxyt”，值为False表示“xywht”。默认值为False。
 
 ## 调用示例
@@ -36,7 +39,7 @@ torch_npu.npu_rotated_overlaps(self, query_boxes, trans=False) -> Tensor
 >>> box1=torch.from_numpy(a).to("npu")
 >>> box2=torch.from_numpy(b).to("npu")
 >>> output = torch_npu.npu_rotated_overlaps(box1, box2, trans=False)
->>> output
+>>> print(output)
 tensor([[[0.0000, 0.1562, 0.0000],
         [0.1562, 0.3713, 0.0611],
         [0.0000, 0.0611, 0.0000]]], device='npu:0', dtype=torch.float32)

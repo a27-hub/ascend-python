@@ -1,4 +1,3 @@
-
 # （beta）torch_npu.npu.obfuscation_finalize
 
 ## 产品支持情况
@@ -14,7 +13,7 @@
 该接口针对[PMCC](https://www-file.huawei.com/admin/asset/v1/pro/view/6812dab6dd4e4640b11619e401db1c47.pdf)业务，如下两种结果均符合预期：
 
 * 如果部署PMCC特性，该接口返回响应结果。
-* 未部署PMCC特性时，执行用例会返回错误码507018。
+* 未部署PMCC特性时，执行该接口会返回错误码507018。
 
 PMCC特性的部署流程如下：
 
@@ -42,7 +41,7 @@ torch_npu.npu.obfuscation_finalize(fd_to_close) -> Tensor
 
 `Tensor`
 
-代表关闭socket连接符内存数据，1D，shape为(1)，数据类型为`int32`。
+代表关闭socket连接后的结果，1D，shape为(1)，数据类型为`int32`。
 
 ## 调用示例
 

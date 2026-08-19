@@ -23,10 +23,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 namespace {
 at::Tensor& bitwise_xor_out_nocheck(at::Tensor& result, const at::Tensor& self, const at::Tensor& other) {
   if (npu_preparation::IsCPUScalar(other)) {
-    const at::Scalar &other_value = other.item();
+    const at::Scalar& other_value = other.item();
     EXEC_NPU_CMD(aclnnBitwiseXorScalar, self, other_value, result);
   } else if (npu_preparation::IsCPUScalar(self)) {
-    const at::Scalar &self_value = self.item();
+    const at::Scalar& self_value = self.item();
     EXEC_NPU_CMD(aclnnBitwiseXorScalar, other, self_value, result);
   } else {
     EXEC_NPU_CMD(aclnnBitwiseXorTensor, self, other, result);
@@ -92,4 +92,4 @@ at::Tensor& bitwise_xor_(at::Tensor& self, const at::Scalar& other) {
   EXEC_NPU_CMD(aclnnInplaceBitwiseXorScalar, self, other);
   return self;
 }
-}
+} // namespace op_api

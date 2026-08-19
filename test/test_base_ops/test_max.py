@@ -1,9 +1,18 @@
+import unittest
+
 import torch
 import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
+
+
+# Upstream pytorch#173895 removed named-tensor support in PyTorch 2.13.
+# torch.Tensor.refine_names -- the entry point to naming tensor dims that
+# these tests rely on -- is gone, and torch.max no longer accepts a name
+# string as `dim`. Skip the four dimname test methods on 2.13+.
+_TORCH_HAS_NAMED_TENSOR = hasattr(torch.Tensor, "refine_names")
 
 
 class TestMax(TestCase):
@@ -421,6 +430,7 @@ class TestMax(TestCase):
                         ]
         self.max_result_other(shape_format)
 
+    @unittest.skipUnless(_TORCH_HAS_NAMED_TENSOR, "Named tensor removed in PyTorch 2.13 (pytorch#173895)")
     def test_max_dimname_shape_format(self):
         format_list = [0, 3, 4, 29]
         keepdim_list = [True, False]
@@ -430,6 +440,7 @@ class TestMax(TestCase):
                         ]
         self.max_name_result_other(shape_format)
 
+    @unittest.skipUnless(_TORCH_HAS_NAMED_TENSOR, "Named tensor removed in PyTorch 2.13 (pytorch#173895)")
     def test_max_dimname_shape_format_fp16(self):
         format_list = [0, 3, 4, 29]
         keepdim_list = [True, False]
@@ -439,6 +450,7 @@ class TestMax(TestCase):
                         ]
         self.max_name_result_other(shape_format)
 
+    @unittest.skipUnless(_TORCH_HAS_NAMED_TENSOR, "Named tensor removed in PyTorch 2.13 (pytorch#173895)")
     def test_max_dimname_out_shape_format(self):
         format_list = [0, 3, 4, 29]
         keepdim_list = [True, False]
@@ -448,6 +460,7 @@ class TestMax(TestCase):
                         ]
         self.max_name_out_result_other(shape_format)
 
+    @unittest.skipUnless(_TORCH_HAS_NAMED_TENSOR, "Named tensor removed in PyTorch 2.13 (pytorch#173895)")
     def test_max_dimname_out_shape_format_fp16(self):
         format_list = [0, 3, 4, 29]
         keepdim_list = [True, False]
@@ -576,6 +589,22 @@ class TestMax(TestCase):
         torch.max(cpu_input0, cpu_input1, out=cpu_val[0:2, 0:2, 0:2, 0:2])
         torch.max(npu_input0, npu_input1, out=npu_val[0:2, 0:2, 0:2, 0:2])
         self.assertRtolEqual(cpu_val.numpy(), npu_val.cpu().numpy())
+
+    def test_max_first_arg_0d_cpu_tensor(self):
+        cpu_a = torch.tensor(5.0)
+        cpu_b = torch.tensor([1.0, 2.0, 3.0])
+        npu_b = cpu_b.npu()
+        cpu_output = torch.max(cpu_a, cpu_b)
+        npu_output = torch.max(cpu_a, npu_b)
+        self.assertRtolEqual(cpu_output, npu_output.cpu())
+
+    def test_maximum_first_arg_0d_cpu_tensor(self):
+        cpu_a = torch.tensor(5.0)
+        cpu_b = torch.tensor([1.0, 2.0, 3.0])
+        npu_b = cpu_b.npu()
+        cpu_output = torch.maximum(cpu_a, cpu_b)
+        npu_output = torch.maximum(cpu_a, npu_b)
+        self.assertRtolEqual(cpu_output, npu_output.cpu())
 
 
 if __name__ == "__main__":

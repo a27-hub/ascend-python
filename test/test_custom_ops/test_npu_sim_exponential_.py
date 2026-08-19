@@ -9,7 +9,7 @@ from typing import Optional
 
 
 class TestNPUSimExponential(TestCase):
-    """测试 npu_sim_exponential_ 算子（Ascend910B 专属）"""
+    """测试 npu_sim_exponential_ 算子"""
 
     def cal_reject_num(self, alpha: float, n: int) -> float:
         """计算假设检验的拒绝阈值（复用参考用例的计算逻辑）"""
@@ -31,7 +31,7 @@ class TestNPUSimExponential(TestCase):
         return tensor_npu
 
     @unittest.skip("skip") # CI版本不支持
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_sim_exponential_distribution_consistency(self, device: str = "npu"):
         """测试：NPU 算子与 CPU 原生算子的分布一致性（KS检验）"""
         N = 100  # 测试轮数
@@ -45,10 +45,10 @@ class TestNPUSimExponential(TestCase):
             shape = tuple(np.random.randint(10, 100, size=(k,)))
             # 随机选择 λ 值
             lambd = np.random.choice(lambd_list)
-            
+
             # 生成输入 tensor
             tensor_cpu = torch.empty(size=shape, dtype=torch.float32)
-            
+
             # CPU 基准结果
             np_cpu = self.supported_op_exec(tensor_cpu.clone(), lambd)
             # NPU 算子结果
@@ -62,11 +62,11 @@ class TestNPUSimExponential(TestCase):
 
         # 校验拒绝次数是否在可接受范围内
         reject_num = self.cal_reject_num(alpha, N)
-        self.assertTrue(count <= reject_num, 
+        self.assertTrue(count <= reject_num,
                         f"Reject count {count} exceeds threshold {reject_num}, distribution mismatch")
 
     @unittest.skip("skip") # CI版本不支持
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_sim_exponential_inf_lambda(self):
         """测试：λ 为无穷大时，tensor 被置为全 0"""
         # 覆盖不同形状
@@ -82,7 +82,7 @@ class TestNPUSimExponential(TestCase):
                 self.assertTrue(torch.all(tensor_npu == 0.0))
 
     @unittest.skip("skip") # CI版本不支持
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_sim_exponential_no_zero(self):
         """测试：正常 λ 下，输出值均大于 0（指数分布特性）"""
         test_lambds = [0.1, 1.0, 10.0]
@@ -95,7 +95,7 @@ class TestNPUSimExponential(TestCase):
                 self.assertTrue(tensor_npu.min() > 0.0)
 
     @unittest.skip("skip") # CI版本不支持
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_sim_exponential_negative_lambda_fails(self):
         """测试：λ 为负数时抛出 RuntimeError"""
         negative_lambds = [-0.5, -1.0, -10.0]
@@ -109,7 +109,7 @@ class TestNPUSimExponential(TestCase):
                 self.assertIn("expects lambd > 0.0", str(cm.exception))
 
     @unittest.skip("skip") # CI版本不支持
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_sim_exponential_zero_lambda_fails(self):
         """测试：λ 为 0 时抛出 RuntimeError"""
         tensor_npu = torch.empty((10,), device="npu", dtype=torch.float32)
@@ -119,7 +119,7 @@ class TestNPUSimExponential(TestCase):
         self.assertIn("expects lambd > 0.0", str(cm.exception))
 
     @unittest.skip("skip") # CI版本不支持
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_sim_exponential_generator_consistency(self):
         """测试：指定生成器种子时，结果可复现"""
         lam = 1.5
@@ -142,7 +142,7 @@ class TestNPUSimExponential(TestCase):
         self.assertEqual(tensor1, tensor2)
 
     @unittest.skip("skip") # CI版本不支持
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_sim_exponential_mean(self):
         """测试：输出值的均值接近 1/λ（指数分布理论均值）"""
         test_cases = [
@@ -161,6 +161,13 @@ class TestNPUSimExponential(TestCase):
                 # 验证均值在误差范围内
                 self.assertAlmostEqual(actual_mean, expected_mean, delta=expected_mean * tolerance)
 
+    @unittest.skip("skip") # CI版本不支持
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
+    def test_npu_sim_exponential_empty_tensor(self):
+        """测试：输入空tensor，正常返回自身"""
+        tensor_npu = torch.empty((0,), device="npu", dtype=torch.float32)
+        result = torch_npu.npu_sim_exponential_(tensor_npu, 1.0)
+        self.assertEqual(result.numel(), 0)
 
 if __name__ == "__main__":
     # 执行所有测试用例

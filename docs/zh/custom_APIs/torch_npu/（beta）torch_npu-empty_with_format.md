@@ -26,7 +26,7 @@ torch_npu.empty_with_format(size, dtype, layout, device, pin_memory, acl_format)
 
 - **size**（`List[int]`）：定义输出张量shape的整数序列。可以是参数数量（可变值），也可以是列表或元组等集合。
 - **dtype**（`torch.dtype`）：可选参数，返回张量所需数据类型，默认值为None。如果值为None，请使用全局默认值（请参见torch.set_default_tensor_type()）。
-- **layout** （`torch.layout`）：可选参数，返回张量所需布局，默认值为torch.strided。
+- **layout**（`torch.layout`）：可选参数，返回张量所需布局，默认值为torch.strided。
 - **device**（`torch.device`）：可选参数，返回张量所需设备，默认值为None。
 - **pin_memory**（`bool`）：可选参数，默认值为False。如果设置此参数，返回张量将分配在固定内存中。
 - **acl_format**（`int`）：返回张量所需内存格式，默认值为2。
@@ -35,6 +35,7 @@ torch_npu.empty_with_format(size, dtype, layout, device, pin_memory, acl_format)
 
 ```python
 >>> torch_npu.empty_with_format((2, 3), dtype=torch.float32, device="npu")
-tensor([[1., 1., 1.],
-        [1., 1., 1.]], device='npu:0')
+tensor([[3.1415e-45, 0.0000e+00, 1.2345e+20],
+        [9.8765e-10, 0.0000e+00, 1.1111e+30]], device='npu:0')
+# 注：empty_with_format返回未初始化张量，示例中的数值仅用于说明，实际值不固定。
 ```

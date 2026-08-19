@@ -21,8 +21,14 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> batch_norm_backward_reduce(
-    const at::Tensor& grad_out, const at::Tensor& self, const at::Tensor& mean, const at::Tensor& invstd,
-    const c10::optional<at::Tensor>& weight_opt, bool input_g, bool weight_g, bool bias_g) {
+    const at::Tensor& grad_out,
+    const at::Tensor& self,
+    const at::Tensor& mean,
+    const at::Tensor& invstd,
+    const c10::optional<at::Tensor>& weight_opt,
+    bool input_g,
+    bool weight_g,
+    bool bias_g) {
   // set compatibility
   DO_COMPATIBILITY(
       aclnnBatchNormReduceBackward,
@@ -56,8 +62,20 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> batch_norm_backward_r
   }
 
   // calculate the output result of the NPU
-  EXEC_NPU_CMD(aclnnBatchNormReduceBackward, grad_out, self, mean, invstd, weight_opt, input_g, weight_g, bias_g,
-               sum_dy, sum_dy_xmu, grad_weight, grad_bias);
+  EXEC_NPU_CMD(
+      aclnnBatchNormReduceBackward,
+      grad_out,
+      self,
+      mean,
+      invstd,
+      weight_opt,
+      input_g,
+      weight_g,
+      bias_g,
+      sum_dy,
+      sum_dy_xmu,
+      grad_weight,
+      grad_bias);
   return std::make_tuple(sum_dy, sum_dy_xmu, grad_weight, grad_bias);
 }
-}
+} // namespace op_api

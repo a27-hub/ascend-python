@@ -11,7 +11,7 @@
 
 ## 功能说明
 
-判断HCCL通信后端是否可用,与torch.distributed.is_nccl_available类似，具体请参考[https://pytorch.org/docs/stable/distributed.html\#torch.distributed.is_nccl_available](https://pytorch.org/docs/stable/distributed.html#torch.distributed.is_nccl_available)。
+判断HCCL通信后端是否可用，与torch.distributed.is_nccl_available类似，具体请参考[https://pytorch.org/docs/stable/distributed.html\#torch.distributed.is_nccl_available](https://pytorch.org/docs/stable/distributed.html#torch.distributed.is_nccl_available)。
 
 ## 函数原型
 
@@ -21,7 +21,7 @@ torch.distributed.is_hccl_available()
 
 ## 返回值说明
 
-`Bool`：True为可用，False为不可用。
+`bool`：True为可用，False为不可用。
 
 ## 调用示例
 
@@ -29,7 +29,7 @@ torch.distributed.is_hccl_available()
 import torch
 import torch_npu
 
-torch.distributed.is_hccl_available()
+print(torch.distributed.is_hccl_available())
 
 True
 ```

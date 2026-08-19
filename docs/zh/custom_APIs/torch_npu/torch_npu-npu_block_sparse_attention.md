@@ -4,8 +4,8 @@
 
 | 产品                                                   | 是否支持 |
 |:-----------------------------------------------------|:----:|
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品                      |  √   |
-| Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件 |  √   |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>                      |  √   |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |  √   |
 
 ## 功能说明
 
@@ -39,7 +39,7 @@ torch_npu.npu_block_sparse_attention(query, key, value, block_sparse_mask, block
 
 - **block_shape** (`list[int]`)：必选参数，稀疏块shape。至少需要包含两个元素，如`[blockShapeX, blockShapeY]`，且均大于0。blockShapeX：Q方向块大小；blockShapeY：KV方向块大小。**blockShapeY 必须为128的倍数**。
 
-- <strong>*</strong>：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
 - **q_input_layout** (`str`)：可选参数，`query`的排布，默认值为`"TND"`。当前仅支持`"TND"`、`"BNSD"`。
 
@@ -72,8 +72,10 @@ torch_npu.npu_block_sparse_attention(query, key, value, block_sparse_mask, block
 
 - `query`、`key`、`value`数据类型必须一致，且为`float16`或`bfloat16`。
 - `query`的head数$N1$与`key`/`value`的head数$N2$需满足$N1 ≥ N2$且$N1 \% N2 = 0$。
+- `actual_seq_lengths`与`actual_seq_lengths_kv`当前必须同时配置或同时不配置，仅配置其中之一会被算子拦截。
 - 序列长度不需要被`block_shape`整除，分块数按向上取整计算。
-- 当前版本下，当且仅当`q_input_layout`和`kv_input_layout`为`"BNSD"`、MHA场景（`query`的head数$N1$与`key`/`value`的head数$N2$相等），且headDim=128时，支持反向计算。
+- 正向路径当前支持headDim=64或128；反向路径当前支持headDim=128。
+- 反向路径支持`q_input_layout`和`kv_input_layout`同为`"BNSD"`或同为`"TND"`，并支持MHA/GQA场景。MHA场景下$N1 = N2$，GQA场景下需满足$N1 > N2$且$N1 \% N2 = 0$，其中$N1$为`query`的head数，$N2$为`key`/`value`的head数。
 
 ## 调用示例
 

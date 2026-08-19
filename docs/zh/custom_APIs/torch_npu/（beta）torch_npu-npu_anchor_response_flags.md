@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_anchor_response_flags
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -24,11 +27,9 @@
         feat_h, feat_w = featmap_size
         gt_bboxes_cx = (self[:, 0] + self[:, 2]) * 0.5
         gt_bboxes_cy = (self[:, 1] + self[:, 3]) * 0.5
-        try:
-            gt_bboxes_grid_x = torch.floor(gt_bboxes_cx / strides[0]).int()
-            gt_bboxes_grid_y = torch.floor(gt_bboxes_cy / strides[1]).int()
-        except ZeroDivisionError:
-            print("There is 0 in strides.")
+        
+        gt_bboxes_grid_x = torch.floor(gt_bboxes_cx / strides[0]).int().clamp(0, feat_w - 1)
+        gt_bboxes_grid_y = torch.floor(gt_bboxes_cy / strides[1]).int().clamp(0, feat_h - 1)       
         gt_bboxes_grid_idx = gt_bboxes_grid_y * feat_w + gt_bboxes_grid_x
         responsible_grid = torch.zeros(feat_h * feat_w, dtype=torch.uint8)
         gt_bboxes_grid_idx = gt_bboxes_grid_idx.long()
@@ -53,7 +54,7 @@ torch_npu.npu_anchor_response_flags(self, featmap_size, stride, num_base_anchors
 
 - **self** (`Tensor`)：真值框，shape为`[batch, 4]`的2D张量。
 - **featmap_size** (`List[int]`)：特征图大小，长度为2。
-- **stride** (`List[int]`)：当前轴的步长，长度为2。
+- **stride** (`List[int]`)：特征图对于原图的采样步长[stride_h, stride_w]，长度为2。
 - **num_base_anchors** (`int`)：base anchors的数量。
 
 ## 返回值说明
@@ -68,6 +69,6 @@ torch_npu.npu_anchor_response_flags(self, featmap_size, stride, num_base_anchors
 >>> import torch, torch_npu
 >>> x = torch.rand(100, 4).npu()
 >>> y = torch_npu.npu_anchor_response_flags(x, [60, 60], [2, 2], 9)
->>> y.shape
+>>> print(y.shape)
 torch.Size([32400])
 ```

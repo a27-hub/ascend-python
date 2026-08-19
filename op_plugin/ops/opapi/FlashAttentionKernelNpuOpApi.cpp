@@ -605,8 +605,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     } else {
         c10::optional<at::Tensor> empty_optional_tensor;
         at::Tensor empty_out_tensor;
+
+        std::string softmax_layout_str = std::string(softmax_layout);
+        softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
         char softmax_layout_char[LAYOUT_MAX_LENGTH];
+        strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
         softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+
         EXEC_NPU_CMD(
             aclnnFlashAttentionScoreGradV4, format_query, format_key, format_value, format_dy,
             format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
@@ -673,6 +678,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
@@ -746,6 +753,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     std::string softmax_layout_str = std::string(softmax_layout);
 
     TORCH_CHECK(
@@ -973,6 +982,8 @@ at::Tensor npu_prompt_flash_attention(
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     if (input_layout_str == "BNSD_BSND") {
         tmp_output = OpPreparation::apply_tensor_without_format(
             {query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), query.size(DIM_3)},
@@ -1270,6 +1281,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob,
         OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
@@ -1345,6 +1358,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     std::string softmax_layout_str = std::string(softmax_layout);
 
     TORCH_CHECK(
@@ -1608,6 +1623,8 @@ at::Tensor npu_prompt_flash_attention(
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     if (input_layout_str == "BNSD_BSND") {
         tmp_output = OpPreparation::apply_tensor_without_format(
             {query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), query.size(DIM_3)},
@@ -1680,6 +1697,8 @@ at::Tensor npu_incre_flash_attention_symint(
     at::TensorList valueTensors = value;
 
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
     // dispatch hostAPI
@@ -1951,6 +1970,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob,
         OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
@@ -2066,6 +2087,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     std::string softmax_layout_str = std::string(softmax_layout);
 
     TORCH_CHECK(
@@ -2313,6 +2336,8 @@ npu_fusion_attention_v3_out(
     const at::Tensor &sink_const = sink.value_or(at::Tensor());
 
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
@@ -2364,7 +2389,7 @@ npu_fusion_attention_v3_out(
     at::Tensor format_padding_mask = format_trans(padding_mask_const);
     at::Tensor format_atten_mask = format_trans(atten_mask_const);
     at::Tensor format_sink = format_trans(sink_const);
-    
+
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
     input_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
@@ -2471,6 +2496,8 @@ npu_fusion_attention_grad_v3_out(
         keep_prob, OPS_ERROR(ErrCode::PARAM));
 
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }

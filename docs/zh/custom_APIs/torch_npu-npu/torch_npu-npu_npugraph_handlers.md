@@ -4,18 +4,18 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品 | √   |
-| Atlas A2 训练系列产品/Atlas A2 推理系列产品 | √   |
-| Atlas 推理系列加速卡产品 | √   |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √   |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √   |
+| <term>Atlas 推理系列加速卡产品</term> | √   |
 
 ## 功能说明
 
-本接口用于注册自定义算子处理器，使自定义算子支持NPU Graph的动态Shape更新与重放功能。在NPU Graph模式下，用户调用 `g.update()` 传入新的参数时，Ascend Extension for PyTorch框架通过注册的处理器将数据映射到算子输入位置。
+本接口用于注册自定义算子处理器，使自定义算子支持NPU Graph的动态Shape更新与重放功能。在NPU Graph模式下，用户调用 `g.update()` 传入新的参数时，TorchNPU框架通过注册的处理器将数据映射到算子输入位置。
 
 核心机制：
 
 1. Capture预处理：定义算子捕获时的输入数据预处理逻辑。
-2. Update动态更新：在Graph Replay（回放）阶段，无需重新Capture图结构，即可动态修改算子输入参数（如序列长度、Batch Size等）的机制。具体流程如下：
+2. Update动态更新：在Graph Replay（回放）阶段，无需重新Capture图结构，即可动态修改算子输入参数（如序列长度、Batch Size等）。具体流程如下：
     1. 用户在Replay前调用`g.update(cpu_update_input=[...])`传入新参数。
     2. 框架遍历Graph中的算子，查找注册的`NpuGraphOpHandler`。
     3. 框架调用Handler的`update_args`方法，传入`dispatch_record` 和`update_input`。

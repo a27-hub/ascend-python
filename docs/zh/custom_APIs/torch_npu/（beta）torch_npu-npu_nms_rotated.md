@@ -1,7 +1,7 @@
 # （beta）torch_npu.npu_nms_rotated
 
 > [!NOTICE]  
-> 该接口计划废弃，可以参考[小算子拼接方案](https://gitcode.com/Ascend/op-plugin/blob/7.3.0/test/test_base_ops/test_nms_rotated.py)进行替换。
+> 该接口计划废弃，可以参考[小算子拼接方案](https://gitcode.com/Ascend/op-plugin/blob/master/test/test_base_ops/test_nms_rotated.py)进行替换。
 
 ## 产品支持情况
 
@@ -26,7 +26,7 @@ torch_npu.npu_nms_rotated(dets, scores, iou_threshold, scores_threshold=0, max_o
 
 - **dets**（`Tensor`）：shape为[num_boxes, 5]的2D浮点张量。
 - **scores**（`Tensor`）：shape为[num_boxes]的1D浮点张量，表示每个框对应的一个分数。
-- **iou_threshold**（`float`）：表示框与IoU重叠上限阈值的标量。
+- **iou_threshold**（`float`）：表示框间IoU重叠阈值的标量。
 - **scores_threshold**（`float`）：表示决定何时删除框的分数阈值的标量，默认值为0。
 - **max_output_size**（`int`）：表示非最大抑制下要选择的最大框数。默认值为-1，即不施加任何约束。
 - **mode**（`int`）：指定dets布局类型，默认值为0。如果mode设置为0，则dets的输入值为x、y、w、h和角度。如果mode设置为1，则dets的输入值为x1、y1、x2、y2和角度。
@@ -50,11 +50,11 @@ torch_npu.npu_nms_rotated(dets, scores, iou_threshold, scores_threshold=0, max_o
 >>> dets.uniform_(0,100)
 >>> scores.uniform_(0,1)
 >>> output1, output2 = torch_npu.npu_nms_rotated(dets, scores, 0.2, 0, -1, 0)
->>> output1
+>>> print(output1)
 tensor([76, 48, 15, 65, 91, 82, 21, 96, 62, 90, 13, 59,  0, 18, 47, 23,  8, 56,
         55, 63, 72, 39, 97, 81, 16, 38, 17, 25, 74, 33, 79, 44, 36, 88, 83, 37,
         64, 45, 54, 41, 22, 28, 98, 40, 30, 20,  1, 86, 69, 57, 43,  9, 42, 27,
         71, 46, 19, 26, 78, 66,  3, 52], device='npu:0', dtype=torch.int32)
->>> output2
+>>> print(output2)
 tensor([62], device='npu:0', dtype=torch.int32)
 ```

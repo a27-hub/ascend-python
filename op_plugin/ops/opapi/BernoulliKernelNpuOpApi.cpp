@@ -26,7 +26,7 @@ static const uint64_t PHILOX_DEFAULT_NUM = 10;
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor& bernoulli_(at::Tensor& self, double p, c10::optional<at::Generator> gen) {
-    at_npu::native::assert_no_internal_overlap(self);
+  at_npu::native::assert_no_internal_overlap(self);
   DO_COMPATIBILITY(aclnnInplaceBernoulli, acl_op::bernoulli_(self, p, gen));
   auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
   auto pair = gen_->philox_engine_inputs(PHILOX_DEFAULT_NUM);
@@ -39,21 +39,26 @@ at::Tensor& bernoulli_(at::Tensor& self, double p, c10::optional<at::Generator> 
 }
 
 at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p, c10::optional<at::Generator> gen) {
-    at_npu::native::assert_no_internal_overlap(self);
+  at_npu::native::assert_no_internal_overlap(self);
   DO_COMPATIBILITY(aclnnInplaceBernoulliTensor, acl_op::bernoulli_(self, p, gen));
+  at::Tensor cp_p = p;
+  if (npu_preparation::IsCPUScalar(p)) {
+    at::Scalar scalar = p.item();
+    cp_p = npu_preparation::copy_scalar_to_device(scalar, p.scalar_type(), self.device());
+  }
   auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
   auto pair = gen_->philox_engine_inputs(PHILOX_DEFAULT_NUM);
   const uint64_t seed = pair.first;
   const uint64_t offset = pair.second;
-  EXEC_NPU_CMD(aclnnInplaceBernoulliTensor, self, p, seed, offset);
+  EXEC_NPU_CMD(aclnnInplaceBernoulliTensor, self, cp_p, seed, offset);
   return self;
 }
 
 at::Tensor bernoulli(const at::Tensor& self, c10::optional<at::Generator> gen) {
-    DO_COMPATIBILITY(aclnnInplaceBernoulliTensor, acl_op::bernoulli(self, gen));
-    at::Tensor self_copy = npu_preparation::apply_tensor_without_format(self);
-    at::namedinference::propagate_names(self_copy, self);
-    return op_api::bernoulli_(self_copy, self, gen);
+  DO_COMPATIBILITY(aclnnInplaceBernoulliTensor, acl_op::bernoulli(self, gen));
+  at::Tensor self_copy = npu_preparation::apply_tensor_without_format(self);
+  at::namedinference::propagate_names(self_copy, self);
+  return op_api::bernoulli_(self_copy, self, gen);
 }
 
 at::Tensor bernoulli(const at::Tensor& self, double p, c10::optional<at::Generator> gen) {
@@ -67,4 +72,4 @@ at::Tensor& bernoulli_out(const at::Tensor& self, c10::optional<at::Generator> g
   at::namedinference::propagate_names(result, self);
   return result;
 }
-}  // namespace op_api
+} // namespace op_api

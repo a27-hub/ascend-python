@@ -14,7 +14,7 @@
 
 ## 功能说明
 
-返回self张量的新视图，其单维度扩展，结果连续。张量也可以扩展更多维度，新的维度添加在最前面。
+返回self张量的新视图，其单维度被扩展，结果连续。张量也可以扩展更多维度，新的维度添加在最前面。
 
 ## 函数原型
 
@@ -32,9 +32,9 @@ torch_npu.npu_broadcast(self, size) -> Tensor
 ```python
 >>> import torch, torch_npu
 >>> x = torch.tensor([[1],[2],[3]]).npu()
->>> x.shape
+>>> print(x.shape)
 torch.Size([3, 1])
->>> torch_npu.npu_broadcast(x, [3,4])
+>>> print(torch_npu.npu_broadcast(x, [3,4]))
 tensor([[1, 1, 1, 1],
             [2, 2, 2, 2],
             [3, 3, 3, 3]], device='npu:0')

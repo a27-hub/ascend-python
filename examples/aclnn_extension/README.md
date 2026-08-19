@@ -1,6 +1,6 @@
 # aclnn_extension 样例说明
 
-本样例是 **「自定义算子接入 - 结构化代码生成」** 的示例工程，演示如何通过 YAML 描述 + 代码生成工具，将自定义 aclnn 算子接入 PyTorch NPU 生态，并生成可参与 torch_npu 编译的适配代码。
+本样例是 **「自定义算子接入 - 结构化代码生成」** 的示例工程，演示如何通过 YAML 描述 + 代码生成工具，将自定义 aclnn 算子接入 Ascned for Pytorch 生态，并生成可参与 TorchNPU 编译的适配代码。
 
 ## 适用场景
 
@@ -11,19 +11,18 @@
   aclnn 算子与目标 ATen IR 的语义一致，适配层**除申请 output tensor（shape/dtype 由输入推导）外，无其他复杂逻辑**。  
   满足时即可用 YAML 做结构化描述，由工具自动生成 C++ 适配代码，无需手写适配层。
 
-
 不适用或需手写适配的情况：算子语义与 ATen 不一致、需要复杂 shape/type 推导、或需在适配层写额外逻辑时，应使用非结构化方式（如 opapi）。
 
 ## 环境与依赖
 
-- **运行/编译依赖**：PyTorch、torch_npu、CANN。  
-  安装与版本要求见 [torch_npu 安装说明](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)。
-
+- **运行/编译依赖**：PyTorch、TorchNPU、CANN。  
+  安装与版本要求见 [TorchNPU 安装说明](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)。
 
 ## 目录与文件结构
 
 ### 运行前
-```
+
+```text
 aclnn_extension/
 ├── aclnn_extension/
 │   └── __init__.py                   # 构建用init文件
@@ -38,13 +37,11 @@ aclnn_extension/
 └── README.md
 ```
 
-
-
 ### 运行后
 
 先执行 `gen.sh` 生成适配代码，再执行 `setup.py` 构建后，在 `./dist/`下得到 **`aclnn_extension*.whl`**：
 
-```
+```text
 aclnn_extension/
 ├── ...         # 运行前已有文件保持不变
 ├── build/      # gen.sh生成的中间产物
@@ -56,7 +53,6 @@ aclnn_extension/
 ```
 
 使用方式：`pip install aclnn_extension*.whl` 安装后，即可在 Python 中调用本样例接入的自定义算子（如 `torch.ops.npu.npu_fast_gelu_custom`）。
-
 
 ## 一键运行样例
 
@@ -123,9 +119,9 @@ bash gen.sh npu_custom.yaml
 
 脚本会根据当前环境的 PyTorch 版本生成各类适配代码，用户无需关注。
 
-### 4. 构建 whl 包并运行测试
+### 3. 构建 whl 包并运行测试
 
-在步骤 3 完成（gen.sh 已执行）后，再执行 `setup.py` 构建，在 `./dist/`下得到 **`aclnn_extension*.whl`**：
+在步骤2完成（gen.sh 已执行）后，再执行 `setup.py` 构建，在 `./dist/`下得到 **`aclnn_extension*.whl`**：
 
 ```bash
 python setup.py bdist_wheel
@@ -136,6 +132,7 @@ pip install aclnn_extension*.whl
 安装完成后即可在代码中调用接入的自定义算子（如 `torch_npu.npu_fast_gelu_custom`）。例如用样例自带的测试用例验证：
 
 ```bash
+cd ..
 cd test
 python test_npu_fast_gelu_custom.py
 ```
@@ -149,7 +146,7 @@ python test_npu_fast_gelu_custom.py
 改成接入自己的算子时，**核心是把 YAML 里的内容换成自己算子的定义**：
 
 - **算子 YAML**（如 `npu_custom.yaml` 或自建 `my_op.yaml`）：在 `custom` 段中写上自己的 `func`、`gen_opapi.out`、`exec`（aclnn 接口名）等，格式参考本样例。
-- **gen.sh 参数**：若使用新文件名（如 `my_op.yaml`），则执行 `bash gen.sh my_op.yaml` 或 `bash gen.sh my_op.yaml`。
+- **gen.sh 参数**：若使用新文件名（如 `my_op.yaml`），则执行`bash gen.sh my_op.yaml`。
 - **测试脚本**：在 `test/` 下修改或新增测试，调用你暴露的算子名做数值验证。
 
 流程不变：先执行 `gen.sh`（传入你的 YAML），再执行 `setup.py` 构建得到 `aclnn_extension*.whl`，`pip install` 后即可调用。
@@ -181,11 +178,11 @@ python test_npu_fast_gelu_custom.py
 | 2 | `torchnpugen.gen_derivatives` | 仅当传入 `$2` 时执行；根据 derivatives YAML 生成前反向绑定文件 `derivatives.yaml` | `--version`、`--output_dir`、`--source_yaml`（传入的 derivatives YAML） |
 | 3 | `torchnpugen.gen_op_backend` | 根据 `op_plugin_functions.yaml` 生成 op_plugin 对外接口与路由（如 OpInterface、OpApiInterface 等） | `--version`、`--output_dir`（`op_plugin/`）、`--source_yaml`（上一步生成的 `op_plugin_functions.yaml`）、`--deprecate_yaml` |
 | 4 | `torchnpugen.struct.gen_struct_opapi` | 根据算子 YAML 与 `op_plugin_functions.yaml` 生成 aclnn 结构化适配实现（如 `StructKernelNpuOpApi.cpp`） | `--output_dir`（`op_plugin/ops/opapi/`）、`--native_yaml`（`op_plugin_functions.yaml`）、`--struct_yaml`（传入的算子 YAML） |
-| 5 | `torchnpugen.gen_backend_stubs` | 根据 `test_native_functions.yaml` 等生成 torch_npu 侧 backend stub 代码到 `csrc/aten` | `--output_dir`、`--source_yaml`（当前为 `./test_native_functions.yaml`）、`--impl_path`、`--op_plugin_impl_path`、`--op_plugin_yaml_path` |
+| 5 | `torchnpugen.gen_backend_stubs` | 根据 `test_native_functions.yaml` 等生成 TorchNPU 侧 backend stub 代码到 `csrc/aten` | `--output_dir`、`--source_yaml`（当前为 `./test_native_functions.yaml`）、`--impl_path`、`--op_plugin_impl_path`、`--op_plugin_yaml_path` |
 | 6 | `torchnpugen.autograd.gen_autograd` | 根据 `test_native_functions.yaml` 生成 autograd 相关代码到 `csrc/aten` 与 `autograd` | `--out_dir`、`--autograd_dir`、`--npu_native_function_dir`（当前为 `./test_native_functions.yaml`） |
 
 - **步骤 1～4** 使用算子 YAML 和生成的 `op_plugin_functions.yaml`，产出在 `op_plugin/` 下，是 aclnn 扩展适配的核心。
-- **步骤 5～6** 使用 `test_native_functions.yaml`，产出在 `csrc/aten`、`autograd`，用于与 torch_npu 侧的注册与求导衔接。
+- **步骤 5～6** 使用 `test_native_functions.yaml`，产出在 `csrc/aten`、`autograd`，用于与 TorchNPU 侧的注册与求导衔接。
 
 ### 自定义时可调整的内容
 

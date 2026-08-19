@@ -65,16 +65,16 @@ torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportTyp
 
     默认值为False。
 
-    torch_npu.profiler.ProfilerLevel.None时，该参数不生效。
+     torch_npu.profiler.ProfilerLevel.Level_none时，该参数不生效。
 
-- **data_simplification** (`bool`)：可选参数，开启后将在导出性能数据后删除多余数据，仅保留profiler_*.json文件、ASCEND_PROFILER_OUTPUT目录、PROF_XXX目录下的原始性能数据、FRAMEWORK目录和logs目录，以节省存储空间。取值为：
+- **data_simplification** (`bool`)：可选参数，开启后，将在导出性能数据后删除多余数据，仅保留profiler_*.json文件、ASCEND_PROFILER_OUTPUT目录、PROF_XXX目录下的原始性能数据、FRAMEWORK目录和logs目录，以节省存储空间。取值为：
 
     - True：开启。
     - False：关闭。
 
     默认值为True。
 
-- **record_op_args** (`bool`)：可选参数，控制算子信息统计功能开关。开启后会在\{worker_name\}\_\{时间戳\}_ascend_pt_op_args目录输出采集到算子信息文件。取值为：
+- **record_op_args** (`bool`)：可选参数，控制算子信息统计功能开关。开启后会在\{worker_name\}\_\{时间戳\}_ascend_pt_op_args目录输出采集到的算子信息文件。取值为：
 
     - True：开启。
     - False：关闭。
@@ -84,10 +84,10 @@ torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportTyp
 - **gc_detect_threshold** (`float`)：可选参数，GC检测阈值。取值范围为大于等于0的数值，单位ms。当用户设置的阈值为数字时，表示开启GC检测，只采集超过阈值的GC事件。配置为0时表示采集所有的GC事件（可能造成采集数据量过大，请谨慎配置），推荐设置为1ms。
 
     默认为None，表示不开启GC检测功能。
-    
+
     - GC是Python进程对已经销毁的对象进行内存回收。
     - GC层在trace_view.json中生成或在ascend_pytorch_profiler_{Rank_ID}.db中生成GC_RECORD表。
-    
+
 - **host_sys** (`list`)：可选参数，Host侧系统数据采集开关。默认未配置，表示未开启Host侧系统数据采集。取值为：
 
     - torch_npu.profiler.HostSystem.CPU：进程级别的CPU利用率。
@@ -116,7 +116,7 @@ torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportTyp
 
 ## 调用示例
 
-以下是关键步骤的代码示例，不可直接拷贝编译运行，仅供参考。
+以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 
 ```python
 import torch

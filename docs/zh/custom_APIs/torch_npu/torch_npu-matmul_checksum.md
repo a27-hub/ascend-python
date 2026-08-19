@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-提供基于原生torch.matmul和Tensor.matmul接口的aicore错误硬件故障检测接口。内部执行矩阵计算结果校验过程，并对校验误差和实时计算的校验门限进行对比，判断校验误差是否超越门限，若超越则认为发生了aicore错误。
+提供基于原生torch.matmul和Tensor.matmul接口的aicore错误硬件故障检测接口。内部执行矩阵计算结果校验过程，并对校验误差和实时计算的校验门限进行对比，判断校验误差是否超过门限，若超过则认为发生了aicore错误。
 
 ## 函数原型
 
@@ -31,7 +31,7 @@ torch_npu.matmul_checksum(a, b, c) -> Tensor
 
 ## 约束说明
 
-该接口仅支持bf16格式，且device为NPU的场景。
+该接口仅支持bfloat16格式，且device为NPU的场景。
 
 ## 调用示例
 

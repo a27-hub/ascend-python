@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950DT</term>           |    √     |
 |<term>Atlas A3 训练系列产品</term>           |    √     |
 |<term>Atlas A2 训练系列产品</term> | √   |
 |<term>Atlas 训练系列产品</term> | √   |
@@ -16,7 +17,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_format_cast_(input, src) -> Tensor
+torch_npu.npu_format_cast_(input, src, customize_dtype=None) -> Tensor
 ```
 
 ## 参数说明
@@ -30,7 +31,7 @@ torch_npu.npu_format_cast_(input, src) -> Tensor
 
     |torch_npu.Format类型|整数值|说明|
     | ------| ------|:------: |
-    |torch_npu.Format.UNDEFINED|-1|未知数据类型。对应的AscendCL数据格式为ACL_FORMAT_UNDEFINED。|
+    |torch_npu.Format.UNDEFINED|-1|未知数据格式。对应的AscendCL数据格式为ACL_FORMAT_UNDEFINED。|
     |torch_npu.Format.NCHW|0|NCHW格式。对应的AscendCL数据格式为ACL_FORMAT_NCHW。|
     |torch_npu.Format.NHWC|1|NHWC格式。对应的AscendCL数据格式为ACL_FORMAT_NHWC。|
     |torch_npu.Format.ND|2|表示支持任意格式，除了Square、Tanh等这些单输入对自身处理的算子外，其他算子需谨慎使用。对应的AscendCL数据格式为ACL_FORMAT_ND。|
@@ -42,12 +43,26 @@ torch_npu.npu_format_cast_(input, src) -> Tensor
     |torch_npu.Format.FRACTAL_NZ|29|内部格式，用户目前无需使用。对应的AscendCL数据格式为ACL_FORMAT_FRACTAL_NZ。|
     |torch_npu.Format.NCDHW|30|NCDHW格式。对于3维图像就需要使用带D（Depth）维度的格式。对应的AscendCL数据格式为ACL_FORMAT_NCDHW。|
     |torch_npu.Format.NDC1HWC0|32|6维数据格式。相比于NC1HWC0，仅多了D（Depth）维度。对应的AscendCL数据格式为ACL_FORMAT_NDC1HWC0。|
-    |torch_npu.Format.FRACTAL_Z_3D|33|3D卷积权重格式，例如Conv3D/MaxPool3D/AvgPool3D这些算子均需以这种格式来表达。对应的AscendCL数据格式为ACL_FRACTAL_Z_3D。|
+    |torch_npu.Format.FRACTAL_Z_3D|33|3D卷积权重格式，例如Conv3D/MaxPool3D/AvgPool3D这些算子均需以这种格式来表达。对应的AscendCL数据格式为ACL_FORMAT_FRACTAL_Z_3D。|
     |torch_npu.Format.NC|35|2维数据格式。对应的AscendCL数据格式为ACL_FORMAT_NC。|
     |torch_npu.Format.NCL|47|3维数据格式。对应的AscendCL数据格式为ACL_FORMAT_NCL。|
     
-    > [!NOTE]  
-    > 数据排布格式具体可参考《CANN Ascend C算子开发指南》中的“<a href="https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0099.html">数据排布格式</a>”章节。
+    > [!NOTE]
+    > 数据排布格式具体可参考《CANN Ascend C算子开发》中的“<a href="https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E6%8A%80%E6%9C%AF%E9%99%84%E5%BD%95/%E6%A6%82%E5%BF%B5%E5%8E%9F%E7%90%86%E5%92%8C%E6%9C%AF%E8%AF%AD/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E5%92%8C%E7%AE%97%E5%AD%90/%E6%95%B0%E6%8D%AE%E6%8E%92%E5%B8%83%E6%A0%BC%E5%BC%8F.md">数据排布格式</a>”章节。
+
+- **customize_dtype**（`int`）：可选参数，用于指定格式转换时的目标数据类型。该参数可控制C0值，默认值为`None`。
+  - 不传参时默认值为`None`，float32和int32数据类型的默认C0值为16，int8数据类型的默认C0值为32；
+  - 传入`3`（对应int(torch.int32)）时，FRACTAL_NZ格式的C0值为8。
+
+## 约束说明
+
+`customize_dtype`参数仅在Atlas A2 训练系列产品/Atlas A3 训练系列产品且CANN版本为9.1.0及以上的场景下支持。其他产品或CANN 9.1.0以下版本，传入该参数将导致异常。
+
+<term>Ascend 950DT</term>场景下，将张量转为FRACTAL_NZ格式时，当前不支持以下特殊场景：
+
+- 当`input`的dtype与`customize_dtype`相同且类型为float16、bfloat16时，若`input`维度表示为[k, n]，则k为1场景暂不支持。
+- 调用本接口转为FRACTAL_NZ格式后，不支持进行任何能修改Tensor的操作，包括contiguous、pad、view、slice等。
+- `input`的shape后两维任意一维度shape等于1场景，不允许转FRACTAL_NZ后进行transpose。
 
 ## 返回值说明
 
@@ -60,6 +75,8 @@ torch_npu.npu_format_cast_(input, src) -> Tensor
 - 整数值调用示例：
 
     ```python
+     >>> import torch
+     >>> import torch_npu
      >>> x = torch.rand(2, 3, 4, 5).npu()
      >>> torch_npu.get_npu_format(x)
      0

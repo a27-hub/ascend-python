@@ -11,7 +11,7 @@
 
 ## 功能说明
 
-- API功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。
+- API功能：RMSNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。
 - 计算公式：
 
   $$
@@ -67,7 +67,7 @@ torch_npu.npu_rms_norm(self, gamma, epsilon=1e-06) -> (Tensor, Tensor)
 >>> x = torch.randn(24, 1, 128).npu()
 >>> w = torch.randn(128).npu()
 >>> out1 = torch_npu.npu_rms_norm(x, w, epsilon=1e-5)[0]
->>> out1
+>>> print(out1)
 tensor([[[-0.1875,  0.2383,  0.2334,  ...,  0.8555, -0.0908, -0.3574]],
         [[ 0.0747,  0.4668,  0.1074,  ...,  1.7500,  0.1953, -0.1992]],
         [[-0.0571, -0.4883,  0.5273,  ..., -2.1250, -0.0312,  2.3281]],

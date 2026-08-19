@@ -10,7 +10,7 @@
 ## 功能说明
 
 - 设置指定Stream的Device资源限制。
-- 本接口应在调用`torch.npu.set_device_limit`接口之后且在算子执行之前调用，如果对同一stream进行多次设置，将以最后一次设置为准。
+- 本接口应在调用`torch.npu.set_device`接口之后且在算子执行之前调用，如果对同一stream进行多次设置，将以最后一次设置为准。
 - 该接口设置完后，可以跨线程传递stream使用。
 
 ## 函数原型
@@ -22,8 +22,8 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
 ## 参数说明
 
 - **stream** (`torch_npu.npu.Stream`)：必选参数，设置控核的流。
-- **cube_num** (`int`)：可选参数，设置的cube的核数，默认为-1不设置分核。
-- **vector_num** (`int`)：可选参数，设置的vector的核数，默认为-1不设置分核。
+- **cube_num** (`int`)：可选参数，设置的cube的核数，默认为-1不设置控核。
+- **vector_num** (`int`)：可选参数，设置的vector的核数，默认为-1不设置控核。
 
 ## 返回值说明
 
@@ -33,7 +33,7 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
 
 ## 约束说明
 
-- 该接口仅支持对Ascend C开发的算子控核；对于非Ascend C开发的算子暂不支持控核，并且micro batch多流并行场景下存在卡死可能或其他影响，不推荐使用本接口。对于非Ascend C算子，您可参考《[Ascend C算子开发](https://hiascend.com/document/redirect/CannCommercialOpdevAscendC)》增加算子实现，再使用本接口实现算子控核。
+- 该接口仅支持对Ascend C开发的算子控核；对于非Ascend C开发的算子暂不支持控核，并且micro batch多流并行场景下存在卡死可能或其他影响，不推荐使用本接口。对于非Ascend C算子，您可参考《[Ascend C算子开发](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E5%85%A5%E9%97%A8%E6%95%99%E7%A8%8B/Ascend-C%E6%A6%82%E8%BF%B0%E4%B8%8E%E5%AD%A6%E4%B9%A0%E8%B7%AF%E5%BE%84.md)》增加算子实现，再使用本接口实现算子控核。
 - 该接口主要适用于micro batch多流并行，如果存在不支持控核的算子，可能会影响多流并行效果。
 - 该接口需要配合torch_npu.npu.config.allow_internal_format = False来使用（不允许私有格式）。
 - 该接口不支持多线程并发设置同一条流上的控核数，无法保证算子执行时的控核生效值。
@@ -43,19 +43,20 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
  ```python
 >>> import torch
 >>> import torch_npu
-
+>>> torch.npu.set_device(0)
 >>> torch.npu.set_stream_limit(torch.npu.current_stream(), 12, 24)
 >>> torch.npu.set_stream_limit(torch.npu.Stream(), 13, 23)
  ```
 
-## 控核生效示例
+**控核生效示例**
 
 1. 使用Ascend PyTorch Profiler接口采集性能数据，主要包括PyTorch层算子信息、CANN层算子信息、底层NPU算子信息以及算子内存占用信息等。
-   > **说明**：Ascend PyTorch Profiler是CANN针对PyTorch框架开发的性能分析工具，通过在PyTorch脚本中添加Ascend PyTorch Profiler接口（推荐torch_npu.profiler.profile接口）采集指定指标数据，模型执行时同步采集性能数据，详细的使用方法和结果文件介绍请参考《[CANN 性能调优工具用户指南](https://hiascend.com/document/redirect/CanncommercialToolProfiling)》中的“Ascend PyTorch Profiler”章节。
+   > **说明**：Ascend PyTorch Profiler是CANN针对PyTorch框架开发的性能分析工具，通过在PyTorch脚本中添加Ascend PyTorch Profiler接口（推荐torch_npu.profiler.profile接口）采集指定指标数据，模型执行时同步采集性能数据，详细的使用方法和结果文件介绍请参见“<a href="https://www.hiascend.com/document/detail/zh/mindstudio/2610/msTT_msIT/ascend_pytorch_profiler/docs/zh/ascend_pytorch_profiler/ascend_pytorch_profiler_user_guide.md">Ascend PyTorch调优工具</a>”。
 
      ```python
      >>> import torch
      >>> import torch_npu
+     >>> torch.npu.set_device(0)
      >>> stream1 = torch.npu.current_stream()
      >>> stream2 = torch.npu.Stream()
      >>> x1 = torch.randn(1024, 1960).npu()
@@ -64,7 +65,7 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
      >>>    with_stack=False,                # 采集算子的函数调用栈开关，默认关闭
      >>>    record_shapes=False,             # 采集算子的input shape和input type开关，默认关闭
      >>>    profile_memory=False,            # 采集memory相关数据开关，默认关闭
-     >>>    schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1),           # warmup默认为0，老版本torch_npu包该参数为必填项
+     >>>    schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1),           # warmup默认为0，老版本TorchNPU包该参数为必填项
      >>>    experimental_config=experimental_config,                                   
      >>>    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result_dir") # 导出tensorboard可视化数据
      >>>    ) as prof:

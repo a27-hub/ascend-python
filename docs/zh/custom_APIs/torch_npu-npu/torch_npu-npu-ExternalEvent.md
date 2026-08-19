@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-ExternalEvent是AscendCL Event的封装。NPUGraph场景在执行图捕获时，ExternalEvent会被作为图外部节点被捕获，用于控制非图内时序控制场景。
+ExternalEvent是AscendCL Event的封装。NPUGraph场景在执行图捕获时，ExternalEvent会被作为图外部节点被捕获，用于非图内时序控制场景。
 
 ## 函数原型
 
@@ -27,7 +27,7 @@ torch_npu.npu.ExternalEvent()
 
 ## 约束说明
 
- ExternalEvent创建时，系统内部会在Device上分配32字节的内存，创建数量受芯片硬件规格限制。
+ExternalEvent创建时，系统内部会在Device上分配32字节的内存，创建数量受芯片硬件规格限制。
 
 ## 调用示例
 

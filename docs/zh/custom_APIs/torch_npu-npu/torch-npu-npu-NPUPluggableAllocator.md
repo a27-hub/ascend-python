@@ -26,18 +26,18 @@ torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name
 ## 参数说明
 
 - **path_to_so_file**（`str`）：so文件路径。
-- **alloc_fn_name**（`str`）：内存申请函数名（与c/c++文件中函数名一致）。
-- **free_fn_name**（`str`）：内存释放函数名（与c/c++文件中函数名一致）。
+- **alloc_fn_name**（`str`）：内存申请函数名（与C/C++文件中函数名一致）。
+- **free_fn_name**（`str`）：内存释放函数名（与C/C++文件中函数名一致）。
 
 ## 约束说明
 
-`alloc_fn_name`内存申请函数名必须与c/c++文件中函数名一致。
+`alloc_fn_name`内存申请函数名必须与C/C++文件中函数名一致。
 
-`free_fn_name`内存释放函数名必须与c/c++文件中函数名一致。
+`free_fn_name`内存释放函数名必须与C/C++文件中函数名一致。
 
 ## 调用示例
 
-完整调用示例可参考[LINK](https://gitcode.com/ascend/pytorch/blob/v2.7.1-7.3.0/test/allocator/test_pluggable_allocator_extensions.py)。
+完整调用示例可参考[LINK](https://gitcode.com/Ascend/pytorch/blob/master/test/allocator/test_pluggable_allocator_extensions.py)。
 
 **Python代码示例**：
 
@@ -52,11 +52,11 @@ torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name
 >>> npu_tensor = torch.zeros(10, device='npu')
 ```
 
-风险提示：自定义的so建议严格参照安全代码示例，内存申请，释放函数必须正确实现。错误的so文件可能出现内存申请失败，内存泄漏等问题。
+风险提示：自定义的so建议严格参照安全代码示例，内存申请、释放函数必须正确实现。错误的so文件可能出现内存申请失败、内存泄漏等问题。
 
-建议处理方式：用户可在内存申请，释放等内存相关操作函数中，增加日志记录内存行为，方便后续定位问题。
+建议处理方式：用户可在内存申请、释放等内存相关操作函数中，增加日志记录内存行为，方便后续定位问题。
 
-**c++安全代码示例**：
+**C++安全代码示例**：
 
 ```cpp
 #include <sys/types.h>
@@ -86,7 +86,7 @@ void my_free(void* ptr, ssize_t size, int device, aclrtStream stream)
  
 ```
 
-**日志记录示例**：可使用Ascend Extension for PyTorch自带的debug级别日志打印。日志需注意存放至安全路径。
+**日志记录示例**：可使用TorchNPU自带的debug级别日志打印。日志需注意存放至安全路径。
 
 ```cpp
 #include "torch_npu/csrc/core/npu/npu_log.h"

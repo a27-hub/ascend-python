@@ -4,8 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Atlas A2 推理系列产品</term>   | √  |
-|<term>Atlas A3 推理系列产品</term>   | √  |
+|<term>Ascend 950PR/Ascend 950DT</term>              | √ |
+|<term>Atlas A2 推理系列产品</term>         | √  |
+|<term>Atlas A3 推理系列产品</term>         | √  |
 
 ## 功能说明
 
@@ -20,7 +21,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, return_value=False) -> (Tensor, Tensor)
+torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=2**63-1, next_tokens=2**63-1, return_value=False) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -32,16 +33,16 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 
 - **query**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`。`layout_query`为BSND时shape为[B,S1,N1,D]，当`layout_query`为TND时shape为[T1,N1,D]，N1仅支持小于等于64。
     
-- **key**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，layout\_key为PA_BSND时shape为[block\_count, block\_size, N2, D]，其中block\_count为PageAttention时block总数，block\_size为一个block的token数，block\_size取值为16的整数倍，最大支持到1024。`layout_key`为BSND时shape为[B, S2, N2, D]，`layout_key`为TND时shape为[T2, N2, D]，N2仅支持1。
+- **key**（`Tensor`）：必选参数，在`layout_key`为PA_BSND时支持0轴非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，layout\_key为PA_BSND时shape为[block\_count, block\_size, N2, D]，其中block\_count为PageAttention时block总数，block\_size为一个block的token数，block\_size取值为16的整数倍，最大支持到1024。`layout_key`为BSND时shape为[B, S2, N2, D]，`layout_key`为TND时shape为[T2, N2, D]，N2仅支持1。
     
 - **weights**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`、`float16`和`float32`，支持输入shape[B,S1,N1]、[T,N1]。
     
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
-- **actual\_seq\_lengths\_query**（`Tensor`）：可选参数，表示不同Batch中`query`的有效token数，数据类型支持`int32`。如果不指定seqlen可传入None，表示和`query`的shape的S长度相同。
+- **actual\_seq\_lengths\_query**（`Tensor`）：可选参数，表示不同Batch中`query`的有效token数，数据类型支持`int32`。如果不指定actual\_seq\_lengths\_query可传入None，表示和`query`的shape的S长度相同。
     - 该入参中每个Batch的有效token数不超过`query`中的维度S大小且不小于0。支持长度为B的一维tensor。当`layout_query`为TND时，该入参必须传入，且以该入参元素的数量作为B值，该入参中每个元素的值表示当前batch与之前所有batch的token数总和，即前缀和，因此后一个元素的值必须大于等于前一个元素的值。
 
-- **actual\_seq\_lengths\_key**（`Tensor`）：可选参数，表示不同Batch中`key`的有效token数，数据类型支持`int32`。如果不指定seqlen可传入None，表示和key的shape的S长度相同。
+- **actual\_seq\_lengths\_key**（`Tensor`）：可选参数，表示不同Batch中`key`的有效token数，数据类型支持`int32`。如果不指定actual\_seq\_lengths\_key可传入None，表示和key的shape的S长度相同。
     - 该参数中每个Batch的有效token数不超过`key`中的维度S大小且不小于0。支持长度为B的一维tensor。当`layout_key`为TND或PA_BSND时，该入参必须传入，`layout_key`为TND，该参数中每个元素的值表示当前batch与之前所有batch的token数总和，即前缀和，因此后一个元素的值必须大于等于前一个元素的值。
 
 - **block\_table**（`Tensor`）：可选参数，表示PageAttention中KV存储使用的block映射表，数据格式支持$ND$，数据类型支持`int32`。
@@ -62,21 +63,29 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 
 - **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`。仅支持默认值2^63-1。
 
-- **return\_value**（`bool`）：可选参数，表示是否输出`sparse_values`。True表示输出，但图模式下不支持，False表示不输出；默认值为False。该参数仅在训练且`layout_key`不为PA_BSND场景支持。
+- **return\_value**（`bool`）：可选参数，表示是否输出`sparse_values`。True表示输出，False表示不输出；默认值为False。该参数仅在训练且`layout_key`不为PA_BSND场景下支持。
 
 ## 返回值说明
 
-- **sparse\_indices**（`Tensor`）：公式中的Indices输出，数据类型支持`int32`,数据格式支持$ND$，当`layout_query`为"BSND"时输出shape为[B, S1, N2, sparse\_count]，当layout\_query为"TND"时输出shape为[T1, N2, sparse\_count]。
+- **sparse\_indices**（`Tensor`）：公式中的Indices输出，数据类型支持`int32`，数据格式支持$ND$，当`layout_query`为"BSND"时输出shape为[B, S1, N2, sparse\_count]，当layout\_query为"TND"时输出shape为[T1, N2, sparse\_count]。
 
 - **sparse\_values**（`Tensor`）：公式中的Indices输出对应的value值，数据类型支持`bfloat16`、`float16`，数据格式支持$ND$，输出shape与`sparse_indices`保持一致。
 
 ## 约束说明
 
 - 该接口支持图模式。
-- 参数query中的N支持小于等于64，key中的N支持1。
+- 参数key中的N仅支持为1。
 - 参数query中的D和参数key中的D值相等为128。
 - 参数query、key的数据类型应保持一致。
 - 参数weights不为`float32`时，参数query、key、weights的数据类型应保持一致。
+- return_value仅在Ascend 950PR/Ascend 950DT上支持图模式。
+- Ascend 950PR/Ascend 950DT：
+    - query中的N仅支持8、16、24、32、64。
+    - 参数weights不支持`float32`类型。
+    - 仅在layout_key为PA_BSND时，key支持0轴非连续。
+- <term>Atlas A2 推理系列产品</term>、<term>Atlas A3 推理系列产品</term>：
+    - query中的N必须小于等于64。
+    - key不支持非连续。
 
 ## 调用示例
 
@@ -113,6 +122,7 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
             actual_seq_lengths_key=actual_seq_lengths_key, block_table=block_table, layout_query=layout_query, 
             layout_key=layout_key, sparse_count=sparse_count, sparse_mode=sparse_mode)
 
+    print(sparse_indices)
     # 执行上述代码的输出sparse_indices类似如下
     tensor([[[[4488, 3926, 1154, ..., 3535, 8031, 8180]]]],
             device='npu:0', dtype=torch.int32)

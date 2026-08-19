@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-通过张量融合实现的高性能RMSpropTF优化器，RMSpropTF是timm库（pytorch-image-models）中提供的RMSprop变体， 其实现对齐TensorFlow版RMSprop的行为（故后缀为 "TF"），与torch.optim.RMSprop在初始化方式、epsilon加入位置、动量更新顺序等细节上存在差异，核心功能和torch.optim.RMSprop兼容。RMSpropTF的功能和原理可参考[https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py\#L14](https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py#L14)。
+通过张量融合实现的高性能RMSpropTF优化器，RMSpropTF是timm库（pytorch-image-models）中提供的RMSprop变体，其实现对齐TensorFlow版RMSprop的行为（故后缀为"TF"），与torch.optim.RMSprop在初始化方式、epsilon加入位置、动量更新顺序等细节上存在差异，核心功能和torch.optim.RMSprop兼容。RMSpropTF的功能和原理可参考[https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py#L14](https://github.com/huggingface/pytorch-image-models/blob/main/timm/optim/rmsprop_tf.py#L14)。
 
 ## 函数原型
 
@@ -21,12 +21,12 @@ class torch_npu.optim.NpuFusedRMSpropTF(params, lr=1e-2, alpha=0.9, eps=1e-10, w
 ## 参数说明
 
 - **params** (`iterable`)：必选参数，模型参数或模型参数组。
-- **lr** (`float`)：可选参数，学习率，默认值为1e-2。`lr`的值小于0时，打印“ValueError”异常信息。
-- **alpha** (`float`)：可选参数，平滑常量，默认值为0.9。`alpha`的值小于0时，打印“ValueError”异常信息。
-- **eps** (`float`)：可选参数，分母防止除0项，提高数值稳定性，默认值为1e-10。`eps`的值小于0时，打印“ValueError”异常信息。
-- **weight_decay** (`float`)：可选参数，权重衰减，默认值为0。`weight_decay`的值小于0时，打印“ValueError”异常信息。
-- **momentum** (`float`)：可选参数，动量因子，默认值为0。`momentum`的值小于0时，打印“ValueError”异常信息。
-- **centered** (`bool`)：可选参数，计算中心RMSProp，梯度将被方差的估计值归一化，默认值为False。
+- **lr** (`float`)：可选参数，学习率，默认值为1e-2。`lr`的值小于0时，系统会抛出“ValueError”异常信息。
+- **alpha** (`float`)：可选参数，平滑常量，默认值为0.9。`alpha`的值小于0时，系统会抛出“ValueError”异常信息。
+- **eps** (`float`)：可选参数，作为分母防止除零错误，提高数值稳定性，默认值为1e-10。`eps`的值小于0时，系统会抛出“ValueError”异常信息。
+- **weight_decay** (`float`)：可选参数，权重衰减，默认值为0。`weight_decay`的值小于0时，系统会抛出“ValueError”异常信息。
+- **momentum** (`float`)：可选参数，动量因子，默认值为0。`momentum`的值小于0时，系统会抛出“ValueError”异常信息。
+- **centered** (`bool`)：可选参数，计算中心RMSprop，梯度将被方差的估计值归一化，默认值为False。
 - **decoupled_decay** (`bool`)：可选参数，权重衰减仅作用于参数，默认值为False。
 - **lr_in_momentum** (`bool`)：可选参数，计算动量buffer时使用lr，默认值为True。
 
@@ -38,11 +38,11 @@ class torch_npu.optim.NpuFusedRMSpropTF(params, lr=1e-2, alpha=0.9, eps=1e-10, w
 
 `NpuFusedRMSpropTF`的实现机制要求`params`中的每一个模型参数对象在使用过程中不能被重新申请，否则将导致无法预料的结果。引起模型参数对象被重新申请的操作包括但不限于：
 
-- 将模型或其子Module进行.cpu操作
+- 将模型或其子Module执行.cpu()操作
 - 将模型参数对象指向新的对象
 - 将模型参数对象置为None
 
-对模型参数对象进行inplace计算，或者读取参数的值，`NpuFusedRMSpropTF`可正常工作。
+对模型参数对象进行inplace计算或读取参数的值时，`NpuFusedRMSpropTF`可正常工作。
 
 ## 调用示例
 

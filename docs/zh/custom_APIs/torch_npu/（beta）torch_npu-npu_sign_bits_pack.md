@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_sign_bits_pack
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -56,10 +59,10 @@ torch_npu.npu_sign_bits_pack(self, size) -> Tensor
 >>> import torch, torch_npu
 >>> a = torch.tensor([5,4,3,2,0,-1,-2, 4,3,2,1,0,-1,-2],dtype=torch.float32).npu()
 >>> b = torch_npu.npu_sign_bits_pack(a, 2)
->>> b
+>>> print(b)
 tensor([[159],
         [ 15]], device='npu:0', dtype=torch.uint8)
 >>> c = torch_npu.npu_sign_bits_pack(a, 1)
->>> c
+>>> print(c)
 tensor([[159, 15]], device='npu:0', dtype=torch.uint8)
 ```

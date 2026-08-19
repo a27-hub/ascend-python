@@ -33,7 +33,7 @@ torch_npu.contrib.module.Focus(c1, c2, k=1, s=1, p=None, g=1, act=True)
 
 **计算输入**
 
-- **x**(`Tensor`): 输入张量。
+- **x** (`Tensor`)：输入张量。
 
 ## 返回值说明
 
@@ -51,6 +51,6 @@ Focus计算结果。
 >>> fast_focus = Focus(8, 13).npu()
 >>> output = fast_focus(input)
 >>> output.sum().backward()
->>> output.shape
+>>> print(output.shape)
 torch.Size([4, 13, 150, 20])
 ```

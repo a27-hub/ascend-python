@@ -28,13 +28,15 @@ torch_npu.npu_max(self, dim, keepdim=False) -> (Tensor, Tensor)
 ## 返回值说明
 
 - **values** (`Tensor`)：输入张量中的最大值。
-- **indices** (`Tensor`)：输入张量中最大值的indices。
+- **indices** (`Tensor`)：输入张量中最大值的索引。
 
 ## 调用示例
 
 ```python
+>>> import torch
+>>> import torch_npu
 >>> input = torch.randn(2, 2, 2, 2, dtype = torch.float32).npu()
->>> input
+>>> print(input)
 tensor([[[[-1.8135,  0.2078],
           [-0.6678,  0.7846]],
 
@@ -47,13 +49,13 @@ tensor([[[[-1.8135,  0.2078],
           [[ 0.6669,  0.1876],
           [ 0.1160, -0.1061]]]], device='npu:0')
 >>> outputs, indices = torch_npu.npu_max(input, 2)
->>> outputs
+>>> print(outputs)
 tensor([[[-0.6678,  0.7846],
         [ 0.6458, -0.0923]],
 
         [[ 0.2580,  1.1335],
         [ 0.6669,  0.1876]]], device='npu:0')
->>> indices
+>>> print(indices)
 tensor([[[1, 1],
         [0, 0]],
 

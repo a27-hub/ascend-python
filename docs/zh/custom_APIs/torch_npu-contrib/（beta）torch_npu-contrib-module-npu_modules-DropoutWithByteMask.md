@@ -1,5 +1,8 @@
 # （beta）torch_npu.contrib.module.npu_modules.DropoutWithByteMask
 
+> [!NOTICE]
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -45,6 +48,6 @@ torch_npu.contrib.module.npu_modules.DropoutWithByteMask(p=0.5, inplace=False, m
 >>> m = DropoutWithByteMask(p=0.5)
 >>> input = torch.randn(16, 16).npu()
 >>> output = m(input)
->>> output.shape
+>>> print(output.shape)
 torch.Size([16, 16])
 ```

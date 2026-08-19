@@ -24,11 +24,7 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 at::Tensor& celu_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, const at::Scalar& alpha) {
   at_npu::native::OpCommand cmd;
-  cmd.Name("CeluV2")
-      .Input(self)
-      .Output(result)
-      .Attr("alpha", alpha)
-      .Run();
+  cmd.Name("CeluV2").Input(self).Output(result).Attr("alpha", alpha).Run();
   return result;
 }
 

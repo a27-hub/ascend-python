@@ -2,8 +2,8 @@
 
 ## 简介
 
-本项目开发了Ascend Extension for Pytorch（torch_npu）算子插件，为使用PyTorch框架的开发者提供便捷的NPU算子库调用能力。
-OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch。因此，在编译OpPlugin之前，需要了解、安装昇腾PyTorch。使用手册可参考昇腾社区[Ascend Extension for Pytorch](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md)。
+本项目开发了TorchNPU算子插件，为使用PyTorch框架的开发者提供便捷的NPU算子库调用能力。
+OpPlugin算子插件的编译、使用依赖昇腾TorchNPU。因此，在编译OpPlugin之前，需要了解、安装昇腾PyTorch。使用手册可参考昇腾社区[TorchNPU](https://gitcode.com/ascend/pytorch/blob/v2.7.1-26.1.0/README.zh.md)。
 
 ## 目录结构
 
@@ -23,21 +23,23 @@ OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch�
 
 ## 版本配套表
 
-op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，两个仓的对应关系如下：
+OpPlugin仓旨在为**TorchNPU**提供运行所需要的算子适配文件，两个仓的对应关系如下：
 
-| op-plugin分支 | 对应Ascend Extension for PyTorch版本 |
+| OpPlugin分支 | 对应TorchNPU版本 |
 | ------------- | :----------------------------------: |
-| master        |     主线版本，如v2.7.1等             |
+| master       |     主线版本，如v2.7.1等              |
+| 26.1.0       |    26.1.0版本，如v2.7.1-26.1.0等      |
+| 26.0.0       |    26.0.0版本，如v2.7.1-26.0.0等      |
 | 7.3.0        |     7.3.0版本，如v2.7.1-7.3.0等       |
 | 7.2.0        |     7.2.0版本，如v2.7.1-7.2.0等       |
 | 7.1.0        |     7.1.0版本，如v2.1.0-7.1.0等       |
 | 7.0.0        |     7.0.0版本，如v2.1.0-7.0.0等       |
 | 6.0.0        |     6.0.0版本，如v2.1.0-6.0.0等       |
-| 6.0.rc3       |   6.0.rc3版本，如v2.1.0-6.0.rc3等    |
-| 6.0.rc2       |   6.0.rc2版本，如v2.1.0-6.0.rc2等    |
-| 6.0.rc1       |   6.0.rc1版本，如v2.1.0-6.0.rc1等    |
-| 5.0.0         |     5.0.0版本，如v2.1.0-5.0.0等      |
-| 5.0.rc3       |   5.0.rc3版本，如v2.1.0-5.0.rc3等    |
+| 6.0.rc3      |   6.0.rc3版本，如v2.1.0-6.0.rc3等     |
+| 6.0.rc2      |   6.0.rc2版本，如v2.1.0-6.0.rc2等     |
+| 6.0.rc1      |   6.0.rc1版本，如v2.1.0-6.0.rc1等     |
+| 5.0.0        |     5.0.0版本，如v2.1.0-5.0.0等       |
+| 5.0.rc3      |   5.0.rc3版本，如v2.1.0-5.0.rc3等     |
 
 ## 安装OpPlugin
 
@@ -45,19 +47,19 @@ op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，�
 
 ## 快速入门
 
-提供了一个通过OpPlugin插件实现PyTorch调用Ascend C自定义算子的完整开发指南，涵盖了从环境配置、算子注册、适配实现到测试验证提供了全流程说明。具体操作，请参考[调用样例](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/framework_feature_guide_pytorch/opplugin_operator_adaptation.md)。
+提供了一个通过OpPlugin插件实现PyTorch调用Ascend C自定义算子的完整开发指南，涵盖了从环境配置、算子注册、适配实现到测试验证提供了全流程说明。具体操作，请参考[调用样例](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/framework_feature_guide_pytorch/opplugin_operator_adaptation.md)。
 
 ## API参考
 
-基于PyTorch2.9.0/2.8.0/2.7.1/2.6.0版本，提供Ascend Extension for PyTorch自定义API的功能说明、函数原型、参数说明与调用示例等。具体信息，请参考[自定义API参考](https://gitcode.com/Ascend/op-plugin/blob/master/docs/zh/custom_APIs/menu_Pytorch_API.md)。
+基于PyTorch2.10.0/2.9.0/2.8.0/2.7.1版本，提供TorchNPU自定义API的功能说明、函数原型、参数说明与调用示例等。具体信息，请参考[自定义API](https://gitcode.com/Ascend/op-plugin/blob/26.1.0/docs/zh/custom_APIs/menu_Pytorch_API.md)。
 
 ## 生命周期
 
-op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的[PyTorch版本维护策略](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md#pytorch%E7%89%88%E6%9C%AC%E7%BB%B4%E6%8A%A4%E7%AD%96%E7%95%A5)。
+OpPlugin仓依赖**TorchNPU**运行，生命周期请参考**TorchNPU**中的[PyTorch版本维护策略](https://gitcode.com/ascend/pytorch/blob/v2.7.1-26.1.0/README.zh.md#pytorch%E7%89%88%E6%9C%AC%E7%BB%B4%E6%8A%A4%E7%AD%96%E7%95%A5)。
 
 ## 贡献指导
 
-介绍如何向OpPlugin仓库贡献代码，具体请参见[贡献指南](https://gitcode.com/Ascend/pytorch/blob/master/CONTRIBUTING.md)。
+介绍如何向OpPlugin仓库贡献代码，具体请参见[贡献指南](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/CONTRIBUTING.md)。
 
 ## 联系我们
 
@@ -80,7 +82,7 @@ op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的
 
   ## License
 
-  OpPlugin的使用许可证，详见[LICENSE](http://gitcode.com/Ascend/op-plugin/blob/master/LICENSE)。
+  OpPlugin的使用许可证，详见[LICENSE](http://gitcode.com/Ascend/op-plugin/blob/26.1.0/LICENSE)。
 
   ## 致谢
 

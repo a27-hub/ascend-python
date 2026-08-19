@@ -21,7 +21,7 @@ CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 cd $CDIR/
 
 # Following updates only add incompatible ops files in corresponding branch folder.
-newest_minor_version=12
+newest_minor_version=15
 for minor_version in $(seq 1 ${newest_minor_version}); do
     # Merge base info and version related info (unsupported ops)
     sed -i "1r test/unsupported_ops_info_base.yaml" test/test_v2r${minor_version}_ops/unsupported_ops_info.yaml
@@ -69,5 +69,11 @@ ${python_execute} -m torchnpugen.struct.gen_struct_opapi  \
   --output_dir="$CDIR/op_plugin/ops/opapi/" \
   --native_yaml="$OUTPUT_DIR/op_plugin_functions.yaml" \
   --struct_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"
+
+${python_execute} -m torchnpugen.gen_atb_ops \
+  --config="$CDIR/op_plugin/config/atb_ops.yaml" \
+  --header="$CDIR/op_plugin/include/AtbOpsInterface.h" \
+  --source="$CDIR/op_plugin/ops/atb/AtbOpsInterface.cpp" \
+  --atb-src-dir="$CDIR/op_plugin/ops/atb"
 
 sh $CDIR/op_plugin/third_party/atb/libs/build_stub.sh

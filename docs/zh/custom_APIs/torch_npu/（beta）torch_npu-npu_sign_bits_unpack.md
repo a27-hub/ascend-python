@@ -1,5 +1,8 @@
 # （beta）torch\_npu.npu\_sign\_bits\_unpack
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -11,7 +14,7 @@
 
 ## 功能说明
 
-- API功能：将`uint8`类型的输入拆包为`float`类型。将`uint8`数值中的8个二进制位解码为8个浮点数，0解码为-1.0，1解码为1.0，并以小端序进行返回。
+- API功能：将`uint8`类型的输入拆包为`float`类型。将`uint8`数值中的8个二进制位解码为8个浮点数，0解码为-1.0，1解码为1.0，并以小端序返回。
 
 - 等价计算逻辑：
     
@@ -56,10 +59,10 @@ torch_npu.npu_sign_bits_unpack(x, size, dtype) -> Tensor
 >>> import torch, torch_npu
 >>> a = torch.tensor([159, 15], dtype=torch.uint8).npu()
 >>> b = torch_npu.npu_sign_bits_unpack(a, 2, torch.float32)
->>> b
+>>> print(b)
 tensor([[ 1.,  1.,  1.,  1.,  1., -1., -1.,  1.],
         [ 1.,  1.,  1.,  1., -1., -1., -1., -1.]], device='npu:0')
 >>> c = torch_npu.npu_sign_bits_unpack(a, 1, torch.float32)
->>> c
+>>> print(c)
 tensor([[ 1.,  1.,  1.,  1.,  1., -1., -1.,  1.,  1.,  1.,  1.,  1., -1., -1., -1., -1.]], device='npu:0')
 ```

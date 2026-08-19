@@ -40,13 +40,13 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
 
 - **state** (`Tensor`)：必选输入&输出，对应公式中的状态矩阵$S$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$BlockNum$, $N_v$, $D_v$, $D_k$）。
 
-- **beta** (`Tensor`)：必选输入。对应公式中的$β$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$）。
+- **beta** (`Tensor`)：可选输入。对应公式中的$β$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$）。
 
-- **scale** (`float`)：必选输入。表示query的缩放因子，对应公式中的 $1/\sqrt{D_k}$。数据类型支持`float32`。
+- **scale** (`float`)：可选输入。表示query的缩放因子，对应公式中的 $1/\sqrt{D_k}$。数据类型支持`float32`。
 
-- **actual_seq_lengths** (`Tensor`)：必选输入。表示各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（$B$）。要求$1 \le L_i \le 8$，$L_i$ 表示第i个actual_seq_lengths的值。
+- **actual_seq_lengths** (`Tensor`)可选输入。表示各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（$B$）。要求$1 \le L_i \le 8$，$L_i$ 表示第i个actual_seq_lengths的值。
 
-- **ssm_state_indices** (`Tensor`)：必选输入。表示输入序列到状态矩阵的映射索引。`state[ssm_state_indices[i]]`表示第i个token的状态矩阵。`ssm_state_indices[i]`要求取值大于等于0且小于$BlockNum$。数据类型支持`int32`，数据格式支持ND，shape为（$T$）。
+- **ssm_state_indices** (`Tensor`)：可选输入。表示输入序列到状态矩阵的映射索引。`state[ssm_state_indices[i]]`表示第i个token的状态矩阵。`ssm_state_indices[i]`要求取值大于等于0且小于$BlockNum$。数据类型支持`int32`，数据格式支持ND，shape为（$T$）。
 
 - **num_accepted_tokens** (`Tensor`)：可选输入，`num_accepted_tokens[i]`表示投机推理第i个batch接受的token数量，要求取值大于等于1且不大于$L_i$。默认为None，表示每个batch接受的token数为1。数据类型支持`int32`，数据格式支持ND，shape为（$B$,）。
 
@@ -71,7 +71,7 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
     - $D_k$ 表示key向量的维度，其取值范围为$1 \le D_k \le 512$。
     - $D_v$ 表示value向量的维度，其取值范围为$1 \le D_v \le 512$。
     - $BlockNum$为状态矩阵分块数量，其值不小于$T$。
-- 该接口仅支持推理场景下使用。
+- 该接口仅支持在推理场景下使用。
 - 该接口仅支持单算子和静态图模式。
 
 ## 调用示例
@@ -123,7 +123,7 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
     import os
     import numpy as np
 
-    # "ENABLE_ACLNN"是否使能走aclnn, true: 回调走aclnn, false: 在线编译
+    # "ENABLE_ACLNN"是否走aclnn, true: 回调走aclnn, false: 在线编译
     os.environ["ENABLE_ACLNN"] = "false"
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)

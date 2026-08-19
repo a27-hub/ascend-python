@@ -1,9 +1,17 @@
+import unittest
+
 import torch
 import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
+
+
+# Upstream pytorch#173895 removed named-tensor support in PyTorch 2.13.
+# torch.Tensor.refine_names -- the entry point to naming tensor dims that
+# these tests rely on -- is gone. Skip the dimname test methods on 2.13+.
+_TORCH_HAS_NAMED_TENSOR = hasattr(torch.Tensor, "refine_names")
 
 
 class TestStdMean(TestCase):
@@ -39,7 +47,7 @@ class TestStdMean(TestCase):
         format_list = [0, 3, 4]
         shape_list = [[1024], [32, 1024], [32, 8, 1024]]
         unbiased_list = [True, False]
-        
+
         shape_format = [
             [np.float16, i, j, k] for i in format_list for j in shape_list for k in unbiased_list
         ]
@@ -57,7 +65,7 @@ class TestStdMean(TestCase):
         format_list = [0, 3, 4]
         shape_list = [[1024], [32, 1024], [32, 8, 1024]]
         unbiased_list = [True, False]
-        
+
         shape_format = [
             [np.float32, i, j, k] for i in format_list for j in shape_list for k in unbiased_list
         ]
@@ -105,6 +113,7 @@ class TestStdMean(TestCase):
             self.assertRtolEqual(cpu_output1[0], npu_output1[0])
             self.assertRtolEqual(cpu_output1[1], npu_output1[1])
 
+    @unittest.skipUnless(_TORCH_HAS_NAMED_TENSOR, "Named tensor removed in PyTorch 2.13 (pytorch#173895)")
     def test_std_dim_mean_name_fp32(self):
         shape = (1024, 8, 32)
         cpu_input = torch.rand(shape, dtype=torch.float32, names=('N', 'C', 'H'))
@@ -115,6 +124,7 @@ class TestStdMean(TestCase):
         self.assertRtolEqual(cpu_output[0].numpy(), npu_output[0].cpu().numpy())
         self.assertRtolEqual(cpu_output[1].numpy(), npu_output[1].cpu().numpy())
 
+    @unittest.skipUnless(_TORCH_HAS_NAMED_TENSOR, "Named tensor removed in PyTorch 2.13 (pytorch#173895)")
     def test_std_dim_mean_name_fp16(self):
         shape = (1024, 8, 32)
         cpu_input = torch.rand(shape, dtype=torch.float32)
@@ -126,7 +136,7 @@ class TestStdMean(TestCase):
         npu_output = torch.std_mean(npu_input, dim=dim)
         self.assertRtolEqual(cpu_output[0].to(torch.float16).numpy(), npu_output[0].cpu().numpy())
         self.assertRtolEqual(cpu_output[1].to(torch.float16).numpy(), npu_output[1].cpu().numpy())
-    
+
     def cpu_op_dim_mean_correction_exec(self, input1, dim, correction):
         output = torch.std_mean(input1, dim, correction=correction)
         result = []
@@ -140,7 +150,7 @@ class TestStdMean(TestCase):
         result.append(output[0].to("cpu").numpy())
         result.append(output[1].to("cpu").numpy())
         return result
-    
+
     def test_std_mean_correction_fp32(self):
         shape_list = [[1024], [32, 1024], [32, 8, 1024]]
         correction_list = [-3, 1, 2147483647, 2147483648, -2147483647, -2147483648]

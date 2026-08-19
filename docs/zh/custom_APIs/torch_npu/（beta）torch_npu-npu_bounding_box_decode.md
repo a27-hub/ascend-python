@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_bounding_box_decode
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -21,8 +24,8 @@ torch_npu.npu_bounding_box_decode(rois, deltas, means0, means1, means2, means3, 
 
 ## 参数说明
 
-- **rois** (`Tensor`)：区域候选网络（RPN）生成的region of interests（ROI）。shape为（N,4）数据类型为float32或float16的2D张量。“N”表示ROI的数量， “4”表示“x0”、“x1”、“y0”和“y1”。
-- **deltas** (`Tensor`)：RPN生成的ROI和真值框之间的绝对变化。shape为（N,4）数据类型为float32或float16的2D张量。“N”表示区域数，“4”表示“dx”、“dy”、“dw”和“dh”。
+- **rois** (`Tensor`)：区域候选网络（RPN）生成的regions of interest（ROIs）。shape为(N,4)，数据类型为float32或float16的2D张量。“N”表示ROI的数量，“4”表示“x0”、“x1”、“y0”和“y1”。
+- **deltas** (`Tensor`)：RPN生成的ROI和真值框之间的绝对变化。shape为(N,4)，数据类型为float32或float16的2D张量。“N”表示区域数，“4”表示“dx”、“dy”、“dw”和“dh”。
 - **means0** (`float`)：“x0”的偏差值。默认值为0。
 - **means1** (`float`)：“y0”的偏差值。默认值为0。
 - **means2** (`float`)：“x1”的偏差值。默认值为0。
@@ -46,7 +49,7 @@ torch_npu.npu_bounding_box_decode(rois, deltas, means0, means1, means2, means3, 
 >>> rois = torch.tensor([[1., 2., 3., 4.], [3.,4., 5., 6.]], dtype = torch.float32).to("npu")
 >>> deltas = torch.tensor([[5., 6., 7., 8.], [7.,8., 9., 6.]], dtype = torch.float32).to("npu")
 >>> output = torch_npu.npu_bounding_box_decode(rois, deltas, 0, 0, 0, 0, 1, 1, 1, 1, (10, 10), 0.1)
->>> output
+>>> print(output)
 tensor([[2.5000, 6.5000, 9.0000, 9.0000],
         [9.0000, 9.0000, 9.0000, 9.0000]], device='npu:0')
 ```

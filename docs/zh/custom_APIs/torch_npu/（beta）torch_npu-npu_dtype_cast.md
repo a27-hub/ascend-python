@@ -1,7 +1,7 @@
 # （beta）torch_npu.npu_dtype_cast
 
 > [!NOTICE]  
-> 该接口计划废弃，可以使用`torch.to`接口进行替换。
+> 该接口计划废弃，可以使用`tensor.to()`接口进行替换。
 
 ## 产品支持情况
 
@@ -49,6 +49,6 @@ tensor([ 0,  0, -1], device='npu:0', dtype=torch.int32)
 ...     x = torch.rand(2, dtype=torch.float32).npu()
 ...     res = torch_npu.npu_dtype_cast(x, torch.float16)
 ...
->>> res
+>>> print(res)
 FakeTensor(..., device='npu:0', size=(2,), dtype=torch.float16)
 ```

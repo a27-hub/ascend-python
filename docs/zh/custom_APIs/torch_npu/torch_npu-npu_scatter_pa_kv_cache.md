@@ -18,7 +18,7 @@
     ```python
     key:[batch, num_head, k_head_size]
     value:[batch, num_head, v_head_size]
-    key_cache:[num_blocks, num_head * k_head_size /last_dim_k, block_size, last_dim_k]
+    key_cache:[num_blocks, num_head * k_head_size // last_dim_k, block_size, last_dim_k]
     value_cache:[num_blocks, num_head * v_head_size // last_dim_k, block_size, last_dim_k]
     slot_mapping:[batch]
     ```    
@@ -71,7 +71,7 @@ torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mappi
 - 当`key`和`value`是4维时，`compress_lens`、`seq_lens`为必选参数；当`key`和`value`是3维时，`compress_lens`、`compress_seq_offsets`、`seq_lens`为可选参数；
 - 当`key`和`value`都是4维时，`slot_mapping`是二维，且`slot_mapping`的第一维值等于`key`的第一维为`batch`，`slot_mapping`的第二维值等于`key`的第三维为num_head(对应场景二)；
 - 当`key`和`value`都是4维时，`seq_lens`是一维，且`seq_lens`的值等于`key`的第一维为batch(对应场景二)；
-- `seq_lens`和`compress_lens`里面的每个元素值必须满足公式：reduceSum(seq_lens[i] - compress_lens[i]) <= num_blocks * block_size(对应场景二);
+- `seq_lens`和`compress_lens`里面的每个元素值必须满足公式：reduceSum(seq_lens[i] - compress_lens[i]) <= num_blocks * block_size(对应场景二)；
 
 ## 调用示例
 
@@ -107,7 +107,7 @@ torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mappi
     >>> slot_mapping_npu = torch.from_numpy(slot_mapping).npu()
     >>>
     >>> torch_npu.npu_scatter_pa_kv_cache(key_npu, value_npu, key_cache_npu_cast, value_cache_npu_cast, slot_mapping_npu)
-    >>> key_cache_npu_cast
+    >>> print(key_cache_npu_cast)
     tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
         [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
         [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],

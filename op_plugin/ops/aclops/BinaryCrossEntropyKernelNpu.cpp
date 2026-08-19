@@ -48,7 +48,7 @@ at::Tensor& binary_cross_entropy_out(
     const c10::optional<at::Tensor>& weight_opt,
     int64_t reduction,
     at::Tensor& result) {
-  const at::Tensor& weight = c10::value_or_else(weight_opt, [] {return at::Tensor();});
+  const at::Tensor& weight = c10::value_or_else(weight_opt, [] { return at::Tensor(); });
   at::IntArrayRef output_size;
   if (reduction == at::Reduction::None) {
     output_size = self.sizes();
@@ -60,11 +60,7 @@ at::Tensor& binary_cross_entropy_out(
     result.copy_(result_cp);
     return result;
   }
-  npu_preparation::CheckOut(
-      {self, target, weight},
-      result,
-      self,
-      output_size);
+  npu_preparation::CheckOut({self, target, weight}, result, self, output_size);
   if (!npu_utils::check_match(&result)) {
     at::Tensor contiguous_result = npu_utils::format_contiguous(result);
     binary_cross_entropy_out_nocheck(contiguous_result, self, target, weight, reduction);
@@ -80,7 +76,7 @@ at::Tensor binary_cross_entropy(
     const at::Tensor& target,
     const c10::optional<at::Tensor>& weight_opt,
     int64_t reduction) {
-  const at::Tensor& weight = c10::value_or_else(weight_opt, [] {return at::Tensor();});
+  const at::Tensor& weight = c10::value_or_else(weight_opt, [] { return at::Tensor(); });
 
   at::IntArrayRef output_size;
   if (reduction == at::Reduction::None) {

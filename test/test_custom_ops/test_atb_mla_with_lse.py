@@ -1,3 +1,12 @@
+# Copyright (c) 2024 Huawei Technologies Co., Ltd.
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 1.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+#
+
 import math
 import unittest
 import numpy as np
@@ -200,7 +209,7 @@ class TestAtbAttention(TestCase):
                 continue
             block_table = block_tables[i]
             context_len = int(context_len)
-            
+
             q = query[index].view(1, num_heads, head_size_qk)
             keys = []
             values = []
@@ -400,7 +409,7 @@ class TestAtbAttention(TestCase):
             lse_old = self.compare_output_data(out_tensors[1], golden_tensors[1], [0.001, 0.001, 0.005, 0.005])
 
         return (go_double or go_old) and (lse_double or lse_old)
-    
+
     @SupportedDevices(['Ascend910B'])
     def test_atb_attention_with_lse(self):
         num_tokens = 32
@@ -438,7 +447,7 @@ class TestAtbAttention(TestCase):
 
         self.assertRtolEqual(go_output, self.golden_out)
         self.assertRtolEqual(lse_output, self.lse)
-    
+
     @SupportedDevices(['Ascend910B'])
     def test_atb_attention_with_lse_out(self):
         num_tokens = 32
@@ -579,7 +588,7 @@ class TestAtbAttention(TestCase):
                 lse=lse_output_graph
             )
             handle = torch.npu.graph_task_group_end(stream)
-        
+
         with torch.npu.stream(update_stream):
             torch.npu.graph_task_update_begin(update_stream, handle)
             torch_npu.atb.npu_multi_head_latent_attention(

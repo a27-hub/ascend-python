@@ -38,10 +38,7 @@ at::Tensor& conv_transpose2d_out_npu(
   c10::SmallVector<int64_t, N> size_vector = op_infer::array_to_small_vector(result.sizes());
 
   at_npu::native::OpCommand cmd;
-  cmd.Name("Conv2DTranspose")
-      .Input(size_vector, at::kInt)
-      .Input(input, "x")
-      .Input(weight, "filter");
+  cmd.Name("Conv2DTranspose").Input(size_vector, at::kInt).Input(input, "x").Input(weight, "filter");
   if (bias.defined()) {
     cmd.Input(bias);
   }
@@ -67,14 +64,12 @@ at::Tensor npu_conv_transpose2d(
     at::IntArrayRef dilation,
     int64_t groups) {
   const at::Tensor& bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
-  auto output_size = op_infer::conv_transpose2d_npu_output_size(
-      input, weight, padding, output_padding, stride, dilation, groups);
+  auto output_size =
+      op_infer::conv_transpose2d_npu_output_size(input, weight, padding, output_padding, stride, dilation, groups);
   int64_t result_format = input.dtype() == at::kHalf ? ACL_FORMAT_NC1HWC0 : ACL_FORMAT_ND;
-  at::Tensor result =
-      npu_preparation::apply_tensor_with_format(output_size, input.options(), result_format);
+  at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, input.options(), result_format);
 
-  conv_transpose2d_out_npu(
-      result, input, weight, bias, padding, output_padding, stride, dilation, groups);
+  conv_transpose2d_out_npu(result, input, weight, bias, padding, output_padding, stride, dilation, groups);
   return result;
 }
 } // namespace acl_op

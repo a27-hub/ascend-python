@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_pad
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，建议使用torch.nn.functional.pad。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -32,7 +35,7 @@ torch_npu.npu_pad(input, paddings) -> Tensor
 >>> input = torch.tensor([[20, 20, 10, 10]], dtype=torch.float16).to("npu")
 >>> paddings = [1, 1, 1, 1]
 >>> output = torch_npu.npu_pad(input, paddings)
->>> output
+>>> print(output)
 tensor([[ 0.,  0.,  0.,  0.,  0.,  0.],
         [ 0., 20., 20., 10., 10.,  0.],
         [ 0.,  0.,  0.,  0.,  0.,  0.]], device='npu:0', dtype=torch.float16)

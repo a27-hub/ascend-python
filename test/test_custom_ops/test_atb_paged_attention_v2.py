@@ -1,3 +1,13 @@
+#
+# Copyright (c) 2024 Huawei Technologies Co., Ltd.
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 1.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+#
+
 import random
 import os
 import numpy as np
@@ -246,7 +256,7 @@ class TestPagedAttentionAlibi(TestCase):
         self.keyCache = self.in_tensors[1]
         self.valueCache = self.in_tensors[2]
         self.blockTables = self.in_tensors[3]
-        self.contextLens = self.in_tensors[4].cpu() 
+        self.contextLens = self.in_tensors[4].cpu()
         self.mask = self.in_tensors[5]
         self.attnOut = torch.empty_like(self.golden_out).npu()
         torch_npu.atb._npu_paged_attention_v2(self.query, self.keyCache, self.blockTables, self.contextLens, value_cache=self.valueCache, mask=self.mask, num_kv_heads=self.kv_heads, num_heads=self.num_heads, scale_value=self.tor, mask_type=2, out=self.attnOut)
@@ -278,7 +288,7 @@ class TestPagedAttentionAlibi(TestCase):
         self.keyCache = self.in_tensors[1]
         self.valueCache = self.in_tensors[2]
         self.blockTables = self.in_tensors[3]
-        self.contextLens = self.in_tensors[4].cpu() 
+        self.contextLens = self.in_tensors[4].cpu()
         self.mask = self.in_tensors[5]
         self.attnOut = torch.empty_like(self.golden_out).npu()
         torch_npu.atb._npu_paged_attention_v2(self.query, self.keyCache, self.blockTables, self.contextLens, value_cache=self.valueCache, mask=self.mask, num_kv_heads=self.kv_heads, num_heads=self.num_heads, scale_value=self.tor, mask_type=2, out=self.attnOut)
@@ -336,7 +346,7 @@ class TestPagedAttentionAlibi(TestCase):
                                                   num_heads=self.num_heads, scale_value=self.tor, mask_type=2,
                                                   workspace=workspace, out=attnOut_Graph)
             handle = torch.npu.graph_task_group_end(stream)
-        
+
         with torch.npu.stream(update_stream):
             torch.npu.graph_task_update_begin(update_stream, handle)
             torch_npu.atb._npu_paged_attention_v2(self.query, self.keyCache, self.blockTables, context_lens_new,

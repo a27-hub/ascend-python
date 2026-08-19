@@ -1,7 +1,7 @@
 # torch_npu.npu_gelu
 
 > [!NOTICE]  
-> 在NPU环境下使用Torch原生接口gelu时，approximate参数不起作用且默认为tanh，如果需要approximate的默认值设定为None或者区分不同的approximate方法需要使用此接口。
+> 在NPU环境下使用PyTorch原生接口gelu时，approximate参数不起作用且默认为tanh，如果需要将approximate的默认值设定为None，或者需要区分不同的approximate方法，则需使用此接口。
 
 ## 产品支持情况
 
@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- API功能：计算高斯误差线性单元的激活函数。
+- API功能：计算高斯误差线性单元（GELU）激活函数。
 - 计算公式：
 
     Gaussian Error Linear Unit(GELU)的表达式为：
@@ -25,7 +25,7 @@
     $$
     \Phi(x) = P(X \leq x) = \frac{1}{2} \left[ 1 + \text{erf}\left(\frac{x}{\sqrt{2}}\right) \right]
     $$
-    此时对应`approximate="none"`，若采用`approximate="tanh"`，则将 $\text{erf}(\cdot)$ 替换为 $\tanh(\cdot)$ 的近似形式。
+    当`approximate="none"`时，使用上述公式；若采用`approximate="tanh"`，则将 $\text{erf}(\cdot)$ 替换为 $\tanh(\cdot)$ 的近似形式。
 
 ## 函数原型
 
@@ -40,7 +40,7 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bfloat16`。
     - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
 
-- **approximate** (`String`)：可选参数，字符串类型，计算使用的激活函数模式，可配置为`none`或者`tanh`。其中`none`代表使用erf模式，`tanh`代表使用tanh模式。
+- **approximate** (`str`)：可选参数，字符串类型，计算使用的激活函数模式，可配置为`none`或者`tanh`。其中`none`代表使用erf模式，`tanh`代表使用tanh模式。
 
 ## 返回值说明
 
@@ -64,7 +64,7 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
     >>> input_tensor = torch.randn(100, 200)
     >>> output_tensor = torch_npu.npu_gelu(input_tensor.npu(), approximate='tanh')
     >>>
-    >>> output_tensor
+    >>> print(output_tensor)
     tensor([[ 0.5795, -0.0274, -0.1477,  ...,  0.2422, -0.0843, -0.1154],
             [-0.0385,  0.8736,  0.1809,  ..., -0.0676,  0.2404,  0.4038],
             [ 0.0438,  0.0205, -0.1536,  ...,  0.2910,  1.1553,  0.3319],
@@ -73,9 +73,9 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
             [ 0.1980,  0.0535, -0.1685,  ..., -0.1528, -0.1484,  1.0703],
             [-0.1351,  1.5851, -0.0222,  ..., -0.0230,  1.4319, -0.1700]],
         device='npu:0')
-    >>> output_tensor.shape
+    >>> print(output_tensor.shape)
     torch.Size([100, 200])
-    >>> output_tensor.dtype
+    >>> print(output_tensor.dtype)
     torch.float32
     ```
 

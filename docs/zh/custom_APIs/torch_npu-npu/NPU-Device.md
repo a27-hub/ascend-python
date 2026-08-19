@@ -3,7 +3,7 @@
 **表1** NPU device API
 
 <a name="table13377193418547"></a>
-<table><thead align="left"><tr id="row1888615477417"><th class="cellrowborder" valign="top" width="54.559999999999995%" id="mcps1.2.3.1.1"><p id="p188634764114"><a name="p188634764114"></a><a name="p188634764114"></a>API接口</p>
+<table><thead align="left"><tr id="row1888615477417"><th class="cellrowborder" valign="top" width="54.559999999999995%" id="mcps1.2.3.1.1"><p id="p188634764114"><a name="p188634764114"></a><a name="p188634764114"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="45.440000000000005%" id="mcps1.2.3.1.2"><p id="p188862474415"><a name="p188862474415"></a><a name="p188862474415"></a>说明</p>
 </th>
@@ -11,7 +11,7 @@
 </thead>
 <tbody><tr id="row939163412547"><td class="cellrowborder" valign="top" width="54.559999999999995%" headers="mcps1.2.3.1.1 "><p id="p13919348541"><a name="p13919348541"></a><a name="p13919348541"></a>（<span id="ph168289415199"><a name="ph168289415199"></a><a name="ph168289415199"></a>beta</span>）torch_npu.npu.is_initialized</p>
 </td>
-<td class="cellrowborder" rowspan="11" valign="top" width="45.440000000000005%" headers="mcps1.2.3.1.2 "><p id="p20972816174218"><a name="p20972816174218"></a><a name="p20972816174218"></a>torch_npu提供设备相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/v2.7.1-7.3.0/docs/zh/native_apis/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
+<td class="cellrowborder" rowspan="11" valign="top" width="45.440000000000005%" headers="mcps1.2.3.1.2 "><p id="p20972816174218"><a name="p20972816174218"></a><a name="p20972816174218"></a>TorchNPU提供设备相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/master/docs/zh/api/native_api/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
 </td>
 </tr>
 <tr id="row13391173465410"><td class="cellrowborder" valign="top" headers="mcps1.2.3.1.1 "><p id="p173915341547"><a name="p173915341547"></a><a name="p173915341547"></a>（<span id="ph1943317523417"><a name="ph1943317523417"></a><a name="ph1943317523417"></a>beta</span>）torch_npu.npu.init</p>
