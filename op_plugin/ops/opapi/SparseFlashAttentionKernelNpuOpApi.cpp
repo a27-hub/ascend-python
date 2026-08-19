@@ -54,6 +54,10 @@ at::Tensor construct_sparse_flash_attention_output_tensor(
 
     return output;
 }
+
+int64_t get_kv_num_index(const std::string& layout_kv) {
+    return layout_kv == "TND" ? DIM_1 : DIM_2;
+}
 }
 
 
@@ -83,12 +87,25 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     at::Tensor softmax_sum;
     at::SmallVector<int64_t, SIZE> softmax_max_size;
     at::SmallVector<int64_t, SIZE> softmax_sum_size;
-    if (query.dim() == DIM_3) {
-        softmax_max_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
-        softmax_sum_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
+    if (return_softmax_lse) {
+        int64_t kv_num_index = get_kv_num_index(layout_kv_str);
+        TORCH_CHECK(
+            key.size(kv_num_index) > 0,
+            "key.size(",
+            kv_num_index,
+            ") should be greater than 0, but got ",
+            key.size(kv_num_index),
+            OPS_ERROR(ErrCode::PARAM));
+        if (query.dim() == DIM_3) {
+            softmax_max_size = {key.size(kv_num_index), query.size(0), query.size(1) / key.size(kv_num_index)};
+            softmax_sum_size = {key.size(kv_num_index), query.size(0), query.size(1) / key.size(kv_num_index)};
+        } else {
+            softmax_max_size = {query.size(0), key.size(kv_num_index), query.size(1), query.size(2) / key.size(kv_num_index)};
+            softmax_sum_size = {query.size(0), key.size(kv_num_index), query.size(1), query.size(2) / key.size(kv_num_index)};
+        }
     } else {
-        softmax_max_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
-        softmax_sum_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
+        softmax_max_size = {0};
+        softmax_sum_size = {0};
     }
     softmax_max = at::empty(softmax_max_size, query.options().dtype(at::kFloat));
     softmax_sum = at::empty(softmax_sum_size, query.options().dtype(at::kFloat));
