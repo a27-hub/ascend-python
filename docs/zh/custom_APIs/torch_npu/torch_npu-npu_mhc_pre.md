@@ -59,7 +59,6 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 
 - 该接口支持推理场景下使用。
 - 该接口支持单算子模式和TorchAir图模式调用。
-- Batch一致性说明：设置`torch_npu.npu.set_deterministic_level(3)`开启Batch一致性开关。
 - Shape规格约束：
   - n：目前支持4、6、8。
   - D：支持1\~16384，需满足D为16对齐。
