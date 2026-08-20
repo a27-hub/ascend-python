@@ -6,7 +6,7 @@ on:
       py_version:
         required: false
         type: string
-        default: "3.10"
+        default: '3.10'
       REMOTE_URL:
         required: false
         type: string
@@ -41,7 +41,6 @@ jobs:
     steps:
       - name: print env
         run: |
-          echo "[ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]"
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
           echo "py_version=${{ inputs.py_version }}"
           echo "pr_id=${{ inputs.pr_id }}"
@@ -115,6 +114,7 @@ jobs:
             ./
 
       - name: Verify artifact
+        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           ls -al
           pip"${inputs.py_version}" install torch_npu*.whl
