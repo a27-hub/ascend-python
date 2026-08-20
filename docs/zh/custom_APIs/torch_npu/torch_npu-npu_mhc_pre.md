@@ -67,6 +67,12 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 - 可选输出 inv\_rms、h\_mix、h\_pre 为互存关系，需同时输出或全部不输出，不支持仅返回其中部分。
   - inner_precise：目前支持0、1。
 
+## 确定性/Batch一致性
+- 确定性计算
+  - 默认支持确定性计算。
+- Batch一致性
+  - 默认不支持Batch一致性，可通过PyTorch开关（[torch_npu.npu.set_deterministic_level](https://www.hiascend.com/document/detail/zh/Pytorch/latest/apiref/customapi/docs/zh/custom_APIs/overview.md)）支持。
+
 ## 调用示例
 
 - 单算子模式调用
