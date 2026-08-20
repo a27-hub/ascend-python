@@ -4,7 +4,7 @@
     English | <a href="./README.zh.md">简体中文</a>
 </p>
 
-## Brief Introduction
+## Brief Introduction 
 
 In this project, the TorchNPU operator plug-in is developed to provide the NPU operator library invoking capability for developers using the PyTorch framework. The compilation and use of the OpPlugin operator plug-in depend on the Ascend TorchNPU. Therefore, you need to understand and install Ascend PyTorch before compiling OpPlugin. For details about the user manual, see the Ascend community.[TorchNPU](https://gitcode.com/ascend/pytorch/blob/master/README.en.md).
 
