@@ -19,7 +19,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_conv2d(input, weight, bias, stride, padding, dilation, groups) -> Tensor
+torch_npu.npu_conv2d(input, weight, bias=None, stride, padding, dilation, groups) -> Tensor
 ```
 
 ## 参数说明
@@ -28,6 +28,6 @@ torch_npu.npu_conv2d(input, weight, bias, stride, padding, dilation, groups) -> 
 - **weight**（`Tensor`）：可学习的权重，shape为(out_channels, in_channels/groups, kH, kW)。
 - **bias**（`Tensor`）：可选参数，可学习的偏置，shape为(out_channels)。
 - **stride**（`List[int]`）：卷积核步长。
-- **padding**（`List[int]`）：输入两侧的隐式填充。
+- **padding**（`List[int]`）：输入各边的隐式填充。
 - **dilation**（`List[int]`）：内核元素间距。
 - **groups**（`int`）：对输入进行分组。in_channels可被组数整除。
