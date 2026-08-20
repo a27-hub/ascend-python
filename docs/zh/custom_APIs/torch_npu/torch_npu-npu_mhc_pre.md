@@ -67,6 +67,7 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
   - inner_precise：目前支持0、1。
 
 ## 确定性/Batch一致性
+
 - 确定性计算
   - 默认支持确定性计算。
 - Batch一致性
