@@ -1,4 +1,4 @@
-name: PR-pipeline_op-plugin
+name: PR-pipeline_op-plugin_test
 
 concurrency:
   max: 5
