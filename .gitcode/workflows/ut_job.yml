@@ -21,6 +21,10 @@ on:
       pytorch_branch:
         required: true
         type: string
+      TARGET_BRANCH:
+        required: false
+        type: string
+        default: ${{ atomgit.event.pull_request.base.ref }}
       TEST_RANK:
         required: false
         type: string
