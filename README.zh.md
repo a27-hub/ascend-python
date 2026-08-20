@@ -1,5 +1,9 @@
 # OpPlugin
 
+<p>
+    简体中文 | <a href="./README.md">English</a>
+</p>
+
 ## 简介
 
 本项目开发了TorchNPU算子插件，为使用PyTorch框架的开发者提供便捷的NPU算子库调用能力。
