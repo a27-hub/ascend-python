@@ -35,9 +35,9 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(const at::Tensor 
     TORCH_CHECK(self.dim() == DIM_TWO && x2.dim() == DIM_TWO,
         "Both inputs of mm are required to be 2D, but the actual inputs are ", self.dim(), "D and ", x2.dim(), "D",
         OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.size(1) == x2.size(0),
-        "The K-axis in the two inputs of Matmul must be equal, but in reality, the K-axis of x1 is ", self.size(1),
-        " and the K-axis of x2 is ", x2.size(0), OPS_ERROR(ErrCode::PARAM));
+    // TORCH_CHECK(self.size(1) == x2.size(0),
+    //     "The K-axis in the two inputs of Matmul must be equal, but in reality, the K-axis of x1 is ", self.size(1),
+    //     " and the K-axis of x2 is ", x2.size(0), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(world_size != 0, "world_size cannot be zero", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
         OPS_ERROR(ErrCode::PARAM));
@@ -50,7 +50,8 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(const at::Tensor 
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = op_plugin::utils::check_and_get_group_size(group_size_list);
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
-    auto output_size = {self.size(0) / (world_size != 0 ? world_size : 1), x2.size(1)};
+    auto output_size = {self.size(0) / (world_size != 0 ? world_size : 1), (x2.size(1) * 2)};
+    std::cout << "pta x2.size(1)*2" << std::endl;
     auto output_scalar_type = self.scalar_type();
     bool is_fp16_or_bf16 = ((output_scalar_type == at::kBFloat16) || (output_scalar_type == at::kHalf));
     if (is_fp16_or_bf16) {
