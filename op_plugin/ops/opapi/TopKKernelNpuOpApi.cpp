@@ -26,7 +26,6 @@ std::tuple<at::Tensor&, at::Tensor&> topk_out(
     int64_t dim,
     bool largest,
     bool sorted,
-    int64_t sort_policy,
     at::Tensor& values,
     at::Tensor& indices) {
   if (self.dim() == 0 && k == 0) {
@@ -54,6 +53,7 @@ std::tuple<at::Tensor&, at::Tensor&> topk_out(
   npu_preparation::check_tensor({self}, values, self.scalar_type(), output_size);
   npu_preparation::check_tensor({self}, indices, at::ScalarType::Long, output_size);
 
+  int64_t sort_policy = 1;
   if (is_top_k_v2_available) {
     EXEC_NPU_CMD(aclnnTopkV2, self, k, dim, largest, sorted, sort_policy, values, indices);
   } else {
