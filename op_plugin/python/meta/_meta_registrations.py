@@ -941,7 +941,7 @@ def npu_quant_mm_reduce_scatter_meta(self, x2, hcom, world_size, reduce_op='sum'
         raise RuntimeError("world_size must be bigger than zero")
     out_m = math.floor(self.size(0) / world_size)
     torch_dtype = self.dtype if y_dtype is None else TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
-    return (self.new_empty(out_m, x2.size(1), dtype=torch_dtype), self.new_empty(0, dtype=torch.float32))
+    return (self.new_empty(out_m, (x2.size(1)*2), dtype=torch_dtype), self.new_empty(0, dtype=torch.float32))
 
 
 @impl(m, "npu_gmm_alltoallv")
