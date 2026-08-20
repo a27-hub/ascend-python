@@ -32,10 +32,8 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(
     c10::optional<int64_t> x1_dtype,
     c10::optional<int64_t> x2_dtype) {
   c10::SmallVector<int64_t, SIZE> output_size;
-  aclDataType x1_acl_type = x1_dtype.has_value() ? c10_npu::GetAclDataType(x1_dtype.value())
-                                                 : at_npu::native::OpPreparation::convert_to_acl_data_type(x1.scalar_type());
-  aclDataType x2_acl_type = x2_dtype.has_value() ? c10_npu::GetAclDataType(x2_dtype.value())
-                                                 : at_npu::native::OpPreparation::convert_to_acl_data_type(x2.scalar_type());
+  aclDataType x1_acl_type = c10_npu::GetAclDataType(x1_dtype.value());
+  aclDataType x2_acl_type = c10_npu::GetAclDataType(x2_dtype.value());
   const bool x2_is_fp4 = (x2_acl_type == ACL_FLOAT4_E2M1 || x2_acl_type == ACL_FLOAT4_E1M2 || x2_acl_type == ACL_INT4);
   const int64_t x2_last_dim = static_cast<int64_t>(x2.sizes().size()) - 1;
   constexpr int64_t FP4_IN_INT8 = 2;
