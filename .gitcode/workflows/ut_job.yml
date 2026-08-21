@@ -108,13 +108,19 @@ jobs:
           torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl"
           echo "torch_url=${torch_url}"
           pip"${{ inputs.py_version }}" install $torch_url
-      - name: download artifact
+      - name: download op-plugin artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: download-artifact
         with:
           name: op-plugin-${{ inputs.pytorch_branch }}-arm
-          path: |
-            ./
+          path: ./
+
+      - name: download modify.txt artifact
+        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
+        uses: download-artifact
+        with:
+          name: modify.txt
+          path: ./
 
       - name: Verify artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
