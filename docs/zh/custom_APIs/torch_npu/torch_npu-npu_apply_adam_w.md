@@ -4,6 +4,7 @@
 
 | 产品             |  是否支持  |
 |:-------------------------|:----------:|
+| <term>Ascend 950PR</term> | √ |
 | <term>Ascend 950DT</term> | √ |
 
 ## 功能说明
@@ -76,6 +77,8 @@ torch_npu.npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay, beta1, be
 
 - `var`、`m`、`v`、`grad`的Shape需保持一致。
 - 当`amsgrad`为`True`时，必须传入`max_grad_norm`，否则接口报错；当前版本`amsgrad`仅支持`False`。
+- 该接口支持训练场景。
+- 该接口支持Eager模式调用。
 
 ## 调用示例
 
