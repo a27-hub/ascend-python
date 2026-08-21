@@ -4,6 +4,8 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term> | √   |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √   |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √   |
 |<term>Atlas 推理系列产品</term> | √   |
 
@@ -14,7 +16,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_points=None, axis=-2, quant_axis=-1, reduce='update') -> Tensor
+torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_points=None, axis=-2, quant_axis=-1, reduce='update', *, dst_type=1, round_mode='rint') -> Tensor
 ```
 
 ## 参数说明
@@ -37,6 +39,9 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
 - **axis** (`int`)：可选参数，`updates`上用来更新的轴，默认值为`-2`。
 - **quant_axis** (`int`)：可选参数，`updates`上用来量化的轴，默认值为`-1`。
 - **reduce** (`str`)：可选参数，表示数据操作方式；当前只支持`update`，即更新操作。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- **dst_type** (`int`)：可选参数，指定输出`input`的数据类型，默认值为1（`int8`）。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
+- **round_mode** (`str`)：可选参数，指定量化时的取整方式，支持取值`"rint"`，默认值为`"rint"`。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
 
 ## 返回值说明
 

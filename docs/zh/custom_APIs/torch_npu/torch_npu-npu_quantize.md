@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term>            |    √     |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>|    √     |
 |<term>Atlas 推理系列产品</term>| √   |
@@ -57,6 +58,7 @@ torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True)
     - `div_mode`为`True`时：
         - <term>Atlas 推理系列产品</term>：类型支持`qint8`、`quint8`、`int32`。
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：类型支持`qint8`、`quint8`、`int32`。
+        - <term>Ascend 950PR/Ascend 950DT</term>：类型支持`qint8`、`quint8`、`int32`、`hifloat8`、`float8_e4m3fn`、`float8_e5m2`。
 
     - `div_mode`为`False`时，类型支持`qint8`、`quint4x2`。当`dtype`为`quint4x2`时，输出tensor类型为`int32`，由8个`int4`拼接。
 

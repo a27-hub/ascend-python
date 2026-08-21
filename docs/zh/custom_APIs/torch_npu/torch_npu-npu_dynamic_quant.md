@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term>            |    √     |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 
@@ -12,6 +13,8 @@
 - API功能：对输入的张量进行pertoken对称动态量化。
 
     如果是MoE（Mixture of Experts，混合专家模型）场景，会引入`group_index`，`smooth_scales`中包含多组smooth向量，按`group_index`中的数值作用到`x`的不同行上。具体地，假如`x`包含m个token，`smooth_scales`有n行，`smooth_scales[0]`会作用到`x[0:group_index[0]]`上，`smooth_scales[i]`会作用到`x[group_index[i-1]: group_index[i]]`上，`i=1, 2, ..., n-1`。
+
+    通过`quant_mode`可指定量化模式，支持`pertoken`（默认）、`perchannel`、`pertensor`三种模式。其中`pertoken`表示按token粒度量化，`perchannel`表示按通道量化，`pertensor`表示对整个张量使用同一个scale量化。`perchannel`和`pertensor`模式仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
 
 - 计算公式：
     - 若`smooth_scales`不存在：
@@ -25,12 +28,12 @@
     y = \text{round}\left(\frac{\mathbf{x} * smooth\_scales}{\text{scale}}\right)
     $$
 
-    rowMax表示求一行的最大值，DTYPE_MAX表示常量，是y输出对应的数据类型的最大值。
+    rowMax表示求一行的最大值，DTYPE_MAX表示常量，是y输出对应的数据类型的最大值。当`dst_type_max`不为0时，使用`dst_type_max`的值作为DTYPE_MAX。
 
 ## 函数原型
 
 ```python
-torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type=None) ->(Tensor, Tensor)
+torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type=None, quant_mode="pertoken", dst_type_max=0.0) ->(Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -43,11 +46,14 @@ torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type
 - **dst_type** (`ScalarType`)：可选参数，指定量化输出的类型，传`None`时当作`int8`处理。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持取值`int8`、`quint4x2`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持取值`int8`、`quint4x2`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值`int8`、`quint4x2`、`hifloat8`、`float8_e5m2`、`float8_e4m3fn`。
+- **quant_mode** (`str`)：可选参数，指定量化模式，支持取值`"pertoken"`（按token粒度）、`"perchannel"`（按通道）、`"pertensor"`（整个张量共用一个scale），默认值为`"pertoken"`。`"perchannel"`和`"pertensor"`模式仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
+- **dst_type_max** (`float`)：可选参数，指定目标数据类型的最大表示值，取值为0.0时使用目标精度能表示的最大值，默认值为0.0。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
 
 ## 返回值说明
 
 - **y** (`Tensor`)：量化后的输出Tensor，数据类型由`dst_type`指定。当`dst_type`是`quint4x2`时，`y`的数据类型为`int32`，形状最后一维为`x`最后一维除以8，其余维度与`x`一致，每个`int32`元素包含8个`int4`结果。其他场景下`y`形状与输入`x`一致，数据类型由`dst_type`指定。
-- **scale** (`Tensor`)：对称动态量化过程中计算出的缩放系数，数据类型为`float32`，形状为`x`的形状剔除最后一维。
+- **scale** (`Tensor`)：对称动态量化过程中计算出的缩放系数，数据类型为`float32`。当`quant_mode`为`"pertoken"`时，形状为`x`的形状剔除最后一维；当`quant_mode`为`"perchannel"`时，形状为`x`的形状剔除倒数第二维，最后一维保持与`x`一致；当`quant_mode`为`"pertensor"`时，形状为`(1,)`。
 
 ## 约束说明
 
