@@ -387,7 +387,6 @@ class TestSparseFlashAttention(TestCase):
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_sfa_value_none(self, device = "npu"):
         from torch_npu.npu.utils import get_cann_version
-        from torch_npu.npu._backends import get_soc_version
 
         scale_value = 0.041666666666666664
         sparse_block_size = 1
@@ -428,7 +427,7 @@ class TestSparseFlashAttention(TestCase):
         act_seq_q = torch.tensor(act_seq_q).to(torch.int32).npu()
         act_seq_kv = torch.tensor(act_seq_kv).to(torch.int32).npu()
 
-        support_value_none = get_cann_version() >= "9.2.0" and get_soc_version() >= 220 and get_soc_version() < 260
+        support_value_none = get_cann_version() >= "9.2.0"
         if support_value_none:
             npu_out, npu_softmax_max, npu_softmax_sum = torch_npu.npu_sparse_flash_attention(
                 query, key, value, sparse_indices, scale_value, block_table=None,
