@@ -4,7 +4,7 @@
 
 | 产品             |  是否支持  |
 |:-------------------------|:----------:|
-| <term>Ascend 950PR</term>/<term>Ascend 950DT</term> | √ |
+| <term>Ascend 950PR/Ascend 950DT</term>  | √ |
 
 ## 功能说明
 
@@ -69,15 +69,15 @@ torch_npu.npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay, beta1, be
 - **m**(`Tensor`)：更新后的一阶矩，对应公式中的$m_{out}$。Shape与数据类型与输入`m`一致。
 - **v**(`Tensor`)：更新后的二阶矩，对应公式中的$v_{out}$。Shape与数据类型与输入`v`一致。
 
->**说明：**<br>
->返回的`(var, m, v)`与`out`中传入的三个张量为同一对象，计算结果为原地更新。
+> [!NOTICE]
+> 返回的`(var, m, v)`与`out`中传入的三个张量为同一对象，计算结果为原地更新。
 
 ## 约束说明
 
 - `var`、`m`、`v`、`grad`的Shape需保持一致。
 - 当`amsgrad`为`True`时，必须传入`max_grad_norm`，否则接口报错；当前版本`amsgrad`仅支持`False`。
-- 该接口支持训练场景。
-- 该接口支持Eager模式调用。
+- 该接口仅支持训练场景。
+- 该接口仅支持Eager模式调用。
 
 ## 调用示例
 
