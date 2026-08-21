@@ -22,12 +22,12 @@
 ## 函数原型
 
 ```python
-torch_npu.npu.mstx.range_start(message: str='None', stream=None, domain: str='default') -> int
+torch_npu.npu.mstx.range_start(message: Optional[str] = None, stream=None, domain: str='default') -> int
 ```
 
 ## 参数说明
 
-- **message** (`str`)：可选参数，打点携带信息的字符串，默认为'None'。
+- **message** (`Optional[str]`)：可选参数，打点携带信息的字符串，默认为None。
 
   传入的message字符串长度要求：msPTI场景不能超过255字节。
 
