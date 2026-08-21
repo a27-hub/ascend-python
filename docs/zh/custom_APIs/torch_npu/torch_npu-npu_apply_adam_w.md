@@ -4,7 +4,7 @@
 
 | 产品             |  是否支持  |
 |:-------------------------|:----------:|
-| <term>Ascend 950PR</term>/<term>Ascend 950DT</term> | √ |
+| <term>Ascend 950PR/Ascend 950DT</term>  | √ |
 
 ## 功能说明
 
@@ -69,8 +69,8 @@ torch_npu.npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay, beta1, be
 - **m**(`Tensor`)：更新后的一阶矩，对应公式中的$m_{out}$。Shape与数据类型与输入`m`一致。
 - **v**(`Tensor`)：更新后的二阶矩，对应公式中的$v_{out}$。Shape与数据类型与输入`v`一致。
 
->**说明：**<br>
->返回的`(var, m, v)`与`out`中传入的三个张量为同一对象，计算结果为原地更新。
+> [!NOTICE]
+> 返回的`(var, m, v)`与`out`中传入的三个张量为同一对象，计算结果为原地更新。
 
 ## 约束说明
 
