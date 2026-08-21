@@ -268,7 +268,7 @@ static void check_strides_envelope(c10::IntArrayRef sizes, c10::IntArrayRef stri
               " vs numel ", numel, OPS_ERROR(ErrCode::PARAM));
 }
 
-static void prepare_out_weight_scale_per_channel(QuantContext& ctx) {
+static void prepare_out_weight_scale(QuantContext& ctx) {
   auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
   ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
   check_strides_envelope(ctx.weight_scale.sizes(), ctx.weight_scale.strides(), ctx.out_weight_scale.numel());
@@ -291,16 +291,6 @@ static void prepare_out_weight_nz(QuantContext& ctx) {
   int64_t weight_dim = ctx.weight.dim();
   int64_t k = weight_sizes[weight_dim - IDX_2];
   int64_t n = weight_sizes[weight_dim - IDX_1];
-
-  // 对于 4-bit 紧凑排布，CANN 会把 K 维度乘以 2
-  // 因为每个字节存储 2 个 4-bit 值
-  aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-  bool is_4bit_compact =
-      (weight_acl_dtype == ACL_INT4 || weight_acl_dtype == ACL_FLOAT4_E2M1 || weight_acl_dtype == ACL_FLOAT4_E1M2);
-
-  if (is_4bit_compact) {
-    k = k * 2;
-  }
 
   c10::SmallVector<int64_t, DIMS_MAX> storage_shape;
   c10::SmallVector<int64_t, DIMS_MAX> trans_stride;
@@ -332,11 +322,6 @@ static void prepare_out_weight_nz(QuantContext& ctx) {
 
   auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
 
-  // 对于 4-bit 紧凑排布，outWeight 的 view shape 也需要调整
-  if (is_4bit_compact) {
-    weight_view_shape[weight_dim - IDX_2] = weight_view_shape[weight_dim - IDX_2] * 2;
-  }
-
   if (ctx.is_weight_trans) {
     ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, trans_stride);
   } else {
@@ -351,11 +336,11 @@ static void prepare_out_weight_nz(QuantContext& ctx) {
       static_cast<aclFormat>(OutWeightFormat));
 }
 
-// A16S4 INT4 NZ（非转置）专用 prepare：torch 侧 uint8 [K, N/2] 非转置输入
-// out_weight: torch 侧保持 uint8 物理打包视图 [K, N/2] + NZ_C0_8 标签（C0=8 字节=16 个 INT4），
+// A16W4（INT4/FP4）NZ（非转置）专用 prepare：torch 侧 uint8 [K, N/2] 非转置输入
+// out_weight: torch 侧保持 uint8 物理打包视图 [K, N/2] + NZ_C0_8 标签（C0=8 字节=16 个 4-bit），
 // storage 为物理分形 [N/16, K/16, 16, 8]（uint8 字节数精确）；经 ConvertType 统一 ×2 还原为
-// ACL INT4 view [K, N]、storage [N/16, K/16, 16, 16]、format NZ_C0_16，与 ops-math 校验一致。
-static void prepare_out_weight_nz_a16s4(QuantContext& ctx) {
+// ACL 4-bit view [K, N]、storage [N/16, K/16, 16, 16]、format NZ_C0_16，与 ops-math 校验一致。
+static void prepare_out_weight_nz_a16w4(QuantContext& ctx) {
   auto weight_sizes = ctx.weight.sizes();
   int64_t weight_dim = ctx.weight.dim();
   int64_t k = weight_sizes[weight_dim - IDX_2];
@@ -384,7 +369,7 @@ static void prepare_out_weight_a16s4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
     prepare_out_weight_nd(ctx);
   } else {
-    prepare_out_weight_nz_a16s4(ctx);
+    prepare_out_weight_nz_a16w4(ctx);
   }
 }
 
@@ -444,38 +429,40 @@ static void execute_prepares(const std::vector<PrepareFunc>& prepares, QuantCont
 static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>> SOC_DATA_FLOW_CONFIG_MAP = {
     {c10_npu::SocVersion::Ascend950,
      {{judge_mm_mx_a8w4,
-       {prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
+       {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
+        prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
         prepare_out_weight_scale_mx<false>,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_gmm_mx_a8w4,
-       {prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
+       {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
+        prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
         prepare_out_weight_scale_mx<true>,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_tensor,
        {prepare_out_weight_nd,
-        prepare_out_weight_scale_per_channel,
+        prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_channel,
        {prepare_out_weight_a16s4,
-        prepare_out_weight_scale_per_channel,
+        prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_group,
        {prepare_out_weight_a16s4,
-        prepare_out_weight_scale_per_channel,
+        prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16f4_nz_pergroup,
-       {prepare_out_weight_nz_a16s4,
-        prepare_out_weight_scale_per_channel,
+       {prepare_out_weight_nz_a16w4,
+        prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16f4_mx,
-       {prepare_out_weight_nz_a16s4,
-        prepare_out_weight_scale_per_channel,
+       {prepare_out_weight_nz_a16w4,
+        prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}}}},
 };

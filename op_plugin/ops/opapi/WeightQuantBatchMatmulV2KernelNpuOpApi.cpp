@@ -133,9 +133,9 @@ at::Tensor npu_weight_quant_batchmatmul(
       quant_scale.has_value() ? x.options().dtype(at::kChar) : x.options().dtype(x.scalar_type());
   at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
-  const bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) || (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_2);
-  const bool is_weight_nz_4bit_compact =
-      (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8) || (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16);
+  // uint8 载体 4-bit 紧凑排布（NZ_C0_8）同属 NZ 分形，统一走 aclnnWeightQuantBatchMatmulNz
+  const bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) ||
+      (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_2) || (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8);
 
   TensorWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
 
@@ -149,19 +149,6 @@ at::Tensor npu_weight_quant_batchmatmul(
         OPS_ERROR(ErrCode::PARAM));
     EXEC_NPU_CMD(
         aclnnWeightQuantBatchMatmulNz,
-        x,
-        weight_wrapper,
-        antiquant_scale,
-        antiquant_offset_real,
-        quant_scale_real,
-        quant_offset_real,
-        bias_real,
-        antiquant_group_size_real,
-        result);
-  } else if (is_weight_nz_4bit_compact) {
-    // 对于 4-bit 紧凑排布，使用 aclnnWeightQuantBatchMatmulV2
-    EXEC_NPU_CMD(
-        aclnnWeightQuantBatchMatmulV2,
         x,
         weight_wrapper,
         antiquant_scale,
