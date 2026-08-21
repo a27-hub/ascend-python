@@ -140,7 +140,8 @@ jobs:
       - name: UT_op-plugin
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
-          cp ../modify.txt ./
+          ls -al
+          cp modify.txt ../
           ls -al
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
