@@ -304,8 +304,8 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
     )
     if value is None:
         torch._check(
-            get_cann_version() >= "9.2.0" and get_soc_version() >= 220 and get_soc_version() < 260,
-            lambda: "npu_sparse_flash_attention: value=None is only supported on A2/A3 SoC with CANN >= 9.2.0."
+            get_cann_version() >= "9.2.0",
+            lambda: "npu_sparse_flash_attention: value=None is only supported with CANN >= 9.2.0."
                     + ops_error(ErrCode.NOT_SUPPORT),
         )
     else:
@@ -355,8 +355,8 @@ def npu_sparse_flash_attention_grad_meta(query, key, value, sparse_indices, d_ou
     d_key = key.new_empty(key.shape, dtype=key.dtype, device='meta')
     if value is None:
         torch._check(
-            get_cann_version() >= "9.2.0" and get_soc_version() >= 220 and get_soc_version() < 260,
-            lambda: "npu_sparse_flash_attention_grad: value=None is only supported on A2/A3 SoC with CANN >= 9.2.0."
+            get_cann_version() >= "9.2.0",
+            lambda: "npu_sparse_flash_attention_grad: value=None is only supported with CANN >= 9.2.0."
                     + ops_error(ErrCode.NOT_SUPPORT),
         )
         d_value = torch.empty([0], dtype=query.dtype, device='meta')

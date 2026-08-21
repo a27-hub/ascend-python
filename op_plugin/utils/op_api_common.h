@@ -935,13 +935,11 @@ inline bool is_ascend950_path() {
   return c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && op_plugin::utils::is_gte_cann_version_910();
 }
 
-// Check if npu_sparse_flash_attention supports value=None: CANN >= 9.2.0 on A2/A3 SoC.
+// Check if npu_sparse_flash_attention supports value=None: CANN >= 9.2.0.
 inline bool IsSupportSparseFlashAttentionNoneValue()
 {
     static const bool is_support = []() -> bool {
-        return op_plugin::utils::is_gte_cann_version_920() &&
-               c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-               c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
+        return op_plugin::utils::is_gte_cann_version_920();
     }();
     return is_support;
 }
