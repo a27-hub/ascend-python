@@ -128,21 +128,13 @@ jobs:
         uses: checkout
         with:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
-          path: op-plugin
           fetch-depth: 1
 
       - name: UT_op-plugin
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           ls -al
-          python"${{ inputs.py_version }}" access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
-
-      - name: checkout pytorch
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
-        uses: checkout
-        with:
-          ref: refs/merge-requests/${{ inputs.pr_id }}/merge
-          path: op-plugin
+          python"${{ inputs.py_version }}" ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
 
       - name: checkout pytorch
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
