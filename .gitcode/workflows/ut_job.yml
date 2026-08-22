@@ -130,11 +130,11 @@ jobs:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
           fetch-depth: 1
 
-      - name: download modify.txt artifact
+      - name: download modify_files.txt artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: download-artifact
         with:
-          name: modify.txt
+          name: modify_files.txt
           path: ./
 
       - name: UT_op-plugin

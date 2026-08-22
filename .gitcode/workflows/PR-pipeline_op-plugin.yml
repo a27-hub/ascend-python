@@ -141,8 +141,8 @@ stages:
           - name: upload modify.txt
             uses: upload-artifact
             with:
-              name: modify.txt
-              path: modify.txt
+              name: modify_files.txt
+              path: modify_files.txt
               overwrite: true
 
   stage_2:
