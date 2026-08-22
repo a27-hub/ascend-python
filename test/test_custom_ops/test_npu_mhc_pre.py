@@ -184,7 +184,6 @@ class TestNpuMhcPre(TestCase):
         self.run_and_check(T, n, D, out_flag, output_names, tol_map)
 
     @SupportedDevices(['Ascend950'])
-
     def test_npu_mhc_pre_prefill_inference(self, device="npu"):
         # 推理场景的 prefill 模式: T >= 512, out_flag=0, 有效输出 h_in, h_post, h_res
         T, n, D = (1024, 4, 2560)
