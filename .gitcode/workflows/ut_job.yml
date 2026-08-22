@@ -140,6 +140,9 @@ jobs:
       - name: UT_op-plugin
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
+          pwd
+          ls -al
+          cd ../
           ls -al
           cp modify.txt ../
           ls -al
