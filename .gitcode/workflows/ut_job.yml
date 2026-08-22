@@ -116,13 +116,6 @@ jobs:
           name: op-plugin-${{ inputs.pytorch_branch }}-arm
           path: ./
 
-      - name: download modify.txt artifact
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
-        uses: download-artifact
-        with:
-          name: modify.txt
-          path: ./
-
       - name: Verify artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
@@ -136,6 +129,13 @@ jobs:
         with:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
           fetch-depth: 1
+
+      - name: download modify.txt artifact
+        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
+        uses: download-artifact
+        with:
+          name: modify.txt
+          path: ./
 
       - name: UT_op-plugin
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
