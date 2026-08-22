@@ -77,6 +77,16 @@ static bool is_transpose_certain_two_dims(const at::Tensor& tensor, int64_t firs
   return tensor.stride(first_dim + 1) == tensor.stride(first_dim) * tensor.size(first_dim);
 }
 
+// A16W4（INT4 / FP4 E2M1，非 MX）torch 侧统一用 uint8 载体物理打包（每字节 2 个 4-bit 元素），
+// 与 aclnnWeightQuantBatchMatmulV2 的 uint8 packed 输入约定一致；其他载体直接拒绝
+static void check_a16w4_uint8_carrier(const QuantContext& ctx) {
+  TORCH_CHECK(
+      ctx.weight.scalar_type() == at::kByte,
+      "A16W4 4-bit weight must be packed into a uint8 tensor (2 elements per byte), but got ",
+      ctx.weight.scalar_type(),
+      OPS_ERROR(ErrCode::PARAM));
+}
+
 bool judge_mm_mx_a8w4(QuantContext& ctx) {
   aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
   aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
@@ -163,6 +173,7 @@ bool judge_mm_a16s4_per_tensor(QuantContext& ctx) {
   // ND 直拷为物理透传，与转置状态无关）
   if (x_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2 &&
       ctx.weight_scale.numel() == 1) {
+    check_a16w4_uint8_carrier(ctx);
     ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
     return true;
   }
@@ -193,6 +204,7 @@ bool judge_mm_a16s4_per_channel(QuantContext& ctx) {
     bool is_per_channel = (scale_dim == DIMS_1) || (scale_dim == DIMS_2 && ctx.weight_scale.size(0) == 1);
     // 转置状态内部分流：转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
     if (is_per_channel && ctx.weight_scale.numel() > 1) {
+      check_a16w4_uint8_carrier(ctx);
       ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
       return true;
     }
@@ -211,6 +223,7 @@ bool judge_mm_a16s4_per_group(QuantContext& ctx) {
   // A16S4 per-group：转置状态内部分流，转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
   if (x_dtype_match && weight_acl_dtype == ACL_INT4 && x_scale_acl_dtype == ACL_DT_UNDEFINED &&
       ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1) {
+    check_a16w4_uint8_carrier(ctx);
     ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
     return true;
   }
@@ -231,6 +244,7 @@ bool judge_mm_a16f4_nz_pergroup(QuantContext& ctx) {
   if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 &&
       x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 &&
       ctx.weight_scale.size(0) > 1 && !is_transpose_certain_two_dims(ctx.weight, 0)) {
+    check_a16w4_uint8_carrier(ctx);
     ctx.is_weight_trans = false;
     return true;
   }
@@ -250,6 +264,7 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
   if (x_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 && weight_scale_acl_dtype == ACL_FLOAT8_E8M0 &&
       x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 &&
       !is_transpose_certain_two_dims(ctx.weight, 0)) {
+    check_a16w4_uint8_carrier(ctx);
     ctx.is_weight_trans = false;
     return true;
   }
