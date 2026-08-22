@@ -162,6 +162,8 @@ jobs:
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           ls -al
+          sed -i "s/if 'op-plugin' in str(Path(ut_file)) and NETWORK_OPS_DIR in str(Path(ut_file)):/if str(NETWORK_OPS_DIR) in str(Path(ut_file)):/" ci/split_by_time.py
+          cat ci/split_by_time.py
           pip"${{ inputs.py_version }}" list
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
