@@ -142,10 +142,6 @@ jobs:
         run: |
           pwd
           ls -al
-          cd ../
-          ls -al
-          cp modify.txt ../
-          ls -al
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
