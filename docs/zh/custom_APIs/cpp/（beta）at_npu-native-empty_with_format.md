@@ -18,7 +18,7 @@ at::Tensor at_npu::native::empty_with_format(c10::IntArrayRef sizes, const c10::
 
 - sizes：IntArrayRef类型，指定tensor的维度。
 
-- options：TensorOptions类型，指定tensor的可选信息，如dtype、device等。
+- options：TensorOptions类型，指定tensor的可选信息，比如dtype、device等。
 
 - acl_format：int64_t类型，指定tensor的内存格式。
 
