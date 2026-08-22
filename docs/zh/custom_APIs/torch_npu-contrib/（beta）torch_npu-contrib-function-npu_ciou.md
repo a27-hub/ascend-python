@@ -34,7 +34,7 @@ torch_npu.contrib.function.npu_ciou(boxes1, boxes2, trans=True, is_cross=False, 
 
 `Tensor` 
 
- CIoU，size为[1,n]。
+ IoU，size为[1,n]。
 
 ## 约束说明
 
