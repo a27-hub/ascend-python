@@ -183,14 +183,12 @@ bool judge_mm_a16s4_per_tensor(QuantContext& ctx) {
 bool judge_mm_a16s4_per_channel(QuantContext& ctx) {
   aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
   aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
-  aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
 
   OP_LOG_DEBUG(
-      "judge_mm_a16s4_per_channel: x_acl_dtype=%d, weight_acl_dtype=%d, weight_scale_acl_dtype=%d, "
+      "judge_mm_a16s4_per_channel: x_acl_dtype=%d, weight_acl_dtype=%d, "
       "weight_dim=%d, weight_stride=[%d,%d], weight_size=[%d,%d]",
       static_cast<int>(x_acl_dtype),
       static_cast<int>(weight_acl_dtype),
-      static_cast<int>(weight_scale_acl_dtype),
       static_cast<int>(ctx.weight.dim()),
       ctx.weight.dim() >= 2 ? static_cast<int>(ctx.weight.stride(0)) : -1,
       ctx.weight.dim() >= 2 ? static_cast<int>(ctx.weight.stride(1)) : -1,
