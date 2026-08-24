@@ -163,6 +163,7 @@ jobs:
         run: |
           ls -al
           sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/" pytorch/ci/split_by_time.py
+          sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/" pytorch/ci/access_control_test.py
           cat pytorch/ci/split_by_time.py
           pip"${{ inputs.py_version }}" list
           source /etc/profile
