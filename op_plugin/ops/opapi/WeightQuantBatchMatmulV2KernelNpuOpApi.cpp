@@ -20,6 +20,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 constexpr int MINIMUM_SHAPE_SIZE = 2;
 const int64_t INT4_NUMS_IN_INT32 = 8;
+const int64_t B4_IN_UINT8 = 2; // uint8 载体每字节打包 2 个 4-bit（INT4/FP4）
 at::Tensor npu_weight_quant_batchmatmul(
     const at::Tensor& x,
     const at::Tensor& weight,
@@ -73,7 +74,7 @@ at::Tensor npu_weight_quant_batchmatmul(
   if (is_int32_float_packed && trans_weight) {
     weight_k_dim *= INT4_NUMS_IN_INT32; // 8
   } else if (uint8_pack_along_k) {
-    weight_k_dim *= FP4_IN_INT8; // 沿 K 打包，K 按每字节 2 个 4-bit 还原
+    weight_k_dim *= B4_IN_UINT8; // 沿 K 打包，K 按每字节 2 个 4-bit 还原
   }
 
   TORCH_CHECK(
@@ -92,7 +93,7 @@ at::Tensor npu_weight_quant_batchmatmul(
   if (is_int32_float_packed && !trans_weight) {
     output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * INT4_NUMS_IN_INT32;
   } else if (uint8_pack_along_n || is_uint8_4bit_nz_c08) {
-    output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * FP4_IN_INT8;
+    output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * B4_IN_UINT8;
   } else {
     output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base;
   }
