@@ -59,7 +59,9 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
 - **col_block_size** (`int`)：可选参数，指定单个量化的数据块的列大小。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值1或128。
     - <term>Ascend 950PR/Ascend 950DT</term>：支持取值64、128、192、256。
-- **dst_type_max** (`float`)：可选参数，目标数据类型的最大值。当前仅在`dst_type`为`hifloat8`时生效，支持取值0.0、15.0、56.0、224.0、32768.0，取值为0.0时表示使用数据类型原始的最大值。
+- **dst_type_max** (`float`)：可选参数，目标数据类型的最大值。当前仅在`dst_type`为`hifloat8`时生效，取值为0.0时表示使用数据类型原始的最大值。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值0.0。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值0.0、15.0、56.0、224.0、32768.0。
 
 ## 返回值说明
 
