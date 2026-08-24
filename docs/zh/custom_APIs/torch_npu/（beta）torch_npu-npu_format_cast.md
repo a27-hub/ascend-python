@@ -54,12 +54,7 @@ torch_npu.npu_format_cast(input, acl_format, customize_dtype=None) -> Tensor
 
 `customize_dtype`参数仅在Atlas A2 训练系列产品/Atlas A3 训练系列产品且CANN版本为9.1.0及以上的场景下支持。其他产品或CANN 9.1.0以下版本，传入该参数将导致异常。
 
-<term>Atlas A2 训练系列产品</term>/<term>Atlas A3 训练系列产品</term>上，本接口受[`torch_npu.npu.config.allow_internal_format`](../torch_npu-npu/（beta）torch_npu-npu-config-allow_internal_format.md)控制：
-
-- `allow_internal_format = False`（默认）时，不支持转换为私有格式：当`acl_format`为私有格式（FRACTAL_NZ、FRACTAL_Z、NC1HWC0等）时，自动降级为对应的base格式（FRACTAL_NZ降级为ND，FRACTAL_Z/NC1HWC0降级为NCHW）并打印告警，数据与shape保持不变。
-- `allow_internal_format = True`时，真实转换为私有格式。
-
-本约束同样适用于`torch_npu.npu_format_cast_`。
+<term>Ascend 950DT</term>场景下，本接口转为私有格式（如FRACTAL_NZ）的行为不受`allow_internal_format = False`约束。
 
 <term>Ascend 950DT</term>场景下，将张量转为FRACTAL_NZ格式时，当前不支持以下特殊场景：
 
@@ -104,7 +99,7 @@ torch_npu.npu_format_cast(input, acl_format, customize_dtype=None) -> Tensor
     ```python
     >>> import torch
     >>> import torch_npu
-    >>> # A2/A3上需开启私有格式开关，否则FRACTAL_NZ目标会被降级为ND
+    >>> # Atlas A2/A3系列上allow_internal_format默认为False，需先开启私有格式开关，否则FRACTAL_NZ目标会被降级为ND
     >>> torch_npu.npu.config.allow_internal_format = True
     >>> t = torch.randint(0, 100, (32, 32), dtype=torch.int32).npu()
     >>> # customize_dtype=3 即 ACL_INT32，此时 C0=8
