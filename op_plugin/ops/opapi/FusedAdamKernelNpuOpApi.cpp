@@ -136,22 +136,35 @@ void _fused_adam_(
 		TORCH_CHECK(false, "the size of tensor list should be same.");
 	}
 
-	float lr_cast = static_cast<float>(lr);
-	float beta1_cast = static_cast<float>(beta1);
-	float beta2_cast = static_cast<float>(beta2);
-	float weight_decay_cast = static_cast<float>(weight_decay);
-	float eps_cast = static_cast<float>(eps);
-
-	for (size_t i = 0; i < self.size(); i++) {
-		auto step = state_steps[i].sub(1);
-		if (max_exp_avg_sqs.size() == 0) {
-			c10::optional<at::Tensor> null_max_exp;
-			EXEC_NPU_CMD(aclnnApplyAdamV2, self[i], exp_avgs[i], exp_avg_sqs[i], null_max_exp, grads[i],
-				step, lr_cast, beta1_cast, beta2_cast, weight_decay_cast, eps_cast, amsgrad, maximize);
-		} else {
-			EXEC_NPU_CMD(aclnnApplyAdamV2, self[i], exp_avgs[i], exp_avg_sqs[i], max_exp_avg_sqs[i], grads[i],
-				step, lr_cast, beta1_cast, beta2_cast, weight_decay_cast, eps_cast, amsgrad, maximize);
-		}
+	// 融合Adam优化器：一次性调用aclnnFusedAdam算子（TensorList输入），
+	// 替代逐参数多次调用aclnnApplyAdamV2，与aclnnFusedSgd的调用方式保持一致。
+	// 注意：CANN侧FusedAdam核内会对state_steps做+1后再计算bias correction
+	// （见fused_adam_regbase.h中 stepCount_ = state_steps + 1），而PyTorch在调用
+	// _fused_adam_前已通过_foreach_add_将state_steps自增为当前步数t，因此这里先
+	// 对每个state_step减1，保证bias correction使用的步数语义与PyTorch一致。
+	std::vector<at::Tensor> state_steps_adjusted;
+	state_steps_adjusted.reserve(state_steps.size());
+	for (size_t i = 0; i < state_steps.size(); i++) {
+		state_steps_adjusted.emplace_back(state_steps[i].sub(1));
 	}
+	at::TensorList state_steps_list(state_steps_adjusted);
+
+	EXEC_NPU_CMD(
+		aclnnFusedAdam,
+		self,
+		grads,
+		exp_avgs,
+		exp_avg_sqs,
+		max_exp_avg_sqs,
+		state_steps_list,
+		grad_scale.value_or(at::Tensor()),
+		found_inf.value_or(at::Tensor()),
+		lr,
+		beta1,
+		beta2,
+		weight_decay,
+		eps,
+		amsgrad,
+		maximize);
 }
 }  // namespace op_api
