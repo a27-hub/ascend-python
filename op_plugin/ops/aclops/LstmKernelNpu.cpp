@@ -789,8 +789,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     double dropout,
     bool train,
     bool bidirectional) {
-  // The legacy LSTM.forward patch passes NPU batch_sizes and reshapes the output in Python.
-  const bool should_reshape_output = batch_sizes.device().is_cpu();
   at::Tensor batch_sizes_cpu = batch_sizes.to("cpu");
   at::Tensor y;
   at::Tensor h;
@@ -815,9 +813,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
           data, batch_sizes_cpu, hx, params, has_biases, num_layers, dropout, train, bidirectional);
     }
   }
-  if (should_reshape_output) {
-    y = y.reshape({-1, y.size(-1)});
-  }
+  y = y.reshape({-1, y.size(-1)});
   return std::tie(y, h, c);
 }
 
