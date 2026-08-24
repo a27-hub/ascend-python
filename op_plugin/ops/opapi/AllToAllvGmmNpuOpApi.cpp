@@ -17,6 +17,8 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+#include <string>
+
 namespace op_api {
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm(
     const at::Tensor& gmm_x,
@@ -68,7 +70,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm(
         check_aclnn_kernel_available("aclnnAlltoAllvGroupedMatMulV2"),
         "Current CANN version do not support this api. Please try to update the version of CANN." +
             OPS_ERROR(ErrCode::PARAM));
-    const char* comm_mode_real = const_cast<char*>(comm_mode.value().data());
+    const std::string comm_mode_value(comm_mode.value());
+    const char* comm_mode_real = comm_mode_value.c_str();
     EXEC_NPU_CMD(
         aclnnAlltoAllvGroupedMatMulV2,
         gmm_x,
