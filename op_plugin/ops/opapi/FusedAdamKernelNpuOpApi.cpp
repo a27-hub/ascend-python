@@ -136,12 +136,6 @@ void _fused_adam_(
 		TORCH_CHECK(false, "the size of tensor list should be same.");
 	}
 
-	// 融合Adam优化器：一次性调用aclnnFusedAdam算子（TensorList输入），
-	// 替代逐参数多次调用aclnnApplyAdamV2，与aclnnFusedSgd的调用方式保持一致。
-	// 注意：CANN侧FusedAdam核内会对state_steps做+1后再计算bias correction
-	// （见fused_adam_regbase.h中 stepCount_ = state_steps + 1），而PyTorch在调用
-	// _fused_adam_前已通过_foreach_add_将state_steps自增为当前步数t，因此这里先
-	// 对每个state_step减1，保证bias correction使用的步数语义与PyTorch一致。
 	std::vector<at::Tensor> state_steps_adjusted;
 	state_steps_adjusted.reserve(state_steps.size());
 	for (size_t i = 0; i < state_steps.size(); i++) {
