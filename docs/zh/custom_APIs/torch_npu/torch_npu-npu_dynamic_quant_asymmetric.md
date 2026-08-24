@@ -12,7 +12,7 @@
 
 - API功能：
 
-    对输入的张量进行动态非对称量化。支持MoE（Mixture of Experts，混合专家模型）场景。通过`quant_mode`可指定量化模式，支持`pertoken`（默认）、`perchannel`、`pertensor`三种模式。其中`perchannel`和`pertensor`模式仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
+    对输入的张量进行动态非对称量化。支持MoE（Mixture of Experts，混合专家模型）场景。通过`quant_mode`可指定量化模式，支持`pertoken`（默认）、`perchannel`、`pertensor`三种模式。其中`perchannel`和`pertensor`模式仅在<term>Ascend 950PR/Ascend 950DT</term>上支持，详见参数说明。
 
 - 计算公式：
     
@@ -45,8 +45,12 @@ torch_npu.npu_dynamic_quant_asymmetric(x, *, smooth_scales=None, group_index=Non
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`、`quint4x2`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`int8`、`quint4x2`。
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`int8`、`quint4x2`、`hifloat8`、`float8_e5m2`、`float8_e4m3fn`。
-- **quant_mode** (`str`)：可选参数，指定量化模式，支持取值`"pertoken"`（按token粒度）、`"perchannel"`（按通道）、`"pertensor"`（整个张量共用一个scale），默认值为`"pertoken"`。`"perchannel"`和`"pertensor"`模式仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
-- **dst_type_max** (`float`)：可选参数，指定目标数据类型的最大表示值，取值为0.0时使用目标精度能表示的最大值，默认值为0.0。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
+- **quant_mode** (`str`)：可选参数，指定量化模式，默认值为`"pertoken"`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值`"pertoken"`（按token粒度）。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值`"pertoken"`（按token粒度）、`"perchannel"`（按通道）、`"pertensor"`（整个张量共用一个scale）。
+- **dst_type_max** (`float`)：可选参数，指定目标数据类型的最大表示值，取值为0.0时使用目标精度能表示的最大值，默认值为0.0。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值0.0。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值0.0~32768.0，仅在`dst_type`为`hifloat8`时生效。
 
 ## 返回值说明
 
