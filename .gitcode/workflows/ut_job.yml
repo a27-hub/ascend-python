@@ -154,7 +154,7 @@ jobs:
         uses: checkout
         with:
           repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/${{ inputs.pytorch_branch }}
+          ref: refs/heads/${{ steps.check_support.outputs.pytorch_build_branch }}
           path: pytorch
           submodules: true
 
@@ -162,9 +162,12 @@ jobs:
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           ls -al
-          sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/split_by_time.py
-          sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/access_control_test.py
-          cat pytorch/ci/split_by_time.py
+          if [ -f "pytorch/ci/split_by_time.py" ]; then
+            sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/split_by_time.py
+          fi
+          if [ -f "pytorch/ci/access_control_test.py" ]; then
+            sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/access_control_test.py
+          fi
           pip"${{ inputs.py_version }}" list
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
