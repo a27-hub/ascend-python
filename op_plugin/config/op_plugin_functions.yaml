@@ -4299,7 +4299,7 @@ official:
 
   - func: repeat_interleave.Tensor(Tensor repeats, *, SymInt? output_size=None) -> Tensor
     op_api: [v2.2, newest]
- 
+
   - func: replication_pad1d(Tensor self, SymInt[2] padding) -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
