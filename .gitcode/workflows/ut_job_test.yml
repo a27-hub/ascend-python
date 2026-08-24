@@ -46,7 +46,7 @@ jobs:
     select: selected_by_default
     # runs-on: [ self-hosted, arch=arm64, os=euler ]
     # runs-on: [ self-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
-    runs-on: [ self-hosted, npuType=910B2, npuNum=1 ]
+    runs-on: [ self-hosted, npuType=910b2, npuNum=1 ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
