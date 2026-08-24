@@ -154,7 +154,7 @@ jobs:
         uses: checkout
         with:
           repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/${{ inputs.pytorch_branch }}
+          ref: refs/heads/${{ steps.check_support.outputs.pytorch_build_branch }}
           path: pytorch
           submodules: true
 
