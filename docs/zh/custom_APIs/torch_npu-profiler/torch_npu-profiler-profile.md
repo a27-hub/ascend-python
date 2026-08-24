@@ -84,7 +84,7 @@ torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, 
 
 以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 
-torch_npu.profiler.profile采集的性能数据会自动解析到torch_npu.profiler.tensorboard_trace_handler指定的目录，请参见《[MindStudio Insight系统调优](https://gitcode.com/Ascend/msinsight/blob/26.1.0/docs/zh/user_guide/system_tuning.md)》进行可视化展示与分析。
+torch_npu.profiler.profile采集的性能数据会自动解析到torch_npu.profiler.tensorboard_trace_handler指定的目录，请参见《[MindStudio Insight系统调优](https://gitcode.com/Ascend/msinsight/blob/master/docs/zh/user_guide/system_tuning.md)》进行可视化展示与分析。
 
 - 采集性能数据基础示例
 
@@ -94,14 +94,14 @@ torch_npu.profiler.profile采集的性能数据会自动解析到torch_npu.profi
   
   ...
   
-  # 添加Profiling采集扩展配置参数，详细参数介绍可参考下文的参数说明
+  # 添加Profiling采集扩展配置参数，详细参数介绍可参考上文的参数说明
   experimental_config = torch_npu.profiler._ExperimentalConfig(
       export_type=torch_npu.profiler.ExportType.Text,
       profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
       aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone
   )
   
-  # 添加Profiling采集基础配置参数，详细参数介绍可参考下文的参数说明
+  # 添加Profiling采集基础配置参数，详细参数介绍可参考上文的参数说明
   with torch_npu.profiler.profile(
       activities=[
           torch_npu.profiler.ProfilerActivity.CPU,
