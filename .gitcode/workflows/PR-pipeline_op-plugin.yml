@@ -136,6 +136,14 @@ stages:
               else
                 echo "need_build=no" >> "$ATOMGIT_OUTPUT"
               fi
+              echo "${{ steps.filter.outputs.changed_files }}" | tr -d '[]" ' | tr ',' '\n' > modify_files.txt
+              cat modify_files.txt
+          - name: upload modify_files.txt
+            uses: upload-artifact
+            with:
+              name: modify_files.txt
+              path: modify_files.txt
+              overwrite: true
 
   stage_2:
     name: Build
