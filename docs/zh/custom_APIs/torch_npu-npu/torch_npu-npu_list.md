@@ -425,6 +425,11 @@
 <td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p172891387259"><a name="zh-cn_topic_0000001863035964_p172891387259"></a><a name="zh-cn_topic_0000001863035964_p172891387259"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-NPUPluggableAllocator.md">torch_npu.npu.NPUPluggableAllocator</a>。</p>
 </td>
 </tr>
+<tr id="zh-cn_topic_0000001863035964_row1933424017244"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p7819165411226"><a name="zh-cn_topic_0000001863035964_p7819165411226"></a><a name="zh-cn_topic_0000001863035964_p7819165411226"></a><a href="torch_npu-npu-MemPool.md">torch_npu.npu.MemPool</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p172891387260"><a name="zh-cn_topic_0000001863035964_p172891387260"></a><a name="zh-cn_topic_0000001863035964_p172891387260"></a>表示NPU缓存分配器中的一个内存池，可将指定代码区域中的内存申请路由到该内存池。</p>
+</td>
+</tr>
 <tr id="zh-cn_topic_0000001863035964_row12478193618244"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p681913541224"><a name="zh-cn_topic_0000001863035964_p681913541224"></a><a name="zh-cn_topic_0000001863035964_p681913541224"></a>torch_npu.npu.change_current_allocator</p>
 </td>
 <td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p75031810165517"><a name="zh-cn_topic_0000001863035964_p75031810165517"></a><a name="zh-cn_topic_0000001863035964_p75031810165517"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-change_current_allocator.md">torch_npu.npu.change_current_allocator</a>。</p>
