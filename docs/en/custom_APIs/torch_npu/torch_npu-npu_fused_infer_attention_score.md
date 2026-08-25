@@ -161,7 +161,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 - **`num_heads`** (`int`): Optional. Number of heads for `query`. The data type can be `int64`. In `BNSD` scenarios, this value must be identical to the shape of the N axis of `query`. Otherwise, an execution exception occurs.
 - **`scale`** (`float`): Optional. Scaling factor, typically the reciprocal of the square root of `D`, used as a scalar value for Muls in the computation flow. The data type can be `float`. Its data type and the data type of `query` must meet the type deduction rules. The default value is `1.0`.
 - **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `int64`. The default value is `2147483647`. This parameter is invalid when `Q_S` is `1`.
-- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. The data type can be `int64`. The default value is `2147483647`. This parameter is invalid when `Q_S` is `1`.
+- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. The default value is `2147483647`. This parameter is invalid when `Q_S` is `1`.
 - **`input_layout`** (`string`): Optional. Data layout of the input `query`, `key`, and `value`. The default value is `"BSH"`.
 
     > [!NOTE]   

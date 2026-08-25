@@ -14,7 +14,7 @@
 
 ## Function
 
-Implements the Multi-Head Attention (MHA) computation logic in the Transformer module.
+Implements the Multi-head Attention (MHA) computation logic in the Transformer module.
 
 ## Prototype
 

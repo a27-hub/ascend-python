@@ -12,7 +12,7 @@
 
 ## Function
 
-- Performs computation during Multi-Head Latent Attention (MLA) preprocessing in inference scenarios.
+- Performs computation during Multi-head Latent Attention (MLA) preprocessing in inference scenarios.
 
   The main computation flow consists of four separate paths:
 

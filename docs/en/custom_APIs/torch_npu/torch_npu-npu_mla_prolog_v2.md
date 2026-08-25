@@ -12,7 +12,7 @@
 
 ## Function
 
-- Performs computation during Multi-Head Latent Attention (MLA) preprocessing in inference scenarios. The main computation flow consists of five separate paths.
+- Performs computation during Multi-head Latent Attention (MLA) preprocessing in inference scenarios. The main computation flow consists of five separate paths.
     - First, input `x` is multiplied by W<sup>DQ</sup> for downsampling and processed through `RmsNorm`. This output is then split into two distinct paths. In the first path, the tensor is multiplied by W<sup>UQ</sup> and W<sup>UK</sup>, followed by two upsampling operations, to yield q<sup>N</sup>.
     - In the second path, the tensor is multiplied by W<sup>QR</sup> and processed through rotary position embedding (`ROPE`) to yield q<sup>R</sup>.
     - In the third path, input `x` is multiplied by W<sup>DKV</sup> for downsampling, processed through `RmsNorm`, and committed to a cache layer to yield k<sup>C</sup>.
