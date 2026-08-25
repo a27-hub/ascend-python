@@ -99,7 +99,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
         - <term>Atlas 推理系列产品</term>：仅支持传入`None`。
 
     - 列表长度与weight列表长度相同。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：普通量化场景每个张量仅支持1维输入；MX量化scale NZ亲和格式场景支持下述shape。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：普通量化场景每个张量仅支持1维输入；MX量化scale NZ亲和格式场景支持下述storage shape。
     - MX量化场景支持scale NZ亲和格式。单tensor场景下，scale NZ亲和格式的storage shape为$[E, \lceil N/16 \rceil, \lceil K/64 \rceil, 16, 2]$；多tensor场景下，每个scale tensor的storage shape为$[\lceil N_i/16 \rceil, \lceil K_i/64 \rceil, 16, 2]$。
 
 - **offset** (`List[Tensor]`)：可选参数。用于调整量化后的数值偏移量，从而更准确地表示原始浮点数值，对应公式（2）。当前仅支持传入`None`。
@@ -197,6 +197,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
     - 仅支持`weight`不转置场景。
     - 仅支持`group_type`为0，即m轴分组。
     - 暂不支持`float4_e2m1`和`float4_e1m2`场景。
+    - 不支持图模式，仅支持单算子模式和aclnn直调场景。
     - 单tensor场景下，scale NZ亲和格式的storage shape为$[E, \lceil N/16 \rceil, \lceil K/64 \rceil, 16, 2]$；多tensor场景下，每个scale tensor的storage shape为$[\lceil N_i/16 \rceil, \lceil K_i/64 \rceil, 16, 2]$。
 
 - `tuning_config`使用场景限制：
