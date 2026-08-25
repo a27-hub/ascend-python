@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950DT</term>     | √  |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 |<term>Atlas 推理系列加速卡产品</term>  | √   |
@@ -29,11 +30,12 @@
      $$
      y = x @ ANTIQUANT(weight) + bias
      $$
+- <term>Ascend 950DT</term>上支持A16W4数据流：`weight`以`uint8`类型承载4-bit紧凑排布的`int4`/`float4`数据（每字节打包2个4-bit元素），通过`weight_dtype`参数指定其逻辑数据类型，`x`数据类型为`float16`或`bfloat16`。
 
 ## 函数原型
 
 ```python
-torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_offset=None, quant_scale=None, quant_offset=None, bias=None, antiquant_group_size=0, inner_precise=0) -> Tensor
+torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_offset=None, quant_scale=None, quant_offset=None, bias=None, antiquant_group_size=0, inner_precise=0, weight_dtype=None) -> Tensor
 ```
 
 ## 参数说明
@@ -42,11 +44,15 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float16`、`bfloat16`。
+    - <term>Ascend 950DT</term>：数据类型支持`float16`、`bfloat16`。
 
 - **weight** (`Tensor`)：必选参数。即矩阵乘中的右矩阵。对应公式中的$weight$。支持带transpose的非连续的Tensor，支持输入维度为两维\(K, N\)，维度需与`x`保持一致。当数据格式为$ND$时，perchannel场景下为提高性能推荐使用transpose后的`weight`输入。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`int8`。数据格式支持$ND$、$FRACTAL\_NZ$，其中$FRACTAL\_NZ$格式只在“图模式”有效，需依赖接口torch\_npu.npu\_format\_cast完成$ND$到$FRACTAL\_NZ$的转换，可参考[调用示例](#zh-cn_topic_0000001771071862_section14459801435)。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`、`int32`（通过`int32`承载`int4`的输入，可参考[torch\_npu.npu\_convert\_weight\_to\_int4pack](torch_npu-npu_convert_weight_to_int4pack.md)的调用示例）。数据格式支持$ND$、$FRACTAL\_NZ$。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`int8`、`int32`（通过`int32`承载`int4`的输入，可参考[torch\_npu.npu\_convert\_weight\_to\_int4pack](torch_npu-npu_convert_weight_to_int4pack.md)的调用示例）。数据格式支持$ND$、$FRACTAL\_NZ$。
+    - <term>Ascend 950DT</term>：新增支持`uint8`类型，通过`uint8`承载4-bit紧凑排布的`int4`/`float4`输入（每字节打包2个4-bit元素，需通过`weight_dtype`参数指定逻辑数据类型），数据格式支持$ND$、$FRACTAL\_NZ$。
+        - `uint8`承载4-bit紧凑排布场景下，$ND$格式的`weight`可直接输入，无需经过[torch\_npu.npu\_weight\_quant\_preprocess](torch_npu-npu_weight_quant_preprocess.md)预处理；打包方向沿N维（非转置，shape为\(K, N/2\)）或沿K维（转置，shape为\(K/2, N\)）均支持，接口内部按打包方向还原逻辑K/N，要求打包维度的元素个数为偶数。
+        - $FRACTAL\_NZ$格式的`weight`由[torch\_npu.npu\_weight\_quant\_preprocess](torch_npu-npu_weight_quant_preprocess.md)输出，支持NZ\_C0\_8/NZ\_C0\_16分形。
 
 - **antiquant\_scale** (`Tensor`)：必选参数。反量化的缩放因子，用于weight矩阵反量化，对应反量化公式中的$antiquantScale$，数据格式支持$ND$。支持带transpose的非连续的Tensor。`antiquant_scale`支持的shape与量化方式相关：
 
@@ -65,6 +71,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
         - 若输入为`float16`、`bfloat16`，其数据类型需与`x`保持一致。
         - 若输入为`int64`，`x`数据类型必须为`float16`且不带transpose输入，同时`weight`数据类型必须为`int8`、数据格式为$ND$、带transpose输入，可参考[调用示例](#zh-cn_topic_0000001771071862_section14459801435)。此时只支持perchannel场景，M范围为\[1, 96\]，且K和N要求64对齐。
 
+    - <term>Ascend 950DT</term>：`uint8`承载4-bit紧凑排布场景下，数据类型支持`float16`、`bfloat16`（需与`x`保持一致），MXFP4场景下支持`float8_e8m0fnu`（shape为\(ceil\_div\(K, 32\), N\)）。
 - **antiquant\_offset** (`Tensor`)：可选参数。反量化的偏移量，用于weight矩阵反量化。对应反量化公式中的$antiquantOffset$，默认值为None，数据格式支持$ND$，支持带transpose的非连续的Tensor，支持输入维度为两维\(1, N\)或一维\(N, \)、\(1, \)。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`，其数据类型需与`antiquant_scale`保持一致。pergroup场景shape要求为\(ceil\_div\(K, antiquant\_group\_size\), N\)。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int32`。pergroup场景shape要求为\(ceil\_div\(K, antiquant\_group\_size\), N\)。
@@ -75,6 +82,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
         - 若输入为`float16`、`bfloat16`，其数据类型需与`antiquant_scale`保持一致。
         - 若输入为`int32`，`antiquant_scale`的数据类型必须为`int64`。
 
+    - <term>Ascend 950DT</term>：`uint8`承载4-bit紧凑排布的INT4场景下，数据类型支持`float16`、`bfloat16`，需与`antiquant_scale`保持一致；FP4/MXFP4场景下需传入None。
 - **quant\_scale** (`Tensor`)：可选参数。量化的缩放因子，用于输出矩阵的量化，默认值为None，仅在`weight`格式为$ND$时支持。数据类型支持`float32`、`int64`，数据格式支持$ND$，支持输入维度为两维\(1, N\)或一维\(N, \)、\(1, \)。当`antiquant_scale`的数据类型为`int64`时，此参数必须为空。
     - <term>Atlas 推理系列加速卡产品</term>：暂不支持此参数。
 
@@ -85,9 +93,12 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`。当`x`数据类型为`bfloat16`，`bias`需为`float32`；当`x`数据类型为`float16`，`bias`需为`float16`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float16`、`float32`。当`x`数据类型为`bfloat16`，`bias`需为`float32`；当`x`数据类型为`float16`，`bias`需为`float16`。
+    - <term>Ascend 950DT</term>：数据类型支持`float16`、`float32`。当`x`数据类型为`bfloat16`，`bias`需为`float32`；当`x`数据类型为`float16`，`bias`需为`float16`。
 
 - **antiquant\_group\_size** (`int`)：可选参数。用于控制pergroup场景下group大小，其他量化场景不生效。默认值为0，pergroup场景下要求传入值的范围为\[32, K-1\]且必须是32的倍数。
 - **inner\_precise** (`int`)：可选参数。计算模式选择，默认为0。0表示高精度模式，1表示高性能模式，可能会影响精度。当`weight`以`int32`类型且以$FRACTAL\_NZ$格式输入，M不大于16的pergroup场景下可以设置为1，提升性能。其他场景不建议使用高性能模式。
+- **weight\_dtype** (`int`)：可选参数。用于指定`weight`的逻辑数据类型，默认值为None。
+    - <term>Ascend 950DT</term>：当`weight`为`uint8`承载的4-bit紧凑排布输入时必选，取值支持`torch_npu.int4`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`，分别对应`int4`、`float4_e2m1`、`float4_e1m2`的逻辑数据类型；其他场景传入None。
 
 ## 返回值说明<a name="zh-cn_topic_0000001771071862_section22231435517"></a>
 
@@ -107,6 +118,11 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
 - 当输入`weight`为$FRACTAL\_NZ$格式且类型为`int32`时，perchannel场景需满足`weight`为转置输入；pergroup场景需满足`x`为转置输入，`weight`为非转置输入，`antiquant_group_size`为64或128，K为`antiquant_group_size`对齐，N为64对齐。
 - 不支持输入`weight` shape为\(1, 8\)且类型为`int4`，同时`weight`带有transpose的场景，否则会报错`x`矩阵和`weight`矩阵K轴不匹配，该场景建议走非量化算子获取更高精度和性能。
 - 当`antiquant_scale`为`float16`、`bfloat16`，单算子模式要求`x`和`antiquant_scale`数据类型一致，图模式允许不一致，如果出现不一致，接口内部会自行判断是否转换成一致的数据类型。用户可dump图信息查看实际参与计算的数据类型。
+- <term>Ascend 950DT</term>上`uint8`承载4-bit紧凑排布场景还需满足如下约束：
+    - `weight`数据类型必须为`uint8`，且`weight_dtype`必须传入4-bit逻辑数据类型（`torch_npu.int4`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`）。
+    - 4-bit打包维度的元素个数必须为偶数，即沿N打包时N为偶数、沿K打包时K为偶数。
+    - $ND$格式输入时接口内部按`weight`的stride判定打包方向：非转置视图\(K, N/2\)视为沿N打包，转置视图\(K/2, N\)视为沿K打包，并据此还原逻辑K/N。
+    - $FRACTAL\_NZ$格式（NZ\_C0\_8/NZ\_C0\_16分形）输入建议由[torch\_npu.npu\_weight\_quant\_preprocess](torch_npu-npu_weight_quant_preprocess.md)接口输出。
 
 ## 调用示例<a name="zh-cn_topic_0000001771071862_section14459801435"></a>
 
@@ -162,6 +178,25 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
             cpu_antiquantscale = torch.randn((256,1),dtype=torch.float16)
             cpu_antiquantoffset = torch.randint(-128, 127, (256,1), dtype=torch.float16)
             npu_out = torch_npu.npu_weight_quant_batchmatmul(cpu_x.npu(), cpu_weight.npu().transpose(-1, -2), cpu_antiquantscale.npu().transpose(-1, -2), cpu_antiquantoffset.npu().transpose(-1, -2))
+            ```
+
+    - uint8承载4-bit紧凑排布的weight输入场景，仅支持如下产品：
+
+        - <term>Ascend 950DT</term>
+
+            ```python
+            import torch
+            import torch_npu
+            import numpy as np
+            # 输入uint8承载int4+ND，沿N维打包（每字节2个4-bit，低4位为偶数列元素）
+            m, k, n = 16, 256, 128
+            cpu_x = torch.randn((m, k), dtype=torch.float16)
+            cpu_weight_int4 = torch.randint(low=-8, high=8, size=(k, n), dtype=torch.int8)
+            cpu_antiquantscale = torch.randn((n,), dtype=torch.float16)
+            # 逻辑shape (k, n) 的int4数据打包为uint8载体 (k, n//2)
+            w = (cpu_weight_int4.numpy() & 0xF).astype(np.uint8)
+            cpu_weight_packed = torch.from_numpy((w[:, 1::2] << 4) | w[:, 0::2])
+            npu_out = torch_npu.npu_weight_quant_batchmatmul(cpu_x.npu(), cpu_weight_packed.npu(), cpu_antiquantscale.npu(), weight_dtype=torch_npu.int4)
             ```
 
 - 图模式调用
