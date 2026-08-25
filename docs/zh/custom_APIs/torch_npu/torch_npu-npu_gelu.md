@@ -7,8 +7,10 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Atlas 推理系列产品</term>           |    √     |
+|<term>Ascend 950PR/Ascend 950DT</term>           |    √     |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>           |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
+|<term>Atlas 推理系列产品</term>           |    √     |
 |<term>Atlas 训练系列产品</term>   | √   |
 
 ## 功能说明
@@ -30,16 +32,15 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_gelu(input, approximate='none') -> Tensor
+torch_npu.npu_gelu(self, *, approximate='none') -> Tensor
 ```
 
 ## 参数说明
 
-- **input** (`Tensor`)：必选参数，对应公式中的$x$，待进行`npu_gelu`计算的入参，数据格式支持$ND$，支持非连续的Tensor。输入最大支持8维。
-    - <term>Atlas 训练系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bfloat16`。
-    - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
-
+- **self** (`Tensor`)：必选参数，对应公式中的$x$，待进行`npu_gelu`计算的入参，数据格式支持$ND$，支持非连续的Tensor，支持空Tensor。输入最大支持8维。
+    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float32`、`float16`、`bfloat16`。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **approximate** (`str`)：可选参数，字符串类型，计算使用的激活函数模式，可配置为`none`或者`tanh`。其中`none`代表使用erf模式，`tanh`代表使用tanh模式。
 
 ## 返回值说明
@@ -58,25 +59,14 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
 - 单算子模式调用
 
     ```python
-    >>> import torch
-    >>> import torch_npu
-    >>>
-    >>> input_tensor = torch.randn(100, 200)
-    >>> output_tensor = torch_npu.npu_gelu(input_tensor.npu(), approximate='tanh')
-    >>>
-    >>> print(output_tensor)
-    tensor([[ 0.5795, -0.0274, -0.1477,  ...,  0.2422, -0.0843, -0.1154],
-            [-0.0385,  0.8736,  0.1809,  ..., -0.0676,  0.2404,  0.4038],
-            [ 0.0438,  0.0205, -0.1536,  ...,  0.2910,  1.1553,  0.3319],
-            ...,
-            [-0.1698, -0.0031,  0.5120,  ..., -0.1390, -0.0082,  0.6286],
-            [ 0.1980,  0.0535, -0.1685,  ..., -0.1528, -0.1484,  1.0703],
-            [-0.1351,  1.5851, -0.0222,  ..., -0.0230,  1.4319, -0.1700]],
-        device='npu:0')
-    >>> print(output_tensor.shape)
-    torch.Size([100, 200])
-    >>> print(output_tensor.dtype)
-    torch.float32
+    import torch
+    import torch_npu
+
+    input_tensor = torch.randn(100, 200)
+    output_tensor = torch_npu.npu_gelu(input_tensor.npu(), approximate='tanh')
+    print(output_tensor)
+    print(output_tensor.shape)
+    print(output_tensor.dtype)
     ```
 
 - 图模式调用
@@ -108,7 +98,4 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
     model = torch.compile(model, fullgraph=True, backend=npu_backend, dynamic=False)
     npu_out = model(x, approximate="none")    
     print(npu_out.shape, npu_out.dtype)
-
-    # 执行上述代码的输出类似如下
-    torch.Size([100, 10, 20]) torch.float32
     ```
