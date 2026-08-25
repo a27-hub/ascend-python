@@ -915,5 +915,25 @@
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><span>QuantMatmul的二级量化功能，减少精度损失。</span></p></td>
 </tr>
+<tr id="npu_dynamic_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_dynamic_mx_quant"><a name="p_npu_dynamic_mx_quant"></a><a name="p_npu_dynamic_mx_quant"></a><a href="torch_npu-npu_dynamic_mx_quant.md">torch_npu.npu_dynamic_mx_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_dynamic_mx_quant_desc"><a name="p_npu_dynamic_mx_quant_desc"></a><a name="p_npu_dynamic_mx_quant_desc"></a><span>对输入张量进行目的数据类型为FLOAT4类、FLOAT8类的动态对称MX量化。</span></p></td>
+</tr>
+<tr id="npu_dynamic_mx_quant_with_dual_axis"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_dynamic_mx_quant_with_dual_axis"><a name="p_npu_dynamic_mx_quant_with_dual_axis"></a><a name="p_npu_dynamic_mx_quant_with_dual_axis"></a><a href="torch_npu-npu_dynamic_mx_quant_with_dual_axis.md">torch_npu.npu_dynamic_mx_quant_with_dual_axis</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_dynamic_mx_quant_with_dual_axis_desc"><a name="p_npu_dynamic_mx_quant_with_dual_axis_desc"></a><a name="p_npu_dynamic_mx_quant_with_dual_axis_desc"></a><span>在-1轴和-2轴上同时进行目的数据类型为FLOAT4类、FLOAT8类的MX量化。</span></p></td>
+</tr>
+<tr id="npu_grouped_dynamic_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_grouped_dynamic_mx_quant"><a name="p_npu_grouped_dynamic_mx_quant"></a><a name="p_npu_grouped_dynamic_mx_quant"></a><a href="torch_npu-npu_grouped_dynamic_mx_quant.md">torch_npu.npu_grouped_dynamic_mx_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_grouped_dynamic_mx_quant_desc"><a name="p_npu_grouped_dynamic_mx_quant_desc"></a><a name="p_npu_grouped_dynamic_mx_quant_desc"></a><span>根据传入的分组索引的起始值，对各个group以基本块的粒度进行FLOAT4类、FLOAT8类的动态MX量化。</span></p></td>
+</tr>
+<tr id="npu_dynamic_block_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_dynamic_block_mx_quant"><a name="p_npu_dynamic_block_mx_quant"></a><a name="p_npu_dynamic_block_mx_quant"></a><a href="torch_npu-npu_dynamic_block_mx_quant.md">torch_npu.npu_dynamic_block_mx_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_dynamic_block_mx_quant_desc"><a name="p_npu_dynamic_block_mx_quant_desc"></a><a name="p_npu_dynamic_block_mx_quant_desc"></a><span>以数据块（32*32）为基本块进行MX量化转换为目的数据类型。</span></p></td>
+</tr>
+<tr id="npu_gelu_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_gelu_quant"><a name="p_npu_gelu_quant"></a><a name="p_npu_gelu_quant"></a><a href="torch_npu-npu_gelu_quant.md">torch_npu.npu_gelu_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_gelu_quant_desc"><a name="p_npu_gelu_quant_desc"></a><a name="p_npu_gelu_quant_desc"></a><span>将Gelu激活与量化融合，对输入进行Gelu激活后进行量化，输出量化后的结果。</span></p></td>
+</tr>
 </tbody>
 </table>

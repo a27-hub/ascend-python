@@ -157,6 +157,11 @@
         -   [torch_npu.npu_transpose_batchmatmul](./torch_npu/torch_npu-npu_transpose_batchmatmul.md)
         -   [torch_npu.npu_moe_update_expert](./torch_npu/torch_npu-npu_moe_update_expert.md)
         -   [torch_npu.npu_dynamic_block_quant](./torch_npu/torch_npu-npu_dynamic_block_quant.md)
+        -   [torch_npu.npu_dynamic_mx_quant](./torch_npu/torch_npu-npu_dynamic_mx_quant.md)
+        -   [torch_npu.npu_dynamic_mx_quant_with_dual_axis](./torch_npu/torch_npu-npu_dynamic_mx_quant_with_dual_axis.md)
+        -   [torch_npu.npu_grouped_dynamic_mx_quant](./torch_npu/torch_npu-npu_grouped_dynamic_mx_quant.md)
+        -   [torch_npu.npu_dynamic_block_mx_quant](./torch_npu/torch_npu-npu_dynamic_block_mx_quant.md)
+        -   [torch_npu.npu_gelu_quant](./torch_npu/torch_npu-npu_gelu_quant.md)
         -   [torch_npu.set_device_limit](./torch_npu/torch_npu-set_device_limit.md)
         -   [torch_npu.get_device_limit](./torch_npu/torch_npu-get_device_limit.md)
         -   [torch_npu.set_stream_limit](./torch_npu/torch_npu-set_stream_limit.md)
@@ -187,7 +192,7 @@
         -   [torch_npu.npu_fused_linear_online_max_sum](./torch_npu/torch_npu-npu_fused_linear_online_max_sum.md)
         -   [torch_npu.npu_fused_cross_entropy_loss_with_max_sum](./torch_npu/torch_npu-npu_fused_cross_entropy_loss_with_max_sum.md)
         -   [torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward](./torch_npu/torch_npu-npu_fused_linear_cross_entropy_loss_with_max_sum_backward.md)
-        
+
     -   [torch_npu.contrib](./torch_npu-contrib/torch_npu-contrib.md)
         -   [torch_npu.contrib接口列表](./torch_npu-contrib/torch_npu-contrib_list.md)
         -   [（beta）torch_npu.contrib.npu_fused_attention_with_layernorm](./torch_npu-contrib/（beta）torch_npu-contrib-npu_fused_attention_with_layernorm.md)
