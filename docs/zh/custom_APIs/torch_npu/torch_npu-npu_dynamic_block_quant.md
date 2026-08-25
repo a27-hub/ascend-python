@@ -2,12 +2,11 @@
 
 ## 产品支持情况
 
-| 产品                                                      | 是否支持 |
-| --------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品</term>                        |    √     |
-| <term>Atlas A3 推理系列产品</term>                        |    √     |
-| <term>Atlas A2 训练系列产品</term>                        |    √     |
-| <term>Atlas A2 推理系列产品</term> |    √     |
+| 产品 | 是否支持 |
+| --- | --- |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
 
 ## 功能说明
 
@@ -31,7 +30,7 @@
   y = cast\_to\_[FP8/HiF8/INT8](x / scale)
   $$
 
-  其中$block\_reduce\_max$代表求每个`block`中的最大值。`FP8_MAX`、`HiF8_MAX`、`INT8_MAX`分别表示FP8、HiF8、INT8目标量化类型可表示的最大正数值，由`dst_type`决定。
+  其中$block\_reduce\_max$代表求每个`block`中的最大值。`FP8_MAX`、`HiF8_MAX`、`INT8_MAX`分别表示FP8、HiF8、INT8目标量化类型可表示的最大正数值，由`dst_type`决定。当`dst_type_max`不为0时，使用`dst_type_max`的值作为目标类型的最大值。
   FP8、HiF8、INT8均为8-bit低精度量化目标类型，分别表示FP8浮点、HiF8浮点和INT8整数格式。当前支持的最大值如下：
 
   | 目标类型 | 最大正数值 |
@@ -43,17 +42,26 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128) -> (Tensor, Tensor)
+torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128, dst_type_max=0.0) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
 
-- **x** (`Tensor`)：必选参数，输入张量，数据类型支持`float16`、`bfloat16`，支持非连续的Tensor，数据格式支持ND。当前shape支持2维和3维。
+- **x** (`Tensor`)：必选参数，输入张量，数据类型支持`float16`、`bfloat16`，支持非连续的Tensor，数据格式支持ND。当前shape支持2维和3维。不支持空Tensor。
 - **min_scale** (`float`)：可选参数，参与`scale`计算的最小`scale`值。当前支持取值大于等于0。
-- **round_mode** (`str`)：可选参数，指定类型转换到输出的转换方式。当前仅支持取值`rint`。
-- **dst_type** (`int`)：可选参数，指定输出`y`的数据类型。当前仅支持取值1，表示输出`y`的数据类型为`int8`。
-- **row_block_size** (`int`)：可选参数，指定单个量化的数据块的行大小。当前仅支持取值1。
-- **col_block_size** (`int`)：可选参数，指定单个量化的数据块的列大小，当前仅支持取值128。
+- **round_mode** (`str`)：可选参数，指定类型转换到输出的转换方式。当`dst_type`为`int8`、`float8_e4m3fn`、`float8_e5m2`时，仅支持取值`rint`；当`dst_type`为`hifloat8`时，支持取值`rint`、`round`。
+- **dst_type** (`int`)：可选参数，指定输出`y`的数据类型。支持取值1（`int8`）、290（`hifloat8`）、23（`float8_e5m2`）、24（`float8_e4m3fn`）。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值1，表示输出`y`的数据类型为`int8`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值1、290、23、24。
+- **row_block_size** (`int`)：可选参数，指定单个量化的数据块的行大小。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值1。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值1、128、256、512。
+- **col_block_size** (`int`)：可选参数，指定单个量化的数据块的列大小。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值1或128。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值64、128、192、256。
+- **dst_type_max** (`float`)：可选参数，目标数据类型的最大值。当前仅在`dst_type`为`hifloat8`时生效，取值为0.0时表示使用数据类型原始的最大值。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取值0.0。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值0.0、15.0、56.0、224.0、32768.0。
 
 ## 返回值说明
 
