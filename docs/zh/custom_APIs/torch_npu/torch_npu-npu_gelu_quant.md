@@ -55,7 +55,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_gelu_quant(self, *, input_scale=None, input_offset=None, approximate="none", quant_mode="dynamic", dst_type=1, round_mode="rint") -> (Tensor, Tensor)
+torch_npu.npu_gelu_quant(self, *, input_scale=None, input_offset=None, approximate="none", quant_mode="dynamic", dst_type=None, round_mode="rint") -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -67,7 +67,7 @@ torch_npu.npu_gelu_quant(self, *, input_scale=None, input_offset=None, approxima
 - **approximate** (`str`)：可选参数，Gelu激活函数的模式，支持取值`"none"`、`"tanh"`，默认值为`"none"`。
 - **quant_mode** (`str`)：可选参数，量化的模式，支持取值`"static"`（静态量化）、`"dynamic"`（动态量化），默认值为`"dynamic"`。
 - **round_mode** (`str`)：可选参数，数据转换的模式。当`dst_type`为`int8`、`float8_e4m3fn`、`float8_e5m2`时，仅支持取值`"rint"`；当`dst_type`为`hifloat8`时，支持取值`"round"`、`"hybrid"`。默认值为`"rint"`。
-- **dst_type** (`int`)：可选参数，指定量化后输出y的数据类型。支持取值1（`int8`）、290（`hifloat8`）、23（`float8_e5m2`）、24（`float8_e4m3fn`），默认值为1。
+- **dst_type** (`int`)：可选参数，指定量化后输出y的数据类型。支持取值1（`int8`）、290（`hifloat8`）、23（`float8_e5m2`）、24（`float8_e4m3fn`），默认值为`None`，表示`int8`。
 
 ## 返回值说明
 

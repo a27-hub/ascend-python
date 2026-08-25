@@ -16,12 +16,12 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_points=None, axis=-2, quant_axis=-1, reduce='update', dst_type=1, round_mode='rint') -> Tensor
+torch_npu.npu_quant_scatter(self, indices, updates, quant_scales, quant_zero_points=None, axis=-2, quant_axis=-1, reduce='update', dst_type=None, round_mode='rint') -> Tensor
 ```
 
 ## 参数说明
 
-- **input** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，维数只能是3~8维。
+- **self** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，维数只能是3~8维。
     - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品：数据类型支持`int8`。
 - **indices** (`Tensor`)：必选输入，索引张量，数据类型支持`int32`，数据格式支持$ND$，支持非连续的Tensor。
 - **updates** (`Tensor`)：必选输入，更新数据张量，数据格式支持$ND$，支持非连续的Tensor。
@@ -39,7 +39,7 @@ torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_po
 - **axis** (`int`)：可选参数，`updates`上用来更新的轴，默认值为`-2`。
 - **quant_axis** (`int`)：可选参数，`updates`上用来量化的轴，默认值为`-1`。
 - **reduce** (`str`)：可选参数，表示数据操作方式；当前只支持`'update'`，即更新操作。
-- **dst_type** (`int`)：可选参数，指定输出`input`的数据类型，默认值为1（`int8`）。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
+- **dst_type** (`int`)：可选参数，指定输出`self`的数据类型，默认值为`None`，表示`int8`。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
 - **round_mode** (`str`)：可选参数，指定量化时的取整方式，支持取值`"rint"`，默认值为`"rint"`。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
 
 ## 返回值说明

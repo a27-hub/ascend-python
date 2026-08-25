@@ -27,12 +27,12 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True) -> Tensor
+torch_npu.npu_quantize(self, scales, zero_points, dtype, axis=1, div_mode=True) -> Tensor
 ```
 
 ## 参数说明
 
-- **input** (`Tensor`)：必选参数，需要进行量化的源数据张量，对应公式中的`input`。数据格式支持$ND$，支持空Tensor，支持非连续的Tensor。`div_mode`为`False`且`dtype`为`quint4x2`时，最后一维需要能被8整除。
+- **self** (`Tensor`)：必选参数，需要进行量化的源数据张量，对应公式中的`input`。数据格式支持$ND$，支持空Tensor，支持非连续的Tensor。`div_mode`为`False`且`dtype`为`quint4x2`时，最后一维需要能被8整除。
     - <term>Atlas 推理系列产品</term>：数据类型支持`float`、`float16`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float`、`float16`、`bfloat16`。`div_mode`为`False`时，且当数据类型为`float`时，数据格式支持$NZ$。
 

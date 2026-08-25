@@ -33,12 +33,12 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_dynamic_mx_quant(x, *, axis=-1, round_mode="rint", dst_type=296, block_size=32, scale_alg=0, dst_type_max=0.0, max_low_bound=0.0) -> (Tensor, Tensor)
+torch_npu.npu_dynamic_mx_quant(input, *, axis=-1, round_mode="rint", dst_type=296, block_size=32, scale_alg=0, dst_type_max=0.0, max_low_bound=0.0) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
 
-- **x** (`Tensor`)：必选参数，待量化的输入张量，数据类型支持`float16`、`bfloat16`，shape支持1-7维度，支持非连续的Tensor，数据格式支持ND。当`dst_type`为`float4_e2m1fn_x2`或`float4_e1m2fn_x2`时，x的最后一维必须是偶数。
+- **input** (`Tensor`)：必选参数，待量化的输入张量，数据类型支持`float16`、`bfloat16`，shape支持1-7维度，支持非连续的Tensor，数据格式支持ND。当`dst_type`为`float4_e2m1fn_x2`或`float4_e1m2fn_x2`时，input的最后一维必须是偶数。
 - **\***：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **axis** (`int`)：可选参数，量化发生的轴，取值范围为[-D, D-1]，D为x的维数，默认值为-1。
 - **round_mode** (`str`)：可选参数，数据转换的模式。当`dst_type`为`float4_e2m1fn_x2`或`float4_e1m2fn_x2`时，支持取值`"rint"`、`"floor"`、`"round"`；当`dst_type`为`float8_e4m3fn`或`float8_e5m2`时，仅支持取值`"rint"`。默认值为`"rint"`。
