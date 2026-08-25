@@ -423,6 +423,12 @@ static void prepare_out_weight_offset(QuantContext& ctx) {
     auto offset_sizes = op_infer::array_to_small_vector(ctx.weight_offset.value().sizes());
     ctx.out_weight_offset =
         npu_preparation::apply_tensor_without_format(offset_sizes, ctx.weight_offset.value().options());
+    check_strides_envelope(
+        ctx.weight_offset.value().sizes(), ctx.weight_offset.value().strides(), ctx.out_weight_offset.numel());
+    // 与 prepare_out_weight_scale 同理：保持与输入 offset 相同的 strides，
+    // 转置场景下游 wqbmmv2 要求 antiquantOffset 与 weight 连续/转置状态一致，连续输入时为空操作
+    ctx.out_weight_offset = ctx.out_weight_offset.as_strided_(
+        offset_sizes, op_infer::array_to_small_vector(ctx.weight_offset.value().strides()));
   }
 }
 
