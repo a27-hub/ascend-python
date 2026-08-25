@@ -45,7 +45,7 @@ torch_npu.npu_fusion_attention_v3(query, key, value, head_num, input_layout, pse
     >If the operator detects an invalid row scenario (for example, when `sparse_mode` is `3` and `Sq` is greater than `Skv`), invalid row computation is automatically enabled.
 
 - **`prefix`** (`List[int]`): Optional. `N` value of each batch in the prefix sparse computation scenario. The data type can be `int64`. The data layout can be ND. For details about the overall constraints, see [Constraints](#en-us_topic_0000001742717129_section12345537164214).
-- **`actual_seq_qlen`** (`Tensor`): Optional. This parameter must be provided in varlen scenarios as a one-dimensional CPU `Tensor`. representing the cumulative sequence length of each `S` dimension in `query`. The data type can be `int64`. The data layout can be ND. For details about the overall constraints, see [Constraints](#en-us_topic_0000001742717129_section12345537164214).
+- **`actual_seq_qlen`** (`Tensor`): Optional. This parameter must be provided in varlen scenarios as a one-dimensional CPU `Tensor`, representing the cumulative sequence length of each `S` dimension in `query`. The data type can be `int64`. The data layout can be ND. For details about the overall constraints, see [Constraints](#en-us_topic_0000001742717129_section12345537164214).
 
     For example, if the actual sequence lengths are `2`, `2`, `2`, `2`, and `2`, then `actual_seq_qlen` must be `2`, `4`, `6`, `8`, and `10`.
 
@@ -163,7 +163,7 @@ Six outputs are generated in the following types: `Tensor`, `Tensor`, `Tensor`, 
     - The value of `T` (`B` * `S`) must range from 1 to 1M.
     - Padding is not supported for the `atten_mask` input. That is, no row in `atten_mask` can be entirely filled with `1`.
 
-- `N` of the input `query` can be different from `N` of the `key` or `value`, but they must be proportional. That is, `Nq/Nkv` must be a non-zero integer and the value of `Nq` ranges from 1 to 256. When the ratio of `Nq` to `Nkv` is greater than 1, Grouped-Query Attention (GQA) is enabled. When the ratio of `Nq` to `Nkv` is 1, Multi-Head Attention (MHA) is enabled.
+- `N` of the input `query` can be different from `N` of the `key` or `value`, but they must be proportional. That is, `Nq/Nkv` must be a non-zero integer and the value of `Nq` ranges from 1 to 256. When the ratio of `Nq` to `Nkv` is greater than 1, Grouped-Query Attention (GQA) is enabled. When the ratio of `Nq` to `Nkv` is 1, Multi-head Attention (MHA) is enabled.
 
     > [!NOTE]  
     > Unless otherwise specified, `N` refers to `Nq` in this document.

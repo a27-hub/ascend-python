@@ -40,7 +40,7 @@ at::Tensor embedding_symint(
     output_size.emplace_back(weight.size(weight.dim() - 1));
     // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, weight.options());
-    // calculate the output resugt of the NPU
+    // calculate the output result of the NPU
     EXEC_NPU_CMD(aclnnEmbedding, weight, indices, result);
     return result;
 }

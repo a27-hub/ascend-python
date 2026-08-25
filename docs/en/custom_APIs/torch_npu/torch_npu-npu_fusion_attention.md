@@ -170,7 +170,7 @@ Seven outputs are generated in the following types: `Tensor`, `Tensor`, `Tensor`
     - The value of `T` (`B` * `S`) must range from 1 to 1M.
     - Padding is not supported for the `atten_mask` input. That is, no row in `atten_mask` can be entirely filled with `1`.
 
-- `N` of the input `query` can be different from `N` of the `key` or `value`, but they must be proportional. That is, `Nq/Nkv` must be a non-zero integer and the value of `Nq` ranges from 1 to 256. When the ratio of `Nq` to `Nkv` is greater than 1, Grouped-Query Attention (GQA) is enabled. When the ratio of `Nq` to `Nkv` is 1, Multi-Head Attention (MHA) is enabled.
+- `N` of the input `query` can be different from `N` of the `key` or `value`, but they must be proportional. That is, `Nq/Nkv` must be a non-zero integer and the value of `Nq` ranges from 1 to 256. When the ratio of `Nq` to `Nkv` is greater than 1, Grouped-Query Attention (GQA) is enabled. When the ratio of `Nq` to `Nkv` is 1, Multi-head Attention (MHA) is enabled.
 
     > [!NOTE]  
     > Unless otherwise specified, `N` refers to `Nq` in this document.
