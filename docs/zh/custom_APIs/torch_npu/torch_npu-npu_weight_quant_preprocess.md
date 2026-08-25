@@ -93,73 +93,74 @@ torch_npu.npu_weight_quant_preprocess(
 
 ## 调用示例
 
-- 单算子模式调用（MM_MX_A8W4数据流）
+- 单算子模式调用
+    - MM_MX_A8W4数据流场景
 
-    ```python
-    import torch
-    import torch_npu
+        ```python
+        import torch
+        import torch_npu
 
-    # MM_MX_A8W4 数据流示例
-    k = 64  # 逻辑K维长度
-    n = 128
-    packed_k = k // 2
-    k_scale = (k + 63) // 64
+        # MM_MX_A8W4 数据流示例
+        k = 64  # 逻辑K维长度
+        n = 128
+        packed_k = k // 2
+        k_scale = (k + 63) // 64
 
-    # weight: FLOAT4_E2M1，每个 uint8 打包2个FP4数据
-    # logical shape: {K, N}, view: {K/2, N}, storage: {N, K/2}
-    cpu_weight = torch.randint(0, 255, (n, packed_k), dtype=torch.uint8)
-    weight = cpu_weight.npu().transpose(0, 1)
+        # weight: FLOAT4_E2M1，每个 uint8 打包2个FP4数据
+        # logical shape: {K, N}, view: {K/2, N}, storage: {N, K/2}
+        cpu_weight = torch.randint(0, 255, (n, packed_k), dtype=torch.uint8)
+        weight = cpu_weight.npu().transpose(0, 1)
 
-    # weight_scale: FLOAT8_E8M0, 3-D transposed
-    # view: {ceil_div(K, 64), N, 2}, storage: {N, ceil_div(K, 64), 2}
-    cpu_scale = torch.randint(0, 255, (n, k_scale, 2), dtype=torch.uint8)
-    weight_scale = cpu_scale.npu().transpose(0, 1)
+        # weight_scale: FLOAT8_E8M0, 3-D transposed
+        # view: {ceil_div(K, 64), N, 2}, storage: {N, ceil_div(K, 64), 2}
+        cpu_scale = torch.randint(0, 255, (n, k_scale, 2), dtype=torch.uint8)
+        weight_scale = cpu_scale.npu().transpose(0, 1)
 
-    out_weight, out_weight_scale, out_weight_offset, out_bias = torch_npu.npu_weight_quant_preprocess(
-        weight,
-        weight_scale,
-        x_dtype=torch.float8_e4m3fn,
-        weight_dtype=torch.float4_e2m1fn_x2,
-        weight_scale_dtype=torch.float8_e8m0fnu,
-        weight_offset=None,
-        bias=None,
-        x_scale_dtype=torch.float8_e8m0fnu,
-        k_group_size=32
-    )
-    ```
+        out_weight, out_weight_scale, out_weight_offset, out_bias = torch_npu.npu_weight_quant_preprocess(
+            weight,
+            weight_scale,
+            x_dtype=torch.float8_e4m3fn,
+            weight_dtype=torch.float4_e2m1fn_x2,
+            weight_scale_dtype=torch.float8_e8m0fnu,
+            weight_offset=None,
+            bias=None,
+            x_scale_dtype=torch.float8_e8m0fnu,
+            k_group_size=32
+        )
+        ```
 
-- 单算子模式调用（GMM_MX_A8W4数据流）
+    - GMM_MX_A8W4数据流场景
 
-    ```python
-    import torch
-    import torch_npu
+        ```python
+        import torch
+        import torch_npu
 
-    # GMM_MX_A8W4 数据流示例
-    g = 4
-    k = 64  # 逻辑K维长度
-    n = 128
-    packed_k = k // 2
-    k_scale = (k + 63) // 64
+        # GMM_MX_A8W4 数据流示例
+        g = 4
+        k = 64  # 逻辑K维长度
+        n = 128
+        packed_k = k // 2
+        k_scale = (k + 63) // 64
 
-    # weight: FLOAT4_E2M1，每个 uint8 打包2个FP4数据
-    # logical shape: {G, K, N}, view: {G, K/2, N}, storage: {G, N, K/2}
-    cpu_weight = torch.randint(0, 255, (g, n, packed_k), dtype=torch.uint8)
-    weight = cpu_weight.npu().transpose(1, 2)
+        # weight: FLOAT4_E2M1，每个 uint8 打包2个FP4数据
+        # logical shape: {G, K, N}, view: {G, K/2, N}, storage: {G, N, K/2}
+        cpu_weight = torch.randint(0, 255, (g, n, packed_k), dtype=torch.uint8)
+        weight = cpu_weight.npu().transpose(1, 2)
 
-    # weight_scale: FLOAT8_E8M0, 4-D transposed
-    # view: {G, ceil_div(K, 64), N, 2}, storage: {G, N, ceil_div(K, 64), 2}
-    cpu_scale = torch.randint(0, 255, (g, n, k_scale, 2), dtype=torch.uint8)
-    weight_scale = cpu_scale.npu().transpose(1, 2)
+        # weight_scale: FLOAT8_E8M0, 4-D transposed
+        # view: {G, ceil_div(K, 64), N, 2}, storage: {G, N, ceil_div(K, 64), 2}
+        cpu_scale = torch.randint(0, 255, (g, n, k_scale, 2), dtype=torch.uint8)
+        weight_scale = cpu_scale.npu().transpose(1, 2)
 
-    out_weight, out_weight_scale, out_weight_offset, out_bias = torch_npu.npu_weight_quant_preprocess(
-        weight,
-        weight_scale,
-        x_dtype=torch.float8_e4m3fn,
-        weight_dtype=torch.float4_e2m1fn_x2,
-        weight_scale_dtype=torch.float8_e8m0fnu,
-        weight_offset=None,
-        bias=None,
-        x_scale_dtype=torch.float8_e8m0fnu,
-        k_group_size=32
-    )
-    ```
+        out_weight, out_weight_scale, out_weight_offset, out_bias = torch_npu.npu_weight_quant_preprocess(
+            weight,
+            weight_scale,
+            x_dtype=torch.float8_e4m3fn,
+            weight_dtype=torch.float4_e2m1fn_x2,
+            weight_scale_dtype=torch.float8_e8m0fnu,
+            weight_offset=None,
+            bias=None,
+            x_scale_dtype=torch.float8_e8m0fnu,
+            k_group_size=32
+        )
+        ```
