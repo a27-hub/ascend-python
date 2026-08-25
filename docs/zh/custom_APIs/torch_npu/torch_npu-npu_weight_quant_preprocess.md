@@ -2,7 +2,6 @@
 
 ## 产品支持情况
 
-
 | 产品                                   | 是否支持 |
 | -------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term> |    √    |
@@ -110,6 +109,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
       k_group_size=32
   )
   ```
+
 - GMM_MX_A8W4数据流场景
 
   ```python
