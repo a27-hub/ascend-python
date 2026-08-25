@@ -142,6 +142,8 @@ void _fused_adam_(
 		state_steps_adjusted.emplace_back(state_steps[i].sub(1));
 	}
 	at::TensorList state_steps_list(state_steps_adjusted);
+	const at::Tensor grad_scale_tensor = grad_scale.value_or(at::Tensor());
+	const at::Tensor found_inf_tensor = found_inf.value_or(at::Tensor());
 
 	EXEC_NPU_CMD(
 		aclnnFusedAdam,
@@ -151,8 +153,8 @@ void _fused_adam_(
 		exp_avg_sqs,
 		max_exp_avg_sqs,
 		state_steps_list,
-		grad_scale.value_or(at::Tensor()),
-		found_inf.value_or(at::Tensor()),
+		grad_scale_tensor,
+		found_inf_tensor,
 		lr,
 		beta1,
 		beta2,
