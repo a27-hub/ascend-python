@@ -88,7 +88,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
   } else {
     TORCH_CHECK(
         IsSupportSparseFlashAttentionNoneValue(),
-        "npu_sparse_flash_attention_grad: value=None is only supported on A2/A3 SoC with CANN >= 9.2.0.",
+        "npu_sparse_flash_attention_grad: value=None is only supported with CANN >= 9.2.0.",
         OPS_ERROR(ErrCode::NOT_SUPPORT));
   }
   at::Tensor d_query = OpPreparation::apply_tensor_without_format(query);
