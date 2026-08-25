@@ -94,12 +94,13 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
     - 支持的数据类型如下：
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
             - 当`group_list`输入类型为`List[int]`时，支持`int64`。
-            - 当`group_list`输入类型为`Tensor`时，支持`float32`、`bfloat16`和`int64`。
+            - 当`group_list`输入类型为`Tensor`时，支持`float32`、`bfloat16`、`int64`和`float8_e8m0fnu`。其中`float8_e8m0fnu`仅支持MX量化场景，可按scale NZ亲和格式输入。
 
         - <term>Atlas 推理系列产品</term>：仅支持传入`None`。
 
     - 列表长度与weight列表长度相同。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：每个张量仅支持1维输入。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：普通量化场景每个张量仅支持1维输入；MX量化scale NZ亲和格式场景支持下述shape。
+    - MX量化场景支持scale NZ亲和格式。单tensor场景下，scale的逻辑shape为$[E, \lceil K/64 \rceil, N, 2]$，转换为scale NZ亲和格式后的storage shape为$[E, \lceil N/16 \rceil, \lceil K/64 \rceil, 16, 2]$；多tensor场景下，每个scale tensor的逻辑shape为$[\lceil K_i/64 \rceil, N_i, 2]$，转换为scale NZ亲和格式后的storage shape为$[\lceil N_i/16 \rceil, \lceil K_i/64 \rceil, 16, 2]$。
 
 - **offset** (`List[Tensor]`)：可选参数。用于调整量化后的数值偏移量，从而更准确地表示原始浮点数值，对应公式（2）。当前仅支持传入`None`。
 - **antiquant_scale** (`List[Tensor]`)：可选参数。用于缩放原数值以匹配伪量化后的范围值，代表伪量化参数中的缩放因子，对应公式（4）。
@@ -189,6 +190,14 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：内轴限制InnerLimit为65536。
 - `x`和`weight`中每一组tensor的最后一维大小都应小于InnerLimit。x<sub>i</sub>的最后一维指当x不转置时<code>x<sub>i</sub></code>的K轴或当`x`转置时<code>x<sub>i</sub></code>的$M$轴。<code>weight<sub>i</sub></code>的最后一维指当`weight`不转置时<code>weight<sub>i</sub></code>的$N$轴或当`weight`转置时<code>weight<sub>i</sub></code>的$K$轴。
 
+- scale NZ亲和格式使用约束：
+    - 仅支持MX量化场景，`scale`数据类型为`float8_e8m0fnu`。
+    - 仅支持`weight`为NZ格式的场景，`weight`数据类型支持`float8_e4m3fn`和`float8_e5m2`。
+    - 仅支持`weight`不转置场景。
+    - 仅支持`group_type`为0，即m轴分组。
+    - 暂不支持`float4_e2m1`和`float4_e1m2`场景。
+    - scale NZ亲和格式仅改变scale的storage shape，scale的逻辑shape仍按MX量化scale语义描述。单tensor场景逻辑shape为$[E, \lceil K/64 \rceil, N, 2]$，storage shape为$[E, \lceil N/16 \rceil, \lceil K/64 \rceil, 16, 2]$；多tensor场景每个scale tensor逻辑shape为$[\lceil K_i/64 \rceil, N_i, 2]$，storage shape为$[\lceil N_i/16 \rceil, \lceil K_i/64 \rceil, 16, 2]$。
+
 - `tuning_config`使用场景限制：
 
     仅在量化场景（输入`int8`，输出为`int32`/`bfloat16`/`float16`/`int8`，数据类型如下表），且为单tensor单专家的场景下使用。
@@ -231,6 +240,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
             |pertoken全量化|`int8`|`int8`|`int32`|`float32`|无需赋值|无需赋值|`float32`|`float16`|`float16`|
             |pertoken全量化|`int4`|`int4`|无需赋值|`uint64`|无需赋值|无需赋值|None/`float32`|`float16`|`float16`|
             |pertoken全量化|`int4`|`int4`|无需赋值|`uint64`|无需赋值|无需赋值|None/`float32`|`bfloat16`|`bfloat16`|
+            |MX量化|`float8_e4m3fn`/`float8_e5m2`|`float8_e4m3fn`/`float8_e5m2`|无需赋值|`float8_e8m0fnu`/scale NZ亲和格式|无需赋值|无需赋值|`float8_e8m0fnu`|None/`float16`/`bfloat16`/`float32`|`float16`/`bfloat16`/`float32`|
             |伪量化|`float16`|`int8`/`int4`|`float16`|无需赋值|`float16`|`float16`|无需赋值|None/`float16`|`float16`|
             |伪量化|`bfloat16`|`int8`/`int4`|`float32`|无需赋值|`bfloat16`|`bfloat16`|无需赋值|None/`bfloat16`|`bfloat16`|
 
@@ -341,6 +351,29 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
         output = torch_npu.npu_grouped_matmul([x_quant], [weight_quant], scale=[scale], per_token_scale=[per_token_scale],
                                                 group_list=group_list, group_list_type=0, group_type=0,
                                                 split_item=3, output_dtype=torch.float16)
+        ```
+
+    - MX量化场景下，scale按NZ亲和格式输入的调用示例如下：
+
+        ```python
+        import torch
+        import torch_npu
+
+        E, M, K, N = 1, 512, 4096, 4096
+        scale_k = (K + 63) // 64
+
+        x = torch.randn((M, K), device="npu", dtype=torch.float8_e4m3fn)
+        weight_nd = torch.randn((E, K, N), device="npu", dtype=torch.float8_e4m3fn)
+        weight_nz = torch_npu.npu_format_cast(weight_nd, 29)
+
+        scale_nd = torch.empty((E, scale_k, N, 2), device="npu", dtype=torch.float8_e8m0fnu)
+        scale_nz = torch_npu.npu_format_cast(scale_nd, 29)
+
+        group_list = torch.tensor([M], device="npu", dtype=torch.int64)
+        output = torch_npu.npu_grouped_matmul([x], [weight_nz], scale=[scale_nz],
+                                              group_list=group_list, group_list_type=0,
+                                              group_type=0, split_item=3,
+                                              output_dtype=torch.float16)
         ```
 
 - 图模式调用
