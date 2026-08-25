@@ -57,7 +57,7 @@ torch_npu.npu_dynamic_mx_quant(input, *, axis=-1, round_mode="rint", dst_type=29
 
 - 该接口支持训练、推理场景下使用。
 - 该接口支持单算子模式和图模式调用。
-- 输入`x`和输出`mxscale`的shape约束关系：
+- 输入`input`和输出`mxscale`的shape约束关系：
   - rank(mxscale) = rank(x) + 1
   - axis_change = axis if axis >= 0 else axis + rank(x)
   - mxscale.shape[axis_change] = (ceil(x.shape[axis] / block_size) + 2 - 1) / 2

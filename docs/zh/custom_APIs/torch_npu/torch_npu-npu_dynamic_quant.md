@@ -12,7 +12,7 @@
 
 - API功能：对输入的张量进行pertoken对称动态量化。
 
-    如果是MoE（Mixture of Experts，混合专家模型）场景，会引入`group_index`，`smooth_scales`中包含多组smooth向量，按`group_index`中的数值作用到`x`的不同行上。具体地，假如`x`包含m个token，`smooth_scales`有n行，`smooth_scales[0]`会作用到`x[0:group_index[0]]`上，`smooth_scales[i]`会作用到`x[group_index[i-1]: group_index[i]]`上，`i=1, 2, ..., n-1`。
+    如果是MoE（Mixture of Experts，混合专家模型）场景，会引入`group_index`，`smooth_scales`中包含多组smooth向量，按`group_index`中的数值作用到`input`的不同行上。具体地，假如`input`包含m个token，`smooth_scales`有n行，`smooth_scales[0]`会作用到`input[0:group_index[0]]`上，`smooth_scales[i]`会作用到`input[group_index[i-1]: group_index[i]]`上，`i=1, 2, ..., n-1`。
 
     通过`quant_mode`可指定量化模式，支持`pertoken`（默认）、`perchannel`、`pertensor`三种模式。其中`pertoken`表示按token粒度量化，`perchannel`表示按通道量化，`pertensor`表示对整个张量使用同一个scale量化。`perchannel`和`pertensor`模式仅在<term>Ascend 950PR/Ascend 950DT</term>上支持，详见参数说明。
 
@@ -56,8 +56,8 @@ torch_npu.npu_dynamic_quant(input, *, smooth_scales=None, group_index=None, dst_
 
 ## 返回值说明
 
-- **y** (`Tensor`)：量化后的输出Tensor，数据类型由`dst_type`指定。当`dst_type`是`quint4x2`时，`y`的数据类型为`int32`，形状最后一维为`x`最后一维除以8，其余维度与`x`一致，每个`int32`元素包含8个`int4`结果。其他场景下`y`形状与输入`x`一致，数据类型由`dst_type`指定。
-- **scale** (`Tensor`)：对称动态量化过程中计算出的缩放系数，数据类型为`float32`。当`quant_mode`为`"pertoken"`时，形状为`x`的形状剔除最后一维；当`quant_mode`为`"perchannel"`时，形状为`x`的形状剔除倒数第二维，最后一维保持与`x`一致；当`quant_mode`为`"pertensor"`时，形状为`(1,)`。
+- **y** (`Tensor`)：量化后的输出Tensor，数据类型由`dst_type`指定。当`dst_type`是`quint4x2`时，`y`的数据类型为`int32`，形状最后一维为`input`最后一维除以8，其余维度与`input`一致，每个`int32`元素包含8个`int4`结果。其他场景下`y`形状与输入`input`一致，数据类型由`dst_type`指定。
+- **scale** (`Tensor`)：对称动态量化过程中计算出的缩放系数，数据类型为`float32`。当`quant_mode`为`"pertoken"`时，形状为`input`的形状剔除最后一维；当`quant_mode`为`"perchannel"`时，形状为`input`的形状剔除倒数第二维，最后一维保持与`input`一致；当`quant_mode`为`"pertensor"`时，形状为`(1,)`。
 
 ## 约束说明
 
@@ -66,13 +66,13 @@ torch_npu.npu_dynamic_quant(input, *, smooth_scales=None, group_index=None, dst_
 - 该接口支持MoE场景。
 
 - 使用`smooth_scales`时：
-    - 若不使用`group_index`，`smooth_scales`必须是一维Tensor，元素数量与`x`的最后一维大小一致。
-    - 若使用`group_index`，`smooth_scales`必须是二维Tensor，第二维元素数量与`x`的最后一维大小一致，`group_index`必须是一维数组，元素数量与`smooth_scales`第一维一致。`group_index`中的元素必须是单调递增的，其最后一个元素的值，应等于`x`的元素数量除以`x`的最后一个维度。
+    - 若不使用`group_index`，`smooth_scales`必须是一维Tensor，元素数量与`input`的最后一维大小一致。
+    - 若使用`group_index`，`smooth_scales`必须是二维Tensor，第二维元素数量与`input`的最后一维大小一致，`group_index`必须是一维数组，元素数量与`smooth_scales`第一维一致。`group_index`中的元素必须是单调递增的，其最后一个元素的值，应等于`input`的元素数量除以`input`的最后一个维度。
 
 ## 调用示例
 
 - 单算子模式调用
-    - 只有一个输入`x`
+    - 只有一个输入`input`
 
         ```python
         >>> import torch

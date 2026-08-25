@@ -58,7 +58,7 @@ torch_npu.npu_dynamic_block_mx_quant(input, *, round_mode="rint", dst_type=296, 
 - 该接口支持单算子模式和图模式调用。
 - 输入x的维度必须为2-3。
 - 该接口为确定性实现。
-- 输入`x`和输出`scale1`、`scale2`的shape约束关系：
+- 输入`input`和输出`scale1`、`scale2`的shape约束关系：
   - rank(scale1) = rank(x) + 1
   - rank(scale2) = rank(x) + 1
   - scale1.shape[-2] = (ceil(x.shape[-1] / 32) + 2 - 1) / 2

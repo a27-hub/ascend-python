@@ -68,7 +68,7 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 - 该接口支持训练、推理场景下使用。
 - 该接口支持单算子模式和图模式调用。
 - 输入x的维度必须大于等于2。
-- 输入`x`和输出`mxscale1`、`mxscale2`的shape约束关系：
+- 输入`input`和输出`mxscale1`、`mxscale2`的shape约束关系：
   - rank(mxscale1) = rank(x) + 1
   - rank(mxscale2) = rank(x) + 1
   - mxscale1.shape[-2] = (ceil(x.shape[-1] / 32) + 2 - 1) / 2
