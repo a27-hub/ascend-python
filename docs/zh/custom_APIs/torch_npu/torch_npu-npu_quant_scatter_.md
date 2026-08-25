@@ -4,22 +4,24 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term> | √   |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √   |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √   |
 |<term>Atlas 推理系列产品</term> | √   |
 
 ## 功能说明
 
-先将`updates`进行量化，然后将`updates`中的值按指定的轴`axis`和索引`indices`更新`input`中的值，`input`中的数据被改变。
+先将`updates`进行量化，然后将`updates`中的值按指定的轴`axis`和索引`indices`更新`self`中的值，`self`中的数据被改变。
 
 ## 函数原型
 
 ```python
-torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_points=None, axis=-2, quant_axis=-1, reduce='update') -> Tensor
+torch_npu.npu_quant_scatter_(self, indices, updates, quant_scales, quant_zero_points=None, axis=-2, quant_axis=-1, reduce='update', dst_type=None, round_mode='rint') -> Tensor
 ```
 
 ## 参数说明
 
-- **input** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，维数只能是3~8维。
+- **self** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，维数只能是3~8维。
     - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品：数据类型支持`int8`。
 - **indices** (`Tensor`)：必选输入，索引张量，数据类型支持`int32`，数据格式支持$ND$，支持非连续的Tensor。
 - **updates** (`Tensor`)：必选输入，更新数据张量，数据格式支持$ND$，支持非连续的Tensor。
@@ -37,19 +39,21 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
 - **axis** (`int`)：可选参数，`updates`上用来更新的轴，默认值为`-2`。
 - **quant_axis** (`int`)：可选参数，`updates`上用来量化的轴，默认值为`-1`。
 - **reduce** (`str`)：可选参数，表示数据操作方式；当前只支持`update`，即更新操作。
+- **dst_type** (`int`)：可选参数，指定输出`self`的数据类型，默认值为`None`，表示`int8`。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
+- **round_mode** (`str`)：可选参数，指定量化时的取整方式，支持取值`"rint"`，默认值为`"rint"`。仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
 
 ## 返回值说明
 
 `Tensor`
 
-代表`input`被更新后的结果。
+代表`self`被更新后的结果。
 
 ## 约束说明
 
 - 该接口支持图模式。
 
-- `indices`的维数只能是1维或者2维；如果是2维，其第2维的大小必须是2；不支持索引越界，用户需自行确保索引合法，框架不进行越界检查；`indices`映射的`input`数据段不能重合，若重合则会因为多核并发原因导致多次执行结果不一样。
-- `updates`的维数需要与`input`的维数一样；其第1维的大小等于`indices`的第1维的大小，且不大于`input`的第1维的大小；其`axis`轴的大小不大于`input`的`axis`轴的大小；其余维度的大小要跟`input`对应维度的大小相等；其最后一维的大小必须32B对齐。
+- `indices`的维数只能是1维或者2维；如果是2维，其第2维的大小必须是2；不支持索引越界，用户需自行确保索引合法，框架不进行越界检查；`indices`映射的`self`数据段不能重合，若重合则会因为多核并发原因导致多次执行结果不一样。
+- `updates`的维数需要与`self`的维数一样；其第1维的大小等于`indices`的第1维的大小，且不大于`self`的第1维的大小；其`axis`轴的大小不大于`self`的`axis`轴的大小；其余维度的大小要跟`self`对应维度的大小相等；其最后一维的大小必须32B对齐。
 - `quant_scales`的元素个数需要等于`updates`在`quant_axis`轴的大小。
 - `quant_zero_points`的元素个数需要等于`updates`在`quant_axis`轴的大小。
 - `axis`不能为`updates`的第1维或最后1维。
