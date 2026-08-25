@@ -1,0 +1,98 @@
+name: codeql
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: '0 0 2 * * ?'
+
+jobs:
+  codeql-cpp:
+    name: codeql-cpp
+    runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a1_x86_64_builder:20260704
+      # 以 root 运行，便于在容器内安装 pip 依赖
+      options: --user root
+    steps:
+      - name: checkout
+        uses: checkout
+
+      - name: checkout pytorch
+        uses: checkout
+        with:
+          repository: https://gitcode.com/Ascend/pytorch.git
+          ref: refs/heads/master
+          path: pytorch
+          fetch-depth: 1
+
+      - name: install torch
+        run: |
+          set -e
+          TORCH_ARCH="x86_64"
+          torch_version=$(cat pytorch/requirements.txt | grep torch== | cut -c 8-25)
+          nightly_date=${torch_version:10:8}
+          if [ ${#nightly_date} -ne 8 ]; then
+            ver=${torch_version:0:6}
+            url_base="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${ver}"
+          else
+            ver=${torch_version}
+            url_base="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}"
+          fi
+          torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_${TORCH_ARCH}.whl"
+          echo "torch_url=${torch_url}"
+          pip3.10 install $torch_url
+
+      - name: codeql-analysis
+        identifier: codeql
+        uses: codeql-action
+        with:
+          language: "cpp"
+          query-suite: security-and-quality
+          report-path: ./codeql-report.md
+          output-path: ./
+          build-mode: manual
+          build-command: |
+            export MAX_JOBS=$(nproc)
+            bash ci/build.sh --python=3.10 --pytorch=master
+          ram: 8192
+          threads: 0
+          verbose: "true"
+
+      - name: upload sarif to openlibing
+        uses: openlibing-upload-sarif
+        with:
+          sarif_file: ./
+          obs_ak: ${{ secrets.OPENLIBING_OBS_AK }}
+          obs_sk: ${{ secrets.OPENLIBING_OBS_SK }}
+          apig_app_key: ${{ secrets.OPENLIBING_KEY }}
+          apig_app_secret: ${{ secrets.OPENLIBING_SECRET }}
+
+  codeql-python:
+    name: codeql-python
+    runs-on: default
+    steps:
+      - name: checkout
+        uses: checkout
+
+      - name: codeql-analysis
+        identifier: codeql
+        uses: codeql-action
+        with:
+          language: "python"
+          query-suite: security-and-quality
+          report-path: ./codeql-report.md
+          output-path: ./
+          # Python 无需构建，CodeQL 直接对源码做语义分析
+          build-mode: none
+          ram: 8192
+          threads: 0
+          verbose: "true"
+
+      - name: upload sarif to openlibing
+        uses: openlibing-upload-sarif
+        with:
+          sarif_file: ./
+          obs_ak: ${{ secrets.OPENLIBING_OBS_AK }}
+          obs_sk: ${{ secrets.OPENLIBING_OBS_SK }}
+          apig_app_key: ${{ secrets.OPENLIBING_KEY }}
+          apig_app_secret: ${{ secrets.OPENLIBING_SECRET }}
