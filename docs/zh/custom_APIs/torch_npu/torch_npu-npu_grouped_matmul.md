@@ -193,7 +193,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
 - scale NZ亲和格式使用约束：
     - 仅支持MX量化场景，`scale`数据类型为`float8_e8m0fnu`。
     - scale使用NZ亲和格式时，`weight`必须为NZ格式。
-    - `weight`数据类型支持`float8_e4m3fn`和`float8_e5m2`。
+    - `x`和`weight`数据类型仅支持`float8_e4m3fn`。
     - 仅支持`weight`不转置场景。
     - 仅支持`group_type`为0，即m轴分组。
     - 暂不支持`float4_e2m1`和`float4_e1m2`场景。
@@ -242,7 +242,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
             |pertoken全量化|`int8`|`int8`|`int32`|`float32`|无需赋值|无需赋值|`float32`|`float16`|`float16`|
             |pertoken全量化|`int4`|`int4`|无需赋值|`uint64`|无需赋值|无需赋值|None/`float32`|`float16`|`float16`|
             |pertoken全量化|`int4`|`int4`|无需赋值|`uint64`|无需赋值|无需赋值|None/`float32`|`bfloat16`|`bfloat16`|
-            |MX量化|`float8_e4m3fn`/`float8_e5m2`|`float8_e4m3fn`/`float8_e5m2`|无需赋值|`float8_e8m0fnu`/scale NZ亲和格式|无需赋值|无需赋值|`float8_e8m0fnu`|None/`float16`/`bfloat16`/`float32`|`float16`/`bfloat16`/`float32`|
+            |MX量化|`float8_e4m3fn`/`float8_e5m2`|`float8_e4m3fn`/`float8_e5m2`|无需赋值|`float8_e8m0fnu`，scale NZ亲和格式见上方约束|无需赋值|无需赋值|`float8_e8m0fnu`|None/`float16`/`bfloat16`/`float32`|`float16`/`bfloat16`/`float32`|
             |伪量化|`float16`|`int8`/`int4`|`float16`|无需赋值|`float16`|`float16`|无需赋值|None/`float16`|`float16`|
             |伪量化|`bfloat16`|`int8`/`int4`|`float32`|无需赋值|`bfloat16`|`bfloat16`|无需赋值|None/`bfloat16`|`bfloat16`|
 
