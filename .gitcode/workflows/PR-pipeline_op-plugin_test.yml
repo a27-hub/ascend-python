@@ -55,7 +55,7 @@ stages:
               owner: ${{ env.org_name }}
               repo: ${{ env.repo }}
               pr_number: ${{ env.pr_id }}
-              token: ${{ secrets.GIT_TOKEN }}
+              token: ${{ secrets.GIT_TOKEN_LABELS }}
               apply_label: 'true'
 
   stage_1:
@@ -413,11 +413,11 @@ post:
       name: Mark_PR_pipeline_result
       steps:
         - name: Mark PR pipeline result
-          uses: WWQ129/.gitcode/actions/query-pipeline@main
+          uses: cann/.gitcode/actions/query-pipeline@master
           with:
             owner: ${{ env.org_name }}
             repo: ${{ env.repo }}
             run_id: ${{ atomgit.workflow_run_id }}
-            token: ${{ secrets.GIT_TOKEN }}
+            token: ${{ secrets.GIT_TOKEN_LABELS }}
             pr_number: ${{ env.pr_id }}
             apply_label: 'true'
