@@ -132,6 +132,7 @@ jobs:
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
         run: |
           ls -al
+          export OMP_NUM_THREADS=32
           bash ci/build.sh --python=3.10 --pytorch=${{ steps.check_support.outputs.pytorch_build_branch }}
           pwd
           ls -al
