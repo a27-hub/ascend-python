@@ -103,61 +103,61 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None, antiquant_offset=None, per_token_scale=None, group_list=None, activation_input=None, activation_quant_scale=None, activation_quant_offset=None, split_item=0, group_type=-1, group_list_type=0, act_type=0, output_dtype=None, tuning_config=None, x_dtype=None, weight_dtype=None, scale_dtype=None, per_token_scale_dtype=None) -> Tensor[]
+torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None, antiquant_offset=None, per_token_scale=None, group_list=None, activation_input=None, activation_quant_scale=None, activation_quant_offset=None, split_item=0, group_type=-1, group_list_type=0, act_type=0, output_dtype=None, tuning_config=None, x_dtype=None, weight_dtype=None, scale_dtype=None, per_token_scale_dtype=None)
 ```
 
 ## 参数说明
 
-- **x**(`List[Tensor]`)：输入矩阵列表，表示矩阵乘法中的左矩阵。
-  - 数据格式支持ND，支持的数据类型如下：
+- **`x`**（`List[Tensor]`）：**必选参数**，输入矩阵列表，表示矩阵乘法中的左矩阵。
+  - 数据格式支持$ND$，支持的数据类型如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`float16`、`float32`、`bfloat16`、`int8`。
     - <term>Atlas 推理系列产品</term>：`float16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：`float8_e4m3fn`、`float8_e5m2`、`float16`、`bfloat16`、`float32`、`int8`、`hifloat8`、`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`int8`、`int4`，其中hifloat8/float4系列需配置可选参数`x_dtype`为对应类型，此时x本身的dtype不再生效，但仍需保证x本身的dtype为8bit位的数据类型，以保证shape正确；其中float4内轴K需为偶数，以保证8bits可以转换为2个float4；另外，float4\_e1m2fn\_x2数据类型仅在weight为NZ时支持。
+    - <term>Ascend 950PR/Ascend 950DT</term>：`float8_e4m3fn`、`float8_e5m2`、`float16`、`bfloat16`、`float32`、`int8`、`hifloat8`、`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`int8`、`int4`，其中`hifloat8`/float4系列需配置可选参数`x_dtype`为对应类型，此时`x`本身的`dtype`不再生效，但仍需保证`x`本身的`dtype`为8bit位的数据类型，以保证shape正确；其中float4内轴`K`需为偶数，以保证8bits可以转换为2个float4；另外，`float4_e1m2fn_x2`数据类型仅在`weight`为NZ时支持。
   - 列表最大长度为128。
     - <term>Ascend 950PR/Ascend 950DT</term>：非量化场景支持列表最大长度为1024。
   - 当`split_item`=0，1时，部分场景张量支持2至6维输入，其他情况下，张量仅支持2维输入。
 
-- **weight**(`List[Tensor]`)：权重矩阵列表，表示矩阵乘法中的右矩阵。
-  - 数据格式支持ND/FRACTAL\_NZ，支持的数据类型如下：
+- **`weight`**（`List[Tensor]`）：**必选参数**，权重矩阵列表，表示矩阵乘法中的右矩阵。
+  - 数据格式支持$ND$/`FRACTAL_NZ`，支持的数据类型如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-      - 当group\_list输入类型为List\[int\]时，支持`float16`、`float32`、`bfloat16`、`int8`。
-      - 当group\_list输入类型为Tensor时，支持`float16`、`float32`、`bfloat16`、`int4`、`int8`。
+      - 当`group_list`输入类型为`List[int]`时，支持`float16`、`float32`、`bfloat16`、`int8`。
+      - 当`group_list`输入类型为`Tensor`时，支持`float16`、`float32`、`bfloat16`、`int4`、`int8`。
     - <term>Atlas 推理系列产品</term>：`float16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：支持`float8_e4m3fn`、`float8_e5m2`、`int8`、`hifloat8`、`bfloat16`、`float16`、`float32`、`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`int32`、`int4`，其中hifloat8/float4系列需配置可选参数`weight_dtype`为对应类型，此时weight本身的dtype不再生效，但仍需保证weight本身的dtype为8bit位的数据类型，以保证shape正确；另外，float4\_e1m2fn\_x2数据类型仅在weight为NZ时支持。
-      - 全量化场景下，当`x`为float4系列、`weight`为float4系列输入时，仅支持推理场景，此时输入`x`的K需为偶数，且当`weight`不转置时内轴N需为偶数，以保证8bits可以转换为2个float4。当输入`x`/`weight`数据类型为int8或float8\_e4m3fn\(`scale_dtype`与`per_token_scale_dtype`为float8_e8m0fnu\)或float4\_e2m1fn\_x2/float4\_e1m2fn\_x2\(`scale_dtype`与`per_token_scale_dtype`为float8_e8m0fnu\)，`weight`数据格式支持FRACTAL\_NZ，可通过`torch_npu.npu_format_cast`接口实现ND转FRACTAL\_NZ格式。当`x`为int4、`weight`为int4输入时，同样需要输入x的K为偶数，且当weight不转置时内轴N需为偶数。weight数据格式支持FRACTAL\_NZ，可通过torch\_npu.npu\_format\_cast接口实现ND转FRACTAL\_NZ格式。
-      - 伪量化场景下，当`weight`为float32/int32类型时，鉴于PyTorch原生不支持部分类型数据，可通过[torch\_npu.npu\_convert\_weight\_to\_int4pack](torch_npu-npu_convert_weight_to_int4pack.md)实现**1个float32承载8个float4\_e2m1fn\_x2的输入、1个int32承载8个int4的输入**，此时不传入`weight_dtype`。同理，当`weight`为int4时，也需要进行pack操作。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持`float8_e4m3fn`、`float8_e5m2`、`int8`、`hifloat8`、`bfloat16`、`float16`、`float32`、`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`int32`、`int4`，其中`hifloat8`/float4系列需配置可选参数`weight_dtype`为对应类型，此时`weight`本身的`dtype`不再生效，但仍需保证`weight`本身的`dtype`为8bit位的数据类型，以保证shape正确；另外，`float4_e1m2fn_x2`数据类型仅在`weight`为NZ时支持。
+      - 全量化场景下，当`x`为float4系列、`weight`为float4系列输入时，仅支持推理场景，此时输入`x`的`K`需为偶数，且当`weight`不转置时内轴`N`需为偶数，以保证8bits可以转换为2个float4。当输入`x`/`weight`数据类型为`int8`或`float8_e4m3fn`（`scale_dtype`与`per_token_scale_dtype`为`float8_e8m0fnu`）或`float4_e2m1fn_x2`/`float4_e1m2fn_x2`（`scale_dtype`与`per_token_scale_dtype`为`float8_e8m0fnu`），`weight`数据格式支持`FRACTAL_NZ`，可通过`torch_npu.npu_format_cast`接口实现$ND$转`FRACTAL_NZ`格式。当`x`为`int4`、`weight`为`int4`输入时，同样需要输入`x`的`K`为偶数，且当`weight`不转置时内轴`N`需为偶数。`weight`数据格式支持`FRACTAL_NZ`，可通过`torch_npu.npu_format_cast`接口实现$ND$转`FRACTAL_NZ`格式。
+      - 伪量化场景下，当`weight`为`float32`/`int32`类型时，鉴于PyTorch原生不支持部分类型数据，可通过[torch\_npu.npu\_convert\_weight\_to\_int4pack](torch_npu-npu_convert_weight_to_int4pack.md)实现**1个`float32`承载8个`float4_e2m1fn_x2`的输入、1个`int32`承载8个`int4`的输入**，此时不传入`weight_dtype`。同理，当`weight`为`int4`时，也需要进行pack操作。
       - 伪量化场景下，MxA8W4数据流支持`weight`使用uint8承载float4\_e2m1fn\_x2/float4\_e1m2fn\_x2（1个uint8承载两个float4\_e2m1fn\_x2/float4\_e1m2fn\_x2），该场景下，静态图/动态图不支持E=1或K=64，其中E表示Group大小。
-      - 非量化场景下，当`weight`输入为float16或bfloat16，且weight.shape后两维对32B对齐时，数据格式还支持FRACTAL\_NZ，可通过`torch_npu.npu_format_cast`接口实现ND转FRACTAL\_NZ格式。
+      - 非量化场景下，当`weight`输入为`float16`或`bfloat16`，且`weight` shape后两维对32B对齐时，数据格式还支持`FRACTAL_NZ`，可通过`torch_npu.npu_format_cast`接口实现$ND$转`FRACTAL_NZ`格式。
   - 列表最大长度为128。
-    - <term>Ascend 950PR/Ascend 950DT</term>：非量化场景支持列表最大长度为1024。全量化在mx量化且输入且w为FRACTAL\_NZ格式时，支持多weight多tensor输入，支持tensorlist最大长度为128。
+    - <term>Ascend 950PR/Ascend 950DT</term>：非量化场景支持列表最大长度为1024。全量化在mx量化且输入且`w`为`FRACTAL_NZ`格式时，支持多`weight`多tensor输入，支持tensorlist最大长度为128。
   - 每个张量支持2维或3维输入。
 
-- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **bias**(`List[Tensor]`)：每个分组的矩阵乘法输出的独立偏置项。
-  - 数据格式支持ND，支持的数据类型如下：
+- <strong>*</strong>：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- **`bias`**（`List[Tensor]`）：**可选参数**，每个分组的矩阵乘法输出的独立偏置项。
+  - 数据格式支持$ND$，支持的数据类型如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`float16`、`float32`和`int32`。
     - <term>Atlas 推理系列产品</term>：`float16`。
     - <term>Ascend 950PR/Ascend 950DT</term>：
-      - 量化场景下，在输入`x`为`int8`时支持`int32`、`bfloat16`、`float16`、`float32`，在输入x为`float4_e2m1fn_x2`时，仅支持`float32`，其它类型输入需传None。
+      - 量化场景下，在输入`x`为`int8`时支持`int32`、`bfloat16`、`float16`、`float32`，在输入`x`为`float4_e2m1fn_x2`时，仅支持`float32`，其它类型输入需传None。
       - 伪量化场景下，在输入`x`为`float16`时支持float16，在x为`bfloat16`时支持`bfloat16`、`float32`，其它类型输入需传None。
-      - 非量化场景下，在输入`x`为`float16`时支持`float16`、`float32`，在x为`bfloat16`时支持`bfloat16`、`float32`，在输入x为`float32`时支持`float32`，其它类型输入需传None。
+      - 非量化场景下，在输入`x`为`float16`时支持`float16`、`float32`，在`x`为`bfloat16`时支持`bfloat16`、`float32`，在输入`x`为`float32`时支持`float32`，其它类型输入需传None。
   - 列表长度与`weight`列表长度相同。
   - 每个张量支持1维或2维输入。
 
-- **scale**(`List[Tensor]`)：用于缩放原数值以匹配量化后的范围值，代表量化参数中的缩放因子。
-  - 数据格式支持ND，支持的数据类型如下：
+- **`scale`**（`List[Tensor]`）：**可选参数**，用于缩放原数值以匹配量化后的范围值，代表量化参数中的缩放因子。
+  - 数据格式支持$ND$，支持的数据类型如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
       - 当`group_list`输入类型为`List[int]`时，支持`int64`。
       - 当`group_list`输入类型为`Tensor`时，支持`float32`、`bfloat16`、`int64`。
     - <term>Atlas 推理系列产品</term>：仅支持传入None。
-    - <term>Ascend 950PR/Ascend 950DT</term>：当`group_list`输入类型为torch.Tensor且`x`不为`float16`、`bfloat16`时，支持`int64`、`bfloat16`、`float32`、`float8_e8m0fnu`，其中float8\_e8m0fnu需配置`scale_dtype`为对应类型，此时scale本身的dtype不再生效，但仍需保证scale本身的dtype为8bit位的数据类型，以保证shape正确。
-  - 列表长度与weight列表长度相同。
+    - <term>Ascend 950PR/Ascend 950DT</term>：当`group_list`输入类型为`torch.Tensor`且`x`不为`float16`、`bfloat16`时，支持`int64`、`bfloat16`、`float32`、`float8_e8m0fnu`，其中`float8_e8m0fnu`需配置`scale_dtype`为对应类型，此时`scale`本身的`dtype`不再生效，但仍需保证`scale`本身的`dtype`为8bit位的数据类型，以保证shape正确。
+  - 列表长度与`weight`列表长度相同。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：每个张量仅支持1维输入。
-  - <term>Ascend 950PR/Ascend 950DT</term>：mx量化的M轴分组场景时，每个张量的维度需要为4，在`weight`多tensor输入场景下，每个张量维度为3维，并且与weight具有相同的转置属性。mx量化的K轴分组场景时，每个张量的维度需要为3，并且与weight具有相同转置属性。K-CG伪量化的M轴分组场景，每个张量的维度需要为2，并且与weight具有相同转置属性。
+  - <term>Ascend 950PR/Ascend 950DT</term>：mx量化的M轴分组场景时，每个张量的维度需要为4，在`weight`多tensor输入场景下，每个张量维度为3维，并且与`weight`具有相同的转置属性。mx量化的K轴分组场景时，每个张量的维度需要为3，并且与`weight`具有相同转置属性。K-CG伪量化的M轴分组场景，每个张量的维度需要为2，并且与`weight`具有相同转置属性。
 
-- **offset**(`List[Tensor]`)：用于调整量化后的数值偏移量，从而更准确地表示原始浮点数值。当前仅支持传入None，数据格式支持ND。
-- **antiquant\_scale**(`List[Tensor]`)：用于缩放原数值以匹配伪量化后的范围值，代表伪量化参数中的缩放因子。
-  - 数据格式支持ND，支持的数据类型如下：
+- **`offset`**（`List[Tensor]`）：**可选参数**，用于调整量化后的数值偏移量，从而更准确地表示原始浮点数值。当前仅支持传入None，数据格式支持$ND$。
+- **`antiquant_scale`**（`List[Tensor]`）：**可选参数**，用于缩放原数值以匹配伪量化后的范围值，代表伪量化参数中的缩放因子。
+  - 数据格式支持$ND$，支持的数据类型如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`float16`、`bfloat16`。
     - <term>Atlas 推理系列产品</term>：仅支持传入None。
     - <term>Ascend 950PR/Ascend 950DT</term>：`float16`、`bfloat16`、`float8_e8m0fnu`，其中float8\_e8m0fnu需传入uint8表示。
@@ -167,25 +167,25 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     - 伪量化pergroup场景，`weight`为单tensor时，shape限制为\[g, G, n\]；weight为多tensor时，shape限制为\[G<sub>i</sub>, n<sub>i</sub>\]。
     - 伪量化mx场景，`weight`为单tensor时，shape限制为\(g, n, G/2, 2\)
 
-- **antiquant\_offset**(`List[Tensor]`)：用于调整伪量化后的数值偏移量，从而更准确地表示原始浮点数值。
-  - 数据格式支持ND，支持的数据类型如下：
+- **`antiquant_offset`**（`List[Tensor]`）：**可选参数**，用于调整伪量化后的数值偏移量，从而更准确地表示原始浮点数值。
+  - 数据格式支持$ND$，支持的数据类型如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`float16`、`bfloat16`。
     - <term>Atlas 推理系列产品</term>：仅支持传入None。
     - <term>Ascend 950PR/Ascend 950DT</term>：`float16`、`bfloat16`。
   - 列表长度与`weight`列表长度相同。
   - 每个张量输入维度和`antiquant_scale`输入维度一致。
 
-- **per\_token\_scale**(`List[Tensor]`)：**用于缩放原数值以匹配量化后的范围值，代表量化参数中由x量化引入的缩放因子，数据格式支持ND。
+- **`per_token_scale`**（`List[Tensor]`）：**可选参数**，用于缩放原数值以匹配量化后的范围值，代表量化参数中由`x`量化引入的缩放因子，数据格式支持$ND$。
   - `group_list`输入类型为`List[int]`时，当前只支持传入None。
   - `group_list`输入类型为`Tensor`时：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：当`group_list`输入类型为Tensor时，数据类型支持`float32`、`float8_e8m0fnu`，其中float8\_e8m0fnu需配置`per_token_scale_dtype`为对应类型，此时`per_token_scale`本身的dtype不再生效，但仍需保证`per_token_scale`本身的dtype为8bit位的数据类型，以保证shape正确。
+    - <term>Ascend 950PR/Ascend 950DT</term>：当`group_list`输入类型为`Tensor`时，数据类型支持`float32`、`float8_e8m0fnu`，其中`float8_e8m0fnu`需配置`per_token_scale_dtype`为对应类型，此时`per_token_scale`本身的`dtype`不再生效，但仍需保证`per_token_scale`本身的`dtype`为8bit位的数据类型，以保证shape正确。
     - 列表长度与`x`列表长度相同。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：每个张量仅支持1维输入。
     - <term>Ascend 950PR/Ascend 950DT</term>：mx量化时，每个张量需要为3维，且与`x`具有相同的转置属性。mx伪量化场景，张量需要为3维，转置属性与x相同，数据类型支持`float8_e8m0fnu`。K-CG伪量化场景，张量需要为1维，数据类型支持`float32`。
 
-- **group\_list**(`List[int]`/`torch.Tensor`)：用于指定分组的索引，表示`x`的第0维矩阵乘法的索引情况。数据格式支持ND，数据类型支持`int64`。
-  - <term>Atlas 推理系列产品</term>：仅支持`torch.Tensor`类型。仅支持1维输入，长度与weight列表长度相同。
+- **`group_list`**（`List[int]`/`torch.Tensor`）：**可选参数**，用于指定分组的索引，表示`x`的第0维矩阵乘法的索引情况。数据格式支持$ND$，数据类型支持`int64`。
+  - <term>Atlas 推理系列产品</term>：仅支持`torch.Tensor`类型。仅支持1维输入，长度与`weight`列表长度相同。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持`List[int]`或`torch.Tensor`类型。若为`torch.Tensor`类型，仅支持1维输入，长度与`weight`列表长度相同。
   - <term>Ascend 950PR/Ascend 950DT</term>：仅支持`torch.Tensor`类型。仅支持1维输入，在`group_type`为0时，长度与`weight`\(单tensor，\[\[E, N, K\]\]\)的最高轴E大小相同。在`group_type`为2时，长度与输出\(单tensor，\[\[E, M, N\]\]\)的最高轴E大小相同。
   - 配置值要求如下：
@@ -195,15 +195,15 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
       - 当`group_list_type`为1时，`group_list`必须为非负数列，且长度不能为0。
       - 当`group_list_type`为2时，`group_list`的shape为\[E, 2\]，E表示Group大小，数据排布为\[\[groupIdx0, groupSize0\], \[groupIdx1, groupSize1\], ...\]，其中groupSize为分组轴上每组大小，必须为非负数。所有groupSize非0的分组按groupIdx有序排列在前，所有groupSize为0的分组按groupIdx有序排列在后，确保非零组前置、零值组后置，且组内有序。
 
-- **activation\_input**(`List[Tensor]`)：代表激活函数的反向输入，当前仅支持传入None。
-- **activation\_quant\_scale**(`List[Tensor]`)：预留参数，当前只支持传入None。
-- **activation\_quant\_offset**(`List[Tensor]`)：预留参数，当前只支持传入None。
-- **split\_item**（`int`）：用于指定切分模式。数据类型支持`int64`。
+- **`activation_input`**（`List[Tensor]`）：**可选参数**，代表激活函数的反向输入，当前仅支持传入None。
+- **`activation_quant_scale`**（`List[Tensor]`）：**可选参数**，预留参数，当前只支持传入None。
+- **`activation_quant_offset`**（`List[Tensor]`）：**可选参数**，预留参数，当前只支持传入None。
+- **`split_item`**（`int`）：**可选参数**，用于指定切分模式。数据类型支持`int64`。
   - 0、1：输出为多个张量，数量与weight相同。
   - 2、3：输出为单个张量。
   - <term>Ascend 950PR/Ascend 950DT</term>：非量化和伪量化支持取0/1/2/3，量化当前支持取2和3。
 
-- **group\_type**（`int`）：代表需要分组的轴。数据类型支持`int64`。
+- **`group_type`**（`int`）：**可选参数**，代表需要分组的轴。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
   - `group_list`输入类型为`Tensor`时，若矩阵乘为C\[m,n\]=A\[m,k\]xB\[k,n\]，group\_type支持的枚举值为：-1代表不分组；0代表m轴分组；1代表n轴分组，2代表k轴分组。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前支持取-1、0、2。
@@ -213,7 +213,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
       - 量化场景支持取0、2。
       - 伪量化场景支持取-1、0。
 
-- **group\_list\_type**（`int`）：代表`group_list`的表达形式。数据类型支持`int64`。
+- **`group_list_type`**（`int`）：**可选参数**，代表`group_list`的表达形式。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
   - `group_list`输入类型为`Tensor`时可取值0、1或2：
     - 0：默认值，`group_list`中数值为分组轴大小的cumsum（累积和）结果。
@@ -223,40 +223,40 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     - <term>Atlas 推理系列产品</term>：不支持取2。
     - <term>Ascend 950PR/Ascend 950DT</term>：仅当全量化场景下，并且`group_type`取0（m轴分组）时，支持取2。
 
-- **act\_type**（`int`）：代表激活函数类型。数据类型支持`int64`。
+- **`act_type`**（`int`）：**可选参数**，代表激活函数类型。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
   - `group_list`输入类型为`Tensor`时，支持的枚举值包括：0代表NONE，不启用激活；1代表RELU激活；2代表GELU\_TANH激活；3代表GELU\_ERR\_FUNC激活，目前暂不支持；4代表FAST\_GELU激活；5代表SILU激活。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0-5。
     - <term>Atlas 推理系列产品</term>：当前只支持传入0。
     - <term>Ascend 950PR/Ascend 950DT</term>：当前支持传入0、1、2、4、5。
 
-- **output\_dtype** (`int`)：输出数据类型。支持的配置包括：
+- **`output_dtype`**（`int`）：**可选参数**，输出数据类型。支持的配置包括：
   - None：默认值，表示输出数据类型与输入`x`的数据类型相同。
   - 与输出y数据类型一致的类型，具体参考[约束说明](#约束说明)。
 
-- **tuning\_config**（`List[int]`）：可选参数，数组中的第一个元素表示各个专家处理的token数的预期值，算子tiling时会按照数组中的第一个元素进行最优tiling，性能更优（使用场景参见[约束说明](#约束说明)）；从第二个元素开始预留，用户无须填写，未来会进行扩展。如不使用该参数不传即可。
+- **`tuning_config`**（`List[int]`）：**可选参数**，数组中的第一个元素表示各个专家处理的token数的预期值，算子tiling时会按照数组中的第一个元素进行最优tiling，性能更优（使用场景参见[约束说明](#约束说明)）；从第二个元素开始预留，用户无须填写，未来会进行扩展。如不使用该参数不传即可。
   - <term>Atlas 推理系列产品</term>：当前暂不支持该参数。
   - <term>Ascend 950PR/Ascend 950DT</term>：当前暂不支持该参数。
 
-- **x\_dtype**（`int`）：输入x的真实数据类型。默认值None，表示输入x真实的数据类型与输入`x`的dtype相同。
+- **`x_dtype`**（`int`）：**可选参数**，输入`x`的真实数据类型。默认值None，表示输入`x`真实的数据类型与输入`x`的`dtype`相同。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas 推理系列产品</term>：当前暂不支持该参数。
   - <term>Ascend 950PR/Ascend 950DT</term>：支持`hifloat8`、`float4_e2m1fn_x2`、`float4_e1m2fn_x2`。
 
-- **weight\_dtype**（`int`）：输入weight的真实数据类型。默认值None，表示输入weight真实的数据类型与输入`weight`的dtype相同。伪量化场景使用float32表示float4\_e2m1fn\_x2时无需传入。
+- **`weight_dtype`**（`int`）：**可选参数**，输入`weight`的真实数据类型。默认值None，表示输入`weight`真实的数据类型与输入`weight`的`dtype`相同。伪量化场景使用`float32`表示`float4_e2m1fn_x2`时无需传入。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas 推理系列产品</term>：当前暂不支持该参数。
   - <term>Ascend 950PR/Ascend 950DT</term>：支持`hifloat8`、`float4_e2m1fn_x2`、`float4_e1m2fn_x2`。
 
-- **scale\_dtype**（`int`）：输入scale的真实数据类型。默认值None，表示输入scale真实的数据类型与输入`scale`的dtype相同。
+- **`scale_dtype`**（`int`）：**可选参数**，输入`scale`的真实数据类型。默认值None，表示输入`scale`真实的数据类型与输入`scale`的`dtype`相同。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas 推理系列产品</term>：当前暂不支持该参数。
   - <term>Ascend 950PR/Ascend 950DT</term>：当前仅支持`float8_e8m0fnu`。
 
-- **per\_token\_scale\_dtype**（`int`）：输入per\_token\_scale的真实数据类型。默认值None，表示`per_token_scale`真实的数据类型与输入per\_token\_scale的dtype相同。
+- **`per_token_scale_dtype`**（`int`）：**可选参数**，输入`per_token_scale`的真实数据类型。默认值None，表示`per_token_scale`真实的数据类型与输入`per_token_scale`的`dtype`相同。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas 推理系列产品</term>：当前暂不支持该参数。
   - <term>Ascend 950PR/Ascend 950DT</term>：当前仅支持`float8_e8m0fnu`。
 
 ## 返回值说明
 
-**y**（`List[Tensor]`）：输出Tensor，数据格式支持ND。
+**`y`**（`List[Tensor]`）：输出Tensor，数据格式支持$ND$。
 
 - 当`split_item`为0或1时，返回的张量数量与`weight`相同。
 - 当`split_item`为2或3时，返回的张量数量为1。
