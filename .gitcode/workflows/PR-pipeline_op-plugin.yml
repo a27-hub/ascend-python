@@ -179,4 +179,3 @@ stages:
                 TEST_WORLD_SIZE: "2"
               - branch: "v2.7.1"
                 img: "pytorch_2.7.1_a2_aarch64_builder:20260704"
-
