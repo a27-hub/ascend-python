@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-该接口用于伪量化场景下Matmul类算子的权重预处理，当前主要实现`weight`张量从$ND$格式转换为$FRACTAL\_NZ$格式。涉及的Matmul类算子包括QuantBatchMatmulV4、GroupedMatmul。
+该接口用于伪量化场景下Matmul类算子的伪量化参数的预处理。涉及的Matmul类算子包括QuantBatchMatmulV4、GroupedMatmul。
 
 ## 函数原型
 
@@ -70,8 +70,6 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   - `x_dtype`必须为`FLOAT8_E4M3FN`。
   - `x_scale_dtype`必须为`FLOAT8_E8M0`。
   - 当前不支持`weight_offset`，必须传入`None`。
-- 不支持空`Tensor`输入。
-- 其余数据类型与shape组合为预留接口，当前调用将报错。
 
 ## 调用示例
 
