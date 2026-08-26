@@ -69,7 +69,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   - `weight_scale`数据类型必须为`float8_e8m0`，数据格式为$ND$/$NCL$。
   - `weight_scale`的view shape为$\{ceil\_div(K, 64), N, 2\}$，storage shape为$\{N, ceil\_div(K, 64), 2\}$（transposed）。
   - `k_group_size`必须等于`32`。
-  - `x_dtype`必须为`FLOAT8_E4M3FN`。
+  - `x_dtype`必须为`float8_e4m3fn`。
   - `x_scale_dtype`必须为`float8_e8m0`。
   - 当前不支持`weight_offset`，必须传入`None`。
 - **GMM_MX_A8W4数据流**：
@@ -78,11 +78,11 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   - `weight_scale`数据类型必须为`float8_e8m0`，数据格式为$ND$/$NCL$。
   - `weight_scale`的view shape为$\{G, ceil\_div(K, 64), N, 2\}$，storage shape为$\{G, N, ceil\_div(K, 64), 2\}$（transposed），stride为$[N * ceil\_div(K, 64) * 2, 2, ceil\_div(K, 64) * 2, 1]$。
   - `k_group_size`必须等于`32`。
-  - `x_dtype`必须为`FLOAT8_E4M3FN`。
+  - `x_dtype`必须为`float8_e4m3fn`。
   - `x_scale_dtype`必须为`float8_e8m0`。
   - 当前不支持`weight_offset`，必须传入`None`。
 - **MM_A16S4数据流**：
-  - `weight`数据类型必须为`INT4`，使用`uint8`承载（1个`uint8`元素打包2个INT4数据），数据格式为$ND$，支持2维输入，转置与非转置均支持。
+  - `weight`数据类型必须为`int4`，使用`uint8`承载（1个`uint8`元素打包2个int4数据），数据格式为$ND$，支持2维输入，转置与非转置均支持。
   - 非转置时`weight`的shape为$\{K, N/2\}$（沿N维打包），转置时shape为$\{K/2, N\}$（沿K维打包），打包维度的元素个数须为偶数。
   - `weight_scale`数据类型为`float16`或`bfloat16`，其shape决定量化粒度。
   - `x_dtype`必须为`float16`或`bfloat16`。
@@ -181,7 +181,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   k, n = 256, 128
   k_group_size = 64 if quant_mode == "pergroup" else 0
 
-  # weight: INT4，每个 uint8 打包2个INT4数据
+  # weight: int4，每个 uint8 打包2个int4数据
   weight_int4 = torch.randint(low=-8, high=8, size=(k, n), dtype=torch.int8)
   w = (weight_int4.numpy() & 0xF).astype(np.uint8)
   if weight_trans:
