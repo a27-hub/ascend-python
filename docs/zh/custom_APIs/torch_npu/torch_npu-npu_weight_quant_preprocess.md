@@ -64,22 +64,22 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
 当前支持如下参数组合：
 
 - **MM_MX_A8W4数据流**：
-  - `weight`数据类型必须为`FLOAT4_E2M1`，数据格式为$ND$，K必须满足$K \% k\_group\_size = 0$。
-  - `weight`的逻辑shape为$\{K, N\}$；使用`uint8`承载FP4数据时，view shape为$\{K/2, N\}$，storage shape为$\{N, K/2\}$（transposed），stride为$[1, K/2]$。
-  - `weight_scale`数据类型必须为`FLOAT8_E8M0`，数据格式为$ND$/$NCL$。
+  - `weight`数据类型必须为`float4_e2m1`，数据格式为$ND$，K必须满足$K \% k\_group\_size = 0$。
+  - `weight`的逻辑shape为$\{K, N\}$；使用`uint8`承载fp4数据时，view shape为$\{K/2, N\}$，storage shape为$\{N, K/2\}$（transposed），stride为$[1, K/2]$。
+  - `weight_scale`数据类型必须为`float8_e8m0`，数据格式为$ND$/$NCL$。
   - `weight_scale`的view shape为$\{ceil\_div(K, 64), N, 2\}$，storage shape为$\{N, ceil\_div(K, 64), 2\}$（transposed）。
   - `k_group_size`必须等于`32`。
   - `x_dtype`必须为`FLOAT8_E4M3FN`。
-  - `x_scale_dtype`必须为`FLOAT8_E8M0`。
+  - `x_scale_dtype`必须为`float8_e8m0`。
   - 当前不支持`weight_offset`，必须传入`None`。
 - **GMM_MX_A8W4数据流**：
-  - `weight`数据类型必须为`FLOAT4_E2M1`，数据格式为$ND$，K必须满足$K \% k\_group\_size = 0$。
-  - `weight`的逻辑shape为$\{G, K, N\}$；使用`uint8`承载FP4数据时，view shape为$\{G, K/2, N\}$，storage shape为$\{G, N, K/2\}$（transposed），stride为$[K * N/2, 1, K/2]$。
-  - `weight_scale`数据类型必须为`FLOAT8_E8M0`，数据格式为$ND$/$NCL$。
+  - `weight`数据类型必须为`float4_e2m1`，数据格式为$ND$，K必须满足$K \% k\_group\_size = 0$。
+  - `weight`的逻辑shape为$\{G, K, N\}$；使用`uint8`承载fp4数据时，view shape为$\{G, K/2, N\}$，storage shape为$\{G, N, K/2\}$（transposed），stride为$[K * N/2, 1, K/2]$。
+  - `weight_scale`数据类型必须为`float8_e8m0`，数据格式为$ND$/$NCL$。
   - `weight_scale`的view shape为$\{G, ceil\_div(K, 64), N, 2\}$，storage shape为$\{G, N, ceil\_div(K, 64), 2\}$（transposed），stride为$[N * ceil\_div(K, 64) * 2, 2, ceil\_div(K, 64) * 2, 1]$。
   - `k_group_size`必须等于`32`。
   - `x_dtype`必须为`FLOAT8_E4M3FN`。
-  - `x_scale_dtype`必须为`FLOAT8_E8M0`。
+  - `x_scale_dtype`必须为`float8_e8m0`。
   - 当前不支持`weight_offset`，必须传入`None`。
 - **MM_A16S4数据流**：
   - `weight`数据类型必须为`INT4`，使用`uint8`承载（1个`uint8`元素打包2个INT4数据），数据格式为$ND$，支持2维输入，转置与非转置均支持。
@@ -107,12 +107,12 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   packed_k = k // 2
   k_scale = (k + 63) // 64
 
-  # weight: FLOAT4_E2M1，每个 uint8 打包2个FP4数据
+  # weight: float4_e2m1，每个 uint8 打包2个fp4数据
   # logical shape: {K, N}, view: {K/2, N}, storage: {N, K/2}
   cpu_weight = torch.randint(0, 255, (n, packed_k), dtype=torch.uint8)
   weight = cpu_weight.npu().transpose(0, 1)
 
-  # weight_scale: FLOAT8_E8M0, 3-D transposed
+  # weight_scale: float8_e8m0, 3-D transposed
   # view: {ceil_div(K, 64), N, 2}, storage: {N, ceil_div(K, 64), 2}
   cpu_scale = torch.randint(0, 255, (n, k_scale, 2), dtype=torch.uint8)
   weight_scale = cpu_scale.npu().transpose(0, 1)
@@ -143,12 +143,12 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   packed_k = k // 2
   k_scale = (k + 63) // 64
 
-  # weight: FLOAT4_E2M1，每个 uint8 打包2个FP4数据
+  # weight: float4_e2m1，每个 uint8 打包2个fp4数据
   # logical shape: {G, K, N}, view: {G, K/2, N}, storage: {G, N, K/2}
   cpu_weight = torch.randint(0, 255, (g, n, packed_k), dtype=torch.uint8)
   weight = cpu_weight.npu().transpose(1, 2)
 
-  # weight_scale: FLOAT8_E8M0, 4-D transposed
+  # weight_scale: float8_e8m0, 4-D transposed
   # view: {G, ceil_div(K, 64), N, 2}, storage: {G, N, ceil_div(K, 64), 2}
   cpu_scale = torch.randint(0, 255, (g, n, k_scale, 2), dtype=torch.uint8)
   weight_scale = cpu_scale.npu().transpose(1, 2)
