@@ -13,10 +13,10 @@
 
 控制是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的tensor，避免了适配层出现私有格式流通。
 
-该开关直接影响以下API的行为：
+该配置直接影响以下API的行为：
 
-- `torch_npu.npu_format_cast`/`torch_npu.npu_format_cast_`：开关为`False`时不支持转换为私有格式，目标私有格式会自动降级为对应的base格式，数据与shape保持不变；开关为`True`时真实转换为私有格式。
-- 卷积类算子（如`torch.nn.Conv1d`、`torch.nn.Conv2d`、`torch.nn.ConvTranspose2d`等）：开关为`False`且JIT编译关闭时，输入保持base格式（NCHW/ND）；开关为`True`或开启JIT编译时，输入会被转为私有格式（如NC1HWC0）参与计算，可能触发在线编译。
+- `torch_npu.npu_format_cast`/`torch_npu.npu_format_cast_`/`at_npu::native::npu_format_cast`：设置为`False`时不支持转换为私有格式，目标私有格式会自动降级为对应的base格式，数据与shape保持不变；设置为`True`时真实转换为私有格式。
+- 卷积类算子（如`torch.nn.Conv1d`、`torch.nn.Conv2d`、`torch.nn.ConvTranspose2d`等）：设置为`False`且JIT编译关闭时，输入保持base格式；设置为`True`或开启JIT编译时，输入会被转为私有格式参与计算，可能触发在线编译。
 
 ## 函数原型
 
