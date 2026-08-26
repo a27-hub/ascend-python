@@ -139,7 +139,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     - <term>Atlas 推理系列产品</term>：`float16`。
     - <term>Ascend 950PR/Ascend 950DT</term>：
       - 量化场景下，在输入`x`为`int8`时支持`int32`、`bfloat16`、`float16`、`float32`，在输入`x`为`float4_e2m1fn_x2`时，仅支持`float32`，其它类型输入需传None。
-      - 伪量化场景下，在输入`x`为`float16`时支持float16，在x为`bfloat16`时支持`bfloat16`、`float32`，其它类型输入需传None。
+      - 伪量化场景下，在输入`x`为`float16`时，`bias`支持`float16`；在输入`x`为`bfloat16`时，`bias`支持`bfloat16`、`float32`；在输入`x`为`float8_e4m3fn`（MXFP8等场景）时，`bias`支持`float16`、`bfloat16`；其它类型输入需传None。
       - 非量化场景下，在输入`x`为`float16`时支持`float16`、`float32`，在`x`为`bfloat16`时支持`bfloat16`、`float32`，在输入`x`为`float32`时支持`float32`，其它类型输入需传None。
   - 列表长度与`weight`列表长度相同。
   - 每个张量支持1维或2维输入。
