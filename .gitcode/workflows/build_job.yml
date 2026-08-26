@@ -6,7 +6,7 @@ on:
       py_version:
         required: false
         type: string
-        default: ${{ '3.10' }} 
+        default: ${{ '3.10' }}
       REMOTE_URL:
         required: false
         type: string
@@ -80,7 +80,7 @@ jobs:
             echo "need_build=yes" >> "$ATOMGIT_OUTPUT"
             echo "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" >> "$ATOMGIT_OUTPUT"
           fi
-          echo  "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" 
+          echo  "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}"
       - name: print need_build
         run: |
           echo "need_build=${{ steps.check_support.outputs.need_build }}"
@@ -136,7 +136,7 @@ jobs:
           pwd
           ls -al
           ls -al ${workspace}
-      
+
       - name: Upload artifact
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
         uses: upload-artifact
@@ -146,4 +146,4 @@ jobs:
             dist/torch_npu*.whl
           overwrite: true
 
-        
+

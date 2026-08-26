@@ -103,7 +103,7 @@ stages:
                   - '!**/*.doc'
                   - '!**/*.eddx'
                   - '!**/*.svg'
-                
+
           - name: set build skip flag
             id: set-skip
             run: |

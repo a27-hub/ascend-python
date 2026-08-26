@@ -53,7 +53,7 @@ jobs:
           echo "inputs.TARGET_BRANCH=${{ inputs.TARGET_BRANCH }}"
           echo "TEST_RANK=${{ env.TEST_RANK }}"
           echo "TEST_WORLD_SIZE=${{ env.TEST_WORLD_SIZE }}"
-        
+
       - name: check branch support
         id: check_support
         run: |
