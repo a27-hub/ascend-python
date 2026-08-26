@@ -12,7 +12,7 @@
 
 - MM_MX_A8W4数据流：表示QuantBatchMatmulV4算子的MX量化场景，A8W4表示左矩阵为`float8_e4m3`，右矩阵为`float4_e2m1`。
 - GMM_MX_A8W4数据流：表示GroupedMatmul算子的MX量化场景，A8W4表示左矩阵为`float8_e4m3`，右矩阵为`float4_e2m1`。
-- MM_A16S4数据流：表示WeightQuantBatchMatmulV2算子的pertensor/pergroup/perchannel量化场景，A16S4表示左矩阵为`float16`，右矩阵为`int4`。
+- MM_A16S4数据流：表示WeightQuantBatchMatmulV2算子的pertensor/perchannel/pergroup量化场景，A16S4表示左矩阵为`float16`/`bfloat16`，右矩阵为`int4`。
 
 ## 函数原型
 
