@@ -23,57 +23,57 @@
   - 非量化场景（公式1）：
 
     $$
-    y_i = x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i
+    y_i = x_i \text{@} \mathit{weight}_i + \mathit{bias}_i
     $$
 
   - 静态量化（T-T、T-C）场景（公式2）：
 
     $$
-    y_i = (x_i \text{@} \mathrm{weight}_i) \times \mathrm{scale}_i + \mathrm{offset}_i
+    y_i = (x_i \text{@} \mathit{weight}_i) \times \mathit{scale}_i + \mathit{offset}_i
     $$
 
     - x为`int8`输入，bias为`int32`输入（公式2-1）：
 
         $$
-        y_i = (x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i) \times \mathrm{scale}_i + \mathrm{offset}_i
+        y_i = (x_i \text{@} \mathit{weight}_i + \mathit{bias}_i) \times \mathit{scale}_i + \mathit{offset}_i
         $$
 
     - x为`int8`输入，bias为`bfloat16`、`float16`、`float32`输入，无offset（公式2-2）：
 
         $$
-        y_i = (x_i \text{@} \mathrm{weight}_i) \times \mathrm{scale}_i + \mathrm{bias}_i
+        y_i = (x_i \text{@} \mathit{weight}_i) \times \mathit{scale}_i + \mathit{bias}_i
         $$
 
   - 动态量化（K-T、K-C、T-T、T-C）场景（公式3）：
 
     $$
-    y_i = (x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i
+    y_i = (x_i \text{@} \mathit{weight}_i + \mathit{bias}_i) \times \mathit{scale}_i \times \mathit{pertokenscale}_i
     $$
 
     - x为`int8`输入，bias为`int32`输入（公式3-1）：
 
         $$
-        y_i = (x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i
+        y_i = (x_i \text{@} \mathit{weight}_i + \mathit{bias}_i) \times \mathit{scale}_i \times \mathit{pertokenscale}_i
         $$
 
     - x为`int8`输入，bias为`bfloat16`、`float16`、`float32`输入（公式3-2）：
 
         $$
-        y_i = (x_i \text{@} \mathrm{weight}_i) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i + \mathrm{bias}_i
+        y_i = (x_i \text{@} \mathit{weight}_i) \times \mathit{scale}_i \times \mathit{pertokenscale}_i + \mathit{bias}_i
         $$
 
   - 伪量化（perchannel、pergroup）场景（公式4）：
 
     $$
-    y_i = x_i \text{@} \left((\mathrm{weight}_i + \mathrm{antiquant\_offset}_i) \times \mathrm{antiquant\_scale}_i\right) + \mathrm{bias}_i
+    y_i = x_i \text{@} \left((\mathit{weight}_i + \mathit{antiquant\_offset}_i) \times \mathit{antiquant\_scale}_i\right) + \mathit{bias}_i
     $$
 
   - 动态量化（G-B、mx）场景（公式5）：仅适用于<term>Ascend 950PR/Ascend 950DT</term>
 
     $$
     \begin{aligned}
-    y_i[m,n] = {} &\sum_{j=0}^{k\_loops-1}\left(\left(\sum_{k=0}^{gsk-1}(\mathrm{x\_slice}_i \times \mathrm{weight\_slice}_i)\right) \\
-    &\quad\times\left(\mathrm{pertokenscale}_i[m/gsm,j] \times \mathrm{scale}_i[j,n/gsn]\right)\right) + \mathrm{bias}_i[n]
+    y_i[m,n] = {} &\sum_{j=0}^{k\_loops-1}\left(\left(\sum_{k=0}^{gsk-1}(\mathit{x\_slice}_i \times \mathit{weight\_slice}_i)\right) \\
+    &\quad\times\left(\mathit{pertokenscale}_i[m/gsm,j] \times \mathit{scale}_i[j,n/gsn]\right)\right) + \mathit{bias}_i[n]
     \end{aligned}
     $$
 
@@ -83,19 +83,19 @@
     - x为`float16`、`bfloat16`输入，weight为`float32`（float4\_e2m1fn\_x2）输入（公式6-1）：
 
         $$
-        y_i = x_i \text{@} (\mathrm{weight}_i \times \mathrm{antiquant\_scale}_i) + \mathrm{bias}_i
+        y_i = x_i \text{@} (\mathit{weight}_i \times \mathit{antiquant\_scale}_i) + \mathit{bias}_i
         $$
 
     - x为`float8_e4m3fn`输入，weight为`float32`（float4\_e2m1fn\_x2）输入（公式6-2）：
 
         $$
-        y_i = (x_i \times \mathrm{pertokenscale}_i) \text{@} (\mathrm{weight}_i \times \mathrm{antiquant\_scale}_i) + \mathrm{bias}_i
+        y_i = (x_i \times \mathit{pertokenscale}_i) \text{@} (\mathit{weight}_i \times \mathit{antiquant\_scale}_i) + \mathit{bias}_i
         $$
 
   - 伪量化（K-CG）场景（公式7）：仅适用于<term>Ascend 950PR/Ascend 950DT</term>
 
     $$
-    y_i = \left(x_i \text{@} (\mathrm{weight}_i \times \mathrm{antiquant\_scale}_i)\right) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i + \mathrm{bias}_i
+    y_i = \left(x_i \text{@} (\mathit{weight}_i \times \mathit{antiquant\_scale}_i)\right) \times \mathit{scale}_i \times \mathit{pertokenscale}_i + \mathit{bias}_i
     $$
 
     其中antiquant\_scale<sub>i</sub>为weight矩阵pergroup量化参数，scale<sub>i</sub>为weight矩阵perchannel量化参数，pertokenscale<sub>i</sub>为pertoken量化参数。

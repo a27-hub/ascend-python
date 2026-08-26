@@ -19,15 +19,15 @@
   - T-T/T-C量化场景：
 
     $$
-    \mathrm{self} = \mathrm{self} + \mathrm{x1} \times \mathrm{x2} * \mathrm{x2\_scale} * \mathrm{x1\_scale}
+    \mathit{self} = \mathit{self} + \mathit{x1} \times \mathit{x2} * \mathit{x2\_scale} * \mathit{x1\_scale}
     $$
 
   - mx量化场景：
 
     $$
     \begin{aligned}
-    \mathrm{self}[m,n] = {} &\mathrm{self}[m,n] + \\
-    &\sum_{j=0}^{k\_loops-1}\left(\left(\sum_{k=0}^{gsk-1}(\mathrm{x1\_slice}_i \times \mathrm{x2\_slice}_i)\right) \times \left(\mathrm{x1\_scale}_i[m,j] \times \mathrm{x2\_scale}_i[j,n]\right)\right)
+    \mathit{self}[m,n] = {} &\mathit{self}[m,n] + \\
+    &\sum_{j=0}^{k\_loops-1}\left(\left(\sum_{k=0}^{gsk-1}(\mathit{x1\_slice}_i \times \mathit{x2\_slice}_i)\right) \times \left(\mathit{x1\_scale}_i[m,j] \times \mathit{x2\_scale}_i[j,n]\right)\right)
     \end{aligned}
     $$
 
