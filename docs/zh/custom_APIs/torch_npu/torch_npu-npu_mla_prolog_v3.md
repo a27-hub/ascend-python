@@ -166,7 +166,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **query_norm_flag**（`bool`）：可选参数，表示是否输出query_norm。仅支持bool类型，False表示不输出query_norm，True表示输出query_norm（量化场景下伴随输出dequant_scale_q_norm），默认值为False。
 
-- **weight_quant_mode**（`int`）：可选参数，表示weight_dq、weight_uq_qr、weight_uk、weight_dkv_kr的量化模式。0表示非量化，1表示weightUqQr量化，2表示weightDq、weightUqQr、weightDkvKr int8量化，3表示weightDq、weightUqQr、weightDkvKr mxfp8量化，4表示weightDq、weightUqQr、weightDkvKr fp8量化，5表示weightDq、weightUqQr、weightDkvKr hif8量化，默认值为0。
+- **weight_quant_mode**（`int`）：可选参数，表示weight_dq、weight_uq_qr、weight_uk、weight_dkv_kr的量化模式。0表示非量化，1表示weight_uq_qr量化，2表示weight_dq、weight_uq_qr、weight_dkv_kr int8量化，3表示weight_dq、weight_uq_qr、weight_dkv_kr mxfp8量化，4表示weight_dq、weight_uq_qr、weight_dkv_kr fp8量化，5表示weight_dq、weight_uq_qr、weight_dkv_kr hif8量化，默认值为0。
 
 - **kv_cache_quant_mode**（`int`）：可选参数，表示kv_cache的量化模式。0表示非量化，1表示pertensor量化，2表示perchannel量化，3-表示pertoken-pergroup量化，默认值为0。
 
@@ -205,11 +205,11 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **query_rope_out**（`Tensor`）：表示Query位置编码的输出Tensor，即公式中q<sup>R</sup>。数据格式支持ND，dtype支持`bfloat16`。shape支持3维和4维，格式为[T, N, Dr]和[B, S, N, Dr]。
 
-- **dequant_scale_q_nope**（`Tensor`）：表示Query的输出Tensor的反量化参数。数据格式支持ND，dtype支持`float`。shape支持3维，weightQuantMode=2/3/4/5时，其shape为[T, N, 1]和[B*S, N, 1]；weightQuantMode=0/1时为nullptr。
+- **dequant_scale_q_nope**（`Tensor`）：表示Query的输出Tensor的反量化参数。数据格式支持ND，dtype支持`float`。shape支持3维，weight_quant_mode=2/3/4/5时，其shape为[T, N, 1]和[B*S, N, 1]；weight_quant_mode=0/1时为nullptr。
 
 - **query_norm**（`Tensor`）：Query做RmsNorm_cq后的输出tensor（对应$q^C$）。数据格式支持ND，dtype支持`bfloat16`、`int8`、`float8_e4m3fn`、`hifloat8`。shape支持2维和3维，`query_norm_flag=True`时有效，shape为[T, Hcq]或[B, S, Hcq]；`query_norm_flag=False`时为nullptr。
 
-- **dequant_scale_q_norm**（`Tensor`）：Query做RmsNorm_cq后的反量化参数。数据格式支持ND，数据类型支持`float`、`float8_e8m0`。shape支持2维，`query_norm_flag=True`且`weight_quant_mode=1/2/3/4/5`时有效。`weight_quant_mode=0`时为nullptr。`weight_quant_mode=1/2/4/5`时，shape为[T,1]或[B\*S,1]；`weightQuantMode=3`时，shape为[T, Hcq/32]或[B*S, Hcq/32]。
+- **dequant_scale_q_norm**（`Tensor`）：Query做RmsNorm_cq后的反量化参数。数据格式支持ND，数据类型支持`float`、`float8_e8m0`。shape支持2维，`query_norm_flag=True`且`weight_quant_mode=1/2/3/4/5`时有效。`weight_quant_mode=0`时为nullptr。`weight_quant_mode=1/2/4/5`时，shape为[T,1]或[B\*S,1]；`weight_quant_mode=3`时，shape为[T, Hcq/32]或[B*S, Hcq/32]。
 
   > [!NOTE]
   >
@@ -287,7 +287,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
           weight_quant_mode=1, kv_cache_quant_mode=3, query_quant_mode=0<br>
           入参：weight_uq_qr传入pertoken量化数据，kv_cache传入pertoken-pergroup量化数据，其余入参皆为非量化数据 <br>
           dequant_scale_w_uq_qr字段必须传入，smooth_scales_cq字段可选传入 <br>
-          出参：kv_cache_out返回pertoken-pergroup量化数据，其余出参返回非量化数据
+          出参：kv_cache返回pertoken-pergroup量化数据，其余出参返回非量化数据
       </td>
     </tr>
     <tr>
@@ -323,7 +323,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td> kv_cache非量化</td>
       <td>
         weight_quant_mode=3, kv_cache_quant_mode=0, query_quant_mode=0<br>
-        入参：tokenX传入pertoken量化数据，weightDq、weightUqQr、weightDkvKr传入perchannel量化数据，其余入参皆为非量化数据。dequantScaleX、dequantScaleWDq、dequantScaleWUqQr、dequantScaleWDkvKr字段必须传入 <br>
+        入参：token_x传入pertoken量化数据，weight_dq、weight_uq_qr、weight_dkv_kr传入perchannel量化数据，其余入参皆为非量化数据。dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr字段必须传入 <br>
         出参：所有出参返回非量化数据
       </td>
     </tr>
@@ -331,7 +331,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td> kv_cache pertensor量化 </td>
       <td>
         weight_quant_mode=3, kv_cache_quant_mode=1, query_quant_mode=1<br>
-        入参：tokenX传入pertoken量化数据，weightDq、weightUqQr、weightDkvKr传入perchannel量化数据，kvCacheRef传入pertensor量化数据，其余入参皆为非量化数据。dequantScaleX、dequantScaleWDq、dequantScaleWUqQr、dequantScaleWDkvKr、quantScaleCkv字段必须传入 <br>
+        入参：token_x传入pertoken量化数据，weight_dq、weight_uq_qr、weight_dkv_kr传入perchannel量化数据，kv_cache传入pertensor量化数据，其余入参皆为非量化数据。dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr、quant_scale_ckv字段必须传入 <br>
         出参：query_out返回per-token-head量化数据，kv_cache出参返回pertensor量化数据，其余出参返回非量化数据
       </td>
     </tr>
@@ -339,7 +339,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td> kv_cache pertoken-pergroup量化 </td>
       <td>
         weight_quant_mode=3, kv_cache_quant_mode=3, query_quant_mode=0<br>
-        入参：tokenX传入pertoken量化数据，weightDq、weightUqQr、weightDkvKr传入perchannel量化数据，其余入参皆为非量化数据。dequantScaleX、dequantScaleWDq、dequantScaleWUqQr、dequantScaleWDkvKr字段必须传入 <br>
+        入参：token_x传入pertoken量化数据，weight_dq、weight_uq_qr、weight_dkv_kr传入perchannel量化数据，其余入参皆为非量化数据。dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr字段必须传入 <br>
         出参：kv_cache出参返回pertoken-pergroup量化数据，其余出参返回非量化数据
       </td>
     </tr>
@@ -365,15 +365,15 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <th>kv_cache非量化<br>dtype</th>
       <th>kv_cache量化<br>dtype</th>
       <th>kv_cache pertoken-pergroup量化<br>dtype</th>
-      <th>kvCache非量化<br>dtype</th>
-      <th>kvCache pertensor量化<br>dtype</th>
-      <th>kvCache pertoken-pergroup量化<br>dtype</th>
-      <th>kvCache非量化<br>dtype</th>
-      <th>kvCache pertensor量化<br>dtype</th>
-      <th>kvCache pertoken-pergroup量化<br>dtype</th>
-      <th>kvCache非量化<br>dtype</th>
-      <th>kvCache pertensor量化<br>dtype</th>
-      <th>kvCache pertoken-pergroup量化<br>dtype</th>
+      <th>kv_cache非量化<br>dtype</th>
+      <th>kv_cache pertensor量化<br>dtype</th>
+      <th>kv_cache pertoken-pergroup量化<br>dtype</th>
+      <th>kv_cache非量化<br>dtype</th>
+      <th>kv_cache pertensor量化<br>dtype</th>
+      <th>kv_cache pertoken-pergroup量化<br>dtype</th>
+      <th>kv_cache非量化<br>dtype</th>
+      <th>kv_cache pertensor量化<br>dtype</th>
+      <th>kv_cache pertoken-pergroup量化<br>dtype</th>
     </tr>
     <tr>
       <td>token_x</td>
@@ -813,7 +813,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td>bfloat16</td>
     </tr>
     <tr>
-      <td> dequant_scale_q_nope_out </td>
+      <td> dequant_scale_q_nope </td>
       <td>无需赋值</td>
       <td>无需赋值</td>
       <td>无需赋值</td>
@@ -832,7 +832,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td>无需赋值</td>
     </tr>
     <tr>
-      <td> query_norm_out </td>
+      <td> query_norm </td>
       <td>bfloat16</td>
       <td>int8</td>
       <td>int8</td>
@@ -851,7 +851,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td>hifloat8</td>
     </tr>
     <tr>
-      <td> dequant_scale_q_norm_out </td>
+      <td> dequant_scale_q_norm </td>
       <td>无需赋值</td>
       <td>float</td>
       <td>float</td>
