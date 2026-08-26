@@ -12480,7 +12480,7 @@ _add_torch_npu_docstr(
     "npu_alltoallv_gmm",
     """
 接口原型：
-npu_alltoallv_gmm(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False) -> (Tensor, Tensor, Tensor)
+npu_alltoallv_gmm(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False, str? comm_mode=None) -> (Tensor, Tensor, Tensor)
 
 功能描述
 alltoallv和grouped matmul的融合算子，对alltoallv通信后的输出做grouped matmul操作，通信时间和计算时间进行掩盖。
@@ -12499,6 +12499,7 @@ alltoallv和grouped matmul的融合算子，对alltoallv通信后的输出做gro
     transGmmWeight：为True：表明gmm的右矩阵要转置，为False时表明gmm右矩阵不转置，默认为false
     transMmWeight：为True：表明mm的右矩阵要转置，为False时表明mm右矩阵不转置，默认为false
     permute_out_flag：为True：表明permute结果输出，为False时表明permute结果不输出，默认为false
+    comm_mode：可选通信模式。传None时调用V1接口；显式传入字符串时调用V2接口。Ascend 910C的AIV模式传"aiv"。
 
 输出说明
     gmmY：device侧Tensor, 计算输出,数据类型支持float16, bfloat16。最终计算结果，数据类型与输入gmmX保持一致
@@ -12539,7 +12540,8 @@ def run_npu_alltoallv_gmm(rank, world_size, master_ip, master_port, gmm_x, gmm_w
                                                 recv_counts=recv_counts,
                                                 trans_gmm_weight=False,
                                                 trans_mm_weight=False,
-                                                permute_out_flag=True)
+                                                permute_out_flag=True,
+                                                comm_mode="aiv")
 
 def generate_matrix(self, e, ep_world_size, bsk, name="alltoallv_gmm", max_iter=10000):
     import hashlib
