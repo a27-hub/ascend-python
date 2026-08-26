@@ -22,54 +22,81 @@
 
   - 非量化场景（公式1）：
 
-    ![](../../figures/zh-cn_formulaimage_0000002447495269.png)
+    $$
+    y_i = x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i
+    $$
 
   - 静态量化（T-T、T-C）场景（公式2）：
 
-    ![](../../figures/zh-cn_formulaimage_0000002412325024.png)
+    $$
+    y_i = (x_i \text{@} \mathrm{weight}_i) \times \mathrm{scale}_i + \mathrm{offset}_i
+    $$
 
     - x为`int8`输入，bias为`int32`输入（公式2-1）：
 
-        ![](../../figures/zh-cn_formulaimage_0000002445964593.png)
+        $$
+        y_i = (x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i) \times \mathrm{scale}_i + \mathrm{offset}_i
+        $$
 
     - x为`int8`输入，bias为`bfloat16`、`float16`、`float32`输入，无offset（公式2-2）：
 
-        ![](../../figures/zh-cn_formulaimage_0000002445924785.png)
+        $$
+        y_i = (x_i \text{@} \mathrm{weight}_i) \times \mathrm{scale}_i + \mathrm{bias}_i
+        $$
 
   - 动态量化（K-T、K-C、T-T、T-C）场景（公式3）：
 
-    ![](../../figures/zh-cn_formulaimage_0000002412485996.png)
+    $$
+    y_i = (x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i
+    $$
 
     - x为`int8`输入，bias为`int32`输入（公式3-1）：
 
-        ![](../../figures/zh-cn_formulaimage_0000002412486712.png)
+        $$
+        y_i = (x_i \text{@} \mathrm{weight}_i + \mathrm{bias}_i) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i
+        $$
 
     - x为`int8`输入，bias为`bfloat16`、`float16`、`float32`输入（公式3-2）：
 
-        ![](../../figures/zh-cn_formulaimage_0000002456687289.png)
+        $$
+        y_i = (x_i \text{@} \mathrm{weight}_i) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i + \mathrm{bias}_i
+        $$
 
   - 伪量化（perchannel、pergroup）场景（公式4）：
 
-    ![](../../figures/zh-cn_formulaimage_0000002420618736.png)
+    $$
+    y_i = x_i \text{@} \left((\mathrm{weight}_i + \mathrm{antiquant\_offset}_i) \times \mathrm{antiquant\_scale}_i\right) + \mathrm{bias}_i
+    $$
 
   - 动态量化（G-B、mx）场景（公式5）：仅适用于<term>Ascend 950PR/Ascend 950DT</term>
 
-    ![](../../figures/zh-cn_formulaimage_0000002603604409.png)
+    $$
+    \begin{aligned}
+    y_i[m,n] = {} &\sum_{j=0}^{k\_loops-1}\left(\left(\sum_{k=0}^{gsk-1}(\mathrm{x\_slice}_i \times \mathrm{weight\_slice}_i)\right) \\
+    &\quad\times\left(\mathrm{pertokenscale}_i[m/gsm,j] \times \mathrm{scale}_i[j,n/gsn]\right)\right) + \mathrm{bias}_i[n]
+    \end{aligned}
+    $$
 
     其中gsm、gsn和gsk分别代表M、N、K轴的量化的block size，K<sub>i</sub>为每个分组的K的大小，x\_slice<sub>i</sub>代表x<sub>i</sub>第m行长度为gsk的向量，weight\_slice<sub>i</sub>代表weight<sub>i</sub>第n列长度为gsk的向量，K轴均从j\*gsk起始切片，j的取值范围\[0, k\_loops\)，k\_loops=ceil\(K<sub>i</sub>/gsk\)，支持最后的切片长度不足gsk。
 
   - 伪量化（mx）场景（公式6）：仅适用于<term>Ascend 950PR/Ascend 950DT</term>
     - x为`float16`、`bfloat16`输入，weight为`float32`（float4\_e2m1fn\_x2）输入（公式6-1）：
 
-        ![](../../figures/zh-cn_formulaimage_0000002489752822.png)
+        $$
+        y_i = x_i \text{@} (\mathrm{weight}_i \times \mathrm{antiquant\_scale}_i) + \mathrm{bias}_i
+        $$
 
     - x为`float8_e4m3fn`输入，weight为`float32`（float4\_e2m1fn\_x2）输入（公式6-2）：
 
-        ![](../../figures/zh-cn_formulaimage_0000002489915920.png)
+        $$
+        y_i = (x_i \times \mathrm{pertokenscale}_i) \text{@} (\mathrm{weight}_i \times \mathrm{antiquant\_scale}_i) + \mathrm{bias}_i
+        $$
 
   - 伪量化（K-CG）场景（公式7）：仅适用于<term>Ascend 950PR/Ascend 950DT</term>
 
-    ![](../../figures/zh-cn_formulaimage_0000002489922674.png)
+    $$
+    y_i = \left(x_i \text{@} (\mathrm{weight}_i \times \mathrm{antiquant\_scale}_i)\right) \times \mathrm{scale}_i \times \mathrm{pertokenscale}_i + \mathrm{bias}_i
+    $$
 
     其中antiquant\_scale<sub>i</sub>为weight矩阵pergroup量化参数，scale<sub>i</sub>为weight矩阵perchannel量化参数，pertokenscale<sub>i</sub>为pertoken量化参数。
 

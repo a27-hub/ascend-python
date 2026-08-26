@@ -18,11 +18,18 @@
 
   - T-T/T-C量化场景：
 
-    ![](../../figures/zh-cn_formulaimage_0000002458772861.png)
+    $$
+    \mathrm{self} = \mathrm{self} + \mathrm{x1} \times \mathrm{x2} * \mathrm{x2\_scale} * \mathrm{x1\_scale}
+    $$
 
   - mx量化场景：
 
-    ![](../../figures/zh-cn_formulaimage_0000002531128880.png)
+    $$
+    \begin{aligned}
+    \mathrm{self}[m,n] = {} &\mathrm{self}[m,n] + \\
+    &\sum_{j=0}^{k\_loops-1}\left(\left(\sum_{k=0}^{gsk-1}(\mathrm{x1\_slice}_i \times \mathrm{x2\_slice}_i)\right) \times \left(\mathrm{x1\_scale}_i[m,j] \times \mathrm{x2\_scale}_i[j,n]\right)\right)
+    \end{aligned}
+    $$
 
     其中gsk代表K轴的mx量化的block size即32，K<sub>i</sub>为每个分组的K的大小，x1\_slice<sub>i</sub>代表x1<sub>i</sub>第m行长度为gsk的向量，x2\_slice<sub>i</sub>代表x2<sub>i</sub>第n列长度为gsk的向量，K轴均从j\*gsk起始切片，j的取值范围\[0, k\_loops\)，k\_loops=ceil\(K<sub>i</sub>/gsk\)，支持最后的切片长度不足gsk。
 
