@@ -674,7 +674,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_distribute_dispatch_v2.md">torch_npu.npu_moe_distribute_dispatch_v2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>对Token数据先进行量化（可选），再进行EP（Expert Parallelism）域的alltoallv通信。v2版本将返回值expand_idx替换为assist_info_for_combine以包含更详细的token信息，并新增comm_alg参数用于代替HCCL_INTRA_PCIE_ENABLE和HCCL_INTRA_ROCE_ENABLE环境变量。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>对Token数据先进行量化（可选），再进行EP（Expert Parallelism）域的alltoallv通信，再进行TP（Tensor Parallelism）域的allgatherv通信（可选）。v2版本将返回值expand_idx替换为assist_info_for_combine以包含更详细的token信息，并新增comm_alg参数用于代替HCCL_INTRA_PCIE_ENABLE和HCCL_INTRA_ROCE_ENABLE环境变量。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_gating_top_k.md">torch_npu.npu_moe_gating_top_k</a></p>
