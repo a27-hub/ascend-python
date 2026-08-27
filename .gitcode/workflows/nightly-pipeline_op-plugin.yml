@@ -1,0 +1,66 @@
+name: Nightly-pipeline_op-plugin
+
+concurrency:
+  max: 5
+  exceed-action: QUEUE
+  enable: true
+  preemption:
+    enable: true
+    events: [mr_id]
+
+on:
+  # 定时触发：每天凌晨 2:00 (UTC+8)
+  schedule:
+    - cron: "0 18 * * *"
+
+  # 测试阶段：PR 触发
+  pull_request:
+    types: [open, update, reopen]
+    branches: [ 'master' ]
+
+  # 测试阶段：Push 触发
+  push:
+    branches: [ 'master' ]
+
+env:
+  repo: ${{ atomgit.event.repository.name }}
+  pr_id: ${{ atomgit.event.pull_request.number }}
+  org_name: "ComputingActionTest"
+  img_master_arm: "pytorch_master_a2_aarch64_builder:20260704"
+
+stages:
+  stage_1:
+    name: Build
+    select: selected_by_default
+    jobs:
+      Build_master:
+        name: Build_master
+        uses: .gitcode/workflows/nightly_build_job.yml
+        with:
+          pytorch_branch: "master"
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          TARGET_BRANCH: "master"
+
+  stage_2:
+    name: UT
+    select: selected_by_default
+    jobs:
+      UT_master_arm_01:
+        name: UT_master_arm_01
+        uses: .gitcode/workflows/nightly_ut_job.yml
+        with:
+          pytorch_branch: "master"
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          TARGET_BRANCH: "master"
+          TEST_RANK: "1"
+          TEST_WORLD_SIZE: "2"
+
+      UT_master_arm_02:
+        name: UT_master_arm_02
+        uses: .gitcode/workflows/nightly_ut_job.yml
+        with:
+          pytorch_branch: "master"
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          TARGET_BRANCH: "master"
+          TEST_RANK: "2"
+          TEST_WORLD_SIZE: "2"
