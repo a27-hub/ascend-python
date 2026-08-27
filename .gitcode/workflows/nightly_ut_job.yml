@@ -96,6 +96,11 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: generate modify_files.txt for full UT
+        run: |
+          git ls-files > modify_files.txt
+          echo "Total files for full UT: $(wc -l < modify_files.txt)"
+
       - name: UT_op-plugin
         run: |
           pwd
@@ -114,6 +119,11 @@ jobs:
           ref: refs/heads/master
           path: pytorch
           submodules: true
+
+      - name: generate pytorch modify_files.txt for full UT
+        run: |
+          cd pytorch && git ls-files > modify_files.txt
+          echo "Total pytorch files for full UT: $(wc -l < modify_files.txt)"
 
       - name: UT_pytorch
         run: |
