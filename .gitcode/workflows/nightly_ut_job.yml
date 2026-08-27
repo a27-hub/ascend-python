@@ -107,6 +107,12 @@ jobs:
           pwd
           ls -al
           pip3 list
+          echo "=== Check NPU devices ==="
+          npu-smi info || echo "npu-smi not available"
+          ls /dev/davinci* 2>/dev/null || echo "No davinci devices found"
+          echo "=== Check Ascend ==="
+          ls /usr/local/Ascend/ 2>/dev/null || echo "Ascend dir not found"
+          echo "=== Start UT ==="
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
