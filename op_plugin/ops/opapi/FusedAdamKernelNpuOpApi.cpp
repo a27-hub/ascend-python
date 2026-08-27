@@ -5,6 +5,7 @@
 #include <ATen/ops/_fused_adam.h>
 #include <ATen/native/ForeachUtils.h>
 
+#include <algorithm>
 #include <vector>
 
 namespace op_api {
@@ -89,6 +90,57 @@ void fused_adam_cpu_fallback(
 		}
 	}
 }
+
+void _split_and_exec_npu_cmd_fused_adam(
+	at::TensorList self,
+	at::TensorList grads,
+	at::TensorList exp_avgs,
+	at::TensorList exp_avg_sqs,
+	at::TensorList max_exp_avg_sqs,
+	at::TensorList state_steps,
+	const at::Tensor& grad_scale_tensor,
+	const at::Tensor& found_inf_tensor,
+	const double lr,
+	const double beta1,
+	const double beta2,
+	const double weight_decay,
+	const double eps,
+	const bool amsgrad,
+	const bool maximize)
+{
+	constexpr size_t max_tensor_count = 512;
+	if (self.empty()) {
+		return;
+	}
+
+	for (size_t offset = 0; offset < self.size(); offset += max_tensor_count) {
+		size_t current_count = std::min(max_tensor_count, self.size() - offset);
+		at::TensorList self_batch(self.data() + offset, current_count);
+		at::TensorList grads_batch(grads.data() + offset, current_count);
+		at::TensorList exp_avgs_batch(exp_avgs.data() + offset, current_count);
+		at::TensorList exp_avg_sqs_batch(exp_avg_sqs.data() + offset, current_count);
+		at::TensorList max_exp_avg_sqs_batch(max_exp_avg_sqs.data() + offset, current_count);
+		at::TensorList state_steps_batch(state_steps.data() + offset, current_count);
+
+		EXEC_NPU_CMD(
+			aclnnFusedAdam,
+			self_batch,
+			grads_batch,
+			exp_avgs_batch,
+			exp_avg_sqs_batch,
+			max_exp_avg_sqs_batch,
+			state_steps_batch,
+			grad_scale_tensor,
+			found_inf_tensor,
+			lr,
+			beta1,
+			beta2,
+			weight_decay,
+			eps,
+			amsgrad,
+			maximize);
+	}
+}
 } // namespace
 
 void _fused_adam_(
@@ -143,17 +195,26 @@ void _fused_adam_(
 	for (size_t i = 0; i < state_steps.size(); i++) {
 		state_steps_adjusted.emplace_back(state_steps[i].sub(1));
 	}
+	std::vector<at::Tensor> max_exp_avg_sqs_adjusted;
+	if (max_exp_avg_sqs.empty()) {
+		max_exp_avg_sqs_adjusted.reserve(self.size());
+		for (const at::Tensor& tensor : self) {
+			max_exp_avg_sqs_adjusted.emplace_back(at::zeros_like(tensor));
+		}
+	}
 	at::TensorList state_steps_list(state_steps_adjusted);
+	at::TensorList max_exp_avg_sqs_list = max_exp_avg_sqs.empty()
+		? at::TensorList(max_exp_avg_sqs_adjusted)
+		: max_exp_avg_sqs;
 	const at::Tensor grad_scale_tensor = grad_scale.value_or(at::Tensor());
 	const at::Tensor found_inf_tensor = found_inf.value_or(at::Tensor());
 
-	EXEC_NPU_CMD(
-		aclnnFusedAdam,
+	_split_and_exec_npu_cmd_fused_adam(
 		self,
 		grads,
 		exp_avgs,
 		exp_avg_sqs,
-		max_exp_avg_sqs,
+		max_exp_avg_sqs_list,
 		state_steps_list,
 		grad_scale_tensor,
 		found_inf_tensor,
