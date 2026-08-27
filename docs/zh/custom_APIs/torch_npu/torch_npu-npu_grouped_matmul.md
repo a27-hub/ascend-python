@@ -141,9 +141,9 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   - 列表长度与`weight`列表长度相同。
   - 每个张量支持1维或2维输入。
 
-- **`scale`**（`List[Tensor]`）：**可选参数**，用于缩放原数值以匹配量化后的范围值，代表量化参数中的缩放因子，对应公式（2）、公式（3）。
+- **`scale`**（`List[Tensor]`）：**可选参数**，用于缩放原数值以匹配量化后的范围值，代表量化参数中的缩放因子。
   - 数据格式和数据类型支持如下：
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持$ND$格式。
       - 当`group_list`输入类型为`List[int]`时，支持`int64`。
       - 当`group_list`输入类型为`Tensor`时，支持`float32`、`bfloat16`、`int64`。
     - <term>Atlas 推理系列产品</term>：仅支持传入None。
