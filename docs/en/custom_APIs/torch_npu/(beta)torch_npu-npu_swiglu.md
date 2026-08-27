@@ -1,4 +1,4 @@
-# (beta) torch_npu.npu_swiglu
+# (beta) torch\_npu.npu\_swiglu
 
 ## Supported Products
 

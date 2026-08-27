@@ -10,8 +10,8 @@
 ## Function<a name="en-us_topic_0000001832267082_section14441124184110"></a>
 
 - Adapts to the `FlashAttention` operator in the incremental and full inference scenarios, supporting both full computation (`PromptFlashAttention`) and incremental computation (`IncreFlashAttention`). When `S` of the `query` matrix is `1`, the execution enters the `IncreFlashAttention` branch. Otherwise, it enters the `PromptFlashAttention` branch. The following two scenarios are supported:
-- PromptFlashAttention: Used during the prefill/prompt stage. Typically, `query`, `key`, and `value` are tensors containing the entire sequence and can be used in conjunction with `atten_mask` and the optional `pse_shift`. This mode prioritizes throughput; for long-sequence scenarios, pay close attention to timeout risks and splitting strategies.
-- IncreFlashAttention: Used during the decode stage, where the S dimension of `query` is 1, and `key`/`value` typically come from the KV Cache. This mode prioritizes per-step latency and KV Cache access efficiency. Enabling PagedAttention can improve throughput and memory access efficiency, but introduces additional constraints.
+  - PromptFlashAttention: Used during the prefill/prompt stage. Typically, `query`, `key`, and `value` are tensors containing the entire sequence and can be used in conjunction with `atten_mask` and the optional `pse_shift`. This mode prioritizes throughput; for long-sequence scenarios, pay close attention to timeout risks and splitting strategies.
+  - IncreFlashAttention: Used during the decode stage, where the S dimension of `query` is 1, and `key`/`value` typically come from the KV Cache. This mode prioritizes per-step latency and KV Cache access efficiency. Enabling PagedAttention can improve throughput and memory access efficiency, but introduces additional constraints.
 - Formulas:
 
   Basic formula:
@@ -155,13 +155,13 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 - **`key_shared_prefix`** (`Tensor`): Optional. Key prefix parameter in the attention structure. The data type can be `float16`, `bfloat16`, or `int8`. Non-contiguous tensors are not supported. The data layout can be ND. For details about the overall constraints, see [Constraints](#en-us_topic_0000001832267082_section12345537164214).
 - **`value_shared_prefix`** (`Tensor`): Optional. Value prefix parameter in the attention structure. The data type can be `float16`, `bfloat16`, or `int8`. Non-contiguous tensors are not supported. The data layout can be ND. For details about the overall constraints, see [Constraints](#en-us_topic_0000001832267082_section12345537164214).
 - **`actual_shared_prefix_len`** (`List[int]`): Optional. Valid sequence length of `key_shared_prefix` and `value_shared_prefix`. The data type can be `int64`. The default value is `None`, indicating that the value is identical to the sequence length `S` in the `key_shared_prefix` and `value_shared_prefix` shapes. Restriction: The valid sequence length in this parameter must be less than or equal to the sequence length in `key_shared_prefix` and `value_shared_prefix`.
-- **`query_rope`** (`Tensor`): Optional. RoPE information of the query in the Multi-Head Latent Attention (MLA) structure. The data type can be `float16` or `bfloat16`. Non-contiguous tensors are not supported. The data layout can be ND.
+- **`query_rope`** (`Tensor`): Optional. RoPE information of the query in the Multi-head Latent Attention (MLA) structure. The data type can be `float16` or `bfloat16`. Non-contiguous tensors are not supported. The data layout can be ND.
 - **`key_rope`** (`Tensor`): Optional. RoPE information of the key in the MLA structure. The data type can be `float16` or `bfloat16`. Non-contiguous tensors are not supported. The data layout can be ND.
 - **`key_rope_antiquant_scale`** (`Tensor`): Optional. Reserved parameter, currently not used. Retain the default value.
 - **`num_heads`** (`int`): Optional. Number of heads for `query`. The data type can be `int64`. In `BNSD` scenarios, this value must be identical to the shape of the N axis of `query`. Otherwise, an execution exception occurs.
 - **`scale`** (`float`): Optional. Scaling factor, typically the reciprocal of the square root of `D`, used as a scalar value for Muls in the computation flow. The data type can be `float`. Its data type and the data type of `query` must meet the type deduction rules. The default value is `1.0`.
 - **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `int64`. The default value is `2147483647`. This parameter is invalid when `Q_S` is `1`.
-- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. The default value is `2147483647`. This parameter is invalid when `Q_S` is `1`.
+- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. The data type can be `int64`. The default value is `2147483647`. This parameter is invalid when `Q_S` is `1`.
 - **`input_layout`** (`string`): Optional. Data layout of the input `query`, `key`, and `value`. The default value is `"BSH"`.
 
     > [!NOTE]   
@@ -615,11 +615,12 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     import torch_npu
     import math
     import torchair as tng
-    
+    import os
+
     from torchair.configs.compiler_config import CompilerConfig
     import torch._dynamo
-    TORCHDYNAMO_VERBOSE=1
-    TORCH_LOGS="+dynamo"
+    os.environ['TORCHDYNAMO_VERBOSE'] = '1'
+    os.environ['TORCH_LOGS'] = '+dynamo'
     
     # Configure logging and debug settings for graph capture
     import logging
