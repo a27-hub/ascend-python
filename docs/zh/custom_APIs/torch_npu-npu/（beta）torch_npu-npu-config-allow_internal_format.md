@@ -16,7 +16,7 @@
 该配置直接影响以下API的行为：
 
 - `torch_npu.npu_format_cast`/`torch_npu.npu_format_cast_`/`at_npu::native::npu_format_cast`：设置为`False`时不支持转换为私有格式，目标私有格式会自动降级为对应的base格式，数据与shape保持不变；设置为`True`时真实转换为私有格式。
-- 卷积类算子（如`torch.nn.Conv1d`、`torch.nn.Conv2d`、`torch.nn.ConvTranspose2d`等）：设置为`False`且JIT编译关闭时，输入保持base格式；设置为`True`或开启JIT编译时，输入会被转为私有格式参与计算，可能触发在线编译。
+- 卷积类算子（主要影响`torch.nn.Conv1d`、`torch.nn.Conv2d`，`Conv3d`不受影响）：影响卷积的实现路径，设置为`False`且JIT编译关闭时，卷积通过aclnn实现；否则通过aclop实现。建议大部分情况下保持为`False`，避免触发在线编译。
 
 ## 函数原型
 
