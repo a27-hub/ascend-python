@@ -69,7 +69,7 @@ jobs:
           bucket: "pytorch-package"
           access-key: "${{ secrets.OBS_AK }}"
           secret-key: "${{ secrets.OBS_SK }}"
-          artifact-path: "pta/op-plugin/master/"
+          key: "pta/op-plugin/master/"
           local-path: "./"
 
       - name: Verify artifact
