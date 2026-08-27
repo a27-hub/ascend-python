@@ -103,7 +103,7 @@ jobs:
 
           torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl"
           echo "torch_url=${torch_url}"
-          pip"${{ inputs.py_version }}" install $torch_url
+          pip3 install $torch_url
 
       - name: download op-plugin from OBS
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
@@ -115,7 +115,7 @@ jobs:
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           ls -al
-          pip"${{ inputs.py_version }}" install torch_npu*.whl
+          pip3 install torch_npu*.whl
         working-directory: ./
 
       - name: checkout op-plugin
@@ -129,12 +129,12 @@ jobs:
         run: |
           pwd
           ls -al
-          pip"${{ inputs.py_version }}" list
+          pip3 list
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
           source /usr/local/Ascend/nnal/atb/set_env.sh
-          python"${{ inputs.py_version }}" ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
+          python3 ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
 
       - name: checkout pytorch for UT
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
@@ -155,9 +155,9 @@ jobs:
           if [ -f "pytorch/ci/access_control_test.py" ]; then
             sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/access_control_test.py
           fi
-          pip"${{ inputs.py_version }}" list
+          pip3 list
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
           source /usr/local/Ascend/nnal/atb/set_env.sh
-          python"${{ inputs.py_version }}" pytorch/ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
+          python3 pytorch/ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
