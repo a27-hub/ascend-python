@@ -281,6 +281,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   - `x`和`weight`数据类型仅支持`float8_e4m3fn`。
   - 仅支持`weight`不转置场景。
   - 仅支持`group_type`为0，即M轴分组。
+  - 不支持图模式，仅支持单算子模式。
   - 单tensor场景下，scale NZ亲和格式的storage shape为$[E, \lceil N/16 \rceil, \lceil K/64 \rceil, 16, 2]$；多tensor场景下，每个scale tensor的storage shape为$[\lceil N_i/16 \rceil, \lceil K_i/64 \rceil, 16, 2]$。
 
 - 内轴限制如下：
