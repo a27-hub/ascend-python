@@ -12,22 +12,22 @@
 
 用于控制Profiler行为状态，如性能数据采集、性能数据采集预热、性能数据采集并保存，属于Enum类型。
 
-## 函数原型
+## 枚举定义
 
 ```python
-torch_npu.profiler.ProfilerAction
+class torch_npu.profiler.ProfilerAction(Enum):
+    NONE = 0
+    WARMUP = 1
+    RECORD = 2
+    RECORD_AND_SAVE = 3
 ```
 
-## 参数说明
+## 枚举成员说明
 
-- **torch_npu.profiler.ProfilerAction.NONE**：可选参数，无任何行为。
-- **torch_npu.profiler.ProfilerAction.WARMUP**：可选参数，性能数据采集预热。
-- **torch_npu.profiler.ProfilerAction.RECORD**：可选参数，性能数据采集。
-- **torch_npu.profiler.ProfilerAction.RECORD_AND_SAVE**：可选参数，性能数据采集并保存。
-
-## 返回值说明
-
-无
+- **torch_npu.profiler.ProfilerAction.NONE**：枚举成员，表示无任何行为。
+- **torch_npu.profiler.ProfilerAction.WARMUP**：枚举成员，表示性能数据采集预热。
+- **torch_npu.profiler.ProfilerAction.RECORD**：枚举成员，表示性能数据采集。
+- **torch_npu.profiler.ProfilerAction.RECORD_AND_SAVE**：枚举成员，表示性能数据采集并保存。
 
 ## 调用示例
 
