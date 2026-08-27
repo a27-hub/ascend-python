@@ -104,20 +104,11 @@ jobs:
 
       - name: UT_op-plugin
         run: |
-          pwd
-          ls -al
-          pip3 list
-          echo "=== Check NPU devices ==="
-          npu-smi info || echo "npu-smi not available"
-          ls /dev/davinci* 2>/dev/null || echo "No davinci devices found"
-          echo "=== Check Ascend ==="
-          ls /usr/local/Ascend/ 2>/dev/null || echo "Ascend dir not found"
-          echo "=== Start UT ==="
           source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
           source /usr/local/Ascend/nnal/atb/set_env.sh
-          python3 ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
+          python3 ci/nightly_ut_debug.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
 
       - name: checkout pytorch for UT
         uses: checkout
