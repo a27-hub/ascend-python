@@ -11,10 +11,6 @@ on:
         required: false
         type: string
         default: ${{ env.ATOMGIT_REPOSITORY_URL }}
-      pr_id:
-        required: false
-        type: string
-        default: ${{ atomgit.event.pull_request.number }}
       CP_DOCKER_IMG:
         required: true
         type: string
@@ -47,7 +43,6 @@ jobs:
         run: |
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
           echo "py_version=${{ inputs.py_version }}"
-          echo "pr_id=${{ inputs.pr_id }}"
           echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
           echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
           echo "inputs.TARGET_BRANCH=${{ inputs.TARGET_BRANCH }}"
@@ -128,7 +123,6 @@ jobs:
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: checkout
         with:
-          ref: refs/merge-requests/${{ inputs.pr_id }}/merge
           fetch-depth: 1
 
       - name: UT_op-plugin

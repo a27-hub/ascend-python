@@ -24,7 +24,6 @@ on:
 
 env:
   repo: ${{ atomgit.event.repository.name }}
-  pr_id: ${{ atomgit.event.pull_request.number }}
   org_name: "ComputingActionTest"
   img_master_arm: "pytorch_master_a2_aarch64_builder:20260704"
 
@@ -39,7 +38,6 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          TARGET_BRANCH: "master"
 
   stage_2:
     name: UT
@@ -51,7 +49,6 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          TARGET_BRANCH: "master"
           TEST_RANK: "1"
           TEST_WORLD_SIZE: "2"
 
@@ -61,6 +58,5 @@ stages:
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          TARGET_BRANCH: "master"
           TEST_RANK: "2"
           TEST_WORLD_SIZE: "2"
