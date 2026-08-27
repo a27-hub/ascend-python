@@ -47,7 +47,6 @@ stages:
         name: UT_master_arm_01
         uses: .gitcode/workflows/nightly_ut_job.yml
         with:
-          pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "1"
           TEST_WORLD_SIZE: "2"
@@ -56,7 +55,6 @@ stages:
         name: UT_master_arm_02
         uses: .gitcode/workflows/nightly_ut_job.yml
         with:
-          pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "2"
           TEST_WORLD_SIZE: "2"

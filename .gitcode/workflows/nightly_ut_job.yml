@@ -3,10 +3,6 @@ name: Nightly UT Job
 on:
   workflow_call:
     inputs:
-      py_version:
-        required: false
-        type: string
-        default: "3.10"
       REMOTE_URL:
         required: false
         type: string
@@ -14,13 +10,6 @@ on:
       CP_DOCKER_IMG:
         required: true
         type: string
-      pytorch_branch:
-        required: true
-        type: string
-      TARGET_BRANCH:
-        required: false
-        type: string
-        default: "master"
       TEST_RANK:
         required: false
         type: string
@@ -41,43 +30,12 @@ jobs:
     steps:
       - name: print env
         run: |
-          echo "pytorch_branch=${{ inputs.pytorch_branch }}"
-          echo "py_version=${{ inputs.py_version }}"
           echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
           echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
-          echo "inputs.TARGET_BRANCH=${{ inputs.TARGET_BRANCH }}"
           echo "TEST_RANK=${{ env.TEST_RANK }}"
           echo "TEST_WORLD_SIZE=${{ env.TEST_WORLD_SIZE }}"
 
-      - name: check branch support
-        id: check_support
-        run: |
-          PYTORCH_BRANCH="${{ inputs.pytorch_branch }}"
-          TARGET_BRANCH="${{ inputs.TARGET_BRANCH }}"
-          echo "TARGET_BRANCH=${TARGET_BRANCH}"
-          echo "PYTORCH_BRANCH=${PYTORCH_BRANCH}"
-          if [ "${TARGET_BRANCH}" = "master" ]; then
-            echo "master branch, execute UT"
-            echo "need_ut=yes" >> "$ATOMGIT_OUTPUT"
-            echo "pytorch_build_branch=${PYTORCH_BRANCH}" >> "$ATOMGIT_OUTPUT"
-            exit 0
-          fi
-          support_730="v2.6.0 v2.7.1 v2.8.0 v2.9.0"
-          support_2600="v2.7.1 v2.8.0 v2.9.0 v2.10.0"
-          support_2610="v2.7.1 v2.9.0 v2.10.0 v2.11.0 v2.12.0"
-          suffix="${TARGET_BRANCH//./}"
-          list="support_${suffix}"
-          if [[ ! " ${!list} " =~ " ${PYTORCH_BRANCH} " ]]; then
-            echo "${TARGET_BRANCH} no need execute ${PYTORCH_BRANCH} UT"
-            echo "need_ut=no" >> "$ATOMGIT_OUTPUT"
-          else
-            echo "${TARGET_BRANCH} need execute ${PYTORCH_BRANCH} UT"
-            echo "need_ut=yes" >> "$ATOMGIT_OUTPUT"
-            echo "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" >> "$ATOMGIT_OUTPUT"
-          fi
-
       - name: checkout pytorch
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' && inputs.pytorch_branch == 'master' }}
         uses: checkout
         with:
           repository: https://gitcode.com/Ascend/pytorch.git
@@ -86,7 +44,6 @@ jobs:
           fetch-depth: 1
 
       - name: install torch
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' && inputs.pytorch_branch == 'master' }}
         run: |
           torch_version=$(cat pytorch/requirements.txt | grep torch== | cut -c 8-25)
           nightly_date=${torch_version:10:8}
@@ -106,7 +63,6 @@ jobs:
           pip3 install $torch_url
 
       - name: download op-plugin from OBS
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: obs-download
         with:
           endpoint: "obs.cn-north-4.myhuaweicloud.com"
@@ -117,20 +73,17 @@ jobs:
           local-path: "./"
 
       - name: Verify artifact
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           ls -al
           pip3 install torch_npu*.whl
         working-directory: ./
 
       - name: checkout op-plugin
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: checkout
         with:
           fetch-depth: 1
 
       - name: UT_op-plugin
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           pwd
           ls -al
@@ -142,16 +95,14 @@ jobs:
           python3 ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
 
       - name: checkout pytorch for UT
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: checkout
         with:
           repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/${{ steps.check_support.outputs.pytorch_build_branch }}
+          ref: refs/heads/master
           path: pytorch
           submodules: true
 
       - name: UT_pytorch
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
           ls -al
           if [ -f "pytorch/ci/split_by_time.py" ]; then
