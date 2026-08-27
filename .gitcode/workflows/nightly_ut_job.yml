@@ -108,7 +108,9 @@ jobs:
       - name: download op-plugin from OBS
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
-          wget -q -r -np -nd -A "torch_npu*.whl" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/op-plugin/master/
+          pip3 install obsutil
+          obsutil config -i="${{ secrets.OBS_AK }}" -k="${{ secrets.OBS_SK }}" -e="obs.cn-north-4.myhuaweicloud.com"
+          obsutil cp obs://pytorch-package/pta/op-plugin/master/ ./
           ls -al
 
       - name: Verify artifact
