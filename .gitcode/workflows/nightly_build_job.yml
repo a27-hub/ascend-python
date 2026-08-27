@@ -115,7 +115,6 @@ jobs:
           access-key: "${{ secrets.OBS_AK }}"
           secret-key: "${{ secrets.OBS_SK }}"
           artifact-path: "dist/torch_npu*.whl"
-          obs-path: "pta/op-plugin/master/"
 
       - name: Upload build info to artifact
         uses: upload-artifact

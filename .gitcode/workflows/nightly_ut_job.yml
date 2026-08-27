@@ -82,7 +82,7 @@ jobs:
           bucket: "pytorch-package"
           access-key: "${{ secrets.OBS_AK }}"
           secret-key: "${{ secrets.OBS_SK }}"
-          key: "pta/op-plugin/master/${{ env.WHL_FILE }}"
+          key: "artifacts/${{ env.WHL_FILE }}"
           local-path: "./"
 
       - name: Verify artifact
