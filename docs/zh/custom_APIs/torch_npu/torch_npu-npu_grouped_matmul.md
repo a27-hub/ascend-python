@@ -71,10 +71,7 @@
   - 动态量化（G-B、mx）场景（公式5）：仅适用于<term>Ascend 950PR/Ascend 950DT</term>
 
     $$
-    \begin{aligned}
-    y_i[m,n] = {} &\sum_{j=0}^{k\_loops-1}\left(\left(\sum_{k=0}^{gsk-1}(\mathit{x\_slice}_i \times \mathit{weight\_slice}_i)\right) \\
-    &\quad\times\left(\mathit{pertokenscale}_i[m/gsm,j] \times \mathit{scale}_i[j,n/gsn]\right)\right) + \mathit{bias}_i[n]
-    \end{aligned}
+    \mathit{y}_i[m,n] = \sum_{j=0}^{\mathit{k}_{\mathit{loops}}-1}\left(\left(\sum_{k=0}^{\mathit{gsk}-1}\left(\mathit{x}_{\mathit{slice},i} \times \mathit{weight}_{\mathit{slice},i}\right)\right)\times\left(\mathit{pertokenscale}_i\left[\frac{m}{\mathit{gsm}},j\right] \times \mathit{scale}_i\left[j,\frac{n}{\mathit{gsn}}\right]\right)\right) + \mathit{bias}_i[n]
     $$
 
     其中gsm、gsn和gsk分别代表M、N、K轴的量化的block size，K<sub>i</sub>为每个分组的K的大小，x\_slice<sub>i</sub>代表x<sub>i</sub>第m行长度为gsk的向量，weight\_slice<sub>i</sub>代表weight<sub>i</sub>第n列长度为gsk的向量，K轴均从j\*gsk起始切片，j的取值范围\[0, k\_loops\)，k\_loops=ceil\(K<sub>i</sub>/gsk\)，支持最后的切片长度不足gsk。
