@@ -4,6 +4,7 @@
 
 | 产品                           | 是否支持 |
 |------------------------------| :------: |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
 | <term>Atlas A3 训练系列产品</term> | √  |
 | <term>Atlas A2 训练系列产品</term> | √  |
 
@@ -17,11 +18,11 @@
         $$
         I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
         $$
-  
+    
         - $W_{t,:}$是第$t$个token对应的$weights$；
         - $\tilde{q}_{t,:}$是$Q_{index}$矩阵第$t$个token对应的$G$个头合轴后的结果；
         - $\tilde{K}_{:t,:}$为$K_{index}$矩阵$t$行。
-  
+    
     2. 正向的Softmax对应公式：
 
         $$
@@ -52,11 +53,11 @@
         $$
         dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
         $$
-  
+    
         $$
         d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
         $$
-  
+    
         $$
         d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
         $$
@@ -89,6 +90,8 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 **scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float`。
 
+\*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+
 **query_rope**(`Tensor`)：可选参数，表示MLA结构中的query的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, Dr)$、$(T1, N1, Dr)$。
 
 **key_rope**(`Tensor`)：可选参数，表示MLA结构中的key的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, Dr)$、$(T2, N2, Dr)$。
@@ -120,18 +123,18 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 - 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
 - 规格约束：
 
-| 规格项     | 规格                                    | 规格说明                  |
-|---------|---------------------------------------|-----------------------|
-| B       | 1~256                                 | -                     |
-| S1、S2   | S1支持1~8K，S2支持1~128K                   | S1、S2支持不等长            |
-| N1      | 32、64、128                             | -                     |
-| N1index | 8、16、32、64                            | -                     |
-| N2      | 1                                       | -                     |
-| N2index | 1                                     | -                     |
-| D       | 512                                   | query与query_index的D不同 |
-| Dr      | 64                                    | -                     |
-| K       | 1024、2048、3081、4096、5120、6144、7168、8192 | -                     |
-| layout  | BSND/TND                              | -                     |
+| 规格项  | 规格                                                         | 规格说明                  |
+| ------- | ------------------------------------------------------------ | ------------------------- |
+| B       | <term>Atlas A2/A3</term>支持1~256<br /><term>Ascend 950PR/Ascend 950DT</term>支持1~128 | -                         |
+| S1、S2  | S1支持1~8K，S2支持1~128K                                     | S1、S2支持不等长          |
+| N1      | 32、64、128                                                  | -                         |
+| N1index | <term>Atlas A2/A3</term>支持8、16、32、64<br /><term>Ascend 950PR/Ascend 950DT</term>支持32、64 | -                         |
+| N2      | 1                                                            | -                         |
+| N2index | 1                                                            | -                         |
+| D       | 512                                                          | query与query_index的D不同 |
+| Dr      | 64                                                           | -                         |
+| K       | 1024、2048、3081、4096、5120、6144、7168、8192               | -                         |
+| layout  | BSND/TND                                                     | -                         |
 
 ## 调用示例
 
@@ -141,7 +144,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
     import torch
     import torch_npu
     import math
-
+    
     def gen_inputs(seqlens_list_array, seqlens_list_kv_array, isTnd):
         B = 1
         NQuery = 64
@@ -221,8 +224,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
             softmax_max = torch.randn(B, N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             softmax_sum = torch.randn(B, N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             return q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum
-
-
+      
    actual_seq_qlen = [128]
    actual_seq_kvlen = [128]
    input_layout = 'TND'
@@ -236,4 +238,5 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
           query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen,
           actual_seq_klen=actual_seq_kvlen, layout=input_layout, sparse_mode=sparse_mode,
           pre_tokens=65536, next_tokens=65536, sinks=None)
-    ```
+   
+   ```
