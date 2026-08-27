@@ -85,6 +85,8 @@ jobs:
         run: |
           ls -al
           bash ci/build.sh --python=3.10 --pytorch=${{ inputs.pytorch_branch }}
+          # rename whl to fixed name for OBS download
+          mv dist/torch_npu*.whl dist/torch_npu-latest.whl
 
       - name: ccache stats
         run: |
@@ -97,5 +99,5 @@ jobs:
           bucket: "pytorch-package"
           access-key: "${{ secrets.OBS_AK }}"
           secret-key: "${{ secrets.OBS_SK }}"
-          artifact-path: "dist/torch_npu*.whl"
-          obs-path: "pta/op-plugin/master/"
+          artifact-path: "dist/torch_npu-latest.whl"
+          obs-path: "pta/op-plugin/master/torch_npu-latest.whl"
