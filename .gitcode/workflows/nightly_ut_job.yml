@@ -62,15 +62,16 @@ jobs:
           echo "torch_url=${torch_url}"
           pip3 install $torch_url
 
-      - name: download whl name from artifact
+      - name: download build info from artifact
         uses: download-artifact
         with:
-          name: whl-name
+          name: build-info
           path: ./
 
-      - name: read whl name
+      - name: read build info
         run: |
-          WHL_FILE=$(cat whl_name.txt)
+          cat build_info.txt
+          WHL_FILE=$(grep whl_file build_info.txt | cut -d= -f2)
           echo "WHL_FILE=${WHL_FILE}"
           echo "WHL_FILE=${WHL_FILE}" >> $ATOMGIT_ENV
 

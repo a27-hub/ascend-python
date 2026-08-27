@@ -85,10 +85,23 @@ jobs:
         run: |
           ls -al
           bash ci/build.sh --python=3.10 --pytorch=${{ inputs.pytorch_branch }}
-          # save whl filename to text file
+
+      - name: record build info
+        run: |
           WHL_FILE=$(basename $(ls dist/torch_npu*.whl))
-          echo "WHL_FILE=${WHL_FILE}"
-          echo "${WHL_FILE}" > dist/whl_name.txt
+          TORCH_VERSION=$(cat pytorch/requirements.txt | grep torch== | cut -c 8-25)
+          BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+          OP_PLUGIN_COMMIT=$(git rev-parse --short HEAD)
+          PYTORCH_COMMIT=$(cd build/pytorch && git rev-parse --short HEAD)
+          cat > dist/build_info.txt << EOF
+          whl_file=${WHL_FILE}
+          torch_version=${TORCH_VERSION}
+          build_time=${BUILD_TIME}
+          op_plugin_commit=${OP_PLUGIN_COMMIT}
+          pytorch_commit=${PYTORCH_COMMIT}
+          pytorch_branch=${{ inputs.pytorch_branch }}
+          EOF
+          cat dist/build_info.txt
 
       - name: ccache stats
         run: |
@@ -104,8 +117,8 @@ jobs:
           artifact-path: "dist/torch_npu*.whl"
           obs-path: "pta/op-plugin/master/"
 
-      - name: Upload whl name to artifact
+      - name: Upload build info to artifact
         uses: upload-artifact
         with:
-          name: whl-name
-          path: dist/whl_name.txt
+          name: build-info
+          path: dist/build_info.txt
