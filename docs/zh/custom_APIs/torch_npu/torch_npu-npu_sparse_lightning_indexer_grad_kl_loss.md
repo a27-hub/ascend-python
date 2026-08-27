@@ -76,9 +76,9 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 **key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
 
-**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D<sub>index</sub>)$。
+**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D_index)$、$(T1, N1index, D_index)$。
 
-**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D<sub>index</sub>)$。
+**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D_index)$、$(T2, N2index, D_index)$。
 
 **weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
@@ -121,15 +121,17 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 - 参数query、key、query_index、key_index的数据类型应保持一致。
 - 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
+- 入参为空的场景处理：
+  - query为空Tensor：直接返回。
+  - 公共约束里入参为空的场景和FAG保持一致。
 - 规格约束：
-  + B: 表示batch大小，取值要求：
-    + <term>Atlas A2 训练系列产品</term>、<term>Atlas A3 训练系列产品</term>支持1~256。
-    + <term>Ascend 950PR/Ascend 950DT</term>支持1~128。
-  + S1、S2：表示sequence length序列长度。S1支持1~8K，S2支持1~128K，S1、S2支持不等长。
-  + N1、N2、N2index：表示headNum注意力头的数量，N1支持32、64、128，N2支持1，N2index支持1。
-  + N1index：表示headNum注意力头的数量，取值要求：
-    + <term>Atlas A2 训练系列产品</term>、<term>Atlas A3 训练系列产品</term>支持8、16、32、64。
-    + <term>Ascend 950PR/Ascend 950DT</term>支持32、64。
+  + B: 表示batch大小，支持1~256
+  + S1、S2：表示sequence length序列长度。
+    + <term>Atlas A2 训练系列产品</term>、<term>Atlas A3 训练系列产品</term>：S1支持1~8K，S2支持1~128K，S1、S2支持不等长。
+    + <term>Ascend 950PR/Ascend 950DT</term>：S1支持1~32K，S2支持1~1M，S1必须小于等于S2
+  + N1、N1index：表示headNum注意力头的数量，N1支持32、64、128，N1index支持8、16、32、64。
+    + <term>Ascend 950PR/Ascend 950DT</term>：额外支持N1取48，N1Index取24，且二者仅允许（48，24）组合，禁止与其他数值配对。
+  + N2、N2index：表示headNum注意力头的数量，N2支持1，N2index支持1。
   + D、Dr、D<sub>index</sub>：表示headDim注意力头的维度。D支持512，Dr支持64，D<sub>index</sub>支持128。
   + TopK：表示筛选Key的数量。K取值范围为1024、2048、3072、4096、5120、6144、7168、8192。
   + layout：表示数据排布，支持BSND和TND
