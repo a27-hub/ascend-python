@@ -62,6 +62,18 @@ jobs:
           echo "torch_url=${torch_url}"
           pip3 install $torch_url
 
+      - name: download whl name from artifact
+        uses: download-artifact
+        with:
+          name: whl-name
+          path: ./
+
+      - name: read whl name
+        run: |
+          WHL_FILE=$(cat whl_name.txt)
+          echo "WHL_FILE=${WHL_FILE}"
+          echo "WHL_FILE=${WHL_FILE}" >> $ATOMGIT_ENV
+
       - name: download op-plugin from OBS
         uses: obs-download
         with:
@@ -69,13 +81,13 @@ jobs:
           bucket: "pytorch-package"
           access-key: "${{ secrets.OBS_AK }}"
           secret-key: "${{ secrets.OBS_SK }}"
-          key: "pta/op-plugin/master/torch_npu-latest.whl"
+          key: "pta/op-plugin/master/${{ env.WHL_FILE }}"
           local-path: "./"
 
       - name: Verify artifact
         run: |
           ls -al
-          pip3 install torch_npu-latest.whl
+          pip3 install ${{ env.WHL_FILE }}
         working-directory: ./
 
       - name: checkout op-plugin

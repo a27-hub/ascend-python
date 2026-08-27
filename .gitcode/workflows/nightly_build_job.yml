@@ -85,19 +85,27 @@ jobs:
         run: |
           ls -al
           bash ci/build.sh --python=3.10 --pytorch=${{ inputs.pytorch_branch }}
-          # rename whl to fixed name for OBS download
-          mv dist/torch_npu*.whl dist/torch_npu-latest.whl
+          # save whl filename to text file
+          WHL_FILE=$(basename $(ls dist/torch_npu*.whl))
+          echo "WHL_FILE=${WHL_FILE}"
+          echo "${WHL_FILE}" > dist/whl_name.txt
 
       - name: ccache stats
         run: |
           ccache -s
 
-      - name: Upload to OBS
+      - name: Upload whl to OBS
         uses: obs-upload
         with:
           endpoint: "obs.cn-north-4.myhuaweicloud.com"
           bucket: "pytorch-package"
           access-key: "${{ secrets.OBS_AK }}"
           secret-key: "${{ secrets.OBS_SK }}"
-          artifact-path: "dist/torch_npu-latest.whl"
-          obs-path: "pta/op-plugin/master/torch_npu-latest.whl"
+          artifact-path: "dist/torch_npu*.whl"
+          obs-path: "pta/op-plugin/master/"
+
+      - name: Upload whl name to artifact
+        uses: upload-artifact
+        with:
+          name: whl-name
+          path: dist/whl_name.txt
