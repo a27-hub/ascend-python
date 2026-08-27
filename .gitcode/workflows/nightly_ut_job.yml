@@ -105,12 +105,11 @@ jobs:
           echo "torch_url=${torch_url}"
           pip"${{ inputs.py_version }}" install $torch_url
 
-      - name: download op-plugin artifact
+      - name: download op-plugin from OBS
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
-        uses: download-artifact
-        with:
-          name: op-plugin-${{ inputs.pytorch_branch }}-arm
-          path: ./
+        run: |
+          wget -q -r -np -nd -A "torch_npu*.whl" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/op-plugin/master/
+          ls -al
 
       - name: Verify artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}

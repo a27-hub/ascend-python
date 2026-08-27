@@ -17,6 +17,10 @@ on:
       pytorch_branch:
         required: true
         type: string
+      CONTAINER_OPTIONS:
+        required: false
+        type: string
+        default: "--user root -v /data/torchnpu-ccache:/ccache"
 
 jobs:
   Compile:
@@ -25,6 +29,10 @@ jobs:
     runs-on: [ self-hosted, build=build ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      options: ${{ inputs.CONTAINER_OPTIONS }}
+    env:
+      CCACHE_DIR: /ccache
+      CCACHE_MAXSIZE: 10G
     steps:
       - name: print env
         run: |
@@ -67,15 +75,27 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: ccache init
+        run: |
+          ccache -M $CCACHE_MAXSIZE
+          ccache -z
+          ccache -s
+
       - name: compile
         run: |
           ls -al
           bash ci/build.sh --python=3.10 --pytorch=${{ inputs.pytorch_branch }}
 
-      - name: Upload artifact
-        uses: upload-artifact
+      - name: ccache stats
+        run: |
+          ccache -s
+
+      - name: Upload to OBS
+        uses: obs-upload
         with:
-          name: op-plugin-${{ inputs.pytorch_branch }}-arm
-          path: |
-            dist/torch_npu*.whl
-          overwrite: true
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pytorch-package"
+          access-key: "${{ secrets.OBS_AK }}"
+          secret-key: "${{ secrets.OBS_SK }}"
+          artifact-path: "dist/torch_npu*.whl"
+          obs-path: "pta/op-plugin/master/"
