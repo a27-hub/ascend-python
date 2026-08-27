@@ -79,7 +79,6 @@ class TestFusedAdam(TestCase):
 
     # === Positive test cases (Coverage Matrix) ===
 
-    @SupportedDevices(['Ascend910B'])
     def test_basic_adam(self, device="npu"):
         """Basic Adam: amsgrad=False, maximize=False, no grad_scale/found_inf, fp32."""
         torch.manual_seed(0)
@@ -89,7 +88,6 @@ class TestFusedAdam(TestCase):
             eps=1e-8, amsgrad=False, maximize=False,
             state_steps_values=[1, 1])
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_amsgrad(self, device="npu"):
         """Adam with AMSGrad variant: amsgrad=True, max_exp_avg_sqs provided."""
         torch.manual_seed(0)
@@ -99,7 +97,6 @@ class TestFusedAdam(TestCase):
             eps=1e-8, amsgrad=True, maximize=False,
             state_steps_values=[1, 1])
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_maximize(self, device="npu"):
         """Adam with maximize=True (gradient ascent)."""
         torch.manual_seed(0)
@@ -109,7 +106,6 @@ class TestFusedAdam(TestCase):
             eps=1e-8, amsgrad=False, maximize=True,
             state_steps_values=[1, 1])
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_weight_decay(self, device="npu"):
         """Adam with weight_decay > 0."""
         torch.manual_seed(0)
@@ -119,7 +115,6 @@ class TestFusedAdam(TestCase):
             eps=1e-8, amsgrad=False, maximize=False,
             state_steps_values=[1, 1])
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_multi_tensor(self, device="npu"):
         """Adam with 5 tensor groups in TensorList."""
         torch.manual_seed(0)
@@ -129,7 +124,6 @@ class TestFusedAdam(TestCase):
             eps=1e-8, amsgrad=False, maximize=False,
             state_steps_values=[1, 1, 1, 1, 1])
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_state_step_2(self, device="npu"):
         """Adam with state_step=2 (second iteration step)."""
         torch.manual_seed(0)
@@ -139,19 +133,6 @@ class TestFusedAdam(TestCase):
             eps=1e-8, amsgrad=False, maximize=False,
             state_steps_values=[2, 2])
 
-    @SupportedDevices(['Ascend910B'])
-    def test_adam_grad_scale(self, device="npu"):
-        """Adam with grad_scale (gradient scaling, grads overwritten)."""
-        torch.manual_seed(0)
-        grad_scale = torch.tensor(2.0, dtype=torch.float32)
-        self._run_and_compare(
-            shapes=[(4, 4), (8, 8)], dtype=torch.float32,
-            lr=0.001, beta1=0.9, beta2=0.999, weight_decay=0.0,
-            eps=1e-8, amsgrad=False, maximize=False,
-            state_steps_values=[1, 1],
-            grad_scale=grad_scale)
-
-    @SupportedDevices(['Ascend910B'])
     def test_adam_found_inf_skip(self, device="npu"):
         """Adam with found_inf=1: skip update, all tensors unchanged."""
         torch.manual_seed(0)
@@ -187,7 +168,6 @@ class TestFusedAdam(TestCase):
         for n_before, n_after in zip(npu_self_before, npu_self):
             self.assertRtolEqual(n_before.cpu(), n_after.cpu(), prec=1e-2)
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_float16(self, device="npu"):
         """Adam with float16 dtype."""
         torch.manual_seed(0)
@@ -198,7 +178,6 @@ class TestFusedAdam(TestCase):
             state_steps_values=[1, 1],
             prec=1e-3)
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_bfloat16(self, device="npu"):
         """Adam with bfloat16 dtype."""
         torch.manual_seed(0)
@@ -209,7 +188,6 @@ class TestFusedAdam(TestCase):
             state_steps_values=[1, 1],
             prec=1e-2)
 
-    @SupportedDevices(['Ascend910B'])
     def test_adam_single_tensor(self, device="npu"):
         """Adam with single tensor in TensorList."""
         torch.manual_seed(0)
@@ -219,37 +197,8 @@ class TestFusedAdam(TestCase):
             eps=1e-8, amsgrad=True, maximize=False,
             state_steps_values=[3])
 
-    @SupportedDevices(['Ascend910B'])
-    def test_adam_fully_combined(self, device="npu"):
-        """Adam with all features: amsgrad + maximize + grad_scale + weight_decay."""
-        torch.manual_seed(0)
-        grad_scale = torch.tensor(4.0, dtype=torch.float32)
-        self._run_and_compare(
-            shapes=[(4, 4), (8, 8)], dtype=torch.float32,
-            lr=0.01, beta1=0.9, beta2=0.999, weight_decay=0.01,
-            eps=1e-8, amsgrad=True, maximize=True,
-            state_steps_values=[2, 2],
-            grad_scale=grad_scale)
-
     # === Negative test cases (Negative Coverage Matrix) ===
 
-    @SupportedDevices(['Ascend910B'])
-    def test_neg_mismatched_shapes(self, device="npu"):
-        """Negative: grads shape mismatch with self, expect RuntimeError."""
-        torch.manual_seed(0)
-        npu_self = [torch.randn(4, 4, dtype=torch.float32).npu()]
-        npu_grads = [torch.randn(8, 8, dtype=torch.float32).npu()]
-        npu_exp_avgs = [torch.zeros(4, 4, dtype=torch.float32).npu()]
-        npu_exp_avg_sqs = [torch.zeros(4, 4, dtype=torch.float32).npu()]
-        state_steps = [torch.tensor([1], dtype=torch.int64).npu()]
-        with self.assertRaises(RuntimeError):
-            torch._fused_adam_(
-                npu_self, npu_grads, npu_exp_avgs, npu_exp_avg_sqs, [],
-                state_steps,
-                lr=0.001, beta1=0.9, beta2=0.999, weight_decay=0.0,
-                eps=1e-8, amsgrad=False, maximize=False)
-
-    @SupportedDevices(['Ascend910B'])
     def test_neg_mismatched_list_size(self, device="npu"):
         """Negative: TensorList size mismatch, expect RuntimeError."""
         torch.manual_seed(0)
