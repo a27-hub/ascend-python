@@ -107,11 +107,14 @@ jobs:
 
       - name: download op-plugin from OBS
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
-        run: |
-          pip3 install obsutil
-          obsutil config -i="${{ secrets.OBS_AK }}" -k="${{ secrets.OBS_SK }}" -e="obs.cn-north-4.myhuaweicloud.com"
-          obsutil cp obs://pytorch-package/pta/op-plugin/master/ ./
-          ls -al
+        uses: obs-download
+        with:
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pytorch-package"
+          access-key: "${{ secrets.OBS_AK }}"
+          secret-key: "${{ secrets.OBS_SK }}"
+          artifact-path: "pta/op-plugin/master/"
+          local-path: "./"
 
       - name: Verify artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
