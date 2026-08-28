@@ -16,6 +16,10 @@ on:
       TEST_WORLD_SIZE:
         required: false
         type: string
+      CONTAINER_OPTIONS:
+        required: false
+        type: string
+        default: "--user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc"
 
 jobs:
   UT:
@@ -24,7 +28,7 @@ jobs:
     runs-on: [ self-hosted, os=euler ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
-      options: --user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc
+      options: ${{ inputs.CONTAINER_OPTIONS }}
     env:
       TEST_RANK: ${{ inputs.TEST_RANK }}
       TEST_WORLD_SIZE: ${{ inputs.TEST_WORLD_SIZE }}
