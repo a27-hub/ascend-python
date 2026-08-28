@@ -1,4 +1,4 @@
-﻿# torch_npu.npu_sparse_flash_attention
+﻿﻿# torch_npu.npu_sparse_flash_attention
 
 ## 产品支持情况
 
@@ -198,7 +198,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
     import torch.nn as nn
     import numpy as np
     import random
-
+    
     query_type = torch.float16
     scale_value = 0.041666666666666664
     sparse_block_size = 1
@@ -216,7 +216,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
     s2_act = 4096
     attention_mode = 2
     return_softmax_lse = False
-
+    
     query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
     key = torch.tensor(np.random.uniform(-5, 10, (b, s2, n2, dn))).to(query_type)
     value = key.clone()
@@ -227,7 +227,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
     key_rope = torch.tensor(np.random.uniform(-10, 10, (b, s2, n2, dr))).to(query_type)
     act_seq_q = [s1] * b
     act_seq_kv = [s2_act] * b
-
+    
     query = query.npu()
     key = key.npu()
     value = value.npu()
@@ -236,20 +236,20 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
     key_rope = key_rope.npu()
     act_seq_q = torch.tensor(act_seq_q).to(torch.int32).npu()
     act_seq_kv = torch.tensor(act_seq_kv).to(torch.int32).npu()
-
+    
     from torchair.configs.compiler_config import CompilerConfig
     config = CompilerConfig()
     npu_backend = torchair.get_npu_backend(compiler_config=config)
-
+    
     class Network(nn.Module):
         def __init__(self):
             super(Network, self).__init__()
-
+    
         def forward(self, query, key, value, sparse_indices, scale_value,
             block_table, actual_seq_lengths_query, actual_seq_lengths_kv,
             query_rope, key_rope, sparse_block_size, layout_query, layout_kv,
             sparse_mode, pre_tokens, next_tokens, attention_mode, return_softmax_lse):
-
+    
             attention_out, softmax_max, softmax_sum = torch_npu.npu_sparse_flash_attention(
                 query, key, value, sparse_indices, scale_value, block_table=None,
                 actual_seq_lengths_query=actual_seq_lengths_query, actual_seq_lengths_kv=actual_seq_lengths_kv,
@@ -258,9 +258,9 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
                 pre_tokens=(1<<63)-1, next_tokens=(1<<63)-1, attention_mode = attention_mode,
                 return_softmax_lse = return_softmax_lse)
             return attention_out, softmax_max, softmax_sum
-
+    
     mod = torch.compile(Network().npu(), backend=npu_backend, fullgraph=True)
-
+    
     attention_out, softmax_max, softmax_sum = mod(query, key, value, sparse_indices,
         scale_value, block_table=None, actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
         query_rope=query_rope, key_rope=key_rope, sparse_block_size=sparse_block_size,
