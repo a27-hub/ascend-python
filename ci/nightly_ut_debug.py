@@ -71,9 +71,9 @@ def main():
 
     # Run original access_control_test.py with same args
     original_script = os.path.join(BASE_DIR, "ci", "access_control_test.py")
-    sys.argv[0] = original_script
     os.chdir(BASE_DIR)
-    exec(open(original_script).read())
+    result = subprocess.run([sys.executable, original_script] + sys.argv[1:])
+    sys.exit(result.returncode)
 
 
 if __name__ == "__main__":
