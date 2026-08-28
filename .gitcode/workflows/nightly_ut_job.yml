@@ -105,11 +105,29 @@ jobs:
       - name: UT_op-plugin
         shell: bash
         run: |
-          source /etc/profile || true
+          set -x
+          echo "=== source /etc/profile ==="
+          source /etc/profile 2>&1 || echo "[WARN] source /etc/profile failed"
+          echo "=== source CANN ==="
+          source /usr/local/Ascend/cann/set_env.sh 2>&1 || echo "[WARN] source cann/set_env.sh failed"
+          echo "=== source ATB ==="
+          source /usr/local/Ascend/nnal/atb/set_env.sh 2>&1 || echo "[WARN] source atb/set_env.sh failed"
+          echo "=== environment ==="
+          env | grep -i ascend || echo "No ASCEND env vars"
+          env | grep -i cann || echo "No CANN env vars"
+          echo "=== check npu-smi ==="
+          which npu-smi 2>/dev/null && npu-smi info || echo "npu-smi not available"
+          echo "=== check /dev/davinci ==="
+          ls -la /dev/davinci* 2>/dev/null || echo "No /dev/davinci devices"
+          echo "=== check Ascend dir ==="
+          ls /usr/local/Ascend/ 2>/dev/null || echo "/usr/local/Ascend not found"
+          echo "=== python3 check ==="
+          python3 -c "import torch; print('torch ok', torch.__version__)" 2>&1 || echo "torch import failed"
+          python3 -c "import torch_npu; print('torch_npu ok', torch_npu.__version__)" 2>&1 || echo "torch_npu import failed"
+          python3 -c "import torch_npu; print('device_count:', torch_npu.npu.device_count())" 2>&1 || echo "torch_npu.npu.device_count() failed"
+          echo "=== run UT ==="
           export PTA_UT_EXEC_TIMEOUT=4800
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          python3 ci/nightly_ut_debug.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
+          python3 ci/nightly_ut_debug.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }} 2>&1 || { echo "=== UT FAILED ==="; exit 1; }
 
       - name: checkout pytorch for UT
         uses: checkout
