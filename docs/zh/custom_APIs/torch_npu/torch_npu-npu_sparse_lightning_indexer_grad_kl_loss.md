@@ -4,6 +4,7 @@
 
 | 产品                           | 是否支持 |
 |------------------------------| :------: |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
 | <term>Atlas A3 训练系列产品</term> | √  |
 | <term>Atlas A2 训练系列产品</term> | √  |
 
@@ -17,11 +18,11 @@
         $$
         I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
         $$
-  
+    
         - $W_{t,:}$是第$t$个token对应的$weights$；
         - $\tilde{q}_{t,:}$是$Q_{index}$矩阵第$t$个token对应的$G$个头合轴后的结果；
         - $\tilde{K}_{:t,:}$为$K_{index}$矩阵$t$行。
-  
+    
     2. 正向的Softmax对应公式：
 
         $$
@@ -52,11 +53,11 @@
         $$
         dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
         $$
-  
+    
         $$
         d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
         $$
-  
+    
         $$
         d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
         $$
@@ -75,9 +76,9 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 **key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
 
-**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
+**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D_{index})$、$(T1, N1index, D_{index})$。
 
-**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
+**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D_{index})$、$(T2, N2index, D_{index})$。
 
 **weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
@@ -118,20 +119,20 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 - 参数query、key、query_index、key_index的数据类型应保持一致。
 - 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
+- 入参为空的场景处理：
+  - query为空Tensor：直接返回。
+  - 公共约束里入参为空的场景和FAG保持一致。
 - 规格约束：
-
-| 规格项     | 规格                                    | 规格说明                  |
-|---------|---------------------------------------|-----------------------|
-| B       | 1~256                                 | -                     |
-| S1、S2   | S1支持1~8K，S2支持1~128K                   | S1、S2支持不等长            |
-| N1      | 32、64、128                             | -                     |
-| N1index | 8、16、32、64                            | -                     |
-| N2      | 1                                       | -                     |
-| N2index | 1                                     | -                     |
-| D       | 512                                   | query与query_index的D不同 |
-| Dr      | 64                                    | -                     |
-| K       | 1024、2048、3081、4096、5120、6144、7168、8192 | -                     |
-| layout  | BSND/TND                              | -                     |
+  + B: 表示batch大小，支持1~256
+  + S1、S2：表示sequence length序列长度。
+    + <term>Atlas A2 训练系列产品</term>、<term>Atlas A3 训练系列产品</term>：S1支持1~8K，S2支持1~128K，S1、S2支持不等长。
+    + <term>Ascend 950PR/Ascend 950DT</term>：S1支持1~32K，S2支持1~1M，S1必须小于等于S2
+  + N1、N1index：表示headNum注意力头的数量，N1支持32、64、128，N1index支持8、16、32、64。
+    + <term>Ascend 950PR/Ascend 950DT</term>：额外支持N1取48，N1Index取24，且二者仅允许（48，24）组合，禁止与其他数值配对。
+  + N2、N2index：表示headNum注意力头的数量，N2支持1，N2index支持1。
+  + D、Dr、D<sub>index</sub>：表示headDim注意力头的维度。D支持512，Dr支持64，D<sub>index</sub>支持128。
+  + TopK：表示筛选Key的数量。K取值范围为1024、2048、3072、4096、5120、6144、7168、8192。
+  + layout：表示数据排布，支持BSND和TND
 
 ## 调用示例
 
@@ -141,7 +142,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
     import torch
     import torch_npu
     import math
-
+    
     def gen_inputs(seqlens_list_array, seqlens_list_kv_array, isTnd):
         B = 1
         NQuery = 64
@@ -221,8 +222,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
             softmax_max = torch.randn(B, N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             softmax_sum = torch.randn(B, N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             return q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum
-
-
+      
    actual_seq_qlen = [128]
    actual_seq_kvlen = [128]
    input_layout = 'TND'
@@ -236,4 +236,5 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
           query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen,
           actual_seq_klen=actual_seq_kvlen, layout=input_layout, sparse_mode=sparse_mode,
           pre_tokens=65536, next_tokens=65536, sinks=None)
-    ```
+   
+   ```
