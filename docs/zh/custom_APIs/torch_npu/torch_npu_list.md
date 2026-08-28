@@ -472,6 +472,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1437638113619"><a name="p1437638113619"></a><a name="p1437638113619"></a><span>npu_grouped_matmul是一种对多个矩阵乘法（matmul）操作进行分组计算的高效方法。</span></p>
 </td>
 </tr>
+<tr id="npu_grouped_matmul_finalize_routing"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_grouped_matmul_finalize_routing"><a name="p_npu_grouped_matmul_finalize_routing"></a><a name="p_npu_grouped_matmul_finalize_routing"></a><a href="torch_npu-npu_grouped_matmul_finalize_routing.md">torch_npu.npu_grouped_matmul_finalize_routing</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_grouped_matmul_finalize_routing_desc"><a name="p_npu_grouped_matmul_finalize_routing_desc"></a><a name="p_npu_grouped_matmul_finalize_routing_desc"></a><span>GroupedMatMul与MoeFinalizeRouting的融合算子。</span></p>
+</td>
+</tr>
 <tr id="row1231245645712"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p548217963045654"><a name="p548217963045654"></a><a name="p548217963045654"></a><a href="torch_npu-npu_grouped_matmul_swiglu_quant_v2.md">torch_npu.npu_grouped_matmul_swiglu_quant_v2</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p5420573896217596"><a name="p5420573896217596"></a><a name="p5420573896217596"></a><span>npu_grouped_matmul_swiglu_quant_v2是一种融合分组矩阵乘法（GroupedMatmul）、反量化（dequant）、SwiGLu混合激活函数、量化（quant）的计算方法，用于模型性能优化。</span></p>
@@ -504,7 +509,7 @@
 </tr>
 <tr id="row1457134215217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p258365124912"><a name="p258365124912"></a><a name="p258365124912"></a><a href="torch_npu-npu_mla_prolog_v3.md">torch_npu.npu_mla_prolog_v3</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention（MLA）前处理的计算操作</span>。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention（MLA）前处理的计算操作。v3版本相比v2新增query_norm和dequant_scale_q_norm输出、pertoken-pergroup量化模式、尺度矫正因子、多种cache_mode格式支持及多个量化配置参数，并调整cache_index为可选参数。</span>。</p>
 </td>
 </tr>
 <tr id="row125419366217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p18998182119294"><a name="p18998182119294"></a><a name="p18998182119294"></a><a href="torch_npu-npu_mm_all_reduce_base.md">torch_npu.npu_mm_all_reduce_base</a></p>
@@ -632,6 +637,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p154556613293"><a name="p154556613293"></a><a name="p154556613293"></a>该接口用于实现矩阵乘计算中的weight输入和输出的量化操作，支持pertensor，perchannel，pergroup多场景量化。</p>
 </td>
 </tr>
+<tr id="row250825154001"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p250825154002"><a name="p250825154002"></a><a name="p250825154002"></a><a href="torch_npu-npu_weight_quant_preprocess.md">torch_npu.npu_weight_quant_preprocess</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p250825154003"><a name="p250825154003"></a><a name="p250825154003"></a>该接口针对Matmul类算子的伪量化参数进行预处理。</p>
+</td>
+</tr>
 <tr id="row10933133063618"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p5743101211585"><a name="p5743101211585"></a><a name="p5743101211585"></a><a href="torch_npu-scatter_update.md">torch_npu.scatter_update</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p874318124582"><a name="p874318124582"></a><a name="p874318124582"></a>将tensor updates中的值按指定的轴axis和索引indices更新tensor data中的值，并将结果保存到输出tensor，data本身的数据不变。</p>
@@ -669,12 +679,12 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_distribute_combine_v2.md">torch_npu.npu_moe_distribute_combine_v2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>先进行reduce_scatterv通信，再进行alltoallv通信，最后将接收的数据整合（乘权重再相加）。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>先进行reduce_scatterv通信，再进行alltoallv通信，最后将接收的数据整合（乘权重再相加）。v2版本新增特殊专家场景（零专家、拷贝专家、常量专家）支持，并配合dispatch_v2的assist_info_for_combine实现更高效的全卡同步。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_distribute_dispatch_v2.md">torch_npu.npu_moe_distribute_dispatch_v2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>对Token数据先进行量化（可选），再进行EP（Expert Parallelism）域的alltoallv通信，再进行TP（Tensor Parallelism）域的allgatherv通信（可选）。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>对Token数据先进行量化（可选），再进行EP（Expert Parallelism）域的alltoallv通信，再进行TP（Tensor Parallelism）域的allgatherv通信（可选）。v2版本将返回值expand_idx替换为assist_info_for_combine以包含更详细的token信息，并新增comm_alg参数用于代替HCCL_INTRA_PCIE_ENABLE和HCCL_INTRA_ROCE_ENABLE环境变量。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_gating_top_k.md">torch_npu.npu_moe_gating_top_k</a></p>
@@ -846,6 +856,11 @@
 <td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_apply_rotary_pos_emb"><a name="p_npu_apply_rotary_pos_emb"></a><a name="p_npu_apply_rotary_pos_emb"></a><a href="torch_npu-apply_rotary_pos_emb.md">torch_npu.npu_apply_rotary_pos_emb</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_apply_rotary_pos_emb_desc"><a name="p_npu_apply_rotary_pos_emb_desc"></a><a name="p_npu_apply_rotary_pos_emb_desc"></a><span>为提升推理网络性能，将query和key两路算子融合为单路，在旋转位置编码计算中直接对结果执行原地更新。</span></p>
+</td>
+</tr>
+<tr id="npu_add_quant_gmm_"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_add_quant_gmm_"><a name="p_npu_add_quant_gmm_"></a><a name="p_npu_add_quant_gmm_"></a><a href="torch_npu-npu_add_quant_gmm_.md">torch_npu.npu_add_quant_gmm_</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_add_quant_gmm__desc"><a name="p_npu_add_quant_gmm__desc"></a><a name="p_npu_add_quant_gmm__desc"></a><span>在micro-batch训练场景下，将量化GroupedMatmul与InplaceAdd操作融合，以提高网络性能。</span></p>
 </td>
 </tr>
 <tr id="npu_add_quant_matmul_"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_add_quant_matmul_"><a name="p_npu_add_quant_matmul_"></a><a name="p_npu_add_quant_matmul_"></a><a href="torch_npu-npu_add_quant_matmul_.md">torch_npu.npu_add_quant_matmul_</a></p>

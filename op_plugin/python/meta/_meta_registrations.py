@@ -286,7 +286,7 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
                                          key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND",
                                          sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
                                          attention_mode=0, return_softmax_lse=False, sinks=None):
-    require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
+    require_param = {"query": query, "key": key, "sparse_indices": sparse_indices}
 
     for item_name, item in require_param.items():
         torch._check(
@@ -302,10 +302,17 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
         key.numel() > 0,
         lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        value.numel() > 0,
-        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
-    )
+    if value is None:
+        torch._check(
+            get_cann_version() >= "9.2.0",
+            lambda: "npu_sparse_flash_attention: value=None is only supported with CANN >= 9.2.0."
+                    + ops_error(ErrCode.NOT_SUPPORT),
+        )
+    else:
+        torch._check(
+            value.numel() > 0,
+            lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
+        )
     torch._check(
         sparse_indices.numel() > 0,
         lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
@@ -346,7 +353,15 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
 def npu_sparse_flash_attention_grad_meta(query, key, value, sparse_indices, d_out, out, softmax_max, softmax_sum, scale_value, sparse_block_size, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_kvlen=None, layout="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0):
     d_query = query.new_empty(query.shape, dtype=query.dtype, device='meta')
     d_key = key.new_empty(key.shape, dtype=key.dtype, device='meta')
-    d_value = value.new_empty(value.shape, dtype=value.dtype, device='meta')
+    if value is None:
+        torch._check(
+            get_cann_version() >= "9.2.0",
+            lambda: "npu_sparse_flash_attention_grad: value=None is only supported with CANN >= 9.2.0."
+                    + ops_error(ErrCode.NOT_SUPPORT),
+        )
+        d_value = torch.empty([0], dtype=query.dtype, device='meta')
+    else:
+        d_value = value.new_empty(value.shape, dtype=value.dtype, device='meta')
     d_query_rope = torch.empty([0], dtype=query.dtype, device='meta') if query_rope is None else query_rope.new_empty(query_rope.shape, dtype=query_rope.dtype, device='meta')
     d_key_rope = torch.empty([0], dtype=key.dtype, device='meta') if key_rope is None else key_rope.new_empty(key_rope.shape, dtype=key_rope.dtype, device='meta')
     return (d_query, d_key, d_value, d_query_rope, d_key_rope)
@@ -940,8 +955,18 @@ def npu_quant_mm_reduce_scatter_meta(self, x2, hcom, world_size, reduce_op='sum'
     if world_size <= 0:
         raise RuntimeError("world_size must be bigger than zero")
     out_m = math.floor(self.size(0) / world_size)
+    out_n = x2.size(1)
     torch_dtype = self.dtype if y_dtype is None else TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
-    return (self.new_empty(out_m, x2.size(1), dtype=torch_dtype), self.new_empty(0, dtype=torch.float32))
+    FP4_FACTOR = 2
+    is_fp4 = (x1_dtype == torch_npu.float4_e2m1fn_x2 and x1_scale_dtype == torch_npu.float8_e8m0fnu) and (x2_dtype == torch_npu.float4_e2m1fn_x2 and x2_scale_dtype == torch_npu.float8_e8m0fnu)
+    if is_fp4:
+        is_trans_b = False
+        if (x2.stride(0) == 1 and x2.stride(1) == x2.size(0)):
+            if not (x2.size(0) == 1 and x2.size(1) == 1):
+                is_trans_b = True
+        if not is_trans_b:
+            out_n = x2.size(1) * FP4_FACTOR
+    return (self.new_empty(out_m, out_n, dtype=torch_dtype), self.new_empty(0, dtype=torch.float32))
 
 
 @impl(m, "npu_gmm_alltoallv")
@@ -2471,7 +2496,7 @@ def npu_lightning_indexer_grad_meta(query, key, dy, sparse_indices, weights, act
 
 
 @impl(m, "npu_sparse_lightning_indexer_grad_kl_loss")
-def npu_sparse_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+def npu_sparse_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, sinks=None):
     d_query_index = query_index.new_empty(query_index.shape, dtype=query_index.dtype, device='meta')
     d_key_index = key_index.new_empty(key_index.shape, dtype=key_index.dtype, device='meta')
     d_weights = weights.new_empty(weights.shape, dtype=weights.dtype, device='meta')
@@ -3730,7 +3755,15 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
             torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
-    if split_item == 0:
+    if group_type == 2 and (split_item == 0 or split_item == 1):
+        # In K-split, x is laid out as [K, M], and K is reduced instead of becoming an output dimension.
+        num_weight = weight[0].shape[0] if singleWeight else len(weight)
+        for i in range(num_weight):
+            weight_i = weight[0] if singleWeight else weight[i]
+            ni = n if singleWeight else weight_i.shape[1]
+            dim_n = ni * INT4_IN_INT32 if weight_i.dtype == torch.int32 else ni
+            y.append(x[0].new_empty((x[0].shape[0], dim_n), dtype=output_dtype))
+    elif split_item == 0:
         for i in range(num_x):
             ni = n if singleWeight else weight[i].shape[1]
             dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
@@ -4167,6 +4200,14 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
     dim_m = x.size(0)
     if (weight.dtype == torch.int32 or weight.dtype == torch.float32) and weight.is_contiguous():
         dim_n = weight.size(1) * 8
+    elif weight.dtype == torch.uint8 and weight_dtype in (torch_npu.int4, torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2):
+        # 4-bit 紧凑打包载体（仅 uint8，与 C++ 侧 at::kByte 判定一致）：与 C++ 输出 size 推齐，
+        # 以 stride(-1)==1 判定沿 N 打包（ND 非转置视图 / NZ_C0_8 视图末维为 N/2，逻辑 N 需 ×2）；
+        # 转置视图（stride(-2)==1）末维已是逻辑 N
+        if weight.stride(-1) == 1:
+            dim_n = weight.size(1) * 2
+        else:
+            dim_n = weight.size(1)
     else:
         dim_n = weight.size(1)
     if quant_scale is not None:
