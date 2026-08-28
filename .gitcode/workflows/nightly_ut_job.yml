@@ -103,31 +103,33 @@ jobs:
           echo "Total files for full UT: $(wc -l < modify_files.txt)"
 
       - name: UT_op-plugin
-        shell: bash
+        shell: bash {0}
         run: |
-          set -x
+          set +e
           echo "=== source /etc/profile ==="
-          source /etc/profile 2>&1 || echo "[WARN] source /etc/profile failed"
+          source /etc/profile
           echo "=== source CANN ==="
-          source /usr/local/Ascend/cann/set_env.sh 2>&1 || echo "[WARN] source cann/set_env.sh failed"
+          source /usr/local/Ascend/cann/set_env.sh
           echo "=== source ATB ==="
-          source /usr/local/Ascend/nnal/atb/set_env.sh 2>&1 || echo "[WARN] source atb/set_env.sh failed"
+          source /usr/local/Ascend/nnal/atb/set_env.sh
           echo "=== environment ==="
-          env | grep -i ascend || echo "No ASCEND env vars"
-          env | grep -i cann || echo "No CANN env vars"
+          env | grep -iE "ascend|cann|npu" || echo "No ASCEND/CANN/NPU env vars"
           echo "=== check npu-smi ==="
-          which npu-smi 2>/dev/null && npu-smi info || echo "npu-smi not available"
+          npu-smi info 2>&1 || echo "npu-smi not available"
           echo "=== check /dev/davinci ==="
-          ls -la /dev/davinci* 2>/dev/null || echo "No /dev/davinci devices"
+          ls -la /dev/davinci* 2>&1 || echo "No /dev/davinci devices"
           echo "=== check Ascend dir ==="
-          ls /usr/local/Ascend/ 2>/dev/null || echo "/usr/local/Ascend not found"
+          ls /usr/local/Ascend/ 2>&1 || echo "/usr/local/Ascend not found"
           echo "=== python3 check ==="
           python3 -c "import torch; print('torch ok', torch.__version__)" 2>&1 || echo "torch import failed"
           python3 -c "import torch_npu; print('torch_npu ok', torch_npu.__version__)" 2>&1 || echo "torch_npu import failed"
           python3 -c "import torch_npu; print('device_count:', torch_npu.npu.device_count())" 2>&1 || echo "torch_npu.npu.device_count() failed"
           echo "=== run UT ==="
           export PTA_UT_EXEC_TIMEOUT=4800
-          python3 ci/nightly_ut_debug.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }} 2>&1 || { echo "=== UT FAILED ==="; exit 1; }
+          python3 ci/nightly_ut_debug.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
+          exit_code=$?
+          echo "UT exit code: ${exit_code}"
+          exit ${exit_code}
 
       - name: checkout pytorch for UT
         uses: checkout
