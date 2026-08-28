@@ -381,11 +381,11 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - A8W8 Pertoken量化场景需满足以下约束：
     - `x`仅支持非转置，shape为`(m, k)`。
     - `weight`支持非转置和转置输入。FRACTAL_NZ格式下，非转置storage shape为`(e, ceil(n / 32), ceil(k / 16), 16, 32)`，转置storage shape为`(e, ceil(k / 32), ceil(n / 16), 16, 32)`。
-    - `weight`转置输入时，算子内部使用转置Weight模板处理FRACTAL_NZ数据。
     - `weight_scale` shape为`(e, n)`，`x_scale`和`output_scale` shape均为`(m,)`，`output` shape为`(m, n / 2)`。
     - `dequant_mode`和`quant_mode`均为0；`dequant_dtype`支持`torch.float32`、`torch.bfloat16`或`torch.float16`。
     - `n`必须大于0且为64的整数倍。
     - `weight`和`weight_scale`的TensorList长度均为1。
+    - `weight`为FRACTAL_NZ格式时，仅支持静态图模式。
 
   - 输入和输出Tensor支持的数据类型组合如下：
 
