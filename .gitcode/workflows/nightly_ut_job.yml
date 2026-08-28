@@ -103,11 +103,12 @@ jobs:
           echo "Total files for full UT: $(wc -l < modify_files.txt)"
 
       - name: UT_op-plugin
+        shell: bash
         run: |
-          source /etc/profile
+          source /etc/profile || true
           export PTA_UT_EXEC_TIMEOUT=4800
-          source /usr/local/Ascend/cann/set_env.sh
-          source /usr/local/Ascend/nnal/atb/set_env.sh
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
           python3 ci/nightly_ut_debug.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
 
       - name: checkout pytorch for UT
