@@ -161,6 +161,10 @@ void _fused_adam_(
 	const c10::optional<at::Tensor>& found_inf)
 {
 	if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+		TORCH_NPU_WARN(
+			"CAUTION: The operator 'aten::_fused_adam_' is not currently supported "
+			"on the NPU backend and will fall back to run on the CPU."
+			" This may have performance implications.");
 		fused_adam_cpu_fallback(
 			self,
 			grads,
