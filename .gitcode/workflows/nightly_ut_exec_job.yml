@@ -1,0 +1,151 @@
+name: _Nightly_UT_Exec_Job
+
+on:
+  workflow_call:
+    inputs:
+      CP_DOCKER_IMG:
+        required: true
+        type: string
+      # 分片类型: regular = 常规用例分片 (并行执行), distributed = 分布式用例分片 (串行独占执行)
+      SHARD_TYPE:
+        required: false
+        type: string
+        default: "regular"
+      # 当前分片编号 (1 起), 对应 collect 阶段产出的
+      # regular_npu_cases_shard_${TEST_RANK}.json; distributed 类型固定为 1
+      TEST_RANK:
+        required: false
+        type: string
+        default: "1"
+      TEST_WORLD_SIZE:
+        required: false
+        type: string
+        default: "6"
+      CONTAINER_OPTIONS:
+        required: false
+        type: string
+        default: "--user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc"
+      # 单用例超时 (秒)
+      TIMEOUT:
+        required: false
+        type: string
+        default: "1200"
+      # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
+      MAX_WORKERS:
+        required: false
+        type: string
+        default: "4"
+
+jobs:
+  UT:
+    name: op-plugin UT exec
+    select: selected_by_default
+    # 单分片执行超时: 5 小时
+    timeout-minutes: 300
+    runs-on: [ self-hosted, os=euler ]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      options: ${{ inputs.CONTAINER_OPTIONS }}
+    env:
+      SHARD_TYPE: ${{ inputs.SHARD_TYPE }}
+      TEST_RANK: ${{ inputs.TEST_RANK }}
+      TEST_WORLD_SIZE: ${{ inputs.TEST_WORLD_SIZE }}
+    steps:
+      - name: print env
+        run: |
+          echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
+          echo "SHARD_TYPE=${{ env.SHARD_TYPE }}"
+          echo "TEST_RANK=${{ env.TEST_RANK }}"
+          echo "TEST_WORLD_SIZE=${{ env.TEST_WORLD_SIZE }}"
+          echo "TIMEOUT=${{ inputs.TIMEOUT }}"
+          echo "MAX_WORKERS=${{ inputs.MAX_WORKERS }}"
+
+      # 用例已在 collect 阶段收集完成, 执行阶段无需再 checkout pytorch 源码,
+      # torch 版本直接从 build 阶段记录的 build_info.txt 中读取。
+      - name: download build info from artifact
+        uses: download-artifact
+        with:
+          name: build-info
+          path: ./
+
+      - name: read build info
+        run: |
+          cat build_info.txt
+          WHL_FILE=$(grep whl_file build_info.txt | cut -d= -f2)
+          echo "WHL_FILE=${WHL_FILE}"
+          echo "WHL_FILE=${WHL_FILE}" >> $ATOMGIT_ENV
+
+      - name: install torch
+        run: |
+          torch_version=$(grep torch_version build_info.txt | cut -d= -f2)
+          nightly_date=${torch_version:10:8}
+          echo "torch_version=${torch_version}"
+          echo "nightly_date=${nightly_date}"
+
+          if [ ${#nightly_date} -ne 8 ]; then
+            ver=${torch_version:0:6}
+            url_base="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${ver}"
+          else
+            ver=${torch_version}
+            url_base="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}"
+          fi
+
+          torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl"
+          echo "torch_url=${torch_url}"
+          pip3 install $torch_url
+
+      - name: download op-plugin from OBS
+        uses: obs-download
+        with:
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pytorch-package"
+          access-key: "${{ secrets.OBS_AK }}"
+          secret-key: "${{ secrets.OBS_SK }}"
+          key: "artifacts/${{ env.WHL_FILE }}"
+          local-path: "./"
+
+      - name: install torch_npu
+        run: |
+          ls -al
+          pip3 install ${{ env.WHL_FILE }}
+        working-directory: ./
+
+      - name: checkout op-plugin
+        uses: checkout
+        with:
+          fetch-depth: 1
+
+      - name: download collected cases from artifact
+        uses: download-artifact
+        with:
+          name: collected-cases
+          path: ./collected_cases
+
+      - name: resolve shard files
+        run: |
+          if [ "${{ env.SHARD_TYPE }}" = "distributed" ]; then
+            echo "CASES_JSON=collected_cases/distributed_cases.json" >> $ATOMGIT_ENV
+          else
+            echo "CASES_JSON=collected_cases/regular_npu_cases_shard_${{ env.TEST_RANK }}.json" >> $ATOMGIT_ENV
+          fi
+          echo "REPORT_DIR=test-reports-${{ env.SHARD_TYPE }}-${{ env.TEST_RANK }}" >> $ATOMGIT_ENV
+
+      - name: Execute tests
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh 2>/dev/null || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh 2>/dev/null || true
+          python3 .gitcode/scripts/run_npu_test_shard.py \
+            --cases-json ${{ env.CASES_JSON }} \
+            --test-dir test \
+            --disabled-testcases .gitcode/config/disabled_testcases.json \
+            --report-dir ${{ env.REPORT_DIR }} \
+            --timeout ${{ inputs.TIMEOUT }} \
+            --max-workers ${{ inputs.MAX_WORKERS }} \
+            --verbose
+
+      - name: upload test reports to artifact
+        if: always()
+        uses: upload-artifact
+        with:
+          name: test-reports-${{ inputs.SHARD_TYPE }}-${{ inputs.TEST_RANK }}
+          path: test-reports-${{ inputs.SHARD_TYPE }}-${{ inputs.TEST_RANK }}/
