@@ -1,4 +1,4 @@
-name: Nightly Build Job
+name: _Nightly_Build_ob
 
 on:
   workflow_call:

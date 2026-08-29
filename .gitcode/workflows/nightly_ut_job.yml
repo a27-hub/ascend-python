@@ -1,4 +1,4 @@
-name: Nightly UT Job
+name: _Nightly_UT_Job
 
 on:
   workflow_call:
@@ -102,8 +102,7 @@ jobs:
           git ls-files > modify_files.txt
           echo "Total files for full UT: $(wc -l < modify_files.txt)"
 
-      - name: UT_op-plugin
-        shell: bash {0}
+      - name: UT_op-plugin 
         run: |
           set +e
           echo "=== source /etc/profile ==="
