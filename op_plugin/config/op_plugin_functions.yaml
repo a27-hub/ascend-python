@@ -7762,6 +7762,7 @@ quant:
 
   - func: dequantize.self(Tensor self) -> Tensor
     acl_op: [v2.2, newest]
+    op_api: [v2.2, newest]
 
   - func: int_repr(Tensor self) -> Tensor
     acl_op: [v2.2, newest]
