@@ -34,7 +34,7 @@ jobs:
         run: |
           echo "[ self-hosted, build=build ]"
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
-          echo "py_version=${{ inputs.py_version }}"
+          echo "py_version=3.10"
           echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
           echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
           echo "TARGET_BRANCH=master"
