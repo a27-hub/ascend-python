@@ -26,6 +26,8 @@ env:
   repo: ${{ atomgit.event.repository.name }}
   org_name: "ComputingActionTest"
   img_master_arm: "pytorch_master_a2_aarch64_builder:20260704"
+  # 编译使用的 PyTorch 分支
+  pytorch_branch: "master"
   # UT 分片总数,需与 unit_test 阶段中 UT job 的数量保持一致
   TEST_WORLD_SIZE: "6"
 
@@ -38,7 +40,7 @@ stages:
         name: Build ARM 
         uses: .gitcode/workflows/nightly_build_job.yml
         with:
-          pytorch_branch: "master"
+          pytorch_branch: ${{ env.pytorch_branch }}
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
 
   unit_test:

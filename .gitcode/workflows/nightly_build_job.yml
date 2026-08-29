@@ -17,6 +17,10 @@ on:
       pytorch_branch:
         required: true
         type: string
+      CONTAINER_OPTIONS:
+        required: false
+        type: string
+        default: "--user root -v /data/torchnpu-ccache:/ccache"
 
 jobs:
   Compile:
@@ -25,7 +29,7 @@ jobs:
     runs-on: [ self-hosted, os=euler, role=compile ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
-      options: --user root -v /data/torchnpu-ccache:/ccache
+      options: ${{ inputs.CONTAINER_OPTIONS }}
     env:
       CCACHE_DIR: /ccache
       CCACHE_MAXSIZE: 10G
