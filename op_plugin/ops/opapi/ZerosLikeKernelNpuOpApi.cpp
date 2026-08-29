@@ -20,8 +20,32 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+namespace {
+// aclnnInplaceZero has no kernel for the unsigned 16/32/64-bit dtypes (error 161002).
+// Zeroing is a pure bit pattern, so the same storage is zeroed through the signed
+// dtype of equal width instead.
+c10::optional<at::ScalarType> signed_alias_dtype(at::ScalarType dtype) {
+  switch (dtype) {
+    case at::kUInt16:
+      return at::kShort;
+    case at::kUInt32:
+      return at::kInt;
+    case at::kUInt64:
+      return at::kLong;
+    default:
+      return c10::nullopt;
+  }
+}
+} // namespace
+
 at::Tensor& zero_(at::Tensor& self) {
   DO_COMPATIBILITY(aclnnInplaceZero, acl_op::zero_(self));
+  const auto alias_dtype = signed_alias_dtype(self.scalar_type());
+  if (alias_dtype.has_value()) {
+    at::Tensor alias = self.view(alias_dtype.value());
+    EXEC_NPU_CMD(aclnnInplaceZero, alias);
+    return self;
+  }
   EXEC_NPU_CMD(aclnnInplaceZero, self);
   return self;
 }
