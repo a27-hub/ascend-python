@@ -51,7 +51,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "1"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
 
       ut_arm_part_2:
         name: Unit Test ARM - Part 2
@@ -59,7 +59,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "2"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
 
       ut_arm_part_3:
         name: Unit Test ARM - Part 3
@@ -67,7 +67,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "3"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
 
       ut_arm_part_4:
         name: Unit Test ARM - Part 4
@@ -75,7 +75,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "4"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
 
       ut_arm_part_5:
         name: Unit Test ARM - Part 5
@@ -83,7 +83,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "5"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
 
       ut_arm_part_6:
         name: Unit Test ARM - Part 6
@@ -91,7 +91,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "6"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
 
       ut_arm_part_7:
         name: Unit Test ARM - Part 7
@@ -99,7 +99,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "7"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
 
       ut_arm_part_8:
         name: Unit Test ARM - Part 8
@@ -107,4 +107,4 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "8"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          TEST_WORLD_SIZE: "8"
