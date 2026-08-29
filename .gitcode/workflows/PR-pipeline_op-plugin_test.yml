@@ -54,6 +54,18 @@ stages:
                 pr_number: ${{ env.pr_id }}
                 token: ${{ secrets.GIT_TOKEN_LABELS }}
                 apply_label: 'true'
+            - name: Generate 50G artifact test file
+              run: |
+                TEST_FILE="artifact-size-test-50G.bin"
+                dd if=/dev/urandom of="${TEST_FILE}" bs=1M count=51200 status=progress
+                test "$(stat -c '%s' "${TEST_FILE}")" -eq 53687091200
+                ls -lh "${TEST_FILE}"
+            - name: Upload 50G artifact
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G
+                path: artifact-size-test-50G.bin
+                overwrite: true
   #     CodeCheck:
   #       name: CodeCheck
   #       runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
