@@ -14,10 +14,8 @@
 // limitations under the License.
 
 #include "torch_npu/csrc/aten/CustomFunctions.h"
-#include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#include "op_plugin/utils/OpAdapter.h"
 
 namespace op_api {
 #if VERSION_BETWEEN(V2R2, VERSION_NEWEST)
@@ -41,7 +39,6 @@ at::Tensor int_repr_quantized_nocheck(const at::Tensor& self)
 
 at::Tensor int_repr(const at::Tensor& self)
 {
-    DO_COMPATIBILITY(aclnnCast, acl_op::int_repr(self));
     return int_repr_quantized_nocheck(self);
 }
 #endif
