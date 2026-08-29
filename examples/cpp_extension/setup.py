@@ -55,30 +55,8 @@ def get_npu_arch():
 
 
 def get_dependency_paths():
-    # 优先使用 sysconfig.get_path('include')，它返回标准头文件安装目录
-    python_include = sysconfig.get_path('include')
-    # 验证该目录下是否存在 Python.h
-    if not os.path.exists(os.path.join(python_include, "Python.h")):
-        # 若不存在，尝试使用 INCLUDEPY
-        python_include = sysconfig.get_config_var("INCLUDEPY")
-        if python_include and not os.path.exists(os.path.join(python_include, "Python.h")):
-            # 最后备用：根据 prefix 和 VERSION 手动构建
-            prefix = sysconfig.get_config_var("prefix")
-            version = sysconfig.get_config_var("VERSION")
-            if prefix and version:
-                candidate = os.path.join(prefix, "include", "python" + version)
-                if os.path.exists(os.path.join(candidate, "Python.h")):
-                    python_include = candidate
-                else:
-                    raise RuntimeError(
-                        f"Cannot find Python.h in any of the following paths:\n"
-                        f"  {sysconfig.get_path('include')}\n"
-                        f"  {sysconfig.get_config_var('INCLUDEPY')}\n"
-                        f"  {candidate}\n"
-                        "Please ensure python3-dev or python3-devel is installed."
-                    )
-            else:
-                raise RuntimeError("Unable to determine Python include path.")
+    python_include = sysconfig.get_config_var("INCLUDEPY")
+    python_lib = sysconfig.get_config_var("LIBDIR")
 
     torch_include_paths = cpp_extension.include_paths()
     torch_lib = os.path.join(os.path.dirname(torch.__file__), "lib")
@@ -89,12 +67,12 @@ def get_dependency_paths():
 
     all_include_paths = list([
         *torch_include_paths,
-        python_include,          # 现在这个路径一定包含 Python.h
+        python_include,
         torch_npu_include,
     ])
 
     all_libs = list([
-        sysconfig.get_config_var("LIBDIR"),  # 也可使用 sysconfig.get_path('stdlib') 等
+        python_lib,
         torch_lib,
         torch_npu_lib,
     ])
@@ -103,6 +81,7 @@ def get_dependency_paths():
         "all_includes": all_include_paths,
         "all_libs": all_libs
     }
+
 
 class AscendBuildExtension(BuildExtension):
     def __init__(self, *args, **kwargs):
