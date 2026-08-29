@@ -16,15 +16,27 @@ on:
       TEST_WORLD_SIZE:
         required: false
         type: string
+      CONTAINER_OPTIONS:
+        required: false
+        type: string
+        default: "--user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc"
+      PYTORCH_REPO_URL:
+        required: false
+        type: string
+        default: "https://gitcode.com/Ascend/pytorch.git"
+      pytorch_branch:
+        required: false
+        type: string
+        default: "master"
 
 jobs:
   UT:
-    name: UT
+    name: op-plugin UT shard
     select: selected_by_default
     runs-on: [ self-hosted, os=euler ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
-      options: --user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc
+      options: ${{ inputs.CONTAINER_OPTIONS }}
     env:
       TEST_RANK: ${{ inputs.TEST_RANK }}
       TEST_WORLD_SIZE: ${{ inputs.TEST_WORLD_SIZE }}
@@ -39,8 +51,8 @@ jobs:
       - name: checkout pytorch
         uses: checkout
         with:
-          repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/master
+          repository: ${{ inputs.PYTORCH_REPO_URL }}
+          ref: refs/heads/${{ inputs.pytorch_branch }}
           path: pytorch
           fetch-depth: 1
 
@@ -133,8 +145,8 @@ jobs:
       - name: checkout pytorch for UT
         uses: checkout
         with:
-          repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/master
+          repository: ${{ inputs.PYTORCH_REPO_URL }}
+          ref: refs/heads/${{ inputs.pytorch_branch }}
           path: pytorch
           submodules: true
 

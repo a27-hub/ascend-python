@@ -17,6 +17,10 @@ on:
       pytorch_branch:
         required: true
         type: string
+      PYTORCH_REPO_URL:
+        required: false
+        type: string
+        default: "https://gitcode.com/Ascend/pytorch.git"
       CONTAINER_OPTIONS:
         required: false
         type: string
@@ -43,11 +47,11 @@ jobs:
           echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
           echo "TARGET_BRANCH=master"
 
-      - name: checkout pytorch
+      - name: checkout ascend pytorch
         uses: checkout
         with:
-          repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/master
+          repository: ${{ inputs.PYTORCH_REPO_URL }}
+          ref: refs/heads/${{ inputs.pytorch_branch }}
           path: pytorch
           fetch-depth: 1
 
