@@ -26,8 +26,6 @@ env:
   repo: ${{ atomgit.event.repository.name }}
   org_name: "ComputingActionTest"
   img_master_arm: "pytorch_master_a2_aarch64_builder:20260704"
-  # UT 分片总数,需与 stage_2 中 UT job 的数量保持一致
-  TEST_WORLD_SIZE: "4"
 
 stages:
   stage_1:
@@ -35,44 +33,28 @@ stages:
     select: selected_by_default
     jobs:
       Build_master:
-        name: Build ARM 
+        name: Build_master
         uses: .gitcode/workflows/nightly_build_job.yml
         with:
           pytorch_branch: "master"
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
 
   stage_2:
-    name: Unit Test (run full op-plugin UT suite)
+    name: UT
     select: selected_by_default
     jobs:
-      ut_arm_part_1:
-        name: Unit Test ARM - Part 1
+      UT_master_arm_01:
+        name: UT_master_arm_01
         uses: .gitcode/workflows/nightly_ut_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "1"
-          TEST_WORLD_SIZE: "4"
+          TEST_WORLD_SIZE: "2"
 
-      ut_arm_part_2:
-        name: Unit Test ARM - Part 2
+      UT_master_arm_02:
+        name: UT_master_arm_02
         uses: .gitcode/workflows/nightly_ut_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           TEST_RANK: "2"
-          TEST_WORLD_SIZE: "4"
-
-      ut_arm_part_3:
-        name: Unit Test ARM - Part 3
-        uses: .gitcode/workflows/nightly_ut_job.yml
-        with:
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          TEST_RANK: "3"
-          TEST_WORLD_SIZE: "4"
-
-      ut_arm_part_4:
-        name: Unit Test ARM - Part 4
-        uses: .gitcode/workflows/nightly_ut_job.yml
-        with:
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          TEST_RANK: "4"
-          TEST_WORLD_SIZE: "4"
+          TEST_WORLD_SIZE: "2"
