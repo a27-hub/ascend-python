@@ -22,7 +22,7 @@ jobs:
   Compile:
     name: Compile
     select: selected_by_default
-    runs-on: [ self-hosted, build=build ]
+    runs-on: [ self-hosted, os=euler ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root -v /data/torchnpu-ccache:/ccache
