@@ -57,21 +57,167 @@ stages:
             - name: Generate 50G artifact test files
               run: |
                 TEST_DIR="artifact-size-test-50G"
+                FILE_SIZE=2000000000
+                TOTAL_SIZE=50000000000
                 rm -rf -- "${TEST_DIR}"
                 mkdir -p "${TEST_DIR}"
                 for index in $(seq -w 1 25); do
                   TEST_FILE="${TEST_DIR}/chunk-${index}.bin"
-                  dd if=/dev/urandom of="${TEST_FILE}" bs=1M count=2048 status=progress
-                  test "$(stat -c '%s' "${TEST_FILE}")" -eq 2147483648
+                  head -c "${FILE_SIZE}" /dev/urandom > "${TEST_FILE}"
+                  test "$(stat -c '%s' "${TEST_FILE}")" -eq "${FILE_SIZE}"
                 done
                 test "$(find "${TEST_DIR}" -type f | wc -l)" -eq 25
-                test "$(find "${TEST_DIR}" -type f -printf '%s\n' | awk '{total += $1} END {print total}')" -eq 53687091200
+                test "$(find "${TEST_DIR}" -type f -printf '%s\n' | awk '{total += $1} END {print total}')" -eq "${TOTAL_SIZE}"
                 du -sh "${TEST_DIR}"
-            - name: Upload 50G artifact
+            - name: Upload 50G artifact chunk 01
               uses: upload-artifact
               with:
-                name: artifact-size-test-50G
-                path: artifact-size-test-50G/
+                name: artifact-size-test-50G-01
+                path: artifact-size-test-50G/chunk-01.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 02
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-02
+                path: artifact-size-test-50G/chunk-02.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 03
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-03
+                path: artifact-size-test-50G/chunk-03.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 04
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-04
+                path: artifact-size-test-50G/chunk-04.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 05
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-05
+                path: artifact-size-test-50G/chunk-05.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 06
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-06
+                path: artifact-size-test-50G/chunk-06.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 07
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-07
+                path: artifact-size-test-50G/chunk-07.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 08
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-08
+                path: artifact-size-test-50G/chunk-08.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 09
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-09
+                path: artifact-size-test-50G/chunk-09.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 10
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-10
+                path: artifact-size-test-50G/chunk-10.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 11
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-11
+                path: artifact-size-test-50G/chunk-11.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 12
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-12
+                path: artifact-size-test-50G/chunk-12.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 13
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-13
+                path: artifact-size-test-50G/chunk-13.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 14
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-14
+                path: artifact-size-test-50G/chunk-14.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 15
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-15
+                path: artifact-size-test-50G/chunk-15.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 16
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-16
+                path: artifact-size-test-50G/chunk-16.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 17
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-17
+                path: artifact-size-test-50G/chunk-17.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 18
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-18
+                path: artifact-size-test-50G/chunk-18.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 19
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-19
+                path: artifact-size-test-50G/chunk-19.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 20
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-20
+                path: artifact-size-test-50G/chunk-20.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 21
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-21
+                path: artifact-size-test-50G/chunk-21.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 22
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-22
+                path: artifact-size-test-50G/chunk-22.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 23
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-23
+                path: artifact-size-test-50G/chunk-23.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 24
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-24
+                path: artifact-size-test-50G/chunk-24.bin
+                overwrite: true
+            - name: Upload 50G artifact chunk 25
+              uses: upload-artifact
+              with:
+                name: artifact-size-test-50G-25
+                path: artifact-size-test-50G/chunk-25.bin
                 overwrite: true
   #     CodeCheck:
   #       name: CodeCheck
