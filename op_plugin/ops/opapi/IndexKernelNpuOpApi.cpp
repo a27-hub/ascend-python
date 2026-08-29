@@ -43,6 +43,16 @@ at::Tensor index_high_dims_op_api(const at::Tensor& self, std::vector<at::Tensor
 
 at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Tensor>>& orig)
 {
+    if (self.is_complex()) {
+        // aclnnIndex has no complex kernel (error 161002). Advanced indexing only gathers whole
+        // elements, so gather from the (..., 2) real view with the same indices -- the extra
+        // trailing undefined entry keeps the (real, imag) pair dim intact -- and view the result
+        // back as complex.
+        torch::List<c10::optional<at::Tensor>> real_indices = orig.copy();
+        real_indices.push_back(c10::optional<at::Tensor>());
+        at::Tensor real_self = at::view_as_real(self.resolve_conj());
+        return at::view_as_complex(op_api::index(real_self, real_indices));
+    }
     DO_COMPATIBILITY(aclnnIndex, acl_op::index(self, orig));
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(orig);
     auto indices = op_plugin::AdvanceIndex::npu_expand_tensors(self, orig, needCast, true);
