@@ -133,6 +133,30 @@ install_and_test() {
 }
 
 # ----------------------------------------------------------------------------
+# 失败时直接把日志中的错误摘要打到 stdout，免于手动翻看日志
+# 参数: $1 = 工程名, $2 = 日志文件
+# ----------------------------------------------------------------------------
+dump_fail_log() {
+    local name="$1"
+    local log="$2"
+    echo -e "${COLOR_RED}==================== [${name}] FAIL excerpt ====================${COLOR_RESET}"
+    if [ ! -f "${log}" ]; then
+        echo "(log not found: ${log})"
+        echo -e "${COLOR_RED}================================================================${COLOR_RESET}"
+        return
+    fi
+    # 优先抽取错误相关行 (含行号)，找不到则回退到尾部 60 行
+    local excerpt
+    excerpt=$(grep -nE -i "error|traceback|fail|exception|cannot|not found|no such|killed|core dumped" "${log}" | tail -n 40)
+    if [ -n "${excerpt}" ]; then
+        echo "${excerpt}"
+    else
+        tail -n 60 "${log}"
+    fi
+    echo -e "${COLOR_RED}==================== [${name}] end excerpt ====================${COLOR_RESET}"
+}
+
+# ----------------------------------------------------------------------------
 # 单个工程任务: 编译 whl + 安装 + 执行 test 脚本
 # 参数:
 #   $1 工程名
@@ -188,6 +212,7 @@ run_project() {
         echo -e "[$(date '+%H:%M:%S')] [${COLOR_GREEN}PASS${COLOR_RESET}] ${name} (${duration}s)" | tee -a "${SUMMARY_LOG}"
     else
         echo -e "[$(date '+%H:%M:%S')] [${COLOR_RED}FAIL${COLOR_RESET}] ${name} (${duration}s) -> ${log}" | tee -a "${SUMMARY_LOG}"
+        dump_fail_log "${name}" "${log}"
     fi
     return $rc
 }
@@ -309,6 +334,7 @@ task_cpp_extension_full() {
         echo -e "[$(date '+%H:%M:%S')] [${COLOR_GREEN}PASS${COLOR_RESET}] cpp_extension_full (${duration}s)" | tee -a "${SUMMARY_LOG}"
     else
         echo -e "[$(date '+%H:%M:%S')] [${COLOR_RED}FAIL${COLOR_RESET}] cpp_extension_full (${duration}s) -> ${log}" | tee -a "${SUMMARY_LOG}"
+        dump_fail_log "cpp_extension_full" "${log}"
     fi
     return $rc
 }
@@ -380,6 +406,7 @@ task_kernel_extension_aclgraph() {
         echo -e "[$(date '+%H:%M:%S')] [${COLOR_GREEN}PASS${COLOR_RESET}] kernel_extension_aclgraph (${duration}s)" | tee -a "${SUMMARY_LOG}"
     else
         echo -e "[$(date '+%H:%M:%S')] [${COLOR_RED}FAIL${COLOR_RESET}] kernel_extension_aclgraph (${duration}s) -> ${log}" | tee -a "${SUMMARY_LOG}"
+        dump_fail_log "kernel_extension_aclgraph" "${log}"
     fi
     return $rc
 }
