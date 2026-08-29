@@ -54,17 +54,24 @@ stages:
                 pr_number: ${{ env.pr_id }}
                 token: ${{ secrets.GIT_TOKEN_LABELS }}
                 apply_label: 'true'
-            - name: Generate 50G artifact test file
+            - name: Generate 50G artifact test files
               run: |
-                TEST_FILE="artifact-size-test-50G.bin"
-                dd if=/dev/urandom of="${TEST_FILE}" bs=1M count=51200 status=progress
-                test "$(stat -c '%s' "${TEST_FILE}")" -eq 53687091200
-                ls -lh "${TEST_FILE}"
+                TEST_DIR="artifact-size-test-50G"
+                rm -rf -- "${TEST_DIR}"
+                mkdir -p "${TEST_DIR}"
+                for index in $(seq -w 1 25); do
+                  TEST_FILE="${TEST_DIR}/chunk-${index}.bin"
+                  dd if=/dev/urandom of="${TEST_FILE}" bs=1M count=2048 status=progress
+                  test "$(stat -c '%s' "${TEST_FILE}")" -eq 2147483648
+                done
+                test "$(find "${TEST_DIR}" -type f | wc -l)" -eq 25
+                test "$(find "${TEST_DIR}" -type f -printf '%s\n' | awk '{total += $1} END {print total}')" -eq 53687091200
+                du -sh "${TEST_DIR}"
             - name: Upload 50G artifact
               uses: upload-artifact
               with:
                 name: artifact-size-test-50G
-                path: artifact-size-test-50G.bin
+                path: artifact-size-test-50G/
                 overwrite: true
   #     CodeCheck:
   #       name: CodeCheck
