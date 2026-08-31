@@ -1,148 +1,353 @@
-# torch\_npu.npu\_grouped\_matmul\_swiglu\_quant\_v2
+# torch_npu.npu_grouped_matmul_swiglu_quant_v2
 
 ## 产品支持情况
 
 | 产品 | 是否支持 |
 | --- | --- |
-| Ascend 950PR/Ascend 950DT | √ |
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品 | √ |
-| Atlas A2 训练系列产品/Atlas A2 推理系列产品 | √ |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
 
 ## 功能说明
 
-- API功能：npu\_grouped\_matmul\_swiglu\_quant\_v2是一种融合分组矩阵乘法（GroupedMatmul）、SwiGLu混合激活函数、量化（quant）的计算方法。该方法适用于需要对矩阵乘法结果进行SwiGlu激活函数激活的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
+- API功能：`torch_npu.npu_grouped_matmul_swiglu_quant_v2`是一种融合分组矩阵乘法（GroupedMatmul）、SwiGLU混合激活函数、量化（quant）的计算方法。该方法适用于需要对矩阵乘法结果进行SwiGLU激活函数激活的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
 
 - 计算公式：
-  - MX量化模式：
-    - 1.根据groupList\[i\]确定当前分组的token：
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+    <details>
+    <summary>量化场景A8W8（A指激活矩阵，W指权重矩阵，8指int8数据类型）：</summary>
 
-            ![](figures/zh-cn_formulaimage_0000002553685305.png)
+    - **输入**：
+      - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
+      - $W∈\mathbb{Z_8}^{E \times K \times N}$：分组权重矩阵（右矩阵），E是专家个数，K是特征维度，N是输出维度。
+      - $w\_scale∈\mathbb{R}^{E \times N}$：分组权重矩阵的逐通道缩放因子。
+      - $x\_scale∈\mathbb{R}^{M}$：激活矩阵的逐token缩放因子。
+      - $groupList∈\mathbb{N}^{E}$：cumsum或count的分组索引列表。
+    - **输出**：
+      - $Q∈\mathbb{Z_8}^{M \times N / 2}$：量化后的输出矩阵。
+      - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
+    - **计算过程**：
+      1. 根据groupList\[i\]确定当前分组的token，$i \in [0,Len(groupList)]$。
+      2. 根据分组确定的入参进行如下计算：
 
-    - 2.根据分组确定的入参进行如下计算：
+          $$
+          C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002522605356.png)
+          $$
+          C_{i,act}, gate_{i} = split(C_{i})
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002553685307.png)
+          $$
+          S_{i}=Swish(C_{i,act})\odot gate_{i}
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002522605358.png)
+          其中$Swish(x)=\frac{x}{1+e^{-x}}$
 
-    - 3.量化输出结果：
+      3. 量化输出结果：
 
-            ![](figures/zh-cn_formulaimage_0000002553685309.png)
+          $$
+          Q\_scale_{i} = \frac{max(|S_{i}|)}{127}
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002522605360.png)
+          $$
+          Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002522605354.png)
+    </details>
 
-      - emax：对应数据类型的最大正则数的指数位
+    <details>
+    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指int8数据类型，4指int4数据类型）：</summary>
 
-        | DataTpye | emax |
-        | --- | --- |
-        | torch.float8_e4m3fn | 8 |
-        | torch.float8_e5m2 | 15 |
-        | torch_npu.float4_e2m1fn_x2 | 2 |
-        | torch_npu.float4_e1m2fn_x2 | 1 |
+    - **输入**：
+      - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
+      - $W∈\mathbb{Z_4}^{E \times K \times N}$：分组权重矩阵（右矩阵），E是专家个数，K是特征维度，N是输出维度。
+      - $weightAssistMatrix∈\mathbb{R}^{E \times N}$：计算矩阵乘时的辅助矩阵（离线生成，非算子内部完成）。
+      - $w\_scale$：分组权重矩阵的缩放因子，perchannel时shape为$\mathbb{R}^{E \times N}$，pergroup时shape为$\mathbb{R}^{E \times K\_group\_num \times N}$。
+      - $x\_scale∈\mathbb{R}^{M}$：激活矩阵的逐token缩放因子。
+      - $groupList∈\mathbb{N}^{E}$：cumsum或count的分组索引列表。
+    - **输出**：
+      - $Q∈\mathbb{Z_8}^{M \times N / 2}$：量化后的输出矩阵。
+      - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
+    - **计算过程**：
+      1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
+      2. 将左矩阵int8拆为高低4bit两部分：
 
-      - blocksize：指每次量化的元素个数，当前仅支持32。
+          $$
+          X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor
+          $$
 
-  - Pertoken量化模式：
-    - 1.根据groupList\[i\]确定当前分组的token：
+          $$
+          X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002522605348.png)
+      3. 分别与权重做矩阵乘并应用perchannel或pergroup量化缩放，合并高低位结果：
 
-    - 2.根据分组确定的入参进行如下计算：
+          $$
+          C_{i} = (C\_high_{i} * 16 + C\_low_{i} + weightAssistMatrix_{i}) \odot x\_scale_{i}
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002553685341.png)
+          $$
+          C_{i,act}, gate_{i} = split(C_{i})
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002522605350.png)
+          $$
+          S_{i}=Swish(C_{i,act})\odot gate_{i}
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002553685299.png)
+          $$
+          Swish(x)=\frac{x}{1+e^{-x}}
+          $$
 
-    - 3.量化输出结果：
+      4. 量化输出结果：
 
-            ![](figures/zh-cn_formulaimage_0000002522446950.png)
+          $$
+          Q\_scale_{i} = \frac{max(|S_{i}|)}{127}
+          $$
 
-            ![](figures/zh-cn_formulaimage_0000002522447138.png)
+          $$
+          Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+          $$
+
+    </details>
+
+    <details>
+    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指int4数据类型）：</summary>
+
+    - **输入**：
+      - $X∈\mathbb{Z_4}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
+      - $W∈\mathbb{Z_4}^{E \times K \times N}$：分组权重矩阵（右矩阵），E是专家个数，K是特征维度，N是输出维度。
+      - $w\_scale∈\mathbb{R}^{E \times N}$：分组权重矩阵的逐通道缩放因子。
+      - $x\_scale∈\mathbb{R}^{M}$：激活矩阵的逐token缩放因子。
+      - $smoothScale∈\mathbb{R}^{E \times N/2}$：平滑缩放因子，E是专家个数，N是输出维度。支持shape为(E,)时广播。
+      - $groupList∈\mathbb{N}^{E}$：cumsum或count的分组索引列表。
+    - **输出**：
+      - $Q∈\mathbb{Z_8}^{M \times N / 2}$：量化后的输出矩阵。
+      - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
+    - **计算过程**：
+      1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
+      2. 根据分组确定的入参进行如下计算：
+
+          $$
+          C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}
+          $$
+
+          $$
+          C_{i,act}, gate_{i} = split(C_{i})
+          $$
+
+          $$
+          S_{i}=Swish(C_{i,act})\odot gate_{i}
+          $$
+
+          $$
+          Swish(x)=\frac{x}{1+e^{-x}}
+          $$
+
+          $$
+          S_{i} = S_{i} \odot smoothScale_{i\ Broadcast}
+          $$
+
+          注：当smoothScale形状为(E,)时，会对其进行广播，使其与$S_{i}$的形状匹配。
+
+      3. 量化输出结果：
+
+          $$
+          Q\_scale_{i} = \frac{max(|S_{i}|)}{127}
+          $$
+
+          $$
+          Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+          $$
+
+    </details>
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    <details>
+    <summary>MX量化场景：</summary>
+
+      1. 根据分组确定的入参进行如下计算：
+
+         $$
+         C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i\ Broadcast} \odot w\_scale_{i\ Broadcast}
+         $$
+
+         $$
+         C_{i,act}, gate_{i} = split(C_{i})
+         $$
+
+         $$
+         S_{i}=Swish(C_{i,act})\odot gate_{i}
+         $$
+
+         $$
+         Swish(x)=\frac{x}{1+e^{-x}}
+         $$
+
+      2. 量化输出结果：
+
+         $$
+         shared\_exp = \left\lfloor \log_2(max_i(|S_i|)) \right\rceil - emax
+         $$
+
+         $$
+         Q\_scale = 2 ^ {shared\_exp}
+         $$
+
+         $$
+         Q_i = quantize\_to\_element\_format(S_i/Q\_scale), \space i\space from\space 1\space to\space blocksize
+         $$
+
+         其中，$emax$表示对应数据类型的最大正则数的指数位：
+
+         |   DataType    | emax |
+         | :-----------: | :--: |
+         | float8_e4m3fn |  8   |
+         |  float8_e5m2  |  15  |
+         |  float4_e2m1  |  2   |
+
+         其中，$blocksize$表示每次量化的元素个数，仅支持32。
+
+    </details>
+
+    <details>
+    <summary>A8W8 Pertoken量化场景：</summary>
+
+      - **定义**：
+        - **⋅** 表示矩阵乘法。
+        - **⊙** 表示逐元素乘法。
+      - **输入**：
+        - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
+        - $W∈\mathbb{Z_8}^{E \times K \times N}$：分组权重矩阵（右矩阵），E是专家个数，K是特征维度，N是输出维度。
+        - $w\_scale∈\mathbb{R}^{E \times N}$：权重矩阵的逐channel缩放因子。
+        - $x\_scale∈\mathbb{R}^{M}$：激活矩阵的逐token缩放因子。
+        - $groupList∈\mathbb{N}^{E}$：cumsum或count形式的分组索引列表。
+      - **输出**：
+        - $Q∈\mathbb{Z_8}^{M \times N / 2}$：量化后的输出矩阵。
+        - $Q\_scale∈\mathbb{R}^{M}$：输出矩阵的逐token量化缩放因子。
+      - **计算过程**：
+
+      1. 根据groupList\[i\]确定当前分组的token，$i \in [0,Len(groupList)]$。
+
+      2. 根据分组确定的入参进行如下计算：
+
+         $$
+         C_{i} = (X_{i}\cdot W_{i} )\odot x\_scale_{i} \odot w\_scale_{i}
+         $$
+
+         $$
+         C_{i,act}, gate_{i} = split(C_{i})
+         $$
+
+         $$
+         S_{i}=Swish(C_{i,act})\odot gate_{i}
+         $$
+
+         $$
+         Swish(x)=\frac{x}{1+e^{-x}}
+         $$
+
+         其中，$x\_scale_{i}$表示对应token的量化因子。
+
+      3. 量化输出结果：
+
+         $$
+         Q\_scale_{i} = \frac{max(|S_{i}|)}{max(type)}
+         $$
+
+         $$
+         Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
+         $$
+
+    </details>
 
 ## 函数原型
 
 ```python
-torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *,  smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=0, group_list_type=0,  tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None) -> (Tensor, Tensor)
+torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=0, group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
 
-- **x**（`Tensor`）：必选参数，矩阵乘法的左矩阵。shape支持2维\[m, k\]，数据格式支持$ND$，支持非连续的Tensor。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持`torch.int8`。
-  - Ascend 950PR/Ascend 950DT：数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`，`torch_npu.float4_e1m2fn_x2`(只有weight nz支持），其中torch\_npu.hifloat8和float4系列需配置可选参数x\_dtype为对应类型，此时x本身的dtype不再生效，但仍需保证x本身的dtype为8bit位的数据类型，以保证shape正确；其中float4内轴K需为偶数，以保证8bits可以转换为2个float4。数据格式支持$ND$。
+- **`x`**（`Tensor`）：**必选参数**，矩阵乘法的左矩阵。`shape`支持2维\[m, k\]，数据格式支持$ND$，支持非连续的`Tensor`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.int8`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`、`torch_npu.float4_e1m2fn_x2`（仅`weight`为$FRACTAL\_NZ$格式时支持）。其中`torch_npu.hifloat8`和float4系列需配置可选参数`x_dtype`为对应类型，此时输入`x`自身的`dtype`不再生效，但仍需保证输入`x`自身的`dtype`为8 bit数据类型，以保证`shape`正确；其中float4内轴`K`需为偶数，以保证8 bit数据可以转换为2个float4。数据格式支持$ND$。
 
-- **weight**（`List[Tensor]`）：必选参数，权重矩阵\(矩阵乘法右矩阵\)，支持非连续的Tensor。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持`torch.int8`。
-    - 数据格式为$ND$时，shape支持3维\[e, k, n\]。
-    - 数据格式为$FRACTAL\_NZ$(通过接口npu\_format\_cast，可实现格式转换\)时，shape支持5维shape，以非转置的时候举例，fp8的时候为\[e, k/32, n/16, 16, 32\]，fp4的时候为\[e, k/64, n/16, 16, 64\]。
+- **`weight`**（`List[Tensor]`）：**必选参数**，权重矩阵（矩阵乘法右矩阵），支持非连续的`Tensor`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.int8`。
+    - 数据格式为$ND$时，`shape`支持3维\[e, k, n\]。
+    - 数据格式为$FRACTAL\_NZ$（通过接口`npu_format_cast`可实现格式转换）时，`shape`支持5维。以非转置为例，fp8的`shape`为\[e, k/32, n/16, 16, 32\]，fp4的`shape`为\[e, k/64, n/16, 16, 64\]。
+  - <term>Ascend 950PR/Ascend 950DT</term>：支持单个`Tensor`（`Tensor`列表长度必须为1）和多个`Tensor`（`Tensor`列表长度为e）。
+    - 数据格式为$ND$时，`shape`支持3维，非转置`shape`为\[\[e, k, n\]\]，转置`shape`为\[\[e, n, k\]\]。数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`，其中`torch_npu.hifloat8`和float4系列需配置可选参数`weight_dtype`为对应类型，此时输入`weight`自身的`dtype`不再生效，但仍需保证输入`weight`自身的`dtype`为8 bit数据类型，以保证`shape`正确；其中float4内轴需为偶数，以保证8 bit数据可以转换为2个float4。
+    - 数据格式为$FRACTAL\_NZ$（通过接口`npu_format_cast`可实现格式转换）时，单单单场景其中`Tensor`的`shape`支持5维，单多单场景其中`Tensor`的`shape`支持4维；数据类型仅支持`torch.float8_e4m3fn`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.float4_e2m1fn_x2`。
 
-  - Ascend 950PR/Ascend 950DT：支持单tensor\(tensor list长度必须为1\)和多tensor\(tensor list长度为e\)。
-    - 数据格式为$ND$时，shape支持3维，非转置shape\[\[e, k, n\]\]，转置shape\[\[e, n, k\]\]。数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`，其中torch\_npu.hifloat8和float4系列需配置可选参数weight\_dtype为对应类型，此时weight本身的dtype不再生效，但仍需保证weight本身的dtype为8bit位的数据类型，以保证shape正确；其中float4内轴需为偶数，以保证8bits可以转换为2个float4。
-    - 数据格式为$FRACTAL\_NZ$(通过接口npu\_format\_cast，可实现格式转换\)时，单单单场景其中tensor的shape支持5维，单多单场景其中tensor的shape支持4维；数据类型仅支持`torch.float8_e4m3fn`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.float4_e2m1fn_x2`。
+- **`weight_scale`**（`List[Tensor]`）：**必选参数**，右矩阵的量化因子。数据格式支持$ND$，支持非连续的`Tensor`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`shape`支持2维\[\[e, n\]\]，数据类型支持`torch.float32`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：MX量化场景下，单多单且`weight`数据格式为$FRACTAL\_NZ$时，其中`Tensor`的`shape`支持3维；其余场景其中`Tensor`的`shape`支持4维。数据类型支持`torch_npu.float8_e8m0fnu`。Pertoken量化场景下，`shape`支持2维，`shape`为\[\[e, n\]\]；当`x`为`torch.int8`时，`weight_scale`需支持`torch.bfloat16`、`torch.float32`、`torch.float16`；当`x`为`torch.float8_e4m3fn`、`torch.float8_e5m2`、`torch_npu.hifloat8`时，`weight_scale`支持`torch.bfloat16`、`torch.float32`。目前仅支持`Tensor`列表长度为1。
 
-- **weight\_scale**（`List[Tensor]`）：必选参数，右矩阵的量化因子。数据格式支持$ND$，支持非连续的Tensor。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：shape支持2维\[\[e,n\]\]，数据类型支持`torch.float32`。
-  - Ascend 950PR/Ascend 950DT：MX量化场景下：单多单且weight数据格式为FRACTAL\_NZ场景时其中tensor的shape支持3维，其余场景其中tensor的shape支持4维。数据类型支持`torch_npu.float8_e8m0fnu`。Pertoken量化场景下：shape支持2维，shape\[\[e, n\]\]，当`x`为torch.int8时，weight_scale需支持`torch.bfloat16`、`torch.float32`、`torch.float16`，当`x`为torch.float8\_e4m3fn、torch.float8\_e5m2、torch\_npu.hifloat8时，weight_scale支持`torch.bfloat16`、`torch.float32`。目前仅支持tensor list长度为1。
+- **`x_scale`**（`Tensor`）：**必选参数**，左矩阵的量化因子。数据格式支持$ND$，支持非连续的`Tensor`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`shape`支持1维\[m\]，数据类型支持`torch.float32`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：MX量化场景下，`shape`支持3维\[m, ceil\(k / 64\), 2\]，数据类型支持`torch_npu.float8_e8m0fnu`；Pertoken量化场景下，`shape`支持1维\[m\]，数据类型支持`torch.float32`。
 
-- **x\_scale**（`Tensor`）：必选参数，左矩阵的量化因子。数据格式支持$ND$，支持非连续的Tensor。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：shape支持1维\[m\]，数据类型支持`torch.float32`。
-  - Ascend 950PR/Ascend 950DT：MX量化场景下：shape支持3维\[m, ceil\(k / 64\), 2\]，数据类型支持`torch_npu.float8_e8m0fnu`。Pertoken量化场景下：shape支持1维\[m\]，数据类型支持`torch.float32`。
+- **`*`**：代表`*`之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
-- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **group\_list**（`Tensor`）：必选参数，指示每个分组参与计算的Token个数。shape支持1维\[e\]，数据类型支持`torch.int64`，数据格式支持$ND$，支持非连续的Tensor。当`group_list_type`为0时，最后一个值不大于x中tensor的第一维，当`group_list_type`为1时，数值的总和不大于x中tensor的第一维。group\_list中的值约束了输出数据的有效部分，group\_list中未指定的部分将不会参与更新。
-- **smooth\_scale**（`Tensor`）：可选参数，量化的smooth\_scale。数据类型为`torch.float32`，当前仅支持传入默认值None。
-- **weight\_assist\_matrix**（`List[Tensor]`）：可选参数，右矩阵的辅助矩阵，数据类型支持`torch.float32`，当前仅支持传入默认值None。
-- **bias**（`Tensor`）：可选参数，矩阵乘计算的偏移值，数据类型支持`torch.int32`，当前仅支持传入默认值None。
-- **dequant\_mode**（`int`）：可选参数，表示反量化模式，数据类型为`torch.int32`。支持取值：0（默认值）表示左矩阵pertoken、右矩阵perchannel；1表示左矩阵pertoken、右矩阵pergroup；2表示MX量化。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：当前仅支持传入默认值0。
-  - Ascend 950PR/Ascend 950DT：当前仅支持传入0以及2。
+- **`group_list`**（`Tensor`）：**必选参数**，指示每个分组参与计算的Token个数。`shape`支持1维\[e\]，数据类型支持`torch.int64`，数据格式支持$ND$，支持非连续的`Tensor`。当`group_list_type`为0时，最后一个值不大于输入`x`中`Tensor`的第一维；当`group_list_type`为1时，数值的总和不大于输入`x`中`Tensor`的第一维。`group_list`中的值约束了输出数据的有效部分，`group_list`中未指定的部分将不会参与更新。
 
-- **dequant\_dtype**（`int`）：可选参数，表示反量化类型，数据类型为`torch.int32`。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：预留输入，当前仅支持传入默认值`torch.int8`。
-  - Ascend 950PR/Ascend 950DT：默认值为`torch.int8`，当前仅支持传入`torch.float32`、`torch.bfloat16`、`torch.float16`。
+- **`smooth_scale`**（`Tensor`）：**可选参数**，平滑缩放因子。数据类型为`torch.float32`，数据格式支持$ND$，当前仅支持传入默认值`None`。
 
-- **quant\_mode**（`int`）：可选参数，参数表示swiglu后的量化模式。数据类型为`torch.int32`。支持取值：0（默认）表示pertoken量化；1表示pergroup量化；2表示mx量化。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：当前仅支持传入默认值0。
-  - Ascend 950PR/Ascend 950DT：当前仅支持传入0以及2。
+- **`weight_assist_matrix`**（`List[Tensor]`）：**可选参数**，右矩阵的辅助矩阵。数据类型支持`torch.float32`，数据格式支持$ND$，当前仅支持传入默认值`None`。
 
-- **quant\_dtype**（`int`）：可选参数，参数表示量化后低比特数据类型。数据类型为`torch.int32`。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：当前仅支持传入默认值`torch.int8`。
-  - Ascend 950PR/Ascend 950DT：默认值为`torch.int8`，当前支持传入`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、 `torch.int8`、`torch_npu.hifloat8`。
+- **`bias`**（`Tensor`）：**可选参数**，矩阵乘计算的偏移值。数据类型支持`torch.int32`，当前仅支持传入默认值`None`。
 
-- **group\_list\_type**（`int`）：可选参数，参数表示grouplist的输入类型。0：cumsum 1：count，数据类型为`torch.int32`，默认值为0。
-- **tuning\_config**（`List[int]`）：可选参数，数组中的第一个元素表示各个专家处理的token数的预期值。从第二个元素开始预留，用户无须填写，未来会进行扩展。默认设置为None。
-- **x\_dtype**（`int`）：可选参数，指定输入x的真实数据类型。当前仅支持默认值None，表示输入`x`真实的数据类型。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：暂不支持该参数，使用默认值。
-  - Ascend 950PR/Ascend 950DT：当`x`为float4\_e2m1fn\_x2、float4\_e1m2fn\_x2、hifloat8时，x\_dtype需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
+- **`dequant_mode`**（`int`）：**可选参数**，表示反量化模式，数据类型为`torch.int32`，默认值为`0`。取值为`0`时，表示激活矩阵pertoken、权重矩阵perchannel；取值为`1`时，表示激活矩阵pertoken、权重矩阵pergroup；取值为`2`时，表示MX量化。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前仅支持传入默认值`0`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当前仅支持传入`0`以及`2`。
 
-- **weight\_dtype**（`int`）：可选参数，指定输入weight的真实数据类型。当前仅支持默认值None，表示输入`weight`真实的数据类型。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：暂不支持该参数，使用默认值。
-  - Ascend 950PR/Ascend 950DT：当`weight`为float4\_e2m1fn\_x2、float4\_e1m2fn\_x2、hifloat8时，weight\_dtype需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
+- **`dequant_dtype`**（`int`）：**可选参数**，表示反量化类型，数据类型为`torch.int32`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：预留输入，当前仅支持传入默认值`torch.int8`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：默认值为`torch.int8`，当前仅支持传入`torch.float32`、`torch.bfloat16`、`torch.float16`。
 
-- **weight\_scale\_dtype**（`int`）：可选参数，指定输入weight\_scale的真实数据类型。默认值None，表示输入`weight_scale`真实的数据类型。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：暂不支持该参数，使用默认值。
-  - Ascend 950PR/Ascend 950DT：当`weight_scale`为float8\_e8m0fnu时，weight\_scale\_dtype需要传入`torch_npu.float8_e8m0fnu`。
+- **`quant_mode`**（`int`）：**可选参数**，表示SwiGLU后的量化模式，数据类型为`torch.int32`。支持取值：`0`（默认值）表示pertoken量化；`1`表示pergroup量化；`2`表示MX量化。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前仅支持传入默认值`0`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当前仅支持传入`0`以及`2`。
 
-- **x\_scale\_dtype**（`int`）：可选参数，指定输入x\_scale的真实数据类型。默认值None，表示输入`x_scale`真实的数据类型。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：暂不支持该参数，使用默认值。
-  - Ascend 950PR/Ascend 950DT：当`x_scale`为float8\_e8m0fnu时，x\_scale\_dtype需要传入`torch_npu.float8_e8m0fnu`。
+- **`quant_dtype`**（`int`）：**可选参数**，表示量化后低比特数据类型，数据类型为`torch.int32`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前仅支持传入默认值`torch.int8`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：默认值为`torch.int8`，当前支持传入`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch.int8`、`torch_npu.hifloat8`。
+
+- **`group_list_type`**（`int`）：**可选参数**，表示`group_list`的输入类型，数据类型为`torch.int32`，默认值为`0`。
+  - 取值为`0`时，表示cumsum模式，`group_list`中的每个元素代表当前分组的累计长度。
+  - 取值为`1`时，表示count模式，`group_list`中的每个元素代表该分组包含的元素个数。
+
+- **`tuning_config`**（`List[int]`）：**可选参数**，数组中的第一个元素表示各个专家处理的token数的预期值。从第二个元素开始预留，用户无须填写，未来会进行扩展。默认值为`None`。
+
+- **`x_dtype`**（`int`）：**可选参数**，指定输入`x`的真实数据类型。当前仅支持默认值`None`，表示输入`x`真实的`dtype`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`x`为`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`hifloat8`时，`x_dtype`需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
+
+- **`weight_dtype`**（`int`）：**可选参数**，指定输入`weight`的真实数据类型。当前仅支持默认值`None`，表示输入`weight`真实的`dtype`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`weight`为`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`hifloat8`时，`weight_dtype`需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
+
+- **`weight_scale_dtype`**（`int`）：**可选参数**，指定输入`weight_scale`的真实数据类型。默认值为`None`，表示输入`weight_scale`真实的`dtype`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`weight_scale`为`float8_e8m0fnu`时，`weight_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
+
+- **`x_scale_dtype`**（`int`）：**可选参数**，指定输入`x_scale`的真实数据类型。默认值为`None`，表示输入`x_scale`真实的`dtype`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`x_scale`为`float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
 
 ## 返回值说明
 
-- **output**（`Tensor`）：输出的量化结果。数据格式支持$ND$，支持非连续的Tensor。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持`torch.int8`，shape支持2维\[m, n / 2\]。
-  - Ascend 950PR/Ascend 950DT：数据类型支持`torch.float8_e4m3fn`、`torch.float8_e5m2`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`、`torch_npu.float4_e1m2fn_x2`（只有weight nz的时候支持），shape支持2维\[m，n / 2\]。
+- **`output`**（`Tensor`）：输出的量化结果。数据格式支持$ND$，支持非连续的`Tensor`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.int8`，`shape`支持2维\[m, n / 2\]。
+  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float8_e4m3fn`、`torch.float8_e5m2`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`、`torch_npu.float4_e1m2fn_x2`（仅`weight`为$FRACTAL\_NZ$格式时支持），`shape`支持2维\[m, n / 2\]。
 
-- **output\_scale**（`Tensor`）：输出的量化因子。数据格式支持$ND$，支持非连续的Tensor。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持`torch.float`，shape支持1维\[m\]。
-  - Ascend 950PR/Ascend 950DT：
-    - MX量化场景：数据类型支持`torch_npu.float8_e8m0fnu`，shape支持3维\[m, ceil\(\(n / 2\) / 64\), 2\]。
-    - Pertoken量化场景：shape支持1维\[m\]，数据类型支持`torch.float32`。
+- **`output_scale`**（`Tensor`）：输出的量化因子。数据格式支持$ND$，支持非连续的`Tensor`。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.float`，`shape`支持1维\[m\]。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - MX量化场景：数据类型支持`torch_npu.float8_e8m0fnu`，`shape`支持3维\[m, ceil\(\(n / 2\) / 64\), 2\]。
+    - Pertoken量化场景：`shape`支持1维\[m\]，数据类型支持`torch.float32`。
 
 ## 约束说明
 
