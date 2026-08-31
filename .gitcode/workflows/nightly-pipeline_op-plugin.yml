@@ -9,9 +9,9 @@ concurrency:
     events: [mr_id]
 
 on:
-  # 定时触发：每天凌晨 2:00 (UTC+8)
+  # 定时触发：每天凌晨 4:00 (UTC+8)
   schedule:
-    - cron: "0 18 * * *"
+    - cron: "0 20 * * *"
 
   # 测试阶段：PR 触发
   pull_request:
