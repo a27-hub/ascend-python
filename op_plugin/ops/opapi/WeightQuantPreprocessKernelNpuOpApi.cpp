@@ -200,7 +200,7 @@ bool judge_mm_a16s4_per_channel(QuantContext& ctx) {
   if (x_dtype_match && weight_acl_dtype == ACL_INT4 && ctx.weight.dim() == DIMS_2) {
     int64_t scale_dim = ctx.weight_scale.dim();
     bool is_per_channel = (scale_dim == DIMS_1) || (scale_dim == DIMS_2 && ctx.weight_scale.size(0) == 1);
-    // 转置状态内部分流：转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
+    // 转置状态内部分流：转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16w4）
     if (is_per_channel && ctx.weight_scale.numel() > 1) {
       check_a16w4_uint8_carrier(ctx);
       ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
@@ -218,7 +218,7 @@ bool judge_mm_a16s4_per_group(QuantContext& ctx) {
 
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
 
-  // A16S4 per-group：转置状态内部分流，转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16s4）
+  // A16S4 per-group：转置状态内部分流，转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16w4）
   if (x_dtype_match && weight_acl_dtype == ACL_INT4 && x_scale_acl_dtype == ACL_DT_UNDEFINED &&
       ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 && ctx.weight_scale.size(0) > 1) {
     check_a16w4_uint8_carrier(ctx);
@@ -228,7 +228,7 @@ bool judge_mm_a16s4_per_group(QuantContext& ctx) {
   return false;
 }
 
-bool judge_mm_a16f4_nz_pergroup(QuantContext& ctx) {
+bool judge_mm_a16f4_pergroup(QuantContext& ctx) {
   aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
   aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
   aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
@@ -238,12 +238,13 @@ bool judge_mm_a16f4_nz_pergroup(QuantContext& ctx) {
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
   bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
-  // A16F4 per-group NZ：FP4 weight + per-group scale [G, N]（G > 1），仅支持非转置 weight
+  // A16F4 per-group：FP4 weight + per-group scale [G, N]（G > 1）；
+  // 转置状态内部分流：转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16w4）
   if (x_dtype_match && scale_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 &&
       x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 &&
-      ctx.weight_scale.size(0) > 1 && !is_transpose_certain_two_dims(ctx.weight, 0)) {
+      ctx.weight_scale.size(0) > 1) {
     check_a16w4_uint8_carrier(ctx);
-    ctx.is_weight_trans = false;
+    ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
     return true;
   }
   return false;
@@ -258,12 +259,12 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
 
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
 
-  // A16 MXFP4：FP4 weight + MX scale（E8M0，2D [K/32, N] 连续），仅支持非转置 weight
+  // A16 MXFP4：FP4 weight + MX scale（E8M0，2D [K/32, N] 连续）；
+  // 转置状态内部分流：转置 → ND 直拷（wqbmmv2 MX kernel 支持 ND 转置），非转置 → NZ 转换
   if (x_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 && weight_scale_acl_dtype == ACL_FLOAT8_E8M0 &&
-      x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 &&
-      !is_transpose_certain_two_dims(ctx.weight, 0)) {
+      x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2) {
     check_a16w4_uint8_carrier(ctx);
-    ctx.is_weight_trans = false;
+    ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
     return true;
   }
   return false;
@@ -377,8 +378,8 @@ static void prepare_out_weight_nz_a16w4(QuantContext& ctx) {
       ctx.out_weight, ctx.out_weight.sizes(), storage_shape, ctx.out_weight.strides(), ACL_FORMAT_FRACTAL_NZ_C0_8);
 }
 
-// A16S4 内部分流：转置 weight → ND 直拷（物理透传，与转置状态无关）；非转置 → NZ 转换
-static void prepare_out_weight_a16s4(QuantContext& ctx) {
+// A16W4（INT4/FP4）转置分流：转置 weight → ND 直拷（物理透传，与转置状态无关）；非转置 → NZ 转换
+static void prepare_out_weight_a16w4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
     prepare_out_weight_nd(ctx);
   } else {
@@ -465,22 +466,23 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_channel,
-       {prepare_out_weight_a16s4,
+       {prepare_out_weight_a16w4,
         prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_group,
-       {prepare_out_weight_a16s4,
+       {prepare_out_weight_a16w4,
         prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}},
-      {judge_mm_a16f4_nz_pergroup,
-       {prepare_out_weight_nz_a16w4,
+      {judge_mm_a16f4_pergroup,
+       {prepare_out_weight_a16w4,
         prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16f4_mx,
-       {prepare_out_weight_nz_a16w4,
+       {// 转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16w4 内部分流）
+        prepare_out_weight_a16w4,
         prepare_out_weight_scale,
         prepare_out_weight_offset,
         prepare_out_bias}}}},
