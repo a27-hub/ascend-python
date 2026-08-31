@@ -10,12 +10,14 @@ on:
       CP_DOCKER_IMG:
         required: true
         type: string
-      # 收集阶段只做用例收集 (pytest --collect-only), 不实际执行用例,
-      # 因此默认不挂载 NPU 设备, 仅挂载 Ascend 目录以满足 import torch_npu 所需。
+      # 收集阶段只做用例收集 (pytest --collect-only), 不实际执行用例。
+      # 但测试文件均会 import torch_npu, 其运行时初始化依赖驱动设备节点,
+      # 故必须与 UT 容器一致挂载 /usr/local/Ascend、npu-smi 及 davinci 设备,
+      # 否则 import 失败导致所有文件收集为空。
       CONTAINER_OPTIONS:
         required: false
         type: string
-        default: "--user root --volume /usr/local/Ascend:/usr/local/Ascend"
+        default: "--user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc"
       PYTORCH_REPO_URL:
         required: false
         type: string
