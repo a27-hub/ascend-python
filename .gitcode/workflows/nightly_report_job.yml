@@ -108,6 +108,7 @@ jobs:
             --reports-root . \
             --output-markdown npu-full-test-summary.md \
             --output-json npu-full-test-summary.json \
+            --output-html npu-full-test-summary.html \
             --pytorch-version "${{ inputs.pytorch_branch }}" \
             --torch-npu-whl "${{ env.WHL_FILE }}" \
             --shard-matrix-json "${shard_matrix}" \
@@ -119,6 +120,23 @@ jobs:
           echo "=== Test Report Summary ==="
           cat npu-full-test-summary.md
 
+      # 上传 HTML 报告到 OBS, 便于通过链接快速访问
+      - name: Upload HTML report to OBS
+        if: always()
+        uses: obs-upload
+        with:
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pytorch-package"
+          access-key: "${{ secrets.OBS_AK }}"
+          secret-key: "${{ secrets.OBS_SK }}"
+          artifact-path: "npu-full-test-summary.html"
+
+      - name: print report link
+        if: always()
+        run: |
+          echo "=== HTML Report Link ==="
+          echo "https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/artifacts/npu-full-test-summary.html"
+
       - name: upload reports as artifact
         if: always()
         uses: upload-artifact
@@ -127,4 +145,5 @@ jobs:
           path: |
             npu-full-test-summary.md
             npu-full-test-summary.json
+            npu-full-test-summary.html
             *_cases_results_by_file.jsonl
