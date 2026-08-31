@@ -98,6 +98,20 @@ stages:
           TEST_RANK: "1"
           TEST_WORLD_SIZE: "1"
 
+  # 报告汇总阶段: 聚合各分片执行结果与收集产物, 生成总报告。
+  # 无论前面阶段成败均执行 (用例失败不阻断 nightly 流水线)
+  report:
+    name: Report
+    select: always
+    jobs:
+      generate_report:
+        name: Generate Test Report
+        uses: .gitcode/workflows/nightly_report_job.yml
+        with:
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          REGULAR_NPU_SHARDS: ${{ env.TEST_WORLD_SIZE }}
+          pytorch_branch: ${{ env.pytorch_branch }}
+
   # 旧版 UT stage (基于 modify_files.txt + run_test.py 的机制) 已停用,
   # 文件已重命名为 nightly_ut_job_old.yml。
   # unit_test_old:

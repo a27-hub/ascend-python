@@ -581,6 +581,8 @@ def main():
         },
         "total_cases": len(all_dist_cases) + len(reg_cases),
         "total_files_scanned": total_files,
+        "distributed_files": discovery_meta.get("distributed_total", 0),
+        "regular_files": discovery_meta.get("regular_total", 0),
     }
     summary_file = output_dir / "cases_collection_summary.json"
     summary_file.write_text(json.dumps(overall_summary, indent=2), encoding="utf-8")
