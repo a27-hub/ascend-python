@@ -29,7 +29,7 @@ env:
   # 编译使用的 PyTorch 分支
   pytorch_branch: "master"
   # UT 分片总数,需与 unit_test 阶段中 UT job 的数量保持一致
-  TEST_WORLD_SIZE: "3"
+  TEST_WORLD_SIZE: "5"
 
 stages:
   build:
@@ -63,7 +63,7 @@ stages:
     select: selected_by_default
     jobs:
       ut_regular_1:
-        name: op-plugin UT regular 1/3
+        name: op-plugin UT regular 1/5
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -72,7 +72,7 @@ stages:
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
       ut_regular_2:
-        name: op-plugin UT regular 2/3
+        name: op-plugin UT regular 2/5
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -81,12 +81,30 @@ stages:
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
       ut_regular_3:
-        name: op-plugin UT regular 3/3
+        name: op-plugin UT regular 3/5
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           SHARD_TYPE: regular
           TEST_RANK: "3"
+          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+
+      ut_regular_4:
+        name: op-plugin UT regular 4/5
+        uses: .gitcode/workflows/nightly_ut_exec_job.yml
+        with:
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          SHARD_TYPE: regular
+          TEST_RANK: "4"
+          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+
+      ut_regular_5:
+        name: op-plugin UT regular 5/5
+        uses: .gitcode/workflows/nightly_ut_exec_job.yml
+        with:
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          SHARD_TYPE: regular
+          TEST_RANK: "5"
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
       ut_distributed:

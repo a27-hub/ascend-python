@@ -25,11 +25,11 @@ on:
         required: false
         type: string
         default: "--user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc"
-      # 单用例超时 (秒)
+      # 单用例超时 (秒): 个别超长用例直接判超时失败, 不为它们拖慢整体
       TIMEOUT:
         required: false
         type: string
-        default: "1200"
+        default: "120"
       # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
       MAX_WORKERS:
         required: false
@@ -50,7 +50,7 @@ jobs:
     select: selected_by_default
     # 单分片执行超时: 5 小时
     timeout-minutes: 300
-    runs-on: [ self-hosted, os=euler ]
+    runs-on: [ self-hosted, os=euler, type=npu ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: ${{ inputs.CONTAINER_OPTIONS }}

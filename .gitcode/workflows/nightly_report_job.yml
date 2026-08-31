@@ -85,6 +85,20 @@ jobs:
           name: test-reports-regular-3
           path: test-reports-regular-3
 
+      - name: download test reports (regular 4)
+        uses: download-artifact
+        continue-on-error: true
+        with:
+          name: test-reports-regular-4
+          path: test-reports-regular-4
+
+      - name: download test reports (regular 5)
+        uses: download-artifact
+        continue-on-error: true
+        with:
+          name: test-reports-regular-5
+          path: test-reports-regular-5
+
       - name: download test reports (distributed)
         uses: download-artifact
         continue-on-error: true
