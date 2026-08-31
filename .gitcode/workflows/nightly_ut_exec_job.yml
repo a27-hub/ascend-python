@@ -147,6 +147,13 @@ jobs:
           fi
           echo "REPORT_DIR=test-reports-${{ env.SHARD_TYPE }}-${{ env.TEST_RANK }}" >> $ATOMGIT_ENV
 
+      # pytest 执行依赖: --timeout 参数需要 pytest-timeout 插件,
+      # 缺失时 pytest 以退出码 4 (usage error) 立即退出, 所有用例报
+      # "XML file not generated"; einops 为部分测试文件运行时依赖
+      - name: install test dependencies
+        run: |
+          pip3 install pytest-timeout einops
+
       - name: Execute tests
         run: |
           source /usr/local/Ascend/cann/set_env.sh 2>/dev/null || true
