@@ -36,11 +36,12 @@ on:
         required: false
         type: string
         default: "6"
-      # 收集并发数
+      # 收集并发数 (每个文件一个 pytest --collect-only 子进程,
+      # 主要耗时在进程启动与 torch/torch_npu 重复初始化, 提高并发可近似线性提速)
       PARALLEL:
         required: false
         type: string
-        default: "16"
+        default: "32"
 
 jobs:
   Collect:

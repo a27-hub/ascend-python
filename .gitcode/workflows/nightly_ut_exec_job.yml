@@ -34,7 +34,7 @@ on:
       MAX_WORKERS:
         required: false
         type: string
-        default: "4"
+        default: "32"
       PYTORCH_REPO_URL:
         required: false
         type: string
