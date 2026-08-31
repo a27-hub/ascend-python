@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term>            |    √     |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 
@@ -96,7 +97,7 @@ torch_npu.npu_clipped_swiglu(x, *, group_index=None, dim=-1, alpha=1.702, limit=
 ## 约束说明
 
 - 该接口支持推理场景下使用。
-- 该接口支持单算子模式和图模式。
+- 该接口支持Eager模式和图模式调用。
 
 ## 调用示例
 

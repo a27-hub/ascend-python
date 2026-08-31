@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-| <term>Ascend 950DT</term>                        |    √    |
+|<term>Ascend 950PR/Ascend 950DT</term>                        |    √    |
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √   |
 
@@ -19,12 +19,12 @@
     $$
     loss=\begin{cases}\sum_{n=1}^N\frac{1}{\sum_{n=1}^Nweight_{y_n}*1\{y_n\ !=\ ignoreIndex \}}l_n,&\text{if reduction = ‘mean’} \\\sum_{n=1}^Nl_n,&\text {if reduction = ‘sum’ }\\\{l_0,l_1,...,l_n\},&\text{if reduction = ‘none’ }\end{cases}
     $$
-    
+
     其中$l_n$的计算公式为：
     $$
     l_n = -weight_{y_n}*log\frac{exp(x_{n,y_n})}{\sum_{c=1}^Cexp(x_{n,c})}*1\{y_n\ !=\ ignoreIndex \}
     $$
-  
+
     第*n*个样本对第*c*个类别的对数概率`log_prob`计算公式为：
     $$
     lse_n = log*\sum_{c=1}^{C}exp(x_{n,c})
@@ -65,6 +65,8 @@ torch_npu.npu_cross_entropy_loss(input, target, weight=None, reduction="mean", i
 - 输入`lse_square_scale_for_zloss`与`return_zloss`暂不支持。
 - 输出`zloss`与`lse_for_zloss`暂不支持。
 - 输出中仅`loss`支持梯度计算。
+- 该接口支持训练场景下使用。
+- 该接口支持Eager模式和图模式调用。
 
 ## 调用示例
 
@@ -86,7 +88,7 @@ torch_npu.npu_cross_entropy_loss(input, target, weight=None, reduction="mean", i
 
     loss.backward()
     ```
-    
+
 - 当reduction设置为`sum`时，示例如下：
 
     ```python
