@@ -29,7 +29,7 @@ on:
       TIMEOUT:
         required: false
         type: string
-        default: "1200"
+        default: "1200
       # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
       MAX_WORKERS:
         required: false
@@ -153,6 +153,32 @@ jobs:
       - name: install test dependencies
         run: |
           pip3 install pytest-timeout einops
+
+      # 执行测试前的环境验证: 确认当前机器 NPU 驱动/设备可用。
+      # 此前出现过坏机器导致所有用例在 setUp 阶段报
+      # "aclInit, error code is 507899" 的情况, 逐用例失败浪费大量时间。
+      # 此处用最小探测快速失败 (fail fast), 并输出主机名便于定位机器。
+      - name: verify NPU environment
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh 2>/dev/null || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh 2>/dev/null || true
+          echo "=== hostname ==="
+          hostname
+          echo "=== npu-smi info ==="
+          npu-smi info || echo "WARNING: npu-smi info failed"
+          echo "=== torch_npu init probe ==="
+          timeout 120 python3 - <<'EOF'
+          import torch
+          import torch_npu
+          print(f"torch={torch.__version__}, torch_npu={torch_npu.__version__}")
+          count = torch.npu.device_count()
+          print(f"npu device_count={count}")
+          assert count > 0, "No NPU device visible"
+          torch.npu.set_device(0)
+          t = torch.zeros(4, device="npu") + torch.ones(4, device="npu")
+          assert (t == 1.0).all(), "NPU compute probe failed"
+          print("NPU environment verification PASSED")
+          EOF
 
       - name: Execute tests
         run: |
