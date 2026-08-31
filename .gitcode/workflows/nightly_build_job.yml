@@ -61,6 +61,9 @@ jobs:
           nightly_date=${torch_version:10:8}
           echo "torch_version=${torch_version}"
           echo "nightly_date=${nightly_date}"
+          # 版本信息在此处最早固化到 env: 后续 checkout op-plugin 会清理工作区中的
+          # pytorch/ 目录, 之后再解析 requirements.txt 将取不到版本
+          echo "TORCH_VERSION=${torch_version}" >> $ATOMGIT_ENV
 
           if [ ${#nightly_date} -ne 8 ]; then
             ver=${torch_version:0:6}
@@ -93,7 +96,7 @@ jobs:
       - name: record build info
         run: |
           WHL_FILE=$(basename $(ls dist/torch_npu*.whl))
-          TORCH_VERSION=$(cat pytorch/requirements.txt | grep torch== | cut -c 8-25)
+          TORCH_VERSION=${TORCH_VERSION}
           BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S')
           OP_PLUGIN_COMMIT=$(git rev-parse --short HEAD)
           PYTORCH_COMMIT=$(cd build/pytorch && git rev-parse --short HEAD)

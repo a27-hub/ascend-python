@@ -35,6 +35,14 @@ on:
         required: false
         type: string
         default: "4"
+      PYTORCH_REPO_URL:
+        required: false
+        type: string
+        default: "https://gitcode.com/Ascend/pytorch.git"
+      pytorch_branch:
+        required: false
+        type: string
+        default: "master"
 
 jobs:
   UT:
@@ -60,24 +68,20 @@ jobs:
           echo "TIMEOUT=${{ inputs.TIMEOUT }}"
           echo "MAX_WORKERS=${{ inputs.MAX_WORKERS }}"
 
-      # 用例已在 collect 阶段收集完成, 执行阶段无需再 checkout pytorch 源码,
-      # torch 版本直接从 build 阶段记录的 build_info.txt 中读取。
-      - name: download build info from artifact
-        uses: download-artifact
+      # 环境准备顺序与 collect 阶段保持一致:
+      # 先 checkout pytorch 并从 requirements.txt 现场解析版本安装 torch,
+      # 再下载 build-info artifact 获取 whl 文件名。
+      - name: checkout pytorch
+        uses: checkout
         with:
-          name: build-info
-          path: ./
-
-      - name: read build info
-        run: |
-          cat build_info.txt
-          WHL_FILE=$(grep whl_file build_info.txt | cut -d= -f2)
-          echo "WHL_FILE=${WHL_FILE}"
-          echo "WHL_FILE=${WHL_FILE}" >> $ATOMGIT_ENV
+          repository: ${{ inputs.PYTORCH_REPO_URL }}
+          ref: refs/heads/${{ inputs.pytorch_branch }}
+          path: pytorch
+          fetch-depth: 1
 
       - name: install torch
         run: |
-          torch_version=$(grep torch_version build_info.txt | cut -d= -f2)
+          torch_version=$(cat pytorch/requirements.txt | grep torch== | cut -c 8-25)
           nightly_date=${torch_version:10:8}
           echo "torch_version=${torch_version}"
           echo "nightly_date=${nightly_date}"
@@ -93,6 +97,19 @@ jobs:
           torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl"
           echo "torch_url=${torch_url}"
           pip3 install $torch_url
+
+      - name: download build info from artifact
+        uses: download-artifact
+        with:
+          name: build-info
+          path: ./
+
+      - name: read build info
+        run: |
+          cat build_info.txt
+          WHL_FILE=$(grep whl_file build_info.txt | cut -d= -f2)
+          echo "WHL_FILE=${WHL_FILE}"
+          echo "WHL_FILE=${WHL_FILE}" >> $ATOMGIT_ENV
 
       - name: download op-plugin from OBS
         uses: obs-download
