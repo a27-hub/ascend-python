@@ -29,7 +29,7 @@ on:
       TIMEOUT:
         required: false
         type: string
-        default: "1200
+        default: "1200"
       # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
       MAX_WORKERS:
         required: false
