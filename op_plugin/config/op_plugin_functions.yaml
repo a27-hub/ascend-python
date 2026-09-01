@@ -5134,6 +5134,10 @@ official:
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
 
+  - func: to_padded_tensor(Tensor self, float padding, int[]? output_size=None) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
+
   - func: trace(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
