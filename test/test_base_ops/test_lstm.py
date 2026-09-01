@@ -84,13 +84,28 @@ class TestLstm(TestCase):
         self.assertEqual(c.shape, (num_layers, 3, 6))
 
     def test_lstm_packed_mixed_dtype_fallback(self):
-        self._assert_packed_fallback(torch.float32, torch.float16)
+        with torch.autocast(device_type="npu", dtype=torch.float16):
+            self._assert_packed_fallback(torch.float32, torch.float16)
 
     def test_lstm_packed_bf16_fallback(self):
         self._assert_packed_fallback(torch.bfloat16, torch.bfloat16)
 
     def test_lstm_packed_params_size_fallback(self):
         self._assert_packed_fallback(torch.float32, torch.float32, num_layers=2)
+
+    def test_lstm_packed_invalid_dtype_without_autocast(self):
+        lstm = self._build_lstm(dtype=torch.float32)
+        packed, h0, c0 = self._make_packed_inputs(torch.float16)
+
+        with self.assertRaisesRegex(RuntimeError, "RNN input dtype"):
+            lstm(packed, (h0, c0))
+
+    def test_lstm_packed_extra_hidden_layer(self):
+        lstm = self._build_lstm(dtype=torch.float32)
+        packed, h0, c0 = self._make_packed_inputs(torch.float32, num_layers=3)
+
+        with self.assertRaisesRegex(RuntimeError, "Expected hidden states"):
+            lstm(packed, (h0, c0))
 
     def test_lstm_packed_aclop_output_shape(self):
         jit_compile = not torch_npu.npu.is_jit_compile_false()

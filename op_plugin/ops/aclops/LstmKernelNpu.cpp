@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/autocast_mode.h>
+
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 
 #include "op_plugin/AclOpsInterface.h"
@@ -789,6 +791,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     double dropout,
     bool train,
     bool bidirectional) {
+  TORCH_CHECK(
+      at::autocast::is_autocast_enabled(at::kPrivateUse1) || data.scalar_type() == params[0].scalar_type(),
+      "RNN input dtype does not match weight dtype" + OPS_ERROR(ErrCode::TYPE));
+
+  const int64_t expected_layers = num_layers * (bidirectional ? 2 : 1);
+  TORCH_CHECK(
+      hx.size() == 2 && hx[0].dim() == 3 && hx[1].dim() == 3 && hx[0].size(0) == expected_layers &&
+          hx[1].size(0) == expected_layers,
+      "Expected hidden states with first dimension ", expected_layers, OPS_ERROR(ErrCode::PARAM));
+
   at::Tensor batch_sizes_cpu = batch_sizes.to("cpu");
   at::Tensor y;
   at::Tensor h;
