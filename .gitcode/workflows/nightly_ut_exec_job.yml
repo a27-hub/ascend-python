@@ -32,11 +32,11 @@ on:
         default: "120"
       # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
       # 32 并发时出现过大量简单算子用例卡死被空闲超时 (150s) 杀掉的情况,
-      # 降低到 16 减少同卡争抢
+      # 进一步降低到 10 减少同卡争抢
       MAX_WORKERS:
         required: false
         type: string
-        default: "16"
+        default: "10"
       PYTORCH_REPO_URL:
         required: false
         type: string

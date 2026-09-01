@@ -10,7 +10,7 @@ Execution modes:
     - Custom test files (--test-files): Execute specified test files
 
 Each worker subprocess runs pytest.main() for multiple same-file cases:
-    - Cases are sorted by test file and grouped into batches (max 100 per batch)
+    - Cases are sorted by test file and grouped into batches (max 50 per batch)
     - pytest.main() avoids per-case subprocess startup overhead
     - Worker subprocesses provide crash isolation between batches
     - Coredump detection and automatic retry for affected cases
@@ -392,7 +392,7 @@ def parse_junit_xml_status(xml_file: Path) -> Dict:
 
 def sort_and_batch_tasks(
     tasks: List[CaseExecutionTask],
-    max_cases_per_batch: int = 100,
+    max_cases_per_batch: int = 50,
 ) -> List[List[CaseExecutionTask]]:
     """
     Sort tasks by test_file then nodeid, group into same-file batches <= max_cases_per_batch.
@@ -570,7 +570,7 @@ def run_tests_with_tasks_concurrent(
             "=" * 80 + "\n"
             f"Total cases: {len(tasks)}\n"
             f"Max concurrent workers: {max_workers}\n"
-            "Execution mode: pytest.main() per case, batched by file (max 100/batch)\n"
+            "Execution mode: pytest.main() per case, batched by file (max 50/batch)\n"
             "=" * 80 + "\n\n"
         ),
     })
@@ -584,8 +584,8 @@ def run_tests_with_tasks_concurrent(
 
     total_cases = len(tasks)
 
-    # Sort and batch tasks: group same-file cases, max 100 per batch
-    batches = sort_and_batch_tasks(tasks, max_cases_per_batch=100)
+    # Sort and batch tasks: group same-file cases, max 50 per batch
+    batches = sort_and_batch_tasks(tasks, max_cases_per_batch=50)
 
     print(f"\n{'=' * 80}", flush=True)
     print(f"Pre-collected cases: {total_cases} cases", flush=True)
