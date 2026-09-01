@@ -123,7 +123,7 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
   - 支持空Tensor场景：m和n可以为空，k不可为空，且需满足以下条件：m为空、k不为空、n不为空；m不为空、k不为空、n为空；m为空、k不为空、n为空。
   - 当x1、x2数据类型为`float4_e2m1`时，x2矩阵仅支持转置场景，且k轴需要为偶数。
   - 当group_size取值为549764202624时，bias必须为`None`。
-  - comm_mode为`"ccu"`时仅支持单机UB域内互联，`"ai_cpu"`可支持跨机UB域内互联；使用`"ccu"`通信引擎时，单个通信域内allgather(x1)集合通信数据总量不能超过63*256MB，集合通信数据总量计算方式为：m * k * sizeof(x1_dtype) * 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
+  - comm_mode为`"ccu"`时仅支持单机UB域内互联，`"ai_cpu"`可支持跨机UB域内互联；使用`"ccu"`通信引擎时，单个通信域内allgather(x1)集合通信数据总量不能超过63*256MB，集合通信数据总量计算方式为：m \* k \* sizeof(x1_dtype) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
   - 支持2、4、8卡。
   - bias仅支持传入`None`。
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     mp.spawn(run_all_gather_base_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
 ```
 
-输出为
+输出如下所示
 
 ```text
 torch.Size([128, 256]) torch.float16
@@ -233,6 +233,27 @@ if __name__ == "__main__":
     mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
 ```
 
+输出如下所示
+
+```text
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+torch.Size([128, 256]) torch.float16
+torch.Size([128, 512]) torch.int8
+```
+
 ### 情形3：`x1、x2`数据类型为`float8_e4m3fn`的perblock场景（仅Ascend 950PR/Ascend 950DT）
 
 ```python
@@ -241,7 +262,7 @@ import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import math
-def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
+def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype):
     torch_npu.npu.set_device(rank)
     init_method = 'tcp://' + master_ip + ':' + master_port
     dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
