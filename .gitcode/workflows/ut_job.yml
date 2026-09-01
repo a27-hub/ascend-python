@@ -174,5 +174,5 @@ jobs:
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
           source /usr/local/Ascend/nnal/atb/set_env.sh
-          ln -sf /usr/local/bin/python3.10 python3
+          ln -sf /usr/local/bin/python3.10 python
           python"${{ inputs.py_version }}" pytorch/ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
