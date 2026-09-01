@@ -180,6 +180,20 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
     print(mxscale2.shape, mxscale2.dtype)
     print(mxscale2.cpu().view(torch.float8_e8m0fnu))
     ```
+    
+    输出如下所示
+
+    ```text
+    tensor([[  0.,   4.,  32., 256.]], device='npu:0', dtype=torch.float8_e4m3fn)
+    torch.Size([1, 1, 2]) torch.uint8
+    tensor([[[2., 0.]]], dtype=torch.float8_e8m0fnu)
+    torch.Size([1, 4]) torch.float8_e4m3fn
+    torch.Size([1, 4, 2]) torch.uint8
+    tensor([[[0.0000, 0.0000],
+             [0.0312, 0.0000],
+             [0.2500, 0.0000],
+             [2.0000, 0.0000]]], dtype=torch.float8_e8m0fnu)
+    ```
 
 - 单算子模式调用，float4量化（`scale_alg`=2）
 
@@ -192,10 +206,16 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
     y1, mxscale1, y2, mxscale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(
         input, dst_type=torch_npu.float4_e2m1fn_x2, scale_alg=2, dst_type_max=6.0)
     print(y1.shape, y1.dtype)
-    print(y1_unpack = y1.cpu().view(torch_npu.float4_e2m1fn_x2)) # y1实际为uint8，最后一维为input的一半，需解包查看
-    print(y1_unpack.shape)
     print(mxscale1.shape)
     print(mxscale2.shape)
+    ```
+
+    输出如下所示
+
+    ```text
+    torch.Size([64, 128]) torch.uint8
+    torch.Size([64, 4, 2])
+    torch.Size([1, 256, 2])
     ```
 
 - 图模式调用
@@ -206,9 +226,6 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
 
-    config = CompilerConfig()
-    npu_backend = tng.get_npu_backend(compiler_config=config)
-
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -217,11 +234,20 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
             return torch_npu.npu_dynamic_mx_quant_with_dual_axis(x, dst_type=torch.float8_e4m3fn)
 
     model = Model().npu()
-    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+    model = torch.compile(model, backend="npugraph_ex", dynamic=False, fullgraph=True)
     input = torch.randn((64, 256), dtype=torch.bfloat16).npu()
     y1, mxscale1, y2, mxscale2 = model(input)
-    print(y1)
-    print(mxscale1)
-    print(y2)
-    print(mxscale2)
+    print(y1.shape, y1.dtype)
+    print(mxscale1.shape)
+    print(y2.shape, y2.dtype)
+    print(mxscale2.shape)
+    ```
+
+    输出如下所示
+
+    ```text
+    torch.Size([64, 256]) torch.float8_e4m3fn
+    torch.Size([64, 4, 2])
+    torch.Size([64, 256]) torch.float8_e4m3fn
+    torch.Size([1, 256, 2])
     ```

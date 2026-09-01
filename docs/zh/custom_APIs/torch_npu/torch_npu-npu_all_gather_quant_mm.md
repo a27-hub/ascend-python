@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- API功能：在TP切分场景下，对输入的MM左矩阵x1执行AllGather集合通信后，与右矩阵x2进行MatMul计算，支持量化场景下的反量化计算，并可同时输出AllGather通信结果gatherOut与MatMul计算结果的最大值amaxOut。与`torch_npu.npu_quant_mm_reduce_scatter`类似，该接口是`torch_npu.npu_all_gather_base_mm`接口的功能扩展，Ascend 950PR/Ascend 950DT新增了对低精度数据类型`float8_e4m3fn`/`float8_e5m2`/`hifloat8`/`float4_e2m1fn_x2`的支持（支持pertensor、perblock、mx量化方式，其中mx量化支持MXFP8和MXFP4场景）；Atlas A3/A2新增了对`int8`的支持（支持pertoken/perchannel量化方式）。
+- API功能：在TP切分场景下，对输入的MM左矩阵x1执行AllGather集合通信后，与右矩阵x2进行MatMul计算，支持量化场景下的反量化计算，并可同时输出AllGather通信结果gatherOut与MatMul计算结果的最大值amaxOut。该接口是`torch_npu.npu_all_gather_base_mm`接口的功能扩展，Ascend 950PR/Ascend 950DT新增了对低精度数据类型`float8_e4m3fn`/`float8_e5m2`/`hifloat8`/`float4_e2m1fn_x2`的支持（支持pertensor、perblock、mx量化方式，其中mx量化支持MXFP8和MXFP4场景）；Atlas A3/A2新增了对`int8`的支持（支持pertoken/perchannel量化方式）。
 - 计算公式：
 
   - 情形1：当x1和x2数据类型为float16/bfloat16时，对入参x1进行AllGather后，对x1、x2进行MatMul计算：
@@ -43,7 +43,7 @@
     gatherOut=AllGather(x1)
     $$
 
-  - 情形4：当x1和x2数据类型为float8_e4m3fn/float8_e5m2/float4_e2m1的mx量化场景，x1为(m, k)、x2为(n, k)，且x1Scale为(m, ceilDiv(k, 64), 2)、x2Scale为(n, ceilDiv(k, 64), 2)时，对入参x1和x1Scale进行AllGather后，对x1、x2进行MatMul计算，然后进行dequant操作：
+  - 情形4：当x1和x2数据类型为float8_e4m3fn/float8_e5m2/float4_e2m1的mx量化场景，x1为(m, k)、x2为(n, k)，且x1Scale为(m, ceilDiv(k, 64), 2)、x2Scale为(ceilDiv(k, 64), n, 2)时，对入参x1和x1Scale进行AllGather后，对x1、x2进行MatMul计算，然后进行dequant操作：
 
     $$
     output=\sum_{0}^{\left \lfloor \frac{k}{blockSize=32} \right \rfloor} (AllGather(x1)_{pr}@x2_{rq}*(AllGather(x1Scale)_{pr}*x2Scale_{rq}))
@@ -83,7 +83,7 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
   - <term>Ascend 950PR/Ascend 950DT</term>：pertensor场景shape为$[1]$，perblock场景shape为$(ceilDiv(m, 128), ceilDiv(k, 128))$，以上场景数据类型支持`float32`；mx量化场景数据类型为`float8_e8m0`（torch_npu.float8_e8m0fnu），shape为$(m, ceilDiv(k, 64), 2)$。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`，pertoken场景shape为$(m, 1)$。
 - **x2_scale** (`Tensor`)：可选参数，MM右矩阵反量化参数，默认值为`None`。当x1和x2数据类型为`float16`/`bfloat16`时，仅支持传入`None`。
-  - <term>Ascend 950PR/Ascend 950DT</term>：pertensor场景shape为$[1]$，perblock场景shape为$(ceilDiv(k, 128), ceilDiv(n, 128))$，以上场景数据类型支持`float32`；mx量化场景数据类型为`float8_e8m0`（torch_npu.float8_e8m0fnu），shape为$(n, ceilDiv(k, 64), 2)$，仅支持转置场景。
+  - <term>Ascend 950PR/Ascend 950DT</term>：pertensor场景shape为$[1]$，perblock场景shape为$(ceilDiv(k, 128), ceilDiv(n, 128))$，以上场景数据类型支持`float32`；mx量化场景数据类型为`float8_e8m0`（torch_npu.float8_e8m0fnu），shape为$(ceilDiv(k, 64), n, 2)$，仅支持转置场景。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`int64`（`int64`仅在x1和x2数据类型为`int8`或output数据类型为`float16`场景支持），perchannel场景shape为$(1, n)$。
 - **quant_scale** (`Tensor`)：可选参数，量化参数，默认值为`None`。当前版本仅支持传入`None`。
 - **block_size** (`int`)：可选参数，用于表示MM输出矩阵在M轴方向和N轴方向上可用于对应方向上的多少个数的量化，默认值为`0`。block_size由blockSizeM、blockSizeN、blockSizeK三个值拼接而成，每个值占16位，计算公式为block_size = blockSizeK | blockSizeN << 16 | blockSizeM << 32，MM输出矩阵不涉及K轴，blockSizeK固定为0。当前版本仅支持blockSizeM=blockSizeN=0，即仅支持传入0。
@@ -298,6 +298,17 @@ if __name__ == "__main__":
     mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
 ```
 
+输出如下所示
+
+```text
+torch.Size([256, 256]) torch.float16
+torch.Size([256, 512]) torch.float8_e4m3fn
+None
+torch.Size([256, 256]) torch.float16
+torch.Size([256, 512]) torch.float8_e4m3fn
+None
+```
+
 ### 情形4：`x1、x2`数据类型为`float8_e4m3fn`的mx量化场景（仅Ascend 950PR/Ascend 950DT）
 
 ```python
@@ -306,7 +317,7 @@ import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import math
-def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
+def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype):
     torch_npu.npu.set_device(rank)
     init_method = 'tcp://' + master_ip + ':' + master_port
     dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
@@ -319,24 +330,33 @@ def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_sha
 
     single_shape = [x1_shape[0] // world_size, x1_shape[1]]
     m_rank, k = single_shape
-    n = x2_shape[0]  # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(n, k)
+    n = x2_shape[1]
     self_t = torch.randn(single_shape).to(dtype).npu()
     x2 = torch.randn(x2_shape).to(dtype).npu()
-    # mx场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceilDiv(k, 64), 2)、(n, ceilDiv(k, 64), 2)
+    # mx场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceilDiv(k, 64), 2)、(ceilDiv(k, 64), n, 2)
     x1_scale = torch.rand((m_rank, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
-    x2_scale = torch.rand((n, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
+    x2_scale = torch.rand((math.ceil(k / 64), n, 2)).to(torch.float8_e8m0fnu).npu()
     output, gather_out, amax = torch_npu.npu_all_gather_quant_mm(
         self_t, x2, hcomm_info, world_size, bias=None, x1_scale=x1_scale, x2_scale=x2_scale,
         gather_output=True, y_dtype=torch.float16)
-    print(output.shape, output.dtype)  # (torch.Size([256, 256]), torch.float16)
-    print(gather_out.shape, gather_out.dtype)  # (torch.Size([256, 256]), torch.float8_e4m3fn)
+    print(output.shape, output.dtype)
+    print(gather_out.shape, gather_out.dtype)
 
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
     master_port = '50001'
-    x1_shape = [256, 256]
-    x2_shape = [256, 256]  # 转置输入(n, k)
+    x1_shape = [64, 256]
+    x2_shape = [256, 128]  # 转置输入(n, k)
     dtype = torch.float8_e4m3fn
     mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
+```
+
+输出如下所示
+
+```text
+torch.Size([64, 128]) torch.float16
+torch.Size([64, 256]) torch.float8_e4m3fn
+torch.Size([64, 128]) torch.float16
+torch.Size([64, 256]) torch.float8_e4m3fn
 ```
