@@ -180,7 +180,7 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
     print(mxscale2.shape, mxscale2.dtype)
     print(mxscale2.cpu().view(torch.float8_e8m0fnu))
     ```
-    
+
     输出如下所示
 
     ```text

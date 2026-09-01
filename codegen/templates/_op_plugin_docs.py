@@ -15976,7 +15976,7 @@ world_size: int类型, 必选参数, 通信域内的rank总数, 必须为2的幂
 *: 代表其之前的变量是位置相关, 按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值).
 bias: Tensor类型, 可选输入, 默认值为None, 偏置, 1维shape(n,), 数据格式支持ND. Ascend 950PR/950DT: 数据类型支持float16、bfloat16、float32, x1为float16/bfloat16时bias数据类型必须与x1一致, x1为float8/hifloat8/float4_e2m1时pertensor和mx量化场景下必须为float32, perblock场景下仅支持None; Atlas A3/A2训练推理系列产品当前版本仅支持None.
 x1_scale: Tensor类型, 可选输入, 默认值为None, MM左矩阵反量化参数. x1和x2为float16/bfloat16时仅支持None. Ascend 950PR/950DT: pertensor场景shape为[1], perblock场景shape为(ceilDiv(m, 128), ceilDiv(k, 128)), 数据类型支持float32, mx量化场景数据类型为float8_e8m0(torch_npu.float8_e8m0fnu), shape为(m, ceilDiv(k, 64), 2); Atlas A3/A2训练推理系列产品: 数据类型支持float32, pertoken场景shape为(m, 1).
-x2_scale: Tensor类型, 可选输入, 默认值为None, MM右矩阵反量化参数. x1和x2为float16/bfloat16时仅支持None. Ascend 950PR/950DT: pertensor场景shape为[1], perblock场景shape为(ceilDiv(k, 128), ceilDiv(n, 128)), 数据类型支持float32, mx量化场景数据类型为float8_e8m0(torch_npu.float8_e8m0fnu), shape为(n, ceilDiv(k, 64), 2), 仅支持转置场景; Atlas A3/A2训练推理系列产品: 数据类型支持float32、int64(int64仅在x1和x2为int8或output为float16场景支持), perchannel场景shape为(1, n).
+x2_scale: Tensor类型, 可选输入, 默认值为None, MM右矩阵反量化参数. x1和x2为float16/bfloat16时仅支持None. Ascend 950PR/950DT: pertensor场景shape为[1], perblock场景shape为(ceilDiv(k, 128), ceilDiv(n, 128)), 数据类型支持float32, mx量化场景数据类型为float8_e8m0(torch_npu.float8_e8m0fnu), shape为(ceilDiv(k, 64), n, 2), 仅支持转置场景; Atlas A3/A2训练推理系列产品: 数据类型支持float32、int64(int64仅在x1和x2为int8或output为float16场景支持), perchannel场景shape为(1, n).
 quant_scale: Tensor类型, 可选输入, 默认值为None, 量化参数. 当前版本仅支持None.
 block_size: int类型, 可选输入, 默认值为0. MM输出矩阵在M轴和N轴方向上的量化块大小, 由blockSizeM、blockSizeN、blockSizeK拼接而成(block_size = blockSizeK | blockSizeN << 16 | blockSizeM << 32), blockSizeK固定为0. 当前版本仅支持blockSizeM=blockSizeN=0, 即仅支持传入0.
 gather_index: int类型, 可选输入, 默认值为0. 0表示gather目标为x1, 1表示目标为x2. 当前版本仅支持输入0.
@@ -16097,7 +16097,7 @@ import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import math
-def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
+def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype):
     torch_npu.npu.set_device(rank)
     init_method = 'tcp://' + master_ip + ':' + master_port
     dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
@@ -16137,7 +16137,7 @@ import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import math
-def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
+def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype):
     torch_npu.npu.set_device(rank)
     init_method = 'tcp://' + master_ip + ':' + master_port
     dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
@@ -16150,24 +16150,24 @@ def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_sha
 
     single_shape = [x1_shape[0] // world_size, x1_shape[1]]
     m_rank, k = single_shape
-    n = x2_shape[0]  # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(n, k)
+    n = x2_shape[1]
     self_t = torch.randn(single_shape).to(dtype).npu()
     x2 = torch.randn(x2_shape).to(dtype).npu()
-    # mx场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceilDiv(k, 64), 2)、(n, ceilDiv(k, 64), 2)
+    # mx场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceilDiv(k, 64), 2)、(ceilDiv(k, 64), n, 2)
     x1_scale = torch.rand((m_rank, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
-    x2_scale = torch.rand((n, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
+    x2_scale = torch.rand((math.ceil(k / 64), n, 2)).to(torch.float8_e8m0fnu).npu()
     output, gather_out, amax = torch_npu.npu_all_gather_quant_mm(
         self_t, x2, hcomm_info, world_size, bias=None, x1_scale=x1_scale, x2_scale=x2_scale,
         gather_output=True, y_dtype=torch.float16)
-    print(output.shape, output.dtype)  # (torch.Size([256, 256]), torch.float16)
-    print(gather_out.shape, gather_out.dtype)  # (torch.Size([256, 256]), torch.float8_e4m3fn)
+    print(output.shape, output.dtype)
+    print(gather_out.shape, gather_out.dtype)
 
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
     master_port = '50001'
-    x1_shape = [256, 256]
-    x2_shape = [256, 256]  # 转置输入(n, k)
+    x1_shape = [64, 256]
+    x2_shape = [256, 128]  # 转置输入(n, k)
     dtype = torch.float8_e4m3fn
     mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
 """
