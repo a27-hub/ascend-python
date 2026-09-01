@@ -1,0 +1,221 @@
+# torch_npu.npu_grouped_dynamic_mx_quant
+
+## 产品支持情况
+
+| 产品 | 是否支持 |
+| --- | --- |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+
+## 功能说明
+
+- API功能：根据传入的分组索引的起始值（`group_index`）对输入x按组进行分组，以基本块（`blocksize`）为粒度，对数据执行目标数据类型为float8/float4的动态MX量化，并输出量化尺度`mxscale`（float8\_e8m0）。
+
+- 计算公式：
+  - 场景1，当scale\_alg为0时：
+    - 将输入x在第0维上先按照group\_index进行分组，每个group内按k = blocksize个数分组，一组k个数$\{\{V_i\}_{i=1}^{k}\}$计算出这组数对应的量化尺度mxscale\_pre，$\{mxscale\_pre, \{P_i\}_{i=1}^{k}\}$，计算公式为下面公式(1)(2)。
+
+    $$
+    shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1}
+    $$
+
+    $$
+    mxscale\_pre = 2^{shared\_exp}  \tag{2}
+    $$
+
+    - 这组数每一个除以mxscale\_pre，根据round\_mode转换到对应的dst\_type，得到量化结果y，计算公式为下面公式(3)。
+
+    $$
+    P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
+    $$
+
+    - 量化后的$P_i$按对应的$V_i$的位置组成输出y，mxscale\_pre按对应的group\_index分组，分组内第一个维度pad为偶数，组成输出mxscale。
+    - emax：对应数据类型的最大正则数的指数位，对应关系如下表：
+
+      | dst_type | emax |
+      | --- | --- |
+      | float4\_e2m1fn\_x2 | 2 |
+      | float4\_e1m2fn\_x2 | 0 |
+      | float8\_e4m3fn | 8 |
+      | float8\_e5m2 | 15 |
+
+  - 场景2，当scale\_alg为1时（只涉及float8类型）：
+    - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型float8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
+    - 找到该块中数值的最大绝对值：
+
+    $$
+    Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
+    $$
+
+    - 将FP32映射到目标数据类型float8可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值：
+
+    $$
+    S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+    $$
+
+    - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$，即从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+
+    $$
+    E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
+    $$
+
+    - 计算块缩放因子$S_{ue8m0}^b=2^{E_{int}^b}$，块转换因子$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$，对每个块内元素$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$。最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子（即$S_{ue8m0}^b$），$[d^i]_{i=1}^k$代表块内量化后的数据。
+
+  - 场景3，当scale\_alg为2时（只涉及float4类型）：
+    - 当dst\_type\_max为0.0/6.0/7.0（float4\_e2m1fn\_x2）或1.875（float4\_e1m2fn\_x2）时：
+      - 将输入x在第0维上按k = blocksize个数分组，一组k个数$\{\{V_i\}_{i=1}^{k}\}$动态量化为$\{mxscale, \{P_i\}_{i=1}^{k}\}$，k = blocksize：
+
+      $$
+      shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果尾数位的高比特前1/2/3位为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其它} \end{cases}
+      $$
+
+      $$
+      P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize
+      $$
+
+      - 量化后的$P_i$按对应的$V_i$的位置组成输出y，按对应维度上的分组组成输出mxscale。
+    - 当dst\_type\_max不为上述特殊取值时（float4\_e2m1fn\_x2为6.0-12.0中的其它取值，float4\_e1m2fn\_x2为1.75-3.5中的其它取值）：
+      - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
+      - 找到该块中数值的最大绝对值：
+
+      $$
+      Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
+      $$
+
+      - 将FP32映射到目标数据类型可表示的范围内，其中当dst\_type\_max为0时，$Amax(DType)$是目标精度能表示的最大值；当dst\_type\_max不为0时，$Amax(DType)$是dst\_type\_max传入值：
+
+      $$
+      S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+      $$
+
+      - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$，从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+
+      $$
+      E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
+      $$
+
+      - 计算块缩放因子$S_{ue8m0}^b=2^{E_{int}^b}$，块转换因子$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$，对每个块内元素$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$。最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子（即$S_{ue8m0}^b$），$[d^i]_{i=1}^k$代表块内量化后的数据。
+
+## 函数原型
+
+```python
+torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=23, blocksize=32,
+                                       scale_alg=0, dst_type_max=0.0) -> (Tensor, Tensor)
+```
+
+## 参数说明
+
+- **x**（`Tensor`）：必选参数，表示算子输入的Tensor，公式中的输入x。维度仅支持2维，数据格式支持ND，数据类型支持`float16`、`bfloat16`。支持非连续Tensor，支持空Tensor。
+- **group\_index**（`Tensor`）：必选参数，表示量化分组的起始索引。维度仅支持1维，数据格式支持ND，数据类型支持`int32`。支持非连续Tensor，不支持空Tensor。索引要求大于等于0、非递减，且最后一个数与x的第0维大小相等。
+- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- **round\_mode**（`str`）：可选参数，表示数据转换的模式，公式中的round\_mode。默认值为"rint"。
+  - 当dst\_type为`float8_e5m2`、`float8_e4m3fn`时，仅支持"rint"。
+  - 当dst\_type为`float4_e2m1fn_x2`、`float4_e1m2fn_x2`时，支持"rint"、"round"、"floor"。
+- **dst\_type**（`int`）：可选参数，表示数据转换后y的数据类型。默认值为23，支持取值：
+  - 23：`torch.float8_e5m2`。
+  - 24：`torch.float8_e4m3fn`。
+  - 296：`torch_npu.float4_e2m1fn_x2`。
+  - 297：`torch_npu.float4_e1m2fn_x2`。
+- **blocksize**（`int`）：可选参数，表示每次量化的元素个数，公式中的blocksize。当前取值仅支持32，默认值为32。
+- **scale\_alg**（`int`）：可选参数，表示mxscale计算时采用的算法。支持取值为0、1、2，默认值为0。
+  - 0：场景1（共享指数MX量化），float8、float4均支持。
+  - 1：场景2（逐块缩放），仅float8支持。
+  - 2：场景3（FP4动态量化），仅float4支持。
+- **dst\_type\_max**（`float`）：可选参数，表示maxType的取值，对应公式中的Amax(DType)，仅dst\_type为float4时生效。默认值为0.0。
+  - 0.0：Amax(DType)为量化结果数据类型的最大值。
+  - float4\_e2m1fn\_x2：支持0.0和6.0-12.0。
+  - float4\_e1m2fn\_x2：支持0.0和1.75-3.5。
+
+## 返回值说明
+
+- **y**（`Tensor`）：表示量化后的输出Tensor，公式中的y。shape与输入x保持一致。当dst\_type为float8时，数据类型为`float8_e5m2`或`float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`uint8`，最后一维为输入x最后一维的一半（每个uint8元素打包2个float4数据），查看具体值需自行解包，如`y.view(torch_npu.float4_e2m1fn_x2)`。支持空Tensor。float8支持非连续Tensor，float4不支持非连续Tensor。
+- **mxscale**（`Tensor`）：表示每个分组对应的量化尺度，公式中的`mxscale`。数据类型为float8_e8m0，实际返回的数据类型为`uint8`，查看具体值需自行转换，如`mxscale.view(torch.float8_e8m0fnu)`。假设x的shape为[m, n]，`group_index`的shape为[g]，则`mxscale`的shape为[(m/(blocksize∗2)+g), n, 2]。支持空Tensor，不支持非连续Tensor。
+
+## 约束说明
+
+- 该接口支持训练、推理场景下使用。
+- 该接口支持单算子模式和图模式调用。
+- 该接口仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
+- 确定性计算：默认确定性实现。
+- 输入x必须为2维，group\_index必须为1维。
+- group\_index中的元素必须大于等于0、非递减，且最后一个元素与x的第0维大小相等。group\_index不支持空Tensor。
+- blocksize仅支持取值32。
+- 当dst\_type为float4时，x的最后一维必须是2的整数倍。
+- 关于x、group\_index、y、mxscale的shape约束说明如下（假设x的shape为[m, n]，group\_index的shape为[g]）：
+  - rank(mxscale) = rank(x) + 1。
+  - mxscale.shape[0] = m / (blocksize ∗ 2) + g。
+  - mxscale.shape[-1] = 2，其它维度与输入x一致。
+  - 输出y的shape和x保持一致（float4输出时y的实际最后一维为x最后一维的一半）。
+- dst\_type、scale\_alg、round\_mode、dst\_type\_max的参数组合约束如下表：
+
+| dst_type | scale_alg | round_mode | dst_type_max |
+| --- | --- | --- | --- |
+| float8_e5m2 | 0、1 | "rint" | 不支持设置（仅默认值0.0） |
+| float8_e4m3fn | 0、1 | "rint" | 不支持设置（仅默认值0.0） |
+| float4_e2m1fn_x2 | 0、2 | "rint"/"round"/"floor" | 0.0和6.0-12.0 |
+| float4_e1m2fn_x2 | 0、2 | "rint"/"round"/"floor" | 0.0和1.75-3.5 |
+
+## 调用示例
+
+- 单算子模式调用，float8量化（`scale_alg`使用默认值0）
+
+    ```python
+    >>> import torch
+    >>> import torch_npu
+    >>>
+    >>> # x的shape为[8, 1]，取值为(0, 8, 64, 512)重复两次；group_index=[4, 8]表示[0:4]和[4:8]两个分组
+    >>> x = torch.tensor([[0], [8], [64], [512], [0], [8], [64], [512]], dtype=torch.bfloat16).npu()
+    >>> group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
+    >>> y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch.float8_e4m3fn)
+    >>> print(y)
+    >>> print(mxscale)
+    >>> print(mxscale.cpu().view(torch.float8_e8m0fnu))
+    ```
+
+- 单算子模式调用，float4量化（scale\_alg=2）
+
+    ```python
+    >>> import torch
+    >>> import torch_npu
+    >>>
+    >>> # dst_type为float4时，x的最后一维必须为2的整数倍
+    >>> x = torch.tensor([[0, 0], [8, 8], [64, 64], [512, 512], [0, 0], [8, 8], [64, 64], [512, 512]],
+    ...                  dtype=torch.bfloat16).npu()
+    >>> group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
+    >>> y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch_npu.float4_e2m1fn_x2,
+    ...                                                     scale_alg=2, dst_type_max=6.0)
+    >>> print(y.shape, y.dtype)
+    (torch.Size([8, 1]), torch.uint8)
+    >>> y_unpack = y.cpu().view(torch_npu.float4_e2m1fn_x2)  # y实际为uint8，最后一维为x的一半，需解包查看
+    >>> print(y_unpack.shape
+    torch.Size([8, 2]))
+    >>> print(mxscale.cpu().view(torch.float8_e8m0fnu))
+    tensor([[[2., 0.]],
+            [[2., 0.]]], dtype=torch.float8_e8m0fnu)
+    ```
+
+- 图模式调用
+
+    ```python
+    import torch
+    import torch_npu
+    import torchair as tng
+    from torchair.configs.compiler_config import CompilerConfig
+
+    config = CompilerConfig()
+    npu_backend = tng.get_npu_backend(compiler_config=config)
+
+    class Model(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+
+        def forward(self, x, group_index):
+            return torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch.float8_e4m3fn)
+
+    model = Model().npu()
+    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+    x = torch.randn((64, 256), dtype=torch.float16).npu()
+    group_index = torch.tensor([32, 64], dtype=torch.int32).npu()
+    y, mxscale = model(x, group_index)
+    print(y)
+    print(mxscale)
+    ```
