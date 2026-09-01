@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/autocast_mode.h>
+
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 
 #include "op_plugin/AclOpsInterface.h"
@@ -789,6 +791,35 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     double dropout,
     bool train,
     bool bidirectional) {
+  TORCH_CHECK(hx.size() == 2, "lstm expects two hidden states" + OPS_ERROR(ErrCode::PARAM));
+
+  if (!params.empty() && !at::autocast::is_autocast_enabled(at::kPrivateUse1)) {
+    TORCH_CHECK(
+        data.scalar_type() == params[0].scalar_type(),
+        "RNN input dtype (",
+        data.scalar_type(),
+        ") does not match weight dtype (",
+        params[0].scalar_type(),
+        ").",
+        OPS_ERROR(ErrCode::TYPE));
+  }
+
+  const int64_t expected_layers = num_layers * (bidirectional ? 2 : 1);
+  TORCH_CHECK(
+      hx[0].dim() == 3 && hx[0].size(0) == expected_layers,
+      "Expected hidden[0] size first dimension ",
+      expected_layers,
+      ", got ",
+      hx[0].sizes(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(
+      hx[1].dim() == 3 && hx[1].size(0) == expected_layers,
+      "Expected hidden[1] size first dimension ",
+      expected_layers,
+      ", got ",
+      hx[1].sizes(),
+      OPS_ERROR(ErrCode::PARAM));
+
   at::Tensor batch_sizes_cpu = batch_sizes.to("cpu");
   at::Tensor y;
   at::Tensor h;
