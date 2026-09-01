@@ -18,8 +18,7 @@ on:
       - open
       - update
       - merge
-    branches:
-      - main
+    branches: [ '*' ]
 
 permissions:
   project: read
