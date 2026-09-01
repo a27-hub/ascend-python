@@ -163,52 +163,39 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 
 ## 调用示例
 
-- 单算子模式调用，float8量化（scale\_alg使用默认值0）
+- 单算子模式调用，float8量化（`scale_alg`使用默认值0）
 
     ```python
-    >>> import torch
-    >>> import torch_npu
-    >>>
-    >>> # input的shape为[1, 4]，取值为(0, 8, 64, 512)
-    >>> input = torch.tensor([[0, 8, 64, 512]], dtype=torch.bfloat16).npu()
-    >>> y1, mxscale1, y2, mxscale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(
-    ...     input, dst_type=torch.float8_e4m3fn)
-    >>> y1
-    tensor([[  0.,   4.,  32., 256.]], device='npu:0', dtype=torch.float8_e4m3fn)
-    >>> mxscale1.shape, mxscale1.dtype
-    (torch.Size([1, 1, 2]), torch.uint8)
-    >>> mxscale1.cpu().view(torch.float8_e8m0fnu)
-    tensor([[[2., 0.]]], dtype=torch.float8_e8m0fnu)
-    >>> y2.shape, y2.dtype
-    (torch.Size([1, 4]), torch.float8_e4m3fn)
-    >>> mxscale2.shape, mxscale2.dtype
-    (torch.Size([1, 4, 2]), torch.uint8)
-    >>> mxscale2.cpu().view(torch.float8_e8m0fnu)
-    tensor([[[0.0000, 0.0000],
-             [0.0312, 0.0000],
-             [0.2500, 0.0000],
-             [2.0000, 0.0000]]], dtype=torch.float8_e8m0fnu)
+    import torch
+    import torch_npu
+    
+    # input的shape为[1, 4]，取值为(0, 8, 64, 512)
+    input = torch.tensor([[0, 8, 64, 512]], dtype=torch.bfloat16).npu()
+    y1, mxscale1, y2, mxscale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(
+        input, dst_type=torch.float8_e4m3fn)
+    print(y1)
+    print(mxscale1.shape, mxscale1.dtype)
+    print(mxscale1.cpu().view(torch.float8_e8m0fnu))
+    print(y2.shape, y2.dtype)
+    print(mxscale2.shape, mxscale2.dtype)
+    print(mxscale2.cpu().view(torch.float8_e8m0fnu))
     ```
 
-- 单算子模式调用，float4量化（scale\_alg=2）
+- 单算子模式调用，float4量化（`scale_alg`=2）
 
     ```python
-    >>> import torch
-    >>> import torch_npu
-    >>>
-    >>> # dst_type为float4时，input的最后一维必须为2的整数倍
-    >>> input = torch.randn((64, 256), dtype=torch.bfloat16).npu()
-    >>> y1, mxscale1, y2, mxscale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(
-    ...     input, dst_type=torch_npu.float4_e2m1fn_x2, scale_alg=2, dst_type_max=6.0)
-    >>> y1.shape, y1.dtype
-    (torch.Size([64, 128]), torch.uint8)
-    >>> y1_unpack = y1.cpu().view(torch_npu.float4_e2m1fn_x2)  # y1实际为uint8，最后一维为input的一半，需解包查看
-    >>> y1_unpack.shape
-    torch.Size([64, 256])
-    >>> mxscale1.shape
-    torch.Size([64, 4, 2])
-    >>> mxscale2.shape
-    torch.Size([1, 256, 2])
+    import torch
+    import torch_npu
+    
+    # dst_type为float4时，input的最后一维必须为2的整数倍
+    input = torch.randn((64, 256), dtype=torch.bfloat16).npu()
+    y1, mxscale1, y2, mxscale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(
+        input, dst_type=torch_npu.float4_e2m1fn_x2, scale_alg=2, dst_type_max=6.0)
+    print(y1.shape, y1.dtype)
+    print(y1_unpack = y1.cpu().view(torch_npu.float4_e2m1fn_x2)) # y1实际为uint8，最后一维为input的一半，需解包查看
+    print(y1_unpack.shape)
+    print(mxscale1.shape)
+    print(mxscale2.shape)
     ```
 
 - 图模式调用

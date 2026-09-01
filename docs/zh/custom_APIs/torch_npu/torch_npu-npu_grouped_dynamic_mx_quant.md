@@ -159,38 +159,35 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
 - 单算子模式调用，float8量化（`scale_alg`使用默认值0）
 
     ```python
-    >>> import torch
-    >>> import torch_npu
-    >>>
-    >>> # x的shape为[8, 1]，取值为(0, 8, 64, 512)重复两次；group_index=[4, 8]表示[0:4]和[4:8]两个分组
-    >>> x = torch.tensor([[0], [8], [64], [512], [0], [8], [64], [512]], dtype=torch.bfloat16).npu()
-    >>> group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
-    >>> y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch.float8_e4m3fn)
-    >>> print(y)
-    >>> print(mxscale)
-    >>> print(mxscale.cpu().view(torch.float8_e8m0fnu))
+    import torch
+    import torch_npu
+    
+    # x的shape为[8, 1]，取值为(0, 8, 64, 512)重复两次；group_index=[4, 8]表示[0:4]和[4:8]两个分组
+    x = torch.tensor([[0], [8], [64], [512], [0], [8], [64], [512]], dtype=torch.bfloat16).npu()
+    group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
+    y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch.float8_e4m3fn)
+    print(y)
+    print(mxscale)
+    print(mxscale.cpu().view(torch.float8_e8m0fnu))
     ```
 
 - 单算子模式调用，float4量化（scale\_alg=2）
 
     ```python
-    >>> import torch
-    >>> import torch_npu
-    >>>
-    >>> # dst_type为float4时，x的最后一维必须为2的整数倍
-    >>> x = torch.tensor([[0, 0], [8, 8], [64, 64], [512, 512], [0, 0], [8, 8], [64, 64], [512, 512]],
-    ...                  dtype=torch.bfloat16).npu()
-    >>> group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
-    >>> y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch_npu.float4_e2m1fn_x2,
-    ...                                                     scale_alg=2, dst_type_max=6.0)
-    >>> print(y.shape, y.dtype)
-    (torch.Size([8, 1]), torch.uint8)
-    >>> y_unpack = y.cpu().view(torch_npu.float4_e2m1fn_x2)  # y实际为uint8，最后一维为x的一半，需解包查看
-    >>> print(y_unpack.shape
-    torch.Size([8, 2]))
-    >>> print(mxscale.cpu().view(torch.float8_e8m0fnu))
-    tensor([[[2., 0.]],
-            [[2., 0.]]], dtype=torch.float8_e8m0fnu)
+    import torch
+    import torch_npu
+    
+    # dst_type为float4时，x的最后一维必须为2的整数倍
+    x = torch.tensor([[0, 0], [8, 8], [64, 64], [512, 512], [0, 0], [8, 8], [64, 64], [512, 512]],
+                     dtype=torch.bfloat16).npu()
+    group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
+    y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch_npu.float4_e2m1fn_x2,
+                                                        scale_alg=2, dst_type_max=6.0)
+    print(y.shape, y.dtype)
+    y_unpack = y.cpu().view(torch_npu.float4_e2m1fn_x2)  # y实际为uint8，最后一维为x的一半，需解包查看
+    print(y_unpack.shape
+    print(mxscale.cpu().view(torch.float8_e8m0fnu))
+
     ```
 
 - 图模式调用

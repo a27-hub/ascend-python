@@ -131,9 +131,9 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 
     if __name__ == "__main__":
         output, output_scale, output_offset = gen_input_data()
-        print(output.shape, output.dtype)  # torch.Size([512, 2048]), 数据类型int8
-        print(output_scale.shape, output_scale.dtype)  # torch.Size([512]), 数据类型float32
-        print(output_offset.shape)  # 空Tensor（0维float32），预留输出
+        print(output.shape, output.dtype)
+        print(output_scale.shape, output_scale.dtype)
+        print(output_offset.shape) 
     ```
 
     输出为
@@ -189,9 +189,9 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 
     if __name__ == "__main__":
         output, output_scale, output_offset = gen_input_data()
-        print(output.shape, output.dtype)  # torch.Size([512, 2048]), 数据类型int8
-        print(output_scale.shape, output_scale.dtype)  # torch.Size([512]), 数据类型float32
-        print(output_offset.shape)  # 空Tensor（0维float32），预留输出
+        print(output.shape, output.dtype)
+        print(output_scale.shape, output_scale.dtype)
+        print(output_offset.shape)
     ```
 
     输出为
