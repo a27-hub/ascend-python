@@ -20,6 +20,9 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+// SORT_POLICY: 0 means default sort, 1 means bitonic sort
+static const int64_t SORT_POLICY = 1;
+
 std::tuple<at::Tensor&, at::Tensor&> topk_out(
     const at::Tensor& self,
     int64_t k,
@@ -45,17 +48,16 @@ std::tuple<at::Tensor&, at::Tensor&> topk_out(
     indices.resize_as_(self).fill_(0);
     return std::tuple<at::Tensor&, at::Tensor&>(values, indices);
   }
-  int64_t sort_policy = 1;
-  static const bool is_top_k_v2_available = check_aclnn_kernel_available("aclnnTopkV2");
-  if (!is_top_k_v2_available) {
+  static const bool is_aclnn_top_k_v2_available = check_aclnn_kernel_available("aclnnTopkV2");
+  if (!is_aclnn_top_k_v2_available) {
     DO_COMPATIBILITY(aclnnTopk, acl_op::topk_out(self, k, dim, largest, sorted, values, indices));
   }
   auto output_size = op_infer::topk_npu_output_size(self, k, dim);
   npu_preparation::check_tensor({self}, values, self.scalar_type(), output_size);
   npu_preparation::check_tensor({self}, indices, at::ScalarType::Long, output_size);
 
-  if (is_top_k_v2_available) {
-    EXEC_NPU_CMD(aclnnTopkV2, self, k, dim, largest, sorted, sort_policy, values, indices);
+  if (is_aclnn_top_k_v2_available) {
+    EXEC_NPU_CMD(aclnnTopkV2, self, k, dim, largest, sorted, SORT_POLICY, values, indices);
   } else {
     EXEC_NPU_CMD(aclnnTopk, self, k, dim, largest, sorted, values, indices);
   }
@@ -68,17 +70,16 @@ std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self, int64_t k, int64
     at::Tensor indices = at::zeros_like(self, at::kLong);
     return std::tuple<at::Tensor, at::Tensor>(values, indices);
   }
-  int64_t sort_policy = 1;
-  static const bool is_top_k_v2_available = check_aclnn_kernel_available("aclnnTopkV2");
-  if (!is_top_k_v2_available) {
+  static const bool is_aclnn_top_k_v2_available = check_aclnn_kernel_available("aclnnTopkV2");
+  if (!is_aclnn_top_k_v2_available) {
     DO_COMPATIBILITY(aclnnTopk, acl_op::topk(self, k, dim, largest, sorted));
   }
   auto output_size = op_infer::topk_npu_output_size(self, k, dim);
   at::Tensor values = npu_preparation::apply_tensor_without_format(output_size, self.options());
   at::Tensor indices = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kLong));
 
-  if (is_top_k_v2_available) {
-    EXEC_NPU_CMD(aclnnTopkV2, self, k, dim, largest, sorted, sort_policy, values, indices);
+  if (is_aclnn_top_k_v2_available) {
+    EXEC_NPU_CMD(aclnnTopkV2, self, k, dim, largest, sorted, SORT_POLICY, values, indices);
   } else {
     EXEC_NPU_CMD(aclnnTopk, self, k, dim, largest, sorted, values, indices);
   }
