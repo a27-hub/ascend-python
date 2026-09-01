@@ -26,10 +26,11 @@ on:
         type: string
         default: "--user root --volume /usr/local/Ascend:/usr/local/Ascend --volume /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi --device /dev/davinci0 --device /dev/davinci1 --device /dev/davinci2 --device /dev/davinci3 --device /dev/davinci4 --device /dev/davinci5 --device /dev/davinci6 --device /dev/davinci7 --device /dev/davinci_manager --device /dev/hisi_hdc --device /dev/devmm_svm"
       # 单用例超时 (秒): 个别超长用例直接判超时失败, 不为它们拖慢整体
+      # 分布式用例含多卡通信/进程组初始化, 单用例耗时普遍较长, 统一放宽到 180s
       TIMEOUT:
         required: false
         type: string
-        default: "120"
+        default: "180"
       # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
       # 32 并发时出现过大量简单算子用例卡死被空闲超时杀掉的情况,
       # 10 并发时仍出现多 worker 同时卡死的雪崩现象, 降低到 8 (每卡 1 个)
