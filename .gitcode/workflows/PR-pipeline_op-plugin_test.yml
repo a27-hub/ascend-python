@@ -18,6 +18,7 @@ on:
       - open
       - update
       - merge
+      - reopen
     branches: [ '*' ]
 
 permissions:
