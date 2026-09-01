@@ -9,9 +9,9 @@ concurrency:
     events: [mr_id]
 
 on:
-  # 定时触发：每天凌晨 4:00 (UTC+8)
+  # 定时触发：每天凌晨 6:00 (平台 cron 按北京时间解析, 已用实际触发记录验证)
   schedule:
-    - cron: "0 20 * * *"
+    - cron: "0 6 * * *"
 
   # 测试阶段：PR 触发
   pull_request:
@@ -29,9 +29,12 @@ env:
   # 编译使用的 PyTorch 分支
   pytorch_branch: "master"
   # UT 分片总数,需与 unit_test 阶段中 UT job 的数量保持一致
-  TEST_WORLD_SIZE: "3"
+  # 注意: type=npu 执行机共 3 台, 所有 UT job 总数不可超过 3,
+  # 否则两个 job 会被调度到同一台机器, 共享工作区 /__w/... 互相覆盖
+  # 导致用例执行中文件被删 (No such file or directory)。
+  TEST_WORLD_SIZE: "2"
   # 分布式用例分片数 (每个分片串行独占全卡)
-  DISTRIBUTED_WORLD_SIZE: "2"
+  DISTRIBUTED_WORLD_SIZE: "1"
 
 stages:
   build:
@@ -66,7 +69,7 @@ stages:
     select: selected_by_default
     jobs:
       ut_regular_1:
-        name: op-plugin UT regular 1/3
+        name: op-plugin UT regular 1/2
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -75,7 +78,7 @@ stages:
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
       ut_regular_2:
-        name: op-plugin UT regular 2/3
+        name: op-plugin UT regular 2/2
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -83,31 +86,13 @@ stages:
           TEST_RANK: "2"
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
-      ut_regular_3:
-        name: op-plugin UT regular 3/3
-        uses: .gitcode/workflows/nightly_ut_exec_job.yml
-        with:
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          SHARD_TYPE: regular
-          TEST_RANK: "3"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
-
       ut_distributed_1:
-        name: op-plugin UT distributed 1/2
+        name: op-plugin UT distributed
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           SHARD_TYPE: distributed
           TEST_RANK: "1"
-          TEST_WORLD_SIZE: ${{ env.DISTRIBUTED_WORLD_SIZE }}
-
-      ut_distributed_2:
-        name: op-plugin UT distributed 2/2
-        uses: .gitcode/workflows/nightly_ut_exec_job.yml
-        with:
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          SHARD_TYPE: distributed
-          TEST_RANK: "2"
           TEST_WORLD_SIZE: ${{ env.DISTRIBUTED_WORLD_SIZE }}
 
   # 报告汇总阶段: 聚合各分片执行结果与收集产物, 生成总报告。
