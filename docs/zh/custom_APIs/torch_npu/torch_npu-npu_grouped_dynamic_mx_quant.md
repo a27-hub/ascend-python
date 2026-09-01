@@ -171,23 +171,23 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
     print(mxscale.cpu().view(torch.float8_e8m0fnu))
     ```
 
-- 单算子模式调用，float4量化（scale\_alg=2）
+    输出如下所示
 
-    ```python
-    import torch
-    import torch_npu
+    ```text
+    tensor([[  0.],
+            [  4.],
+            [ 32.],
+            [256.],
+            [  0.],
+            [  4.],
+            [ 32.],
+            [256.]], device='npu:0', dtype=torch.float8_e4m3fn)
+    tensor([[[128,   0]],
     
-    # dst_type为float4时，x的最后一维必须为2的整数倍
-    x = torch.tensor([[0, 0], [8, 8], [64, 64], [512, 512], [0, 0], [8, 8], [64, 64], [512, 512]],
-                     dtype=torch.bfloat16).npu()
-    group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
-    y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch_npu.float4_e2m1fn_x2,
-                                                        scale_alg=2, dst_type_max=6.0)
-    print(y.shape, y.dtype)
-    y_unpack = y.cpu().view(torch_npu.float4_e2m1fn_x2)  # y实际为uint8，最后一维为x的一半，需解包查看
-    print(y_unpack.shape
-    print(mxscale.cpu().view(torch.float8_e8m0fnu))
-
+            [[128,   0]]], device='npu:0', dtype=torch.uint8)
+    tensor([[[2., 0.]],
+    
+            [[2., 0.]]], dtype=torch.float8_e8m0fnu)
     ```
 
 - 图模式调用
@@ -198,9 +198,6 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
 
-    config = CompilerConfig()
-    npu_backend = tng.get_npu_backend(compiler_config=config)
-
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -209,10 +206,51 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
             return torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch.float8_e4m3fn)
 
     model = Model().npu()
-    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+    model = torch.compile(model, backend="npugraph_ex", dynamic=False, fullgraph=True)
     x = torch.randn((64, 256), dtype=torch.float16).npu()
     group_index = torch.tensor([32, 64], dtype=torch.int32).npu()
     y, mxscale = model(x, group_index)
     print(y)
     print(mxscale)
+    ```
+
+    输出如下所示
+
+    ```text
+    tensor([[-128.0000,  208.0000, -160.0000,  ...,  -32.0000, -112.0000,
+              128.0000],
+            [-144.0000,  104.0000, -208.0000,  ...,  112.0000,  288.0000,
+              120.0000],
+            [  -1.7500,  -80.0000,  240.0000,  ..., -192.0000, -160.0000,
+               48.0000],
+            ...,
+            [-160.0000,   40.0000, -160.0000,  ...,  160.0000,  288.0000,
+             -384.0000],
+            [-144.0000, -352.0000,    3.5000,  ...,  176.0000,  128.0000,
+             -384.0000],
+            [ -20.0000,   22.0000,  320.0000,  ...,  256.0000,   -4.5000,
+              -96.0000]], device='npu:0', dtype=torch.float8_e4m3fn)
+    tensor([[[120,   0],
+             [120,   0],
+             [119,   0],
+             ...,
+             [120,   0],
+             [120,   0],
+             [120,   0]],
+    
+            [[120,   0],
+             [120,   0],
+             [119,   0],
+             ...,
+             [120,   0],
+             [120,   0],
+             [119,   0]],
+    
+            [[  0,   0],
+             [  0,   0],
+             [  0,   0],
+             ...,
+             [  0,   0],
+             [  0,   0],
+             [  0,   0]]], device='npu:0', dtype=torch.uint8)
     ```

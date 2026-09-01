@@ -36,7 +36,7 @@
     ceildiv = \left \lfloor \frac{k}{blockSize=128} \right \rfloor
     $$
 
-  - 情形4：x1和x2数据类型为`float8_e4m3fn`/`float8_e5m2`/`float4_e2m1fn_x2`的mx量化场景，且不输出amax时，当x1的shape为(m, k)、x2的shape为(n, k)，x1Scale的shape为(m, ceildiv(k, 64), 2)、x2Scale的shape为(n, ceildiv(k, 64), 2)时，入参x1、x2进行matmul计算和dequant计算后，再进行ReduceScatter通信。mx量化仅支持x2、x2Scale转置场景。
+  - 情形4：x1和x2数据类型为`float8_e4m3fn`/`float8_e5m2`/`float4_e2m1fn_x2`的mx量化场景，且不输出amax时，当x1的shape为(m, k)、x2的shape为(n, k)，x1Scale的shape为(m, ceildiv(k, 64), 2)、x2Scale的shape为(ceildiv(k, 64), n, 2)时，入参x1、x2进行matmul计算和dequant计算后，再进行ReduceScatter通信。mx量化仅支持x2、x2Scale转置场景。
 
     $$
     output=ReduceScatter(\sum_{0}^{ceildiv} (x1_{pr}@x2_{rq}*(x1Scale_{pr}*x2Scale_{rq})))
@@ -72,7 +72,7 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
 - **reduce\_op**（`str`）：可选参数，reduce操作类型。当前版本仅支持"sum"。默认值为'sum'。
 - **bias**（`Tensor`）：可选参数，即计算公式中的bias。当前版本仅支持一维输入，shape为(n,)，支持传入None。数据类型支持`float16`、`bfloat16`、`float32`。Atlas A3/A2上，当x1和x2数据类型为`int8`时，bias数据类型可以是`float16`、`bfloat16`、`float32`；当x1和x2数据类型为`float16`时，bias数据类型必须为`float16`、`float32`；当x1和x2数据类型为`bfloat16`时，bias数据类型必须为`bfloat16`、`float32`。
 - **x1\_scale**（`Tensor`）：可选参数，mm左矩阵反量化参数，支持传入None。当x1和x2数据类型为`float16`/`bfloat16`时，仅支持传入None。Atlas A3/A2上pertoken场景shape为(m, 1)，数据类型支持`float32`。Ascend 950PR/Ascend 950DT上：pertensor场景shape为[1]，perblock场景shape为[ceildiv(m, 128), ceildiv(k, 128)]，数据类型支持`float32`；mx量化场景（MXFP8和MXFP4）数据类型为`float8_e8m0fnu`，shape为(m, ceilDiv(k, 64), 2)。
-- **x2\_scale**（`Tensor`）：可选参数，mm右矩阵反量化参数，支持传入None。当x1和x2数据类型为`float16`/`bfloat16`时，仅支持传入None。Atlas A3/A2上perchannel场景shape为(1, n)，数据类型支持`float32`、`int64`（INT64仅在output数据类型为`float16`场景支持）。Ascend 950PR/Ascend 950DT上：pertensor场景shape为[1]，perblock场景shape为[ceildiv(k, 128), ceildiv(n, 128)]，数据类型支持`float32`；mx量化场景数据类型为`float8_e8m0fnu`，shape为(n, ceilDiv(k, 64), 2)，仅支持转置输入。
+- **x2\_scale**（`Tensor`）：可选参数，mm右矩阵反量化参数，支持传入None。当x1和x2数据类型为`float16`/`bfloat16`时，仅支持传入None。Atlas A3/A2上perchannel场景shape为(1, n)，数据类型支持`float32`、`int64`（INT64仅在output数据类型为`float16`场景支持）。Ascend 950PR/Ascend 950DT上：pertensor场景shape为[1]，perblock场景shape为[ceildiv(k, 128), ceildiv(n, 128)]，数据类型支持`float32`；mx量化场景数据类型为`float8_e8m0fnu`，shape为(ceilDiv(k, 64), n, 2)，仅支持转置输入。
 - **quant\_scale**（`Tensor`）：可选参数，输出矩阵量化scale。当前仅支持传入None。默认值为None。
 - **block\_size**（`int`）：可选参数，用于表示mm输出矩阵在M轴方向和N轴方向上可以用于对应方向上的多少个数的量化。由blockSizeM、blockSizeN、blockSizeK三个值拼接而成，每个值占16位，计算公式为blockSize = blockSizeK | blockSizeN << 16 | blockSizeM << 32，mm输出矩阵不涉及K轴，blockSizeK固定为0，当前版本只支持blockSizeM=blockSizeN=0。默认值为0。
 - **comm\_turn**（`int`）：可选参数，通信数据切分数，即总数据量/单次通信量。当前版本仅支持输入0。默认值为0。
@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
 ```
 
-输出为
+输出如下所示
 
 ```text
 torch.Size([64, 64]) torch.float16
@@ -208,7 +208,7 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50002'
+    master_port = '50001'
     x1_shape = [128, 512]
     x2_shape = [512, 64]
     dtype = torch.float8_e4m3fn
@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
 ```
 
-输出为
+输出如下所示
 
 ```text
 torch.Size([64, 64]) torch.float16
@@ -264,13 +264,22 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50003'
+    master_port = '50001'
     x1_shape = [128, 512]
-    x2_shape = [512, 64]
+    x2_shape = [512, 128]
     dtype = torch.float8_e4m3fn
     amax_output = False  # 情形3不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 
+```
+
+输出如下所示
+
+```text
+torch.Size([64, 128]) torch.float16
+None
+torch.Size([64, 128]) torch.float16
+None
 ```
 
 ### 情形4：`x1，x2`数据类型为`float8_e4m3fn`/`float8_e5m2`/`float4_e2m1fn_x2`的mx量化场景（不输出amax，以MXFP8为例）
@@ -293,12 +302,12 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
         hcomm_info = default_pg.get_hccl_comm_name(rank)
 
     m, k = x1_shape   # x1_shape为(m, k)
-    n = x2_shape[0]   # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(n, k)
+    n = x2_shape[1]   # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(n, k)
     self_t = torch.randn(x1_shape).to(dtype).npu()
     x2 = torch.randn(x2_shape).to(dtype).npu()
-    # mx量化场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceildiv(k, 64), 2)、(n, ceildiv(k, 64), 2)
+    # mx量化场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceildiv(k, 64), 2)、(ceildiv(k, 64), n, 2)
     x1_scale = torch.rand((m, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
-    x2_scale = torch.rand((n, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
+    x2_scale = torch.rand((math.ceil(k / 64), n, 2)).to(torch.float8_e8m0fnu).npu()
     output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None,
                                                           x1_scale=x1_scale, x2_scale=x2_scale,
                                                           amax_output=amax_output, y_dtype=torch.float16)
@@ -309,13 +318,21 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50004'
+    master_port = '50001'
     x1_shape = [128, 256]
-    x2_shape = [64, 256]  # 转置输入
+    x2_shape = [256, 64]  # 转置输入
     dtype = torch.float8_e4m3fn
     amax_output = False  # 情形4不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
+```
 
+输出如下所示
+
+```text
+torch.Size([64, 64]) torch.float16
+None
+torch.Size([64, 64]) torch.float16
+None
 ```
 
 > [!NOTE]
