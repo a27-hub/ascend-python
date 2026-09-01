@@ -891,7 +891,8 @@ def _execute_worker_batch(
             reader_thread = threading.Thread(target=_read_stdout, daemon=True)
             reader_thread.start()
 
-            idle_timeout = timeout + 30
+            # 空闲兜底: 进程 90s 无任何输出即判定卡死, 杀掉后继续下一个用例
+            idle_timeout = 90
             timeout_occurred = False
 
             while True:
