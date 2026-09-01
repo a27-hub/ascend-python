@@ -13,6 +13,13 @@ on:
     types: [created]
     branches: [ '*' ]
     comments: [ '^(?:\/)?compile*' ]
+  pull_request_target:
+    types:
+      - open
+      - update
+      - merge
+    branches:
+      - main
 
 permissions:
   project: read
