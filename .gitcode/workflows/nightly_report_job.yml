@@ -6,11 +6,16 @@ on:
       CP_DOCKER_IMG:
         required: true
         type: string
-      # 常规分片总数, 用于构建分片矩阵 (dist-1, reg-1..N)
+      # 常规分片总数, 用于构建分片矩阵 (dist-1..M, reg-1..N)
       REGULAR_NPU_SHARDS:
         required: false
         type: string
         default: "3"
+      # 分布式分片总数, 用于构建分片矩阵
+      DISTRIBUTED_SHARDS:
+        required: false
+        type: string
+        default: "1"
       pytorch_branch:
         required: false
         type: string
@@ -85,20 +90,6 @@ jobs:
           name: test-reports-regular-3
           path: test-reports-regular-3
 
-      - name: download test reports (regular 4)
-        uses: download-artifact
-        continue-on-error: true
-        with:
-          name: test-reports-regular-4
-          path: test-reports-regular-4
-
-      - name: download test reports (regular 5)
-        uses: download-artifact
-        continue-on-error: true
-        with:
-          name: test-reports-regular-5
-          path: test-reports-regular-5
-
       - name: download test reports (distributed)
         uses: download-artifact
         continue-on-error: true
@@ -106,13 +97,28 @@ jobs:
           name: test-reports-distributed-1
           path: test-reports-distributed-1
 
+      - name: download test reports (distributed 2)
+        uses: download-artifact
+        continue-on-error: true
+        with:
+          name: test-reports-distributed-2
+          path: test-reports-distributed-2
+
       - name: generate consolidated report
         run: |
-          # 构建分片矩阵: dist-1 + reg-1..N
-          shard_matrix='["dist-1"'
+          # 构建分片矩阵: dist-1..M + reg-1..N
+          shard_matrix='['
+          first=1
+          j=1
+          while [ $j -le ${{ inputs.DISTRIBUTED_SHARDS }} ]; do
+            if [ $first -eq 1 ]; then first=0; else shard_matrix="${shard_matrix},"; fi
+            shard_matrix="${shard_matrix}\"dist-${j}\""
+            j=$((j + 1))
+          done
           i=1
           while [ $i -le ${{ inputs.REGULAR_NPU_SHARDS }} ]; do
-            shard_matrix="${shard_matrix},\"reg-${i}\""
+            if [ $first -eq 1 ]; then first=0; else shard_matrix="${shard_matrix},"; fi
+            shard_matrix="${shard_matrix}\"reg-${i}\""
             i=$((i + 1))
           done
           shard_matrix="${shard_matrix}]"

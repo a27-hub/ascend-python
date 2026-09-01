@@ -31,10 +31,12 @@ on:
         type: string
         default: "120"
       # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
+      # 32 并发时出现过大量简单算子用例卡死被空闲超时 (150s) 杀掉的情况,
+      # 降低到 16 减少同卡争抢
       MAX_WORKERS:
         required: false
         type: string
-        default: "32"
+        default: "16"
       PYTORCH_REPO_URL:
         required: false
         type: string
@@ -141,7 +143,14 @@ jobs:
       - name: resolve shard files
         run: |
           if [ "${{ env.SHARD_TYPE }}" = "distributed" ]; then
-            echo "CASES_JSON=collected_cases/distributed_cases.json" >> $ATOMGIT_ENV
+            # 分布式分片文件: 收集阶段按 DISTRIBUTED_SHARDS 产出。
+            # 单分片时为 distributed_cases.json, 多分片时为
+            # distributed_cases_shard_{rank}.json
+            if [ "${{ env.TEST_WORLD_SIZE }}" = "1" ]; then
+              echo "CASES_JSON=collected_cases/distributed_cases.json" >> $ATOMGIT_ENV
+            else
+              echo "CASES_JSON=collected_cases/distributed_cases_shard_${{ env.TEST_RANK }}.json" >> $ATOMGIT_ENV
+            fi
           else
             echo "CASES_JSON=collected_cases/regular_npu_cases_shard_${{ env.TEST_RANK }}.json" >> $ATOMGIT_ENV
           fi

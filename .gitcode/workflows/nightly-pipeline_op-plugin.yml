@@ -29,7 +29,9 @@ env:
   # 编译使用的 PyTorch 分支
   pytorch_branch: "master"
   # UT 分片总数,需与 unit_test 阶段中 UT job 的数量保持一致
-  TEST_WORLD_SIZE: "5"
+  TEST_WORLD_SIZE: "3"
+  # 分布式用例分片数 (每个分片串行独占全卡)
+  DISTRIBUTED_WORLD_SIZE: "2"
 
 stages:
   build:
@@ -54,6 +56,7 @@ stages:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           pytorch_branch: ${{ env.pytorch_branch }}
           REGULAR_NPU_SHARDS: ${{ env.TEST_WORLD_SIZE }}
+          DISTRIBUTED_SHARDS: ${{ env.DISTRIBUTED_WORLD_SIZE }}
 
   # 新版 UT stage: 消费 collect 阶段产出的 collected-cases artifact,
   # 由 run_npu_test_shard.py 按分片执行
@@ -63,7 +66,7 @@ stages:
     select: selected_by_default
     jobs:
       ut_regular_1:
-        name: op-plugin UT regular 1/5
+        name: op-plugin UT regular 1/3
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -72,7 +75,7 @@ stages:
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
       ut_regular_2:
-        name: op-plugin UT regular 2/5
+        name: op-plugin UT regular 2/3
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -81,7 +84,7 @@ stages:
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
       ut_regular_3:
-        name: op-plugin UT regular 3/5
+        name: op-plugin UT regular 3/3
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
@@ -89,32 +92,23 @@ stages:
           TEST_RANK: "3"
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
 
-      ut_regular_4:
-        name: op-plugin UT regular 4/5
-        uses: .gitcode/workflows/nightly_ut_exec_job.yml
-        with:
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          SHARD_TYPE: regular
-          TEST_RANK: "4"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
-
-      ut_regular_5:
-        name: op-plugin UT regular 5/5
-        uses: .gitcode/workflows/nightly_ut_exec_job.yml
-        with:
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
-          SHARD_TYPE: regular
-          TEST_RANK: "5"
-          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
-
-      ut_distributed:
-        name: op-plugin UT distributed
+      ut_distributed_1:
+        name: op-plugin UT distributed 1/2
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           SHARD_TYPE: distributed
           TEST_RANK: "1"
-          TEST_WORLD_SIZE: "1"
+          TEST_WORLD_SIZE: ${{ env.DISTRIBUTED_WORLD_SIZE }}
+
+      ut_distributed_2:
+        name: op-plugin UT distributed 2/2
+        uses: .gitcode/workflows/nightly_ut_exec_job.yml
+        with:
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          SHARD_TYPE: distributed
+          TEST_RANK: "2"
+          TEST_WORLD_SIZE: ${{ env.DISTRIBUTED_WORLD_SIZE }}
 
   # 报告汇总阶段: 聚合各分片执行结果与收集产物, 生成总报告。
   # 无论前面阶段成败均执行 (用例失败不阻断 nightly 流水线)
@@ -128,6 +122,7 @@ stages:
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           REGULAR_NPU_SHARDS: ${{ env.TEST_WORLD_SIZE }}
+          DISTRIBUTED_SHARDS: ${{ env.DISTRIBUTED_WORLD_SIZE }}
           pytorch_branch: ${{ env.pytorch_branch }}
 
 
