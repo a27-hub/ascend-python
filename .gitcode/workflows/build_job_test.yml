@@ -66,21 +66,28 @@ jobs:
           echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
           echo "inputs.TARGET_BRANCH=${{ inputs.TARGET_BRANCH }}"
 
-      - name: compile
+      # - name: compile
+      #   run: |
+      #     rm -rf *
+      #     git config --global http.postBuffer 524288000
+      #     git config --global http.lowSpeedLimit 5000
+      #     git config --global http.lowSpeedTime 300
+      #     # .ci/ 仅存在于默认分支，需先拉取
+      #     git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
+      #     bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
+      #     cd ./CODE
+      #     git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
+      #     cat ../modify_files.txt
+      #     cd -
+      #     source cie/.ci/common/ccache_env.sh
+      #     bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+      - name: shell-test
         run: |
-          rm -rf *
-          git config --global http.postBuffer 524288000
-          git config --global http.lowSpeedLimit 5000
-          git config --global http.lowSpeedTime 300
-          # .ci/ 仅存在于默认分支，需先拉取
-          git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
-          bash cie/.ci/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
-          cd ./CODE
-          git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
-          cat ../modify_files.txt
-          cd -
-          source cie/.ci/common/ccache_env.sh
-          bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          pwd
+          test_file=oidc-upload-test.bin
+          head -c 1048576 /dev/urandom > "${test_file}"
+          test "$(stat -c '%s' "${test_file}")" -eq 1048576
+          sha256sum "${test_file}"
       - name: oidc-auth
         uses: huaweicloud-oidc-auth
         with:
@@ -93,5 +100,5 @@ jobs:
         with:
           endpoint: "obs.cn-north-4.myhuaweicloud.com"
           bucket: "pta-pr"
-          artifact-path: "*.tar.gz*"
+          artifact-path: "oidc-upload-test.bin"
           object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
