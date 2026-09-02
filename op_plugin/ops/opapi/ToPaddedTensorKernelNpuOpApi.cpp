@@ -34,8 +34,17 @@ at::Tensor to_padded_tensor(
 
 } // namespace op_api
 
+namespace {
+at::Tensor to_padded_tensor_nested_fallback(
+    const at::Tensor& self,
+    double padding,
+    c10::optional<at::IntArrayRef> output_size) {
+  return op_api::to_padded_tensor(self, padding, output_size);
+}
+} // namespace
+
 // Register the kernel for NestedTensor on NPU. The dispatcher uses the
 // NestedTensorPrivateUse1 key for nested tensors on the NPU device.
 TORCH_LIBRARY_IMPL(aten, NestedTensorPrivateUse1, m) {
-  m.impl("to_padded_tensor", TORCH_FN(op_api::to_padded_tensor));
+  m.impl("to_padded_tensor", TORCH_FN(to_padded_tensor_nested_fallback));
 }
