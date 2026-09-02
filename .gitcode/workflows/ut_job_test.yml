@@ -70,7 +70,7 @@ jobs:
           cat ../modify_files.txt
           cd -
           # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
-          cp -rf ../output/${{ inputs.pr_id }}/* ./
+          # cp -rf ../output/${{ inputs.pr_id }}/* ./
           bash cie/.gitcode/workflows/scripts/UT/op-plugin_ut_general.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
           echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
           echo "py_version: 3.10"
