@@ -5604,6 +5604,9 @@ official:
     gen_opapi:
       exec: aclnnRightShift
 
+  - func: nested_to_padded_tensor(Tensor self, float padding, int[]? output_size=None) -> Tensor
+    op_api: all_version
+
 autograd:
   - func: _thnn_fused_gru_cell(Tensor input_gates, Tensor hidden_gates, Tensor hx, Tensor? input_bias=None, Tensor? hidden_bias=None) -> (Tensor, Tensor)
     op_api: [v2.5, newest]
