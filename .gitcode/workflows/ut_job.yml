@@ -36,8 +36,7 @@ jobs:
   UT:
     name: UT
     select: selected_by_default
-    runs-on: [ self-hosted, npu=8 ]
-    # runs-on: [ self-hosted, npuType=910b2, npuNum=1 ]
+    runs-on: [ self-hosted, npu=1 ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
     env:
@@ -54,7 +53,7 @@ jobs:
           echo "inputs.TARGET_BRANCH=${{ inputs.TARGET_BRANCH }}"
           echo "TEST_RANK=${{ env.TEST_RANK }}"
           echo "TEST_WORLD_SIZE=${{ env.TEST_WORLD_SIZE }}"
-        
+
       - name: check branch support
         id: check_support
         run: |
@@ -144,6 +143,7 @@ jobs:
           ls -al
           pip"${{ inputs.py_version }}" list
           source /etc/profile
+          export OMP_NUM_THREADS=32
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
           source /usr/local/Ascend/nnal/atb/set_env.sh
@@ -169,9 +169,17 @@ jobs:
             sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/access_control_test.py
           fi
           pip"${{ inputs.py_version }}" list
-          source /etc/profile
           export OMP_NUM_THREADS=32
+          source /etc/profile
           export PTA_UT_EXEC_TIMEOUT=4800
           source /usr/local/Ascend/cann/set_env.sh
           source /usr/local/Ascend/nnal/atb/set_env.sh
+          ln -sf /usr/local/bin/python"${{ inputs.py_version }}" /usr/local/bin/python
+          python_path=$(dirname $(dirname $(readlink -f $(which python"${{ inputs.py_version }}"))))
+          export PATH="${python_path}"/bin:$PATH
+          python"${{ inputs.py_version }}" -c "import acl;print('npu info:',acl.get_soc_name())" || echo "npu info  get error"
+
+          echo "------------------------------------- ENV PATH -------------------------------------"
+          echo ${PATH}
+          echo "------------------------------------------------------------------------------------"
           python"${{ inputs.py_version }}" pytorch/ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}

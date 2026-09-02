@@ -34,6 +34,7 @@ on:
         type: string
         default: ${{ atomgit.event.pull_request.base.ref }}
 
+
 jobs:
   Compile:
     name: Compile
@@ -145,54 +146,3 @@ jobs:
           path: |
             dist/torch_npu*.whl
           overwrite: true
-
-      # - name: download artifact
-      #   if: ${{ steps.check_support.outputs.need_build == 'yes' }}
-      #   uses: download-artifact
-      #   with:
-      #     name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
-      #     path: |
-      #       ./
-
-      # - name: Verify artifact
-      #   run: ls -al
-      #   working-directory: ./
-
-  # UT:
-  #   needs: Compile
-  #   if: ${{ jobs.Compile.outputs.need_ut == 'yes' }}
-  #   name: UT
-  #   # runs-on: [ self-hosted, npu=1 ]
-  #   runs-on: [ self-hosted, arm, cpu=32 ]
-  #   container:
-  #     # image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
-  #     image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.7.1_a2_aarch64_builder:20260704
-  #   steps:
-  #     - name: print need_ut
-  #       run: |
-  #         echo "need_ut=${{ jobs.Compile.outputs.need_ut }}"
-
-  #     - name: download artifact
-  #       if: ${{ jobs.Compile.outputs.need_ut == 'yes' }}
-  #       uses: download-artifact
-  #       with:
-  #         name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
-  #         path: |
-  #           ./
-
-  #     - name: Verify artifact
-  #       run: ls -al
-
-  #     - name: checkout op-plugin
-  #       if: ${{ jobs.Compile.outputs.need_ut == 'yes' }}
-  #       uses: checkout
-  #       with:
-  #         ref: refs/merge-requests/${{ inputs.pr_id }}/merge
-  #         fetch-depth: 0
-  #     - name: op_ut
-  #       if: ${{ jobs.Compile.outputs.need_ut == 'yes' }}
-  #       run: |
-  #         pwd
-  #         ls -al
-  #         pip3.10 install torch_npu*.whl
-  #         python3.10 access_control_test.py --rank=1 --world_size=1
