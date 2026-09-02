@@ -9,7 +9,7 @@ wait_time=30
 attempt=0
 
 while [ $attempt -lt $max_attempts ]
-do 
+do
     if eval $command;then
         echo "Command executed successfully"
         break
@@ -20,7 +20,7 @@ do
         sleep $wait_time
     fi
 done
-if [ $attempt -eq $max_attempts ];then 
+if [ $attempt -eq $max_attempts ];then
     echo "Command failed after $max_attempts attempts."
     exit 1
 fi

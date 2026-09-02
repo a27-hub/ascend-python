@@ -75,5 +75,3 @@ jobs:
           echo "py_version: 3.10"
           echo "pr_id: ${{ env.pr_id }}"
           echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
-
-

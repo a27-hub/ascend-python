@@ -52,7 +52,7 @@ function parse_script_args() {
         if [[ ${args_num} -eq ${DEFAULT_SCRIPT_ARGS_NUM_MAX} ]]; then
             break
         fi
-        
+
     done
 
     while true; do
