@@ -58,6 +58,7 @@ stages:
               ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
               echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
               python --version
+              python -m pip install tomli --quiet
           - name: install gitleaks
             run: |
               cd ${ATOMGIT_WORKSPACE}
