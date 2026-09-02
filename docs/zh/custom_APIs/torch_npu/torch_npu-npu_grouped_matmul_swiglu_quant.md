@@ -60,7 +60,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 - **x**（`Tensor`）：必选参数，左矩阵，公式中的X。shape支持2维[M, K]，数据类型支持`int8`，数据格式支持ND，支持非连续Tensor。A8W8场景K必须小于65536，A8W4场景K必须小于20000。
 - **weight**（`Tensor`）：必选参数，权重矩阵，公式中的W。需先通过`torch_npu.npu_format_cast(weight, 29)`转换为FRACTAL\_NZ格式（5维存储shape），数据类型支持`int8`、`int4`、`int32`（`int32`为适配用途，实际1个`int32`会被解释为8个`int4`数据），支持非连续Tensor。该接口会忽略weight的数据格式，强制视为FRACTAL\_NZ格式。
 - **group\_list**（`Tensor`）：必选参数，指示每个分组参与计算的Token个数，公式中的groupList。shape支持1维，长度需与weight的首轴维度（专家数E）相等，数据类型支持`int64`，数据格式支持ND，支持非连续Tensor。为cumsum形式的分组索引列表，最后一个值约束了输出数据的有效部分。
-- **weight\_scale**（`Tensor`）：必选参数，右矩阵的量化因子，公式中的w\_scale。shape支持2维（per-channel）或3维（per-group），首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴（N）相同。数据类型支持`float32`、`float16`、`bfloat16`，数据格式支持ND，支持非连续Tensor。
+- **weight\_scale**（`Tensor`）：必选参数，右矩阵的量化因子，公式中的w\_scale。shape支持2维（per-channel）或3维（per-group），首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴（N）相同。数据类型支持`float32`、`float16`、`bfloat16`、`int64`（per-channel），数据格式支持ND，支持非连续Tensor。
 - **x\_scale**（`Tensor`）：必选参数，左矩阵的量化因子，公式中的x\_scale。shape支持1维，长度需与x的首轴维度（M）相等。数据类型支持`float32`，数据格式支持ND，支持非连续Tensor。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **bias**（`Tensor`）：可选参数，计算矩阵乘时的辅助矩阵，对应公式中的weightAssistMatrix。shape支持2维[E, N]，数据类型支持`float32`，数据格式支持ND。仅在A8W4场景生效，A8W8场景需传入None。默认值为None。
