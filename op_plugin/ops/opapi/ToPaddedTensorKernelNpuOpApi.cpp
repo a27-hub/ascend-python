@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <torch/library.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -32,3 +33,9 @@ at::Tensor to_padded_tensor(
 }
 
 } // namespace op_api
+
+// Register the kernel for NestedTensor on NPU. The dispatcher uses the
+// NestedTensorPrivateUse1 key for nested tensors on the NPU device.
+TORCH_LIBRARY_IMPL(aten, NestedTensorPrivateUse1, m) {
+  m.impl("to_padded_tensor", TORCH_FN(op_api::to_padded_tensor));
+}
