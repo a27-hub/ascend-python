@@ -168,6 +168,10 @@ jobs:
           if [ -f "pytorch/ci/access_control_test.py" ]; then
             sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/access_control_test.py
           fi
+          pip"${{ inputs.py_version }}" install -r pytorch/test/requirements.txt
+          pip"${{ inputs.py_version }}" install einops
+          pip"${{ inputs.py_version }}" install tlparse==0.3.18
+          pip"${{ inputs.py_version }}" install tabulate==0.9.0
           pip"${{ inputs.py_version }}" list
           export OMP_NUM_THREADS=32
           source /etc/profile
