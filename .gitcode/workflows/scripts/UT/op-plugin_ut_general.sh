@@ -64,7 +64,7 @@ function torch_npu_install() {
     #     exit 1
     # fi
     # tar -zxvf "${WORKSPACE}/${tar_name}"
-    # pip"${py_version}" install -U "${WORKSPACE}"/torch-*${ARCH}.whl --force-reinstall
+    pip"${py_version}" install -U "${WORKSPACE}"/torch-*${ARCH}.whl --force-reinstall
     ls "${WORKSPACE}"
     pip"${py_version}" install -U "${WORKSPACE}"/torch_npu*${ARCH}.whl --force-reinstall --no-deps
 }
