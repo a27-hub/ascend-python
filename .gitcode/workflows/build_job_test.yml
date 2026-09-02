@@ -38,6 +38,12 @@ on:
         type: string
         default: ${{ atomgit.event.pull_request.base.ref }}
 
+    secrets:
+      OBS_AK:
+        required: true
+      OBS_SK:
+        required: true
+
 jobs:
   JOB_compile:
     name: JOB_compile
@@ -75,10 +81,17 @@ jobs:
           cd -
           source cie/.ci/common/ccache_env.sh
           bash cie/.ci/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
-      - name: Upload artifact
-        uses: upload-artifact
+      - name: oidc-auth
+        uses: huaweicloud-oidc-auth
         with:
-          name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
-          path: |
-            *.tar.gz*
-          overwrite: true
+          audience: pta_pr_obs_for_pytorch
+          region: cn-north-4
+          agency_urn: iam::0d336831568090260fd5c01450729240:agency:pta_obs_pr_trust
+          provider_urn: iam::0d336831568090260fd5c01450729240:oidcProvider:pta_obs_pr
+      - name: Upload to OBS
+        uses: obs-upload
+        with:
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pta-pr"
+          artifact-path: "*.tar.gz*"
+          object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"

@@ -54,27 +54,6 @@ stages:
                 pr_number: ${{ env.pr_id }}
                 token: ${{ secrets.GIT_TOKEN_LABELS }}
                 apply_label: 'true'
-      Artifact_size_test:
-        name: Artifact_size_test
-        strategy:
-          fail-fast: false
-          max-parallel: 4
-          matrix:
-            chunk: [ '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25' ]
-        runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
-        steps:
-          - name: Generate 2G artifact test file
-            run: |
-              TEST_FILE="artifact-size-test-50G-${{ matrix.chunk }}.bin"
-              FILE_SIZE=2000000000
-              head -c "${FILE_SIZE}" /dev/urandom > "${TEST_FILE}"
-              test "$(stat -c '%s' "${TEST_FILE}")" -eq "${FILE_SIZE}"
-          - name: Upload 2G artifact
-            uses: upload-artifact
-            with:
-              name: artifact-size-test-50G-${{ matrix.chunk }}
-              path: artifact-size-test-50G-${{ matrix.chunk }}.bin
-              overwrite: true
   #     CodeCheck:
   #       name: CodeCheck
   #       runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
@@ -202,10 +181,10 @@ stages:
               echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
-  # stage_2:
-  #   name: stage_2
-  #   select: selected_by_default
-  #   jobs:
+  stage_2:
+    name: stage_2
+    select: selected_by_default
+    jobs:
 
   #     Build_master_x86:
   #       name: Build_master_x86
@@ -281,15 +260,18 @@ stages:
   #         runs_on_arch: "arm"
   #         runs_on_spec: "cpu=32"
 
-  #     Build_v2_7_1_ARM:
-  #       name: Build_v2_7_1_ARM
-  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-  #       uses: .gitcode/workflows/build_job_test.yml
-  #       with:
-  #         pytorch_branch: "v2.7.1"
-  #         CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
-  #         runs_on_arch: "arm"
-  #         runs_on_spec: "cpu=32"
+      Build_v2_7_1_ARM:
+        name: Build_v2_7_1_ARM
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        uses: .gitcode/workflows/build_job_test.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: "v2.7.1"
+          CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=32"
 
   #     Build_v2_9_0_ARM:
   #       name: Build_v2_9_0_ARM
@@ -332,9 +314,9 @@ stages:
   #         runs_on_spec: "cpu=32"
 
 
-  # stage_3:
-  #   name: stage_3
-  #   jobs:
+  stage_3:
+    name: stage_3
+    jobs:
   #     UT_master_ARM_01:
   #       name: UT_master_ARM_01
   #       # if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
@@ -359,17 +341,17 @@ stages:
   #         TEST_RANK: "2"
   #         TEST_WORLD_SIZE: "2"
 
-  #     UT_v2_7_1_ARM:
-  #       name: UT_v2_7_1_ARM
-  #       if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-  #       uses: .gitcode/workflows/ut_job_test.yml
-  #       with:
-  #         pytorch_branch: "v2.7.1"
-  #         CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
-  #         runs_on_arch: "arm"
-  #         runs_on_spec: "cpu=32"
-  #         TEST_RANK: "1"
-  #         TEST_WORLD_SIZE: "1"
+      UT_v2_7_1_ARM:
+        name: UT_v2_7_1_ARM
+        if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        uses: .gitcode/workflows/ut_job_test.yml
+        with:
+          pytorch_branch: "v2.7.1"
+          CP_DOCKER_IMG: ${{ env.img_2_7_1_arm }}
+          runs_on_arch: "arm"
+          runs_on_spec: "cpu=32"
+          TEST_RANK: "1"
+          TEST_WORLD_SIZE: "1"
 
   #     UT_v2_9_0_ARM:
   #       name: UT_v2_9_0_ARM
