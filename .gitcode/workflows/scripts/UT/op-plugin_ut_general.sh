@@ -16,6 +16,24 @@ source /usr/local/Ascend/nnal/atb/set_env.sh
 
 python_path=$(dirname $(dirname $(readlink -f $(which python$py_version))))
 
+function torch_install_other() {
+    if [ "${ARCH}" == "x86_64" ]; then
+        if [ "${1}" == "2.7.1" ] || [ "${1}" == "2.8.0" ] || [ "${1}" == "2.9.0" ] || [ "${1}" == "2.9.1" ] || [ "${1}" == "2.10.0" ] || [ "${1}" == "2.11.0" ] || [ "${1}" == "2.12.0" ]; then
+            wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${1}/torch-${1}%2Bcpu-cp${2}-cp${2}-manylinux_2_28_x86_64.whl
+        else
+            wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${1}/torch-${1}%2Bcpu-cp${2}-cp${2}-linux_x86_64.whl
+        fi
+    elif [ "${ARCH}" == "aarch64" ]; then
+        if [ "${1}" == "2.6.0" ] || [ "${1}" == "2.7.1" ] || [ "${1}" == "2.8.0" ] || [ "${1}" == "2.9.0" ] || [ "${1}" == "2.10.0" ]; then
+            wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${1}/torch-${1}-cp${2}-cp${2}-manylinux_2_28_aarch64.whl
+        elif [ "${1}" == "2.9.1" ] || [ "${1}" == "2.11.0" ] || [ "${1}" == "2.12.0" ]; then
+            wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${1}/torch-${1}%2Bcpu-cp${2}-cp${2}-manylinux_2_28_aarch64.whl
+        else
+            wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${1}/torch-${1}-cp${2}-cp${2}-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+        fi
+    fi
+}
+
 function torch_install_master() {
     if [ "${ARCH}" == "x86_64" ]; then
         wget --no-check-certificate --no-verbose -P ${WORKSPACE} https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}/torch-${nightly_version}%2Bcpu-cp310-cp310-manylinux_2_28_x86_64.whl
@@ -70,7 +88,12 @@ function main() {
         rm -rf /root/.cache/torch_extensions/py"${py_version//./}"_cpu/custom_add
     fi
 
-    if [ "${pytorch_version}" = "master" ]; then
+
+    if [ ${pytorch_version:0:6} == "v2.1.0" ] || [ ${pytorch_version:0:6} == "v2.6.0" ] || [ ${pytorch_version:0:6} == "v2.7.1" ] || [ ${pytorch_version:0:6} == "v2.8.0" ] || [ ${pytorch_version:0:6} == "v2.9.0" ]; then
+        torch_install_other "${pytorch_version:1:5}" "${py_version//./}"
+    elif [ ${pytorch_version:0:7} == "v2.10.0" ] || [ ${pytorch_version:0:7} == "v2.11.0" ]|| [ ${pytorch_version:0:7} == "v2.12.0" ] ; then
+        torch_install_other "${pytorch_version:1:6}" "${py_version//./}"
+    elif [ "${pytorch_version}" = "master" ]; then
         bash ${WORKSPACE}/cie/.gitcode/workflows/scripts/common/retry_command.sh "rm -rf ${WORKSPACE}/tmp_pytorch && git clone --depth=1 https://gitcode.com/Ascend/pytorch.git ${WORKSPACE}/tmp_pytorch"
         nightly_version=`cat ${WORKSPACE}/tmp_pytorch/requirements.txt | grep torch== | cut -c 8-25`
         nightly_date=${nightly_version:10:8}
