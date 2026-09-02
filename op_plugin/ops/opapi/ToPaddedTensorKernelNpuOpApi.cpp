@@ -38,7 +38,7 @@ namespace {
 at::Tensor to_padded_tensor_nested_fallback(
     const at::Tensor& self,
     double padding,
-    c10::optional<at::IntArrayRef> output_size) {
+    c10::OptionalArrayRef<int64_t> output_size) {
   return op_api::to_padded_tensor(self, padding, output_size);
 }
 } // namespace
