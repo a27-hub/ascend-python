@@ -10,6 +10,7 @@ TARGET_BRANCH=$5
 CUR_DIR=$(dirname $(readlink -f $0))
 ARCH=$(uname -m)
 source /etc/profile
+export OMP_NUM_THREADS=32
 export PTA_UT_EXEC_TIMEOUT=4800
 source /usr/local/Ascend/cann/set_env.sh
 source /usr/local/Ascend/nnal/atb/set_env.sh
