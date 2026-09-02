@@ -44,9 +44,7 @@ jobs:
   JOB_UT:
     name: JOB_UT
     select: selected_by_default
-    # runs-on: [ self-hosted, arch=arm64, os=euler ]
-    # runs-on: [ self-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
-    runs-on: [ self-hosted, npuType=910b2, npuNum=1 ]
+    runs-on: [ self-hosted, npu=8 ]
     env:
       TEST_RANK: ${{ inputs.TEST_RANK }}
       TEST_WORLD_SIZE: ${{ inputs.TEST_WORLD_SIZE }}
@@ -57,7 +55,7 @@ jobs:
       - name: Download build artifact
         uses: download-artifact
         with:
-          name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
+          name: op-plugin-${{ inputs.pytorch_branch }}-arm
           path: ../output/${{ inputs.pr_id }}
       - name: UT
         run: |

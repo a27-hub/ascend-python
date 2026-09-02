@@ -206,7 +206,7 @@ stages:
       UT:
         name: UT
         if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
-        uses: .gitcode/workflows/ut_job.yml
+        uses: .gitcode/workflows/ut_job_test.yml
         with:
           pytorch_branch: ${{ matrix.branch }}
           CP_DOCKER_IMG: ${{ matrix.img }}
