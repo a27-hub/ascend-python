@@ -123,58 +123,58 @@ stages:
               path: modify_files.txt
               overwrite: true
 
-  # stage_2:
-  #   name: Build
-  #   select: selected_by_default
-  #   jobs:
-  #     Build:
-  #       name: Build
-  #       if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
-  #       uses: .gitcode/workflows/build_job.yml
-  #       with:
-  #         pytorch_branch: ${{ matrix.branch }}
-  #         CP_DOCKER_IMG: ${{ matrix.img }}
-  #         runs_on_arch: ${{ matrix.arch }}
-  #         runs_on_spec: "cpu=32"
-  #       strategy:
-  #         matrix:
-  #           include:
-  #             - branch: "master"
-  #               arch: "x86"
-  #               img: "pytorch_master_a1_x86_64_builder:20260804"
-  #             - branch: "v2.7.1"
-  #               arch: "x86"
-  #               img: "pytorch_2.7.1_a1_x86_64_builder:20260804"
-  #             - branch: "v2.9.0"
-  #               arch: "x86"
-  #               img: "pytorch_2.9.0_a1_x86_64_builder:20260704"
-  #             - branch: "v2.10.0"
-  #               arch: "x86"
-  #               img: "pytorch_2.10.0_a1_x86_64_builder:20260704"
-  #             - branch: "v2.11.0"
-  #               arch: "x86"
-  #               img: "pytorch_2.11.0_a1_x86_64_builder:20260704"
-  #             - branch: "v2.12.0"
-  #               arch: "x86"
-  #               img: "pytorch_2.12.0_a1_x86_64_builder:20260704"
-  #             - branch: "master"
-  #               arch: "arm"
-  #               img: "pytorch_master_a2_aarch64_builder:20260804"
-  #             - branch: "v2.7.1"
-  #               arch: "arm"
-  #               img: "pytorch_2.7.1_a2_aarch64_builder:20260804"
-  #             - branch: "v2.9.0"
-  #               arch: "arm"
-  #               img: "pytorch_2.9.0_a2_aarch64_builder:20260804"
-  #             - branch: "v2.10.0"
-  #               arch: "arm"
-  #               img: "pytorch_2.10.0_a2_aarch64_builder:20260804"
-  #             - branch: "v2.11.0"
-  #               arch: "arm"
-  #               img: "pytorch_2.11.0_a2_aarch64_builder:20260804"
-  #             - branch: "v2.12.0"
-  #               arch: "arm"
-  #               img: "pytorch_2.12.0_a2_aarch64_builder:20260804"
+  stage_2:
+    name: Build
+    select: selected_by_default
+    jobs:
+      Build:
+        name: Build
+        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
+        uses: .gitcode/workflows/build_job.yml
+        with:
+          pytorch_branch: ${{ matrix.branch }}
+          CP_DOCKER_IMG: ${{ matrix.img }}
+          runs_on_arch: ${{ matrix.arch }}
+          runs_on_spec: "cpu=32"
+        strategy:
+          matrix:
+            include:
+              - branch: "master"
+                arch: "x86"
+                img: "pytorch_master_a1_x86_64_builder:20260804"
+              - branch: "v2.7.1"
+                arch: "x86"
+                img: "pytorch_2.7.1_a1_x86_64_builder:20260804"
+              - branch: "v2.9.0"
+                arch: "x86"
+                img: "pytorch_2.9.0_a1_x86_64_builder:20260704"
+              - branch: "v2.10.0"
+                arch: "x86"
+                img: "pytorch_2.10.0_a1_x86_64_builder:20260704"
+              - branch: "v2.11.0"
+                arch: "x86"
+                img: "pytorch_2.11.0_a1_x86_64_builder:20260704"
+              - branch: "v2.12.0"
+                arch: "x86"
+                img: "pytorch_2.12.0_a1_x86_64_builder:20260704"
+              - branch: "master"
+                arch: "arm"
+                img: "pytorch_master_a2_aarch64_builder:20260804"
+              - branch: "v2.7.1"
+                arch: "arm"
+                img: "pytorch_2.7.1_a2_aarch64_builder:20260804"
+              - branch: "v2.9.0"
+                arch: "arm"
+                img: "pytorch_2.9.0_a2_aarch64_builder:20260804"
+              - branch: "v2.10.0"
+                arch: "arm"
+                img: "pytorch_2.10.0_a2_aarch64_builder:20260804"
+              - branch: "v2.11.0"
+                arch: "arm"
+                img: "pytorch_2.11.0_a2_aarch64_builder:20260804"
+              - branch: "v2.12.0"
+                arch: "arm"
+                img: "pytorch_2.12.0_a2_aarch64_builder:20260804"
 
 
   stage_3:
