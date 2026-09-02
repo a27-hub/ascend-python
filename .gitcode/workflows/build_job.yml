@@ -6,7 +6,7 @@ on:
       py_version:
         required: false
         type: string
-        default: ${{ '3.10' }} 
+        default: ${{ '3.10' }}
       REMOTE_URL:
         required: false
         type: string
@@ -33,7 +33,6 @@ on:
         required: false
         type: string
         default: ${{ atomgit.event.pull_request.base.ref }}
-
 
 jobs:
   Compile:
@@ -80,7 +79,7 @@ jobs:
             echo "need_build=yes" >> "$ATOMGIT_OUTPUT"
             echo "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" >> "$ATOMGIT_OUTPUT"
           fi
-          echo  "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" 
+          echo  "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}"
       - name: print need_build
         run: |
           echo "need_build=${{ steps.check_support.outputs.need_build }}"
@@ -137,7 +136,7 @@ jobs:
           pwd
           ls -al
           ls -al ${workspace}
-      
+
       - name: Upload artifact
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
         uses: upload-artifact
@@ -159,7 +158,6 @@ jobs:
       #   run: ls -al
       #   working-directory: ./
 
-        
   # UT:
   #   needs: Compile
   #   if: ${{ jobs.Compile.outputs.need_ut == 'yes' }}
@@ -184,7 +182,7 @@ jobs:
 
   #     - name: Verify artifact
   #       run: ls -al
-      
+
   #     - name: checkout op-plugin
   #       if: ${{ jobs.Compile.outputs.need_ut == 'yes' }}
   #       uses: checkout
@@ -198,4 +196,3 @@ jobs:
   #         ls -al
   #         pip3.10 install torch_npu*.whl
   #         python3.10 access_control_test.py --rank=1 --world_size=1
-        

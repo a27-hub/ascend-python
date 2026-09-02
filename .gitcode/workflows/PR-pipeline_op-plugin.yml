@@ -34,7 +34,7 @@ env:
   img_2_9_0_x86: "pytorch_2.9.0_a1_x86_64_builder:20260704"
   img_2_10_0_x86: "pytorch_2.10.0_a1_x86_64_builder:20260704"
   img_2_11_0_x86: "pytorch_2.11.0_a1_x86_64_builder:20260704"
-  img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260704" 
+  img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260704"
   img_2_13_0_x86: "pytorch_2.13.0_a1_x86_64_builder:20260709"
 
 stages:
@@ -125,7 +125,7 @@ stages:
                   - '!**/*.doc'
                   - '!**/*.eddx'
                   - '!**/*.svg'
-                
+
           - name: set build skip flag
             id: set-skip
             run: |
