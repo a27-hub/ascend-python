@@ -52,13 +52,14 @@ stages:
             uses: checkout
             with:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
-          - name: setup-python310
+          - name: setup-python
             run: |
-              PYTHON310_BIN=$(dirname "$(which python3.10)")
-              ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
-              echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
-              python --version
-              python -m pip install tomli --quiet
+              echo "=== available pythons ==="
+              ls /usr/bin/python* /usr/local/bin/python* 2>/dev/null || true
+              which python3.10 python3.11 python3.12 2>/dev/null || true
+              python3.10 --version 2>/dev/null || true
+              python3.11 --version 2>/dev/null || true
+              python3.12 --version 2>/dev/null || true
           - name: install gitleaks
             run: |
               cd ${ATOMGIT_WORKSPACE}
