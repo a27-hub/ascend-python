@@ -4073,9 +4073,6 @@
   "func: threshold_backward(Tensor grad_output, Tensor self, Scalar threshold) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: to_padded_tensor(Tensor self, float padding, int[]? output_size=None) -> Tensor": {
-    "version": ["all_version"]
-  },
   "func: topk(Tensor self, SymInt k, int dim=-1, bool largest=True, bool sorted=True) -> (Tensor values, Tensor indices)": {
     "version": ["all_version"]
   },
