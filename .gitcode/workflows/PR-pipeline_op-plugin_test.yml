@@ -9,6 +9,7 @@ concurrency:
     events: [mr_id]
 
 on:
+  workflow_dispatch:
   pull_request_comment:
     types: [created]
     branches: [ '*' ]
