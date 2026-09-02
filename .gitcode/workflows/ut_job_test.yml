@@ -55,7 +55,7 @@ jobs:
       - name: Download build artifact
         uses: download-artifact
         with:
-          name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
+          name: op-plugin-${{ inputs.pytorch_branch }}-arm
           path: ../output/${{ inputs.pr_id }}
       - name: UT
         run: |
