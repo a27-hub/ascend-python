@@ -60,7 +60,8 @@ jobs:
       - name: UT
         run: |
           rm -rf *
-          git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
+          # git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
+          git clone -b  master_0902 https://gitcode.com/ComputingActionTest/op-plugin_0731.git cie
           ls
           bash cie/.gitcode/workflows/scripts/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${{ inputs.REMOTE_URL }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE}
           pwd
