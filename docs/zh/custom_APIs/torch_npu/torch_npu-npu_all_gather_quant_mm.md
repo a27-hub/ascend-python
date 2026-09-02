@@ -157,7 +157,7 @@ def run_all_gather_base_mm(rank, world_size, master_ip, master_port, x1_shape, x
 
     self_t = torch.randn(single_shape, dtype=dtype).npu()
     x2 = torch.randn(x2_shape, dtype=dtype).npu()
-    output, gather_out, _ = torch_npu.npu_all_gather_quant_mm(self_t, x2, hcom_name, world_size，comm_mode="aiv") #运行于A2/A3上，需要添加common_mode="aiv"
+    output, gather_out, _ = torch_npu.npu_all_gather_quant_mm(self_t, x2, hcomm_info, world_size, comm_mode="aiv") #运行于A2/A3上，需要添加common_mode="aiv"
     print(output.shape, output.dtype)
     print(gather_out.shape, gather_out.dtype)
 

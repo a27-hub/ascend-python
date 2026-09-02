@@ -72,6 +72,7 @@
       计算块缩放因子$S_{ue8m0}^b=2^{E_{int}^b}$，块转换因子$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$，对每个组内元素$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终-1轴输出的量化结果是$\left(S^b, [d^i]_{i=1}^{32}\right)$，其中$S^b$代表块的缩放因子（即$S_{ue8m0}^b$）。
     - -2轴量化：同时，将输入x在-2轴上按照32个数进行分组，采用与-1轴相同的CuBALS Scale计算算法，对每组独立计算块缩放因子并量化，-2轴输出的量化结果是$\left(S^b, [d^j]_{j=1}^{32}\right)$。
     - -1轴量化结果组成输出y1，对应的块缩放因子组成输出mxscale1。-2轴量化结果组成输出y2，对应的块缩放因子组成输出mxscale2。
+
   - 场景3，当scale\_alg为2时，只涉及float4\_e2m1fn\_x2类型（仅aclnnDynamicMxQuantWithDualAxisV2支持）：
     - 当dst\_type\_max为0.0/6.0/7.0时，将输入x在-1轴和-2轴上分别按照32个数进行分组，动态量化为$\{mxscale, \{P\}\}$：
 

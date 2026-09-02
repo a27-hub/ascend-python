@@ -16042,7 +16042,7 @@ def run_all_gather_base_mm(rank, world_size, master_ip, master_port, x1_shape, x
 
     self_t = torch.randn(single_shape, dtype=dtype).npu()
     x2 = torch.randn(x2_shape, dtype=dtype).npu()
-    output, gather_out, _ = torch_npu.npu_all_gather_quant_mm(self_t, x2, hcomm_info, world_size, comm_mode="aiv") #运行于A2/A3上，需要添加comm_mode="aiv"
+    output, gather_out, _ = torch_npu.npu_all_gather_quant_mm(self_t, x2, hcomm_info, world_size, comm_mode="aiv") #运行于A2/A3上，需要添加common_mode="aiv"
     print(output.shape, output.dtype)
     print(gather_out.shape, gather_out.dtype)
 
@@ -16231,39 +16231,37 @@ PyTorch 2.1及以上
 支持的型号:
 Ascend 950PR/Ascend 950DT
 
-调用示例:
-单算子模式调用, float8量化(scale_alg使用默认值0)
+调用示例
+单算子模式调用，float8量化（`scale_alg`使用默认值0）
 import torch
 import torch_npu
 
-# input的shape为[1, 4], 取值为(0, 8, 64, 512)
+# input的shape为[1, 4]，取值为(0, 8, 64, 512)
 input = torch.tensor([[0, 8, 64, 512]], dtype=torch.bfloat16).npu()
 y1, mxscale1, y2, mxscale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(
     input, dst_type=torch.float8_e4m3fn)
-print(y1)  # 量化结果为[0, 4, 32, 256], 数据类型为float8_e4m3fn
-print(mxscale1.cpu().view(torch.float8_e8m0fnu))  # shape为[1, 1, 2], 量化尺度为2
-print(y2.shape)  # torch.Size([1, 4])
-print(mxscale2.cpu().view(torch.float8_e8m0fnu))  # shape为[1, 4, 2]
-单算子模式调用, float4量化(scale_alg=2)
+print(y1)
+print(mxscale1.shape, mxscale1.dtype)
+print(mxscale1.cpu().view(torch.float8_e8m0fnu))
+print(y2.shape, y2.dtype)
+print(mxscale2.shape, mxscale2.dtype)
+print(mxscale2.cpu().view(torch.float8_e8m0fnu))
+单算子模式调用，float4量化（`scale_alg`=2）
 import torch
 import torch_npu
 
-# dst_type为float4时, input的最后一维必须为2的整数倍
+# dst_type为float4时，input的最后一维必须为2的整数倍
 input = torch.randn((64, 256), dtype=torch.bfloat16).npu()
 y1, mxscale1, y2, mxscale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(
     input, dst_type=torch_npu.float4_e2m1fn_x2, scale_alg=2, dst_type_max=6.0)
-y1_unpack = y1.cpu().view(torch_npu.float4_e2m1fn_x2)  # y1实际为uint8, 最后一维为input的一半, 需解包查看
-print(y1_unpack.shape)  # torch.Size([64, 256])
-print(mxscale1.shape)  # torch.Size([64, 4, 2])
-print(mxscale2.shape)  # torch.Size([1, 256, 2])
+print(y1.shape, y1.dtype)
+print(mxscale1.shape)
+print(mxscale2.shape)
 图模式调用
 import torch
 import torch_npu
 import torchair as tng
 from torchair.configs.compiler_config import CompilerConfig
-
-config = CompilerConfig()
-npu_backend = tng.get_npu_backend(compiler_config=config)
 
 class Model(torch.nn.Module):
     def __init__(self):
@@ -16273,13 +16271,13 @@ class Model(torch.nn.Module):
         return torch_npu.npu_dynamic_mx_quant_with_dual_axis(x, dst_type=torch.float8_e4m3fn)
 
 model = Model().npu()
-model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+model = torch.compile(model, backend="npugraph_ex", dynamic=False, fullgraph=True)
 input = torch.randn((64, 256), dtype=torch.bfloat16).npu()
 y1, mxscale1, y2, mxscale2 = model(input)
-print(y1)
-print(mxscale1)
-print(y2)
-print(mxscale2)
+print(y1.shape, y1.dtype)
+print(mxscale1.shape)
+print(y2.shape, y2.dtype)
+print(mxscale2.shape)
 """
 )
 
@@ -16388,67 +16386,67 @@ Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
 调用示例
 单算子模式调用，非varlen场景（BNSD）
-    import torch
-    import torch_npu
+import torch
+import torch_npu
 
-    torch.manual_seed(0)
-    BNSD = (1, 8, 16, 64)
-    query = torch.randn(BNSD, dtype=torch.float16).npu()
-    key = torch.randn(BNSD, dtype=torch.float16).npu()
-    value = torch.randn(BNSD, dtype=torch.float16).npu()
-    atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
-        query, key, value, head_num=8, input_layout="BNSD", scale=0.088, keep_prob=0.9)
-    print(atten_out.shape, atten_out.dtype)
-    print(atten_out[0, 0, 0, :8])
-    print(softmax_max.shape, softmax_max.dtype)
-    print(softmax_max[0, 0, 0])
-    print(softmax_out.shape)
-    print(seed, offset, numels)
+torch.manual_seed(0)
+BNSD = (1, 8, 16, 64)
+query = torch.randn(BNSD, dtype=torch.float16).npu()
+key = torch.randn(BNSD, dtype=torch.float16).npu()
+value = torch.randn(BNSD, dtype=torch.float16).npu()
+atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
+    query, key, value, head_num=8, input_layout="BNSD", scale=0.088, keep_prob=0.9)
+print(atten_out.shape, atten_out.dtype)
+print(atten_out[0, 0, 0, :8])
+print(softmax_max.shape, softmax_max.dtype)
+print(softmax_max[0, 0, 0])
+print(softmax_out.shape)
+print(seed, offset, numels)
 单算子模式调用，varlen场景（TND）
-    import torch
-    import torch_npu
-    torch.manual_seed(0)
-    TND = (8, 2, 64)# B=2，两个sequence长度分别为3和5，则T=8
-    query = torch.randn(TND, dtype=torch.float16).npu()
-    key = torch.randn(TND, dtype=torch.float16).npu()
-    value = torch.randn(TND, dtype=torch.float16).npu()
-    atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
-        query, key, value, head_num=2, input_layout="TND", scale=0.088,
-        actual_seq_qlen=[3, 8], actual_seq_kvlen=[3, 8])
-    print(atten_out.shape, atten_out.dtype)
-    print(atten_out[:2, :, :4])
-    print(softmax_max.shape)
-    print(numels)
+import torch
+import torch_npu
+torch.manual_seed(0)
+TND = (8, 2, 64)# B=2，两个sequence长度分别为3和5，则T=8
+query = torch.randn(TND, dtype=torch.float16).npu()
+key = torch.randn(TND, dtype=torch.float16).npu()
+value = torch.randn(TND, dtype=torch.float16).npu()
+atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
+    query, key, value, head_num=2, input_layout="TND", scale=0.088,
+    actual_seq_qlen=[3, 8], actual_seq_kvlen=[3, 8])
+print(atten_out.shape, atten_out.dtype)
+print(atten_out[:2, :, :4])
+print(softmax_max.shape)
+print(numels)
 单算子模式调用，传入`sink`（非varlen场景）
-    import torch
-    import torch_npu
+import torch
+import torch_npu
 
-    torch.manual_seed(0)
-    BNSD = (1, 8, 16, 64)
-    query = torch.randn(BNSD, dtype=torch.float16).npu()
-    key = torch.randn(BNSD, dtype=torch.float16).npu()
-    value = torch.randn(BNSD, dtype=torch.float16).npu()
-    sink = torch.randn(8, dtype=torch.float32).npu()
-    atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
-        query, key, value, head_num=8, input_layout="BNSD", scale=0.088, sink=sink)
-    print(atten_out.shape)
+torch.manual_seed(0)
+BNSD = (1, 8, 16, 64)
+query = torch.randn(BNSD, dtype=torch.float16).npu()
+key = torch.randn(BNSD, dtype=torch.float16).npu()
+value = torch.randn(BNSD, dtype=torch.float16).npu()
+sink = torch.randn(8, dtype=torch.float32).npu()
+atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
+    query, key, value, head_num=8, input_layout="BNSD", scale=0.088, sink=sink)
+print(atten_out.shape)
 单算子模式调用，传入`query_rope`、`key_rope`（varlen场景）
-    import torch
-    import torch_npu
+import torch
+import torch_npu
 
-    torch.manual_seed(0)
-    TND = (8, 2, 64)
-    query = torch.randn(TND, dtype=torch.bfloat16).npu()
-    query_rope = torch.randn(TND, dtype=torch.bfloat16).npu()
-    key = torch.randn(TND, dtype=torch.bfloat16).npu()
-    key_rope = torch.randn(TND, dtype=torch.bfloat16).npu()
-    value = torch.randn(TND, dtype=torch.bfloat16).npu()
-    atten_mask = torch.zeros(8, 8, dtype=torch.bool).npu()
-    atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
-        query, key, value, head_num=2, input_layout="TND", scale=0.088,
-        query_rope=query_rope, key_rope=key_rope, atten_mask=atten_mask,
-        actual_seq_qlen=[3, 8], actual_seq_kvlen=[3, 8])
-    print(atten_out.shape, atten_out.dtype)
+torch.manual_seed(0)
+TND = (8, 2, 64)
+query = torch.randn(TND, dtype=torch.bfloat16).npu()
+query_rope = torch.randn(TND, dtype=torch.bfloat16).npu()
+key = torch.randn(TND, dtype=torch.bfloat16).npu()
+key_rope = torch.randn(TND, dtype=torch.bfloat16).npu()
+value = torch.randn(TND, dtype=torch.bfloat16).npu()
+atten_mask = torch.zeros(8, 8, dtype=torch.bool).npu()
+atten_out, softmax_max, softmax_sum, softmax_out, seed, offset, numels = torch_npu.npu_fusion_attention_v2(
+    query, key, value, head_num=2, input_layout="TND", scale=0.088,
+    query_rope=query_rope, key_rope=key_rope, atten_mask=atten_mask,
+    actual_seq_qlen=[3, 8], actual_seq_kvlen=[3, 8])
+print(atten_out.shape, atten_out.dtype)
 """
 )
 
@@ -16510,35 +16508,23 @@ PyTorch 2.1及以上
 支持的型号:
 Ascend 950PR/Ascend 950DT
 
-调用示例:
-单算子模式调用
-float8量化示例(scale_alg使用默认值0)
+调用示例
+单算子模式调用，float8量化（`scale_alg`使用默认值0）
 import torch
 import torch_npu
 
+# x的shape为[8, 1]，取值为(0, 8, 64, 512)重复两次；group_index=[4, 8]表示[0:4]和[4:8]两个分组
 x = torch.tensor([[0], [8], [64], [512], [0], [8], [64], [512]], dtype=torch.bfloat16).npu()
 group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
 y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch.float8_e4m3fn)
-print(y)  # 量化结果为[0, 4, 32, 256, 0, 4, 32, 256], 数据类型为float8_e4m3fn
-print(mxscale.cpu().view(torch.float8_e8m0fnu))  # 每个分组的量化尺度为2
-float4量化示例(scale_alg=2)
-import torch
-import torch_npu
-
-x = torch.tensor([[0, 0], [8, 8], [64, 64], [512, 512], [0, 0], [8, 8], [64, 64], [512, 512]], dtype=torch.bfloat16).npu()
-group_index = torch.tensor([4, 8], dtype=torch.int32).npu()
-y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch_npu.float4_e2m1fn_x2, scale_alg=2, dst_type_max=6.0)
-y_unpack = y.cpu().view(torch_npu.float4_e2m1fn_x2)  # y实际为uint8, 最后一维为x的一半, 需解包查看
-print(y_unpack.shape)
+print(y)
+print(mxscale)
 print(mxscale.cpu().view(torch.float8_e8m0fnu))
 图模式调用
 import torch
 import torch_npu
 import torchair as tng
 from torchair.configs.compiler_config import CompilerConfig
-
-config = CompilerConfig()
-npu_backend = tng.get_npu_backend(compiler_config=config)
 
 class Model(torch.nn.Module):
     def __init__(self):
@@ -16548,7 +16534,7 @@ class Model(torch.nn.Module):
         return torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, dst_type=torch.float8_e4m3fn)
 
 model = Model().npu()
-model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+model = torch.compile(model, backend="npugraph_ex", dynamic=False, fullgraph=True)
 x = torch.randn((64, 256), dtype=torch.float16).npu()
 group_index = torch.tensor([32, 64], dtype=torch.int32).npu()
 y, mxscale = model(x, group_index)
@@ -16608,42 +16594,42 @@ Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
 调用示例
 单算子模式调用
-    import torch
-    import torch_npu
+import torch
+import torch_npu
 
-    torch.manual_seed(0)
-    # x的shape为[512, 256]，转置后M=256、K=512；group_list将K轴切分为[0:256]、[256:512]两组
-    x = torch.randn(512, 256, dtype=torch.bfloat16).npu()
-    weight = torch.randn(512, 256, dtype=torch.bfloat16).npu()
-    self_t = torch.zeros(2, 256, 256, dtype=torch.float32).npu()
-    group_list = torch.tensor([256, 512], dtype=torch.int64).npu()
-    out = torch_npu.npu_grouped_matmul_add(self_t, x, weight, group_list, transpose_x=True)
-    print(out.shape, out.dtype)
-    print(out[0, 0, :6])
-    print(out[1, 0, :4])
+torch.manual_seed(0)
+# x的shape为[512, 256]，转置后M=256、K=512；group_list将K轴切分为[0:256]、[256:512]两组
+x = torch.randn(512, 256, dtype=torch.bfloat16).npu()
+weight = torch.randn(512, 256, dtype=torch.bfloat16).npu()
+self_t = torch.zeros(2, 256, 256, dtype=torch.float32).npu()
+group_list = torch.tensor([256, 512], dtype=torch.int64).npu()
+out = torch_npu.npu_grouped_matmul_add(self_t, x, weight, group_list, transpose_x=True)
+print(out.shape, out.dtype)
+print(out[0, 0, :6])
+print(out[1, 0, :4])
 单算子模式调用，非零self（累加语义）
-    import torch
-    import torch_npu
+import torch
+import torch_npu
 
-    torch.manual_seed(0)
-    x = torch.randn(512, 256, dtype=torch.bfloat16).npu()
-    weight = torch.randn(512, 256, dtype=torch.bfloat16).npu()
-    self_t = torch.full((2, 256, 256), 0.5, dtype=torch.float32).npu()
-    group_list = torch.tensor([256, 512], dtype=torch.int64).npu()
-    out = torch_npu.npu_grouped_matmul_add(self_t, x, weight, group_list, transpose_x=True)
-    print(out[0, 0, :3])
+torch.manual_seed(0)
+x = torch.randn(512, 256, dtype=torch.bfloat16).npu()
+weight = torch.randn(512, 256, dtype=torch.bfloat16).npu()
+self_t = torch.full((2, 256, 256), 0.5, dtype=torch.float32).npu()
+group_list = torch.tensor([256, 512], dtype=torch.int64).npu()
+out = torch_npu.npu_grouped_matmul_add(self_t, x, weight, group_list, transpose_x=True)
+print(out[0, 0, :3])
 单算子模式调用，原地版本
-    import torch
-    import torch_npu
+import torch
+import torch_npu
 
-    torch.manual_seed(0)
-    x = torch.randn(512, 256, dtype=torch.bfloat16).npu()
-    weight = torch.randn(512, 256, dtype=torch.bfloat16).npu()
-    self_t = torch.zeros(2, 256, 256, dtype=torch.float32).npu()
-    group_list = torch.tensor([256, 512], dtype=torch.int64).npu()
-    out = torch_npu.npu_grouped_matmul_add_(self_t, x, weight, group_list, transpose_x=True)
-    print(out is self_t)  # True
-    print(out[0, 0, :3]) # tensor([-14.8446,  -4.4171,   7.6527], device='npu:0')
+torch.manual_seed(0)
+x = torch.randn(512, 256, dtype=torch.bfloat16).npu()
+weight = torch.randn(512, 256, dtype=torch.bfloat16).npu()
+self_t = torch.zeros(2, 256, 256, dtype=torch.float32).npu()
+group_list = torch.tensor([256, 512], dtype=torch.int64).npu()
+out = torch_npu.npu_grouped_matmul_add_(self_t, x, weight, group_list, transpose_x=True)
+print(out is self_t)  # True
+print(out[0, 0, :3]) # tensor([-14.8446,  -4.4171,   7.6527], device='npu:0')
 """
 )
 
@@ -16704,92 +16690,92 @@ Atlas A2训练系列产品/Atlas A2推理系列产品
 
 调用示例
 单算子模式调用（A8W8场景）
-    import torch
-    import torch_npu
-    import numpy as np
+import torch
+import torch_npu
+import numpy as np
 
-    torch.npu.config.allow_internal_format = True  # 必须开启，否则FRACTAL_NZ格式无法正确传递
+torch.npu.config.allow_internal_format = True  # 必须开启，否则FRACTAL_NZ格式无法正确传递
 
-    def generate_non_decreasing_sequence(length, upper_limit):
-        # 生成随机增量
-        random_increments = torch.randint(1, 128, (length,), dtype=torch.int64)  # 避免零增量
-        # 累加生成非递减序列
-        sequence = torch.cumsum(random_increments, dim=0)
-        # 确保最后一个元素不超过上限
-        if sequence[-1] > upper_limit:
-            # 线性缩放以确保总和不超过上限
-            scale_factor = upper_limit / sequence[-1].item()
-            sequence = (sequence * scale_factor).to(torch.int64)
-            for i in range(1, length):
-                if sequence[i] <= sequence[i-1]:
-                    sequence[i] = sequence[i-1] + 1
-        return sequence
+def generate_non_decreasing_sequence(length, upper_limit):
+    # 生成随机增量
+    random_increments = torch.randint(1, 128, (length,), dtype=torch.int64)  # 避免零增量
+    # 累加生成非递减序列
+    sequence = torch.cumsum(random_increments, dim=0)
+    # 确保最后一个元素不超过上限
+    if sequence[-1] > upper_limit:
+        # 线性缩放以确保总和不超过上限
+        scale_factor = upper_limit / sequence[-1].item()
+        sequence = (sequence * scale_factor).to(torch.int64)
+        for i in range(1, length):
+            if sequence[i] <= sequence[i-1]:
+                sequence[i] = sequence[i-1] + 1
+    return sequence
 
-    def gen_input_data(E=16, M=512, K=7168, N=4096):
-        x = torch.randint(-128, 127, (M, K), dtype=torch.int8).npu()
-        weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8).npu()
-        # 需转成FRACTAL_NZ的5维存储shape（E, N//32, K//16, 16, 32）
-        weight_npu = torch_npu.npu_format_cast(weight, 29).view(E, N // 32, K // 16, 16, 32)
-        weight_scale = torch.randn(E, N, dtype=torch.float32).npu()
-        x_scale = torch.randn(M, dtype=torch.float32).npu()
-        group_list = generate_non_decreasing_sequence(E, M).npu()
-        output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(x, weight_npu, group_list, weight_scale, x_scale,bias=None, offset=None)
-        # 有效数据截至到group_list[-1]
-        valid_output = output[:group_list[-1], :]
-        valid_output_scale = output_scale[:group_list[-1]]
-        return output, output_scale, output_offset
+def gen_input_data(E=16, M=512, K=7168, N=4096):
+    x = torch.randint(-128, 127, (M, K), dtype=torch.int8).npu()
+    weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8).npu()
+    # 需转成FRACTAL_NZ的5维存储shape（E, N//32, K//16, 16, 32）
+    weight_npu = torch_npu.npu_format_cast(weight, 29).view(E, N // 32, K // 16, 16, 32)
+    weight_scale = torch.randn(E, N, dtype=torch.float32).npu()
+    x_scale = torch.randn(M, dtype=torch.float32).npu()
+    group_list = generate_non_decreasing_sequence(E, M).npu()
+    output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(x, weight_npu, group_list, weight_scale, x_scale,bias=None, offset=None)
+    # 有效数据截至到group_list[-1]
+    valid_output = output[:group_list[-1], :]
+    valid_output_scale = output_scale[:group_list[-1]]
+    return output, output_scale, output_offset
 
-    if __name__ == "__main__":
-        output, output_scale, output_offset = gen_input_data()
-        print(output.shape, output.dtype)  # torch.Size([512, 2048]), 数据类型int8
-        print(output_scale.shape, output_scale.dtype)  # torch.Size([512]), 数据类型float32
-        print(output_offset.shape)  # 空Tensor（0维float32），预留输出
+if __name__ == "__main__":
+    output, output_scale, output_offset = gen_input_data()
+    print(output.shape, output.dtype)
+    print(output_scale.shape, output_scale.dtype)
+    print(output_offset.shape)
 单算子模式调用（A8W4场景）
-    import torch
-    import torch_npu
-    import numpy as np
+import torch
+import torch_npu
+import numpy as np
 
-    torch.npu.config.allow_internal_format = True  # 必须开启，否则FRACTAL_NZ格式无法正确传递
+torch.npu.config.allow_internal_format = True  # 必须开启，否则FRACTAL_NZ格式无法正确传递
 
-    def generate_non_decreasing_sequence(length, upper_limit):
-        # 生成随机增量
-        random_increments = torch.randint(1, 128, (length,), dtype=torch.int64)  # 避免零增量
-        # 累加生成非递减序列
-        sequence = torch.cumsum(random_increments, dim=0)
-        # 确保最后一个元素不超过上限
-        if sequence[-1] > upper_limit:
-            # 线性缩放以确保总和不超过上限
-            scale_factor = upper_limit / sequence[-1].item()
-            sequence = (sequence * scale_factor).to(torch.int64)
-            for i in range(1, length):
-                if sequence[i] <= sequence[i-1]:
-                    sequence[i] = sequence[i-1] + 1
-        return sequence
+def generate_non_decreasing_sequence(length, upper_limit):
+    # 生成随机增量
+    random_increments = torch.randint(1, 128, (length,), dtype=torch.int64)  # 避免零增量
+    # 累加生成非递减序列
+    sequence = torch.cumsum(random_increments, dim=0)
+    # 确保最后一个元素不超过上限
+    if sequence[-1] > upper_limit:
+        # 线性缩放以确保总和不超过上限
+        scale_factor = upper_limit / sequence[-1].item()
+        sequence = (sequence * scale_factor).to(torch.int64)
+        for i in range(1, length):
+            if sequence[i] <= sequence[i-1]:
+                sequence[i] = sequence[i-1] + 1
+    return sequence
 
-    def gen_input_data(E=16, M=512, K=7168, N=4096):
-        x = torch.randint(-128, 127, (M, K), dtype=torch.int8).npu()
-        # A8W4：权重为int4，沿N轴每2个int4打包进1个int8，故打包后weight的shape为(E, K, N//2)
-        weight_pack = torch.randint(-128, 127, (E, K, N // 2), dtype=torch.int8).npu()
-        # 转成FRACTAL_NZ的5维存储shape（E, N//64, K//16, 16, 8）
-        weight_npu = torch_npu.npu_format_cast(weight_pack, 29).view(torch.int32).view(E, N // 64, K // 16, 16, 8)
-        # per-channel场景：weight_scale为int64，shape为(E, N)；per-group场景shape为(E, k_group_num, N)
-        weight_scale = torch.randint(-100, 100, (E, N), dtype=torch.int64).npu()
-        x_scale = torch.randn(M, dtype=torch.float32).npu()
-        # A8W4场景bias（weightAssistMatrix）为必传参数，shape为(E, N)，数据类型float32
-        bias = torch.randn(E, N, dtype=torch.float32).npu()
-        group_list = generate_non_decreasing_sequence(E, M).npu()
-        output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(
-            x, weight_npu, group_list, weight_scale, x_scale, bias=bias, offset=None)
-        # 有效数据截至到group_list[-1]
-        valid_output = output[:group_list[-1], :]
-        valid_output_scale = output_scale[:group_list[-1]]
-        return output, output_scale, output_offset
+def gen_input_data(E=16, M=512, K=7168, N=4096):
+    x = torch.randint(-128, 127, (M, K), dtype=torch.int8).npu()
+    # A8W4：权重为int4，沿N轴每2个int4打包进1个int8，故打包后weight的shape为(E, K, N//2)
+    weight_pack = torch.randint(-128, 127, (E, K, N // 2), dtype=torch.int8).npu()
+    # 转成FRACTAL_NZ的5维存储shape（E, N//64, K//16, 16, 8）
+    weight_npu = torch_npu.npu_format_cast(weight_pack, 29).view(torch.int32).view(E, N // 64, K // 16, 16, 8)
+    # per-channel场景：weight_scale为int64，shape为(E, N)；per-group场景shape为(E, k_group_num, N)
+    weight_scale = torch.randint(-100, 100, (E, N), dtype=torch.int64).npu()
+    x_scale = torch.randn(M, dtype=torch.float32).npu()
+    # A8W4场景bias（weightAssistMatrix）为必传参数，shape为(E, N)，数据类型float32
+    bias = torch.randn(E, N, dtype=torch.float32).npu()
+    group_list = generate_non_decreasing_sequence(E, M).npu()
+    output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(
+        x, weight_npu, group_list, weight_scale, x_scale, bias=bias, offset=None)
+    # 有效数据截至到group_list[-1]
+    valid_output = output[:group_list[-1], :]
+    valid_output_scale = output_scale[:group_list[-1]]
+    return output, output_scale, output_offset
 
-    if __name__ == "__main__":
-        output, output_scale, output_offset = gen_input_data()
-        print(output.shape, output.dtype)  # torch.Size([512, 2048]), 数据类型int8
-        print(output_scale.shape, output_scale.dtype)  # torch.Size([512]), 数据类型float32
-        print(output_offset.shape)  # 空Tensor（0维float32），预留输出
+if __name__ == "__main__":
+    output, output_scale, output_offset = gen_input_data()
+    print(output.shape, output.dtype)
+    print(output_scale.shape, output_scale.dtype)
+    print(output_offset.shape)
 """
 )
 
@@ -16921,7 +16907,7 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50002'
+    master_port = '50001'
     x1_shape = [128, 512]
     x2_shape = [512, 64]
     dtype = torch.float8_e4m3fn
@@ -16962,9 +16948,9 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50003'
+    master_port = '50001'
     x1_shape = [128, 512]
-    x2_shape = [512, 64]
+    x2_shape = [512, 128]
     dtype = torch.float8_e4m3fn
     amax_output = False  # 情形3不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
@@ -16987,12 +16973,12 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
         hcomm_info = default_pg.get_hccl_comm_name(rank)
 
     m, k = x1_shape   # x1_shape为(m, k)
-    n = x2_shape[0]   # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(n, k)
+    n = x2_shape[1]   # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(n, k)
     self_t = torch.randn(x1_shape).to(dtype).npu()
     x2 = torch.randn(x2_shape).to(dtype).npu()
-    # mx量化场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceildiv(k, 64), 2)、(n, ceildiv(k, 64), 2)
+    # mx量化场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceildiv(k, 64), 2)、(ceildiv(k, 64), n, 2)
     x1_scale = torch.rand((m, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
-    x2_scale = torch.rand((n, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
+    x2_scale = torch.rand((math.ceil(k / 64), n, 2)).to(torch.float8_e8m0fnu).npu()
     output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None,
                                                           x1_scale=x1_scale, x2_scale=x2_scale,
                                                           amax_output=amax_output, y_dtype=torch.float16)
@@ -17003,12 +16989,11 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50004'
+    master_port = '50001'
     x1_shape = [128, 256]
-    x2_shape = [64, 256]  # 转置输入
+    x2_shape = [256, 64]  # 转置输入
     dtype = torch.float8_e4m3fn
     amax_output = False  # 情形4不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-
 """
 )
