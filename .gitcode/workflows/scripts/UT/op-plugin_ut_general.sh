@@ -53,8 +53,6 @@ function torch_npu_install() {
 function main() {
     pip"${py_version}" install https://ascend-cann-open.obs.cn-north-4.myhuaweicloud.com/Triton_Innersource/triton-ascend/20260428190056/triton_ascend-3.2.1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
     cd ${WORKSPACE}
-    pip"${py_version}" uninstall -y torch
-    pip"${py_version}" uninstall -y torch_npu
 
     # handle residual files of torch
     rm -rf "${python_path}"/lib/python"${py_version}"/site-packages/torch
