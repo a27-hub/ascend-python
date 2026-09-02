@@ -38,12 +38,6 @@ on:
         type: string
         default: ${{ atomgit.event.pull_request.base.ref }}
 
-    secrets:
-      OBS_AK:
-        required: true
-      OBS_SK:
-        required: true
-
 jobs:
   JOB_compile:
     name: JOB_compile
