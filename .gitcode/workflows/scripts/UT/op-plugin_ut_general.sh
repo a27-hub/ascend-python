@@ -34,18 +34,19 @@ function torch_install_master_2() {
 }
 
 function torch_npu_install() {
-    if [ "${TARGET_BRANCH}" == "master" ]; then
-        tar_name=torch_npu_${pytorch_version}_${ARCH}.tar.gz
-    else
-        tar_name=torch_npu_${pytorch_version}-${TARGET_BRANCH}_${ARCH}.tar.gz
-    fi
-    # 构建产物由 download-artifact 插件下载到 WORKSPACE，不再从 OBS 拉取
-    if [ ! -f "${WORKSPACE}/${tar_name}" ]; then
-        echo "ERROR: build artifact ${tar_name} not found in ${WORKSPACE}, please check upload-artifact/download-artifact"
-        exit 1
-    fi
-    tar -zxvf "${WORKSPACE}/${tar_name}"
-    pip"${py_version}" install -U "${WORKSPACE}"/torch-*${ARCH}.whl --force-reinstall
+    # if [ "${TARGET_BRANCH}" == "master" ]; then
+    #     tar_name=torch_npu_${pytorch_version}_${ARCH}.tar.gz
+    # else
+    #     tar_name=torch_npu_${pytorch_version}-${TARGET_BRANCH}_${ARCH}.tar.gz
+    # fi
+    # # 构建产物由 download-artifact 插件下载到 WORKSPACE，不再从 OBS 拉取
+    # if [ ! -f "${WORKSPACE}/${tar_name}" ]; then
+    #     echo "ERROR: build artifact ${tar_name} not found in ${WORKSPACE}, please check upload-artifact/download-artifact"
+    #     exit 1
+    # fi
+    # tar -zxvf "${WORKSPACE}/${tar_name}"
+    # pip"${py_version}" install -U "${WORKSPACE}"/torch-*${ARCH}.whl --force-reinstall
+    ls "${WORKSPACE}"
     pip"${py_version}" install -U "${WORKSPACE}"/torch_npu*${ARCH}.whl --force-reinstall --no-deps
 }
 
