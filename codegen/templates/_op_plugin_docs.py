@@ -16335,16 +16335,6 @@ dropout_mask: Tensor类型, 外部传入的dropout mask, 可选参数, 默认值
 seed: int类型, DSA生成dropout mask中Philox算法的seed, 可选参数, 默认值为0. 返回值中的seed为实际使用的seed, 可用于反向计算.
 offset: int类型, DSA生成dropout mask中Philox算法的offset, 可选参数, 默认值为0. 返回值中的offset为实际使用的offset, 可用于反向计算.
 
-输出说明
-7个输出, 均为Tensor类型: Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor
--   Tensor: 第一个输出attention_out是计算公式的最终输出, 数据类型和shape类型与query保持一致(BNSD场景输出shape为[B, N, Sq, Dv], TND场景输出shape为[T, N, Dv], 其中Dv为value的Head-Dim)..
--   Tensor: 第二个输出softmax_max是Softmax计算的Max中间结果, 用于反向计算. 数据类型为float32. 非varlen场景shape为[B, N, Sq, 8], varlen场景(TND)shape为[T, N, 8]..
--   Tensor: 第三个输出softmax_sum是Softmax计算的Sum中间结果, 用于反向计算. 数据类型为float32. 非varlen场景shape为[B, N, Sq, 8], varlen场景(TND)shape为[T, N, 8]..
--   Tensor: 第四个输出softmax_out是预留参数, 暂未使用, 返回空Tensor..
--   Tensor: 第五个输出seed是DSA生成dropout mask中Philox算法的seed, 返回实际使用的seed, 可用于反向计算..
--   Tensor: 第6个输出offset是DSA生成dropout mask中Philox算法的offset, 返回实际使用的offset, 可用于反向计算..
--   Tensor: 第7个输出numels是dropout mask的元素个数..
-
 输出说明:
 共7个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、int、int、int.
 attention_out: Tensor类型, 计算公式的最终输出, 数据类型和shape类型与query保持一致(BNSD场景输出shape为[B,N,Sq,Dv], TND场景输出shape为[T,N,Dv], 其中Dv为value的Head-Dim).
@@ -16634,152 +16624,6 @@ print(out[0, 0, :3]) # tensor([-14.8446,  -4.4171,   7.6527], device='npu:0')
 )
 
 _add_torch_npu_docstr(
-    "npu_grouped_matmul_swiglu_quant",
-    """
-torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x_scale, *, bias=None, offset=None) -> (Tensor, Tensor, Tensor)
-
-功能描述:
-算子功能: 融合GroupedMatmul(分组矩阵乘)、dquant(反量化)、swiglu(SwiGLU激活)和quant(量化)四个计算环节, deepseek模型使用, 对比小算子做性能优化. 该接口是aclnnGroupedMatmulSwigluQuant接口的weightNZ特化版本, weight需以FRACTAL_NZ格式传入.
-多算子融合计算顺序(依次执行):
-1. GroupedMatmul: 根据group_list对token按组切分, 各组计算X_i·W_i.
-2. dquant: 矩阵乘结果与激活量化因子x_scale、权重量化因子w_scale逐元素相乘, 完成反量化.
-3. swiglu: 反量化结果沿N轴对半切分为C_act与gate, 计算S_i = Swish(C_act)⊙gate_i, 其中Swish(x)=x/(1+e^{-x}).
-4. quant: Q_scale_i = max(|S_i|)/127, Q_i = round(S_i/Q_scale_i), 得到量化输出Q与量化因子Q_scale.
-计算公式(A8W8场景):
-C_i = (X_i·W_i) ⊙ x_scale_i ⊙ w_scale_i
-C_act, gate_i = split(C_i)
-S_i = Swish(C_act) ⊙ gate_i
-Q_scale_i = max(|S_i|)/127
-Q_i = round(S_i/Q_scale_i)
-A8W4场景: 激活为INT8、权重为INT4, 将左矩阵拆分为高低4bit两部分分别与权重做矩阵乘, 再结合离线生成的辅助矩阵bias还原结果, 其余计算过程与A8W8一致, weight_scale支持2维(per-channel)或3维(per-group)输入.
-group_list分组说明: 根据groupList[i]确定当前分组的token, i属于[0,Len(groupList)). 例如groupList=[3,4,4,6]: 第0个右矩阵W[0,:,:]对应token x[0:3], 第1个对应x[3:4], 第2个对应x[4:4](0个token), 第3个对应x[4:6]. groupList中未指定的部分不会参与更新, 输出的Q[:groupList[-1],:]和Q_scale[:groupList[-1]]为有效数据部分.
-
-接口原型:
-torch_npu.npu_grouped_matmul_swiglu_quant(Tensor x, Tensor weight, Tensor group_list, Tensor weight_scale, Tensor x_scale, *, Tensor? bias=None, Tensor? offset=None) -> (Tensor, Tensor, Tensor)
-
-参数说明:
-x: Tensor类型, 左矩阵, 公式中的X, 必选参数. shape支持2维[M,K], 数据类型支持int8, 数据格式支持ND, 支持非连续Tensor. A8W8场景K必须小于65536, A8W4场景K必须小于20000.
-weight: Tensor类型, 权重矩阵, 公式中的W, 必选参数. 需先通过torch_npu.npu_format_cast(weight, 29)转换为FRACTAL_NZ格式(5维存储shape), 数据类型支持int8、int4、int32(INT32为适配用途, 实际1个INT32会被解释为8个INT4数据), 支持非连续Tensor. 该接口会忽略weight的数据格式, 强制视为FRACTAL_NZ格式.
-group_list: Tensor类型, 指示每个分组参与计算的Token个数, 公式中的groupList, 必选参数. shape支持1维, 长度需与weight的首轴维度(专家数E)相等, 数据类型支持int64, 数据格式支持ND, 支持非连续Tensor. 为cumsum形式的分组索引列表, 最后一个值约束了输出数据的有效部分.
-weight_scale: Tensor类型, 右矩阵的量化因子, 公式中的w_scale, 必选参数. shape支持2维(per-channel)或3维(per-group), 首轴长度需与weight的首轴维度相等, 尾轴长度需要与weight还原为ND格式的尾轴(N)相同. 数据类型支持float32、float16、bfloat16, 数据格式支持ND, 支持非连续Tensor.
-x_scale: Tensor类型, 左矩阵的量化因子, 公式中的x_scale, 必选参数. shape支持1维, 长度需与x的首轴维度(M)相等. 数据类型支持float32, 数据格式支持ND, 支持非连续Tensor.
-bias: Tensor类型, 计算矩阵乘时的辅助矩阵, 对应公式中的weightAssistMatrix, 可选参数, 默认值为None. shape支持2维[E,N], 数据类型支持float32, 数据格式支持ND. 仅在A8W4场景生效, A8W8场景需传入None.
-offset: Tensor类型, per-channel非对称反量化的偏移, 可选参数, 默认值为None. 预留输入, 暂不支持, 需传入None.
-
-输出说明:
-output: Tensor类型, 输出的量化结果, 公式中的Q. 数据类型支持int8, shape支持2维[M,N/2], 数据格式支持ND. group_list指导了输入和输出中的有效值范围, 有效数据截至到group_list[-1], 即output[:group_list[-1],:]为有效数据, 其余部分不会更新.
-output_scale: Tensor类型, 输出的量化因子, 公式中的Q_scale. 数据类型支持float32, shape支持1维[M], 数据格式支持ND. 有效数据截至到group_list[-1].
-output_offset: Tensor类型, 输出的非对称量化的偏移, 公式中的Q_offset. 预留输出, 暂未使用, 返回空Tensor(0维float32).
-
-约束说明:
-该接口支持训练、推理场景下使用.
-默认确定性实现.
-该接口仅在Atlas A3训练系列产品/Atlas A3推理系列产品、Atlas A2训练系列产品/Atlas A2推理系列产品上支持.
-A8W8场景: x的尾轴长度(K)不能大于等于65536, N轴长度不能超过10240, bias需传入None.
-A8W4场景: x的尾轴长度(K)不能大于等于20000, N轴长度不能超过10240, bias(weightAssistMatrix)为必传参数.
-weight需为FRACTAL_NZ格式的5维存储, 首轴长度为专家数E.
-group_list的长度需与weight的首轴维度相等, 元素个数不能大于weight的首轴长度, 为cumsum形式, 其最后一个值约束了输出的有效数据范围.
-offset为预留输入, 暂不支持, 需传入None.
-
-支持的PyTorch版本
-PyTorch 2.1及以上
-
-支持的型号:
-Atlas A3训练系列产品/Atlas A3推理系列产品
-Atlas A2训练系列产品/Atlas A2推理系列产品
-
-调用示例
-单算子模式调用（A8W8场景）
-import torch
-import torch_npu
-import numpy as np
-
-torch.npu.config.allow_internal_format = True  # 必须开启，否则FRACTAL_NZ格式无法正确传递
-
-def generate_non_decreasing_sequence(length, upper_limit):
-    # 生成随机增量
-    random_increments = torch.randint(1, 128, (length,), dtype=torch.int64)  # 避免零增量
-    # 累加生成非递减序列
-    sequence = torch.cumsum(random_increments, dim=0)
-    # 确保最后一个元素不超过上限
-    if sequence[-1] > upper_limit:
-        # 线性缩放以确保总和不超过上限
-        scale_factor = upper_limit / sequence[-1].item()
-        sequence = (sequence * scale_factor).to(torch.int64)
-        for i in range(1, length):
-            if sequence[i] <= sequence[i-1]:
-                sequence[i] = sequence[i-1] + 1
-    return sequence
-
-def gen_input_data(E=16, M=512, K=7168, N=4096):
-    x = torch.randint(-128, 127, (M, K), dtype=torch.int8).npu()
-    weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8).npu()
-    # 需转成FRACTAL_NZ的5维存储shape（E, N//32, K//16, 16, 32）
-    weight_npu = torch_npu.npu_format_cast(weight, 29).view(E, N // 32, K // 16, 16, 32)
-    weight_scale = torch.randn(E, N, dtype=torch.float32).npu()
-    x_scale = torch.randn(M, dtype=torch.float32).npu()
-    group_list = generate_non_decreasing_sequence(E, M).npu()
-    output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(x, weight_npu, group_list, weight_scale, x_scale,bias=None, offset=None)
-    # 有效数据截至到group_list[-1]
-    valid_output = output[:group_list[-1], :]
-    valid_output_scale = output_scale[:group_list[-1]]
-    return output, output_scale, output_offset
-
-if __name__ == "__main__":
-    output, output_scale, output_offset = gen_input_data()
-    print(output.shape, output.dtype)
-    print(output_scale.shape, output_scale.dtype)
-    print(output_offset.shape)
-单算子模式调用（A8W4场景）
-import torch
-import torch_npu
-import numpy as np
-
-torch.npu.config.allow_internal_format = True  # 必须开启，否则FRACTAL_NZ格式无法正确传递
-
-def generate_non_decreasing_sequence(length, upper_limit):
-    # 生成随机增量
-    random_increments = torch.randint(1, 128, (length,), dtype=torch.int64)  # 避免零增量
-    # 累加生成非递减序列
-    sequence = torch.cumsum(random_increments, dim=0)
-    # 确保最后一个元素不超过上限
-    if sequence[-1] > upper_limit:
-        # 线性缩放以确保总和不超过上限
-        scale_factor = upper_limit / sequence[-1].item()
-        sequence = (sequence * scale_factor).to(torch.int64)
-        for i in range(1, length):
-            if sequence[i] <= sequence[i-1]:
-                sequence[i] = sequence[i-1] + 1
-    return sequence
-
-def gen_input_data(E=16, M=512, K=7168, N=4096):
-    x = torch.randint(-128, 127, (M, K), dtype=torch.int8).npu()
-    # A8W4：权重为int4，沿N轴每2个int4打包进1个int8，故打包后weight的shape为(E, K, N//2)
-    weight_pack = torch.randint(-128, 127, (E, K, N // 2), dtype=torch.int8).npu()
-    # 转成FRACTAL_NZ的5维存储shape（E, N//64, K//16, 16, 8）
-    weight_npu = torch_npu.npu_format_cast(weight_pack, 29).view(torch.int32).view(E, N // 64, K // 16, 16, 8)
-    # per-channel场景：weight_scale为int64，shape为(E, N)；per-group场景shape为(E, k_group_num, N)
-    weight_scale = torch.randint(-100, 100, (E, N), dtype=torch.int64).npu()
-    x_scale = torch.randn(M, dtype=torch.float32).npu()
-    # A8W4场景bias（weightAssistMatrix）为必传参数，shape为(E, N)，数据类型float32
-    bias = torch.randn(E, N, dtype=torch.float32).npu()
-    group_list = generate_non_decreasing_sequence(E, M).npu()
-    output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(
-        x, weight_npu, group_list, weight_scale, x_scale, bias=bias, offset=None)
-    # 有效数据截至到group_list[-1]
-    valid_output = output[:group_list[-1], :]
-    valid_output_scale = output_scale[:group_list[-1]]
-    return output, output_scale, output_offset
-
-if __name__ == "__main__":
-    output, output_scale, output_offset = gen_input_data()
-    print(output.shape, output.dtype)
-    print(output_scale.shape, output_scale.dtype)
-    print(output_offset.shape)
-"""
-)
-
-_add_torch_npu_docstr(
     "npu_quant_mm_reduce_scatter",
     """
 torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='sum', bias=None, x1_scale=None, x2_scale=None, quant_scale=None, block_size=0, comm_turn=0, group_sizes=None, amax_output=False, y_dtype=None, x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None) -> (Tensor, Tensor)
@@ -16862,7 +16706,7 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
     output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None, x1_scale=None, x2_scale=None, amax_output=amax_output)
     print(output.shape, output.dtype) # (torch.Size([256, 256]), torch.float16)
     # amax_output为False时返回空Tensor
-    print(amax)
+    print(amax)  # torch.Size([0])
 
 if __name__ == "__main__":
     worksize = 2
@@ -16870,10 +16714,11 @@ if __name__ == "__main__":
     master_port = '50001'
     x1_shape = [128, 512]
     x2_shape = [512, 64]
-    dtype = torch.int8
+    dtype = torch.float16
     amax_output = False  # amax_output为False时返回空Tensor
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-
+    # torch.Size([64, 64]) torch.float16
+    # torch.Size([64, 64]) torch.float16
     amax_output = True  # amax_output为True时返回[1]的float32最大值结果
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 
@@ -16907,10 +16752,10 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50001'
+    master_port = '50002'
     x1_shape = [128, 512]
     x2_shape = [512, 64]
-    dtype = torch.float8_e4m3fn
+    dtype = torch.int8
     amax_output = False  # 情形2不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 

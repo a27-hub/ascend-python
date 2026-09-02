@@ -145,7 +145,7 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
     output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None, x1_scale=None, x2_scale=None, amax_output=amax_output)
     print(output.shape, output.dtype) # (torch.Size([256, 256]), torch.float16)
     # amax_output为False时返回空Tensor
-    print(amax)
+    print(amax)  # torch.Size([0])
 
 if __name__ == "__main__":
     worksize = 2
@@ -153,13 +153,13 @@ if __name__ == "__main__":
     master_port = '50001'
     x1_shape = [128, 512]
     x2_shape = [512, 64]
-    dtype = torch.int8
+    dtype = torch.float16
     amax_output = False  # amax_output为False时返回空Tensor
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-
+    # torch.Size([64, 64]) torch.float16
+    # torch.Size([64, 64]) torch.float16
     amax_output = True  # amax_output为True时返回[1]的float32最大值结果
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-
 ```
 
 输出如下所示
@@ -208,13 +208,12 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50001'
+    master_port = '50002'
     x1_shape = [128, 512]
     x2_shape = [512, 64]
-    dtype = torch.float8_e4m3fn
+    dtype = torch.int8
     amax_output = False  # 情形2不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-
 ```
 
 输出如下所示
