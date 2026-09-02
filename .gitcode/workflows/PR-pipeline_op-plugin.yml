@@ -34,7 +34,7 @@ env:
   img_2_9_0_x86: "pytorch_2.9.0_a1_x86_64_builder:20260704"
   img_2_10_0_x86: "pytorch_2.10.0_a1_x86_64_builder:20260704"
   img_2_11_0_x86: "pytorch_2.11.0_a1_x86_64_builder:20260704"
-  img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260704"
+  img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260704" 
   img_2_13_0_x86: "pytorch_2.13.0_a1_x86_64_builder:20260709"
 
 stages:
@@ -42,9 +42,30 @@ stages:
     name: CodeCheck
     select: selected_by_default
     jobs:
+      # SCA:
+      #   name: SCA
+      #   runs-on: [ dedicate-hosted, x64, 2xlarge ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      #   steps:
+      #     - name: checkout
+      #       uses: checkout
+      #       with:
+      #         ref: refs/merge-requests/${{ env.pr_id }}/merge
+      #     - name: Run SCA PR Scan
+      #       uses: sca-pr-scan
+      #       with:
+      #         scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
+      #         scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
+      #         pr-id: ${{ atomgit.event.pull_request.number }}
+      #         repository-name: ${{ atomgit.repository }}
+      #         project-name: FrameworkPTAdapter
+
+
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
-        runs-on: [ self-hosted, x86, cpu=32 ]
+        # runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         steps:
@@ -69,7 +90,8 @@ stages:
 
       Detect_file_changes:
         name: Detect_file_changes
-        runs-on: [ self-hosted, x86, cpu=32 ]
+        # runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         outputs:
@@ -103,7 +125,7 @@ stages:
                   - '!**/*.doc'
                   - '!**/*.eddx'
                   - '!**/*.svg'
-
+                
           - name: set build skip flag
             id: set-skip
             run: |
