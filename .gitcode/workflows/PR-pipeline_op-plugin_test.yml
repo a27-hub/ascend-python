@@ -61,27 +61,27 @@ stages:
                 pr_number: ${{ env.pr_id }}
                 token: ${{ secrets.GIT_TOKEN_LABELS }}
                 apply_label: 'true'
-      Artifact_size_test:
-        name: Artifact_size_test
-        strategy:
-          fail-fast: false
-          max-parallel: 4
-          matrix:
-            chunk: [ '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25' ]
-        runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
-        steps:
-          - name: Generate 2G artifact test file
-            run: |
-              TEST_FILE="artifact-size-test-50G-${{ matrix.chunk }}.bin"
-              FILE_SIZE=2000000000
-              head -c "${FILE_SIZE}" /dev/urandom > "${TEST_FILE}"
-              test "$(stat -c '%s' "${TEST_FILE}")" -eq "${FILE_SIZE}"
-          - name: Upload 2G artifact
-            uses: upload-artifact
-            with:
-              name: artifact-size-test-50G-${{ matrix.chunk }}
-              path: artifact-size-test-50G-${{ matrix.chunk }}.bin
-              overwrite: true
+      # Artifact_size_test:
+      #   name: Artifact_size_test
+      #   strategy:
+      #     fail-fast: false
+      #     max-parallel: 4
+      #     matrix:
+      #       chunk: [ '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25' ]
+      #   runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
+      #   steps:
+      #     - name: Generate 2G artifact test file
+      #       run: |
+      #         TEST_FILE="artifact-size-test-50G-${{ matrix.chunk }}.bin"
+      #         FILE_SIZE=2000000000
+      #         head -c "${FILE_SIZE}" /dev/urandom > "${TEST_FILE}"
+      #         test "$(stat -c '%s' "${TEST_FILE}")" -eq "${FILE_SIZE}"
+      #     - name: Upload 2G artifact
+      #       uses: upload-artifact
+      #       with:
+      #         name: artifact-size-test-50G-${{ matrix.chunk }}
+      #         path: artifact-size-test-50G-${{ matrix.chunk }}.bin
+      #         overwrite: true
   #     CodeCheck:
   #       name: CodeCheck
   #       runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
