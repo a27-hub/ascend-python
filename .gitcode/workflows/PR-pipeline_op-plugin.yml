@@ -183,7 +183,7 @@ stages:
     jobs:
       UT:
         name: UT
-        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
+        # if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
         uses: .gitcode/workflows/ut_job_test.yml
         with:
           pytorch_branch: ${{ matrix.branch }}
