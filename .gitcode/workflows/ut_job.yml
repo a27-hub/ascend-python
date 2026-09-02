@@ -175,9 +175,9 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh
           source /usr/local/Ascend/nnal/atb/set_env.sh
           ln -sf /usr/local/bin/python"${{ inputs.py_version }}" /usr/local/bin/python
-          # python_path=$(dirname $(dirname $(readlink -f $(which python"${{ inputs.py_version }}"))))
-          # export PATH="${python_path}"/bin:$PATH
-          # python"${{ inputs.py_version }}" -c "import acl;print('npu info:',acl.get_soc_name())" || echo "npu info  get error"
+          python_path=$(dirname $(dirname $(readlink -f $(which python"${{ inputs.py_version }}"))))
+          export PATH="${python_path}"/bin:$PATH
+          python"${{ inputs.py_version }}" -c "import acl;print('npu info:',acl.get_soc_name())" || echo "npu info  get error"
 
           echo "------------------------------------- ENV PATH -------------------------------------"
           echo ${PATH}
