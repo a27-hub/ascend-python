@@ -36,7 +36,7 @@ torch_npu.npu_dual_level_quant_matmul(x1, x2, x1_level0_scale, x2_level0_scale, 
 - **x1\_level1\_scale**（`Tensor`）：必选参数，表示左矩阵的第一级反量化参数，公式中的x1Level1Scale，3维Tensor，不转置，shape为\[M, ceil\(K/level1GroupSize\), 2\]。数据格式仅支持ND。数据类型仅支持`float8_e8m0fnu`。
 - **x2\_level1\_scale**（`Tensor`）：必选参数，表示右矩阵的第一级反量化参数，公式中的x2Level1Scale，3维Tensor，转置，shape为\[N, ceil\(K/level1GroupSize\), 2\]。数据格式仅支持ND。数据类型仅支持`float8_e8m0fnu`。
 - **bias**（`Tensor`）：可选参数，表示输入的偏置矩阵，公式中的bias，1维Tensor，shape为\[N\]。不支持非连续的Tensor。数据格式仅支持ND。数据类型仅支持`float32`。
-- **output\_dtype**（`int`）：必选参数，表示输出的类型，可选类型为`torch.float16`/`torch.half`、`torch.bfloat16`，默认为`torch.float16`。
+- **output\_dtype**（`int`）：必选参数，表示输出的类型，可选类型为`torch.float16`/`torch.half`、`torch.bfloat16`，默认为`torch.bfloat16`。
 
 ## 返回值说明
 
