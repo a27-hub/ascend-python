@@ -13,7 +13,8 @@
 - **计算公式**：
 
   $$
-  out = \sum_{i}^{level0GroupSize} x1Level0Scale @ x2Level0Scale \cdot \sum_{ij}^{level1GroupSize} ((x1Level1Scale @ x1_{ij}) @ (x2Level1Scale @ x2_{ij})) + bias
+  out = \sum_{i}^{level0GroupSize} x1Level0Scale @ x2Level0Scale \cdot \\
+  \sum_{ij}^{level1GroupSize} ((x1Level1Scale @ x1_{ij}) @ (x2Level1Scale @ x2_{ij})) + bias
   $$
 
   - $x1_{ij}$、$x2_{ij}$表示输入的左矩阵和右矩阵，$i$、$j$表示第$i$、$j$个分组；
