@@ -26,6 +26,7 @@ permissions:
   project: read
   repository: read
   pr: write
+  id-token: write
 
 env:
   repo: ${{ atomgit.event.repository.name }}
