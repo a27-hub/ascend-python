@@ -15,7 +15,7 @@
 - 计算公式：
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
     <details>
-    <summary>量化场景A8W8（A指激活矩阵，W指权重矩阵，8指int8数据类型）：</summary>
+    <summary>量化场景A8W8（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -57,7 +57,7 @@
     </details>
 
     <details>
-    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指int8数据类型，4指int4数据类型）：</summary>
+    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型，4指torch.int4数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -71,7 +71,7 @@
       - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
     - **计算过程**：
       1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
-      2. 将左矩阵int8拆为高低4bit两部分：
+      2. 将左矩阵torch.int8拆为高低4bit两部分：
 
           $$
           X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor
@@ -112,7 +112,7 @@
     </details>
 
     <details>
-    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指int4数据类型）：</summary>
+    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指torch.int4数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_4}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -202,9 +202,9 @@
 
          |   DataType    | emax |
          | :-----------: | :--: |
-         | float8_e4m3fn |  8   |
-         |  float8_e5m2  |  15  |
-         |  float4_e2m1  |  2   |
+         | torch.float8_e4m3fn |  8   |
+         | torch.float8_e5m2  |  15  |
+         | torch_npu.float4_e2m1fn_x2  |  2   |
 
          其中，$blocksize$表示每次量化的元素个数，仅支持32。
 
@@ -271,14 +271,14 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **`x`**（`Tensor`）：**必选参数**，矩阵乘法的左矩阵。`shape`支持2维\[m, k\]，数据格式支持$ND$，支持非连续的`Tensor`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.int8`。
-  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`、`torch_npu.float4_e1m2fn_x2`（仅`weight`为$FRACTAL\_NZ$格式时支持）。其中`torch_npu.hifloat8`和float4系列需配置可选参数`x_dtype`为对应类型，此时输入`x`自身的`dtype`不再生效，但仍需保证输入`x`自身的`dtype`为8 bit数据类型，以保证`shape`正确；其中float4内轴`K`需为偶数，以保证8 bit数据可以转换为2个float4。数据格式支持$ND$。
+  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`、`torch_npu.float4_e1m2fn_x2`（仅`weight`为$FRACTAL\_NZ$格式时支持）。其中`torch_npu.hifloat8`和`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`系列需配置可选参数`x_dtype`为对应类型，此时输入`x`自身的`dtype`不再生效，但仍需保证输入`x`自身的`dtype`为8 bit数据类型，以保证`shape`正确；其中float4内轴`K`需为偶数，以保证8 bit数据可以转换为2个float4。数据格式支持$ND$。
 
 - **`weight`**（`List[Tensor]`）：**必选参数**，权重矩阵（矩阵乘法右矩阵），支持非连续的`Tensor`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.int8`。
     - 数据格式为$ND$时，`shape`支持3维\[e, k, n\]。
-    - 数据格式为$FRACTAL\_NZ$（通过接口`npu_format_cast`可实现格式转换）时，`shape`支持5维。以非转置为例，fp8的`shape`为\[e, k/32, n/16, 16, 32\]，fp4的`shape`为\[e, k/64, n/16, 16, 64\]。
+    - 数据格式为$FRACTAL\_NZ$（通过接口`npu_format_cast`可实现格式转换）时，`shape`支持5维。以非转置为例，`torch.float8_e4m3fn`场景的`shape`为\[e, k/32, n/16, 16, 32\]，`torch_npu.float4_e2m1fn_x2`场景的`shape`为\[e, k/64, n/16, 16, 64\]。
   - <term>Ascend 950PR/Ascend 950DT</term>：支持单个`Tensor`（`Tensor`列表长度必须为1）和多个`Tensor`（`Tensor`列表长度为e）。
-    - 数据格式为$ND$时，`shape`支持3维，非转置`shape`为\[\[e, k, n\]\]，转置`shape`为\[\[e, n, k\]\]。数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`，其中`torch_npu.hifloat8`和float4系列需配置可选参数`weight_dtype`为对应类型，此时输入`weight`自身的`dtype`不再生效，但仍需保证输入`weight`自身的`dtype`为8 bit数据类型，以保证`shape`正确；其中float4内轴需为偶数，以保证8 bit数据可以转换为2个float4。
+    - 数据格式为$ND$时，`shape`支持3维，非转置`shape`为\[\[e, k, n\]\]，转置`shape`为\[\[e, n, k\]\]。数据类型支持`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`、`torch.int8`、`torch_npu.hifloat8`，其中`torch_npu.hifloat8`和`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`系列需配置可选参数`weight_dtype`为对应类型，此时输入`weight`自身的`dtype`不再生效，但仍需保证输入`weight`自身的`dtype`为8 bit数据类型，以保证`shape`正确；其中float4内轴需为偶数，以保证8 bit数据可以转换为2个float4。
     - 数据格式为$FRACTAL\_NZ$（通过接口`npu_format_cast`可实现格式转换）时，单单单场景其中`Tensor`的`shape`支持5维，单多单场景其中`Tensor`的`shape`支持4维；数据类型仅支持`torch.float8_e4m3fn`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.float4_e2m1fn_x2`。
 
 - **`weight_scale`**（`List[Tensor]`）：**必选参数**，右矩阵的量化因子。数据格式支持$ND$，支持非连续的`Tensor`。
@@ -323,19 +323,19 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **`x_dtype`**（`int`）：**可选参数**，指定输入`x`的真实数据类型。当前仅支持默认值`None`，表示输入`x`真实的`dtype`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
-  - <term>Ascend 950PR/Ascend 950DT</term>：当`x`为`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`hifloat8`时，`x_dtype`需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`x`为`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`时，`x_dtype`需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
 
 - **`weight_dtype`**（`int`）：**可选参数**，指定输入`weight`的真实数据类型。当前仅支持默认值`None`，表示输入`weight`真实的`dtype`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
-  - <term>Ascend 950PR/Ascend 950DT</term>：当`weight`为`float4_e2m1fn_x2`、`float4_e1m2fn_x2`、`hifloat8`时，`weight_dtype`需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`weight`为`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`时，`weight_dtype`需要传入`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch_npu.hifloat8`。
 
 - **`weight_scale_dtype`**（`int`）：**可选参数**，指定输入`weight_scale`的真实数据类型。默认值为`None`，表示输入`weight_scale`真实的`dtype`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
-  - <term>Ascend 950PR/Ascend 950DT</term>：当`weight_scale`为`float8_e8m0fnu`时，`weight_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`weight_scale`为`torch_npu.float8_e8m0fnu`时，`weight_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
 
 - **`x_scale_dtype`**（`int`）：**可选参数**，指定输入`x_scale`的真实数据类型。默认值为`None`，表示输入`x_scale`真实的`dtype`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
-  - <term>Ascend 950PR/Ascend 950DT</term>：当`x_scale`为`float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当`x_scale`为`torch_npu.float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
 
 ## 返回值说明
 
@@ -357,8 +357,8 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 - WeightNZ场景说明（仅适用于Ascend 950PR/Ascend 950DT）：
   - MXFP4、MXFP8场景支持静态图模式，不支持动态图模式。
   - 单多单MXFP4、MXFP8场景支持单算子模式，不支持图模式。
-  - MX量化、weightND场景下，当输入为fp8数据类型时，需满足N为2对齐；当输入为fp4数据类型时，需满足N为4对齐。
-  - MX量化、weightNZ场景下，当输入为fp8数据类型时，需满足N为64对齐；当输入为fp4数据类型时，需满足N为128对齐。
+  - MX量化、`weight`为ND格式场景下，当输入为`torch.float8_e4m3fn`或`torch.float8_e5m2`数据类型时，需满足N为2对齐；当输入为`torch_npu.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`数据类型时，需满足N为4对齐。
+  - MX量化、`weight`为NZ格式场景下，当输入为`torch.float8_e4m3fn`或`torch.float8_e5m2`数据类型时，需满足N为64对齐；当输入为`torch_npu.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`数据类型时，需满足N为128对齐。
   - MXFP4场景不支持k=2，MXFP4场景需满足K为偶数。
 
 - 参数说明里Shape使用的变量说明：
@@ -368,8 +368,8 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
     MX量化场景下要求（仅适用于Ascend 950PR/Ascend 950DT）：
 
-    - MX量化、weightND场景下，当输入为fp8数据类型时，需满足n为2对齐；当输入为fp4数据类型时，需满足n为4对齐。
-    - MX量化、weightNZ场景下，当输入为fp8数据类型时，需满足n为64对齐；当输入为fp4数据类型时，需满足n为128对齐。
+    - MX量化、`weight`为ND格式场景下，当输入为`torch.float8_e4m3fn`或`torch.float8_e5m2`数据类型时，需满足`n`为2对齐；当输入为`torch_npu.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`数据类型时，需满足`n`为4对齐。
+    - MX量化、`weight`为NZ格式场景下，当输入为`torch.float8_e4m3fn`或`torch.float8_e5m2`数据类型时，需满足`n`为64对齐；当输入为`torch_npu.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`数据类型时，需满足`n`为128对齐。
 
   - k：矩阵乘法reduce轴的大小，取值范围为1-2147483647。
 
@@ -396,7 +396,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     | MxFP8FP4量化（FRACTAL_NZ格式） | torch.float8_e4m3fn | torch_npu.float4_e2m1fn_x2 | torch.int64 | torch_npu.float8_e8m0fnu | torch_npu.float8_e8m0fnu | 暂不支持 | 暂不支持 | 暂不支持 | torch.float8_e4m3fn | torch_npu.float8_e8m0fnu |
 
     > **MxA8W4场景**：
-    > - x数据类型为float8\_e4m3fn，w数据类型为float4\_e2m1fn\_x2。w数据格式要求FRACTAL\_NZ格式, 可通过torch\_npu.npu\_format\_cast接口实现ND转FRACTAL\_NZ格式。k要求32对齐，N要求128对齐。
+    > - `x`数据类型为`torch.float8_e4m3fn`，`weight`数据类型为`torch_npu.float4_e2m1fn_x2`。`weight`数据格式要求$FRACTAL\_NZ$格式，可通过`torch_npu.npu_format_cast`接口实现$ND$转$FRACTAL\_NZ$格式。`k`要求32对齐，N要求128对齐。
     > - 支持单单单和单多单场景。
 
 - 根据输入x、输入weight与输出y的Tensor数量不同，支持以下几种场景。场景中的“单”表示单个张量，“多”表示多个张量。场景顺序为x、weight、y，例如“单多单”表示x为单张量，weight为多张量，y为单张量。
