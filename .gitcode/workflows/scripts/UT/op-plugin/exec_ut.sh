@@ -197,7 +197,7 @@ function main()
     # no torchair in op-plugin access_control
     rm -rf ${PYTORCH_PATH}/test/dynamo/*
     rm -rf ${PYTORCH_PATH}/test/_inductor/*
-    
+
     cd ${PYTORCH_PATH}/ci
     echo "Start to run access_control_test in PTA."
 
