@@ -84,18 +84,18 @@ jobs:
           sha256sum "${test_file}"
       - name: Debug OIDC Token Claims
         run: |
-          echo "=== 1. Check env vars ==="
-          echo "URL set: $([ -n "${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}" ] && echo yes || echo no)"
-          echo "TOKEN set: $([ -n "${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" ] && echo yes || echo no)"
-          echo "=== 2. Fetch OIDC token ==="
+          URL="${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}"
+          if echo "$URL" | grep -q '?'; then
+            FULL_URL="${URL}&audience=pta_pr_obs_for_pytorch"
+          else
+            FULL_URL="${URL}?audience=pta_pr_obs_for_pytorch"
+          fi
           RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" \
-            "${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}?audience=pta_pr_obs_for_pytorch")
+            "$FULL_URL")
           echo "$RESPONSE"
-          echo "=== 3. Extract JWT ==="
           JWT=$(echo "$RESPONSE" | sed -n 's/.*"value":[ ]*"\([^"]*\)".*/\1/p')
           echo "JWT length: ${#JWT}"
-          echo "=== 4. Decode payload ==="
           PAYLOAD=$(echo "$JWT" | cut -d'.' -f2 | tr '_-' '/+')
           case $((${#PAYLOAD} % 4)) in
             2) PAYLOAD="${PAYLOAD}==";;
