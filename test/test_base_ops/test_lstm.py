@@ -1,5 +1,4 @@
 import copy
-import unittest
 import torch
 import numpy as np
 import torch_npu
@@ -84,7 +83,67 @@ class TestLstm(TestCase):
         self.assertEqual(c.shape, (num_layers, 3, 6))
 
     def test_lstm_packed_mixed_dtype_fallback(self):
-        self._assert_packed_fallback(torch.float32, torch.float16)
+        with torch.autocast(device_type=self.device, dtype=torch.float16):
+            self._assert_packed_fallback(torch.float32, torch.float16)
+
+    def test_lstm_packed_forward_args(self):
+        cases = (
+            "input_dim", "input_size", "input_dtype", "hidden_layers", "hidden_batch",
+            "hidden_size", "cell_layers", "cell_batch", "cell_size",
+        )
+        jit_compile = not torch_npu.npu.is_jit_compile_false()
+        try:
+            for jit in (False, True):
+                torch_npu.npu.set_compile_mode(jit_compile=jit)
+                for num_layers in (1, 2):
+                    for bidirectional in (False, True):
+                        model = torch.nn.LSTM(4, 6, num_layers=num_layers,
+                                              bidirectional=bidirectional).to(self.device).eval()
+                        layers = num_layers * (2 if bidirectional else 1)
+                        for name in cases:
+                            with self.subTest(jit=jit, num_layers=num_layers,
+                                              bidirectional=bidirectional, invalid_arg=name):
+                                dtype = torch.float16 if name == "input_dtype" else torch.float32
+                                packed, h0, c0 = self._make_packed_inputs(dtype, num_layers=layers)
+                                if name == "input_dim":
+                                    packed = packed._replace(data=packed.data.unsqueeze(-1))
+                                elif name == "input_size":
+                                    packed = packed._replace(data=packed.data[:, :-1])
+                                elif name.startswith(("hidden_", "cell_")):
+                                    shape = [layers, 3, 6]
+                                    shape[("layers", "batch", "size").index(name.split("_")[1])] += 1
+                                    state = torch.zeros(shape, device=self.device)
+                                    if name.startswith("hidden_"):
+                                        h0 = state
+                                    else:
+                                        c0 = state
+                                # The removed PTA patch called this validator before dispatch.
+                                with self.assertRaises((ValueError, RuntimeError)) as reference:
+                                    model.check_forward_args(packed.data, (h0, c0), packed.batch_sizes)
+                                for call in (lambda: model(packed, (h0, c0)),
+                                             lambda: self._run_raw_packed_lstm(model, packed, (h0, c0))):
+                                    with self.assertRaises(type(reference.exception)) as actual:
+                                        call()
+                                    self.assertEqual(str(actual.exception), str(reference.exception))
+        finally:
+            torch_npu.npu.set_compile_mode(jit_compile=jit_compile)
+
+    def test_lstm_packed_autocast_fallback(self):
+        jit_compile = not torch_npu.npu.is_jit_compile_false()
+        try:
+            for jit in (False, True):
+                torch_npu.npu.set_compile_mode(jit_compile=jit)
+                for device_type in (self.device, "cpu"):
+                    with self.subTest(jit=jit, autocast=device_type), torch.autocast(device_type=device_type):
+                        model = self._build_lstm(num_layers=1)
+                        packed, h0, c0 = self._make_packed_inputs(torch.float16, num_layers=1)
+                        output, (h, c) = model(packed, (h0, c0))
+                        self.assertEqual(output.data.shape, (packed.data.size(0), 6))
+                        self.assertEqual(h.shape, h0.shape)
+                        self.assertEqual(c.shape, c0.shape)
+                        self.assertTrue(torch.isfinite(output.data).all().item())
+        finally:
+            torch_npu.npu.set_compile_mode(jit_compile=jit_compile)
 
     def test_lstm_packed_bf16_fallback(self):
         self._assert_packed_fallback(torch.bfloat16, torch.bfloat16)

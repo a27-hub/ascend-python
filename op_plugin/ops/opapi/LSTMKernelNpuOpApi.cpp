@@ -252,6 +252,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
   DO_COMPATIBILITY(
       aclnnLSTM,
       acl_op::lstm(data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional));
+  op_plugin::utils::check_packed_lstm_args(data, batch_sizes, hx, params, num_layers, bidirectional);
   auto batch_sizes_npu = batch_sizes;
   if (batch_sizes_npu.device() != data.device()) {
     batch_sizes_npu = batch_sizes_npu.to(data.device());

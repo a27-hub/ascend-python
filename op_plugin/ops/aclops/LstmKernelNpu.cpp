@@ -790,6 +790,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     bool train,
     bool bidirectional) {
   at::Tensor batch_sizes_cpu = batch_sizes.to("cpu");
+  op_plugin::utils::check_packed_lstm_args(data, batch_sizes_cpu, hx, params, num_layers, bidirectional);
   at::Tensor y;
   at::Tensor h;
   at::Tensor c;
