@@ -22,7 +22,7 @@ env:
   repo: ${{ atomgit.event.repository.name }}
   pr_id: ${{ atomgit.event.pull_request.number }}
   org_name: "Ascend"
-  img_master_arm: "pytorch_master_a2_aarch64_builder:20260704"
+  img_master_arm: "pytorch_master_a2_aarch64_builder:20260903"
   img_2_7_1_arm: "pytorch_2.7.1_a2_aarch64_builder:20260704"
   img_2_9_0_arm: "pytorch_2.9.0_a2_aarch64_builder:20260704"
   img_2_10_0_arm: "pytorch_2.10.0_a2_aarch64_builder:20260704"
