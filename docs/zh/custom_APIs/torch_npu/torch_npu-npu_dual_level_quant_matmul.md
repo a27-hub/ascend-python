@@ -1,4 +1,4 @@
-# torch\_npu.npu\_dual\_level\_quant\_matmul
+# torch_npu.npu_dual_level_quant_matmul
 
 ## 产品支持情况
 
@@ -12,14 +12,16 @@
 
 - **计算公式**：
 
-  ![](../../figures/zh-cn_formulaimage_0000002548302759.png)
+  $$
+  out = \sum_{i}^{level0GroupSize} x1Level0Scale @ x2Level0Scale \cdot \sum_{ij}^{level1GroupSize} ((x1Level1Scale @ x1_{ij}) @ (x2Level1Scale @ x2_{ij})) + bias
+  $$
 
-  - x1<sub>ij</sub>、x2<sub>ij</sub>表示输入的左矩阵和右矩阵，i、j表示第i、j个分组；
-  - x1Level1Scale为x1的第一级反量化参数，为MX量化，level1GroupSize为32；
-  - x2Level1Scale为x2的第一级反量化参数，为MX量化，level1GroupSize为32；
-  - x1Level0Scale为x1的第零级反量化参数，为PerGroup量化，level0GroupSize为512；
-  - x2Level0Scale为x2的第零级反量化参数，为PerGroup量化，level0GroupSize为512；
-  - bias为偏置矩阵。
+  - $x1_{ij}$、$x2_{ij}$表示输入的左矩阵和右矩阵，$i$、$j$表示第$i$、$j$个分组；
+  - $x1Level1Scale$为$x1$的第一级反量化参数，为MX量化，$level1GroupSize$为32；
+  - $x2Level1Scale$为$x2$的第一级反量化参数，为MX量化，$level1GroupSize$为32；
+  - $x1Level0Scale$为$x1$的第零级反量化参数，为PerGroup量化，$level0GroupSize$为512；
+  - $x2Level0Scale$为$x2$的第零级反量化参数，为PerGroup量化，$level0GroupSize$为512；
+  - $bias$为偏置矩阵。
 
 ## 函数原型
 
@@ -29,18 +31,18 @@ torch_npu.npu_dual_level_quant_matmul(x1, x2, x1_level0_scale, x2_level0_scale, 
 
 ## 参数说明
 
-- **x1**（`Tensor`）：必选参数，表示输入的左矩阵，公式中的x1<sub>ij</sub>，2维Tensor，不转置，shape为\[M, K\]。数据格式仅支持ND。数据类型仅支持`float4_e2m1fn_x2`。
-- **x2**（`Tensor`）：必选参数，表示输入的右矩阵，公式中的x2<sub>ij</sub>，2维Tensor，转置，shape为\[N, K\]。数据格式仅支持FRACTAL\_NZ。数据类型仅支持`float4_e2m1fn_x2`。
-- **x1\_level0\_scale**（`Tensor`）：必选参数，表示左矩阵的第零级反量化参数，公式中的x1Level0Scale，2维Tensor，不转置，shape为\[M, ceil\(K/level0GroupSize\)\]。数据格式仅支持ND。数据类型仅支持`float32`。
-- **x2\_level0\_scale**（`Tensor`）：必选参数，表示右矩阵的第零级反量化参数，公式中的x2Level0Scale，2维Tensor，不转置，shape为\[ceil\(K/level0GroupSize\), N\]。数据格式仅支持ND。数据类型仅支持`float32`。
-- **x1\_level1\_scale**（`Tensor`）：必选参数，表示左矩阵的第一级反量化参数，公式中的x1Level1Scale，3维Tensor，不转置，shape为\[M, ceil\(K/level1GroupSize\), 2\]。数据格式仅支持ND。数据类型仅支持`float8_e8m0fnu`。
-- **x2\_level1\_scale**（`Tensor`）：必选参数，表示右矩阵的第一级反量化参数，公式中的x2Level1Scale，3维Tensor，转置，shape为\[N, ceil\(K/level1GroupSize\), 2\]。数据格式仅支持ND。数据类型仅支持`float8_e8m0fnu`。
-- **bias**（`Tensor`）：可选参数，表示输入的偏置矩阵，公式中的bias，1维Tensor，shape为\[N\]。不支持非连续的Tensor。数据格式仅支持ND。数据类型仅支持`float32`。
-- **output\_dtype**（`int`）：必选参数，表示输出的类型，可选类型为`torch.float16`/`torch.half`、`torch.bfloat16`，默认为`torch.bfloat16`。
+- **x1**(`Tensor`)：必选参数，表示输入的左矩阵，对应公式中的$x1_{ij}$，2维Tensor，不转置，shape为$[M, K]$。数据格式仅支持$ND$。数据类型仅支持`float4_e2m1fn_x2`。
+- **x2**(`Tensor`)：必选参数，表示输入的右矩阵，对应公式中的$x2_{ij}$，2维Tensor，转置，shape为$[N, K]$。数据格式仅支持$FRACTAL\_NZ$。数据类型仅支持`float4_e2m1fn_x2`。
+- **x1\_level0\_scale**(`Tensor`)：必选参数，表示左矩阵的第零级反量化参数，对应公式中的$x1Level0Scale$，2维Tensor，不转置，shape为$[M, ceil(K/level0GroupSize)]$。数据格式仅支持$ND$。数据类型仅支持`float32`。
+- **x2\_level0\_scale**(`Tensor`)：必选参数，表示右矩阵的第零级反量化参数，对应公式中的$x2Level0Scale$，2维Tensor，不转置，shape为$[ceil(K/level0GroupSize), N]$。数据格式仅支持$ND$。数据类型仅支持`float32`。
+- **x1\_level1\_scale**(`Tensor`)：必选参数，表示左矩阵的第一级反量化参数，对应公式中的$x1Level1Scale$，3维Tensor，不转置，shape为$[M, ceil(K/level1GroupSize), 2]$。数据格式仅支持$ND$。数据类型仅支持`float8_e8m0fnu`。
+- **x2\_level1\_scale**(`Tensor`)：必选参数，表示右矩阵的第一级反量化参数，对应公式中的$x2Level1Scale$，3维Tensor，转置，shape为$[N, ceil(K/level1GroupSize), 2]$。数据格式仅支持$ND$。数据类型仅支持`float8_e8m0fnu`。
+- **bias**(`Tensor`)：可选参数，表示输入的偏置矩阵，对应公式中的$bias$，1维Tensor，shape为$[N]$。不支持非连续的Tensor。数据格式仅支持$ND$。数据类型仅支持`float32`。
+- **output\_dtype**(`int`)：必选参数，表示输出的类型，可选类型为`torch.float16`/`torch.half`、`torch.bfloat16`，默认为`torch.bfloat16`。
 
 ## 返回值说明
 
-**y**（`Tensor`）：表示计算结果，公式中的out，数据类型由`output_dtype`决定。数据格式支持ND。
+**y**(`Tensor`)：表示计算结果，对应公式中的$out$，数据类型由`output_dtype`决定。数据格式支持$ND$。
 
 ## 约束说明
 
