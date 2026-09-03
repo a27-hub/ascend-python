@@ -57,7 +57,7 @@
     </details>
 
     <details>
-    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型，4指torch_npu.int4数据类型）：</summary>
+    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型，4指torch.int4数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -112,7 +112,7 @@
     </details>
 
     <details>
-    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指torch_npu.int4数据类型）：</summary>
+    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指torch.int4数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_4}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
