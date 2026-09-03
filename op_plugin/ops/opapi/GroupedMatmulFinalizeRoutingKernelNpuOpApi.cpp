@@ -19,6 +19,8 @@
 namespace op_api {
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 constexpr int64_t INT4_NUMS_IN_INT32 = 8;
+constexpr int64_t OUTPUT_DTYPE_FLOAT32 = 0;
+constexpr int64_t OUTPUT_DTYPE_BFLOAT16 = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 
 static bool is_nz_format(const at::Tensor& w)
@@ -162,12 +164,27 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     TensorWrapper pertoken_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
 
     at::ScalarType dst_type = c10::value_or_else(dtype, [] {return at::ScalarType::Float;});
-    TORCH_CHECK(dst_type == at::ScalarType::Float,
-        "The dtype should be float", OPS_ERROR(ErrCode::PARAM));
+    bool is_bfloat16_output = dst_type == at::ScalarType::BFloat16;
+    TORCH_CHECK(dst_type == at::ScalarType::Float || is_bfloat16_output,
+        "The dtype should be float32 or bfloat16", OPS_ERROR(ErrCode::PARAM));
 
-    if (shared_input.has_value()) {
-        TORCH_CHECK(dst_type == at::ScalarType::Float,
-                    "When shared_input and logit is not None, the dtype must be float32",
+    if (is_bfloat16_output) {
+        TORCH_CHECK(is_weight_nz,
+                    "When dtype is bfloat16, weight must be FRACTAL_NZ format.",
+                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(scale_dtype.has_value() && pertoken_scale_dtype.has_value(),
+                    "When dtype is bfloat16, scale_dtype and pertoken_scale_dtype must be float8_e8m0fnu.",
+                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(!bias_real.defined(),
+                    "When dtype is bfloat16, bias must be None.",
+                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(row_index_real.defined() && row_index_real.scalar_type() == at::ScalarType::Int,
+                    "When dtype is bfloat16, row_index must be int32.",
+                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(logit_real.defined() &&
+                        (logit_real.scalar_type() == at::ScalarType::Float ||
+                         logit_real.scalar_type() == at::ScalarType::BFloat16),
+                    "When dtype is bfloat16, logit must be float32 or bfloat16.",
                     OPS_ERROR(ErrCode::PARAM));
     }
     c10::TensorOptions options = x.options().dtype(dst_type);
@@ -175,9 +192,12 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     bool transposeX = false;
     bool transposeW = false;
-    int64_t dtype_real = 0;
+    int64_t dtype_real = is_bfloat16_output ? OUTPUT_DTYPE_BFLOAT16 : OUTPUT_DTYPE_FLOAT32;
     if (is_weight_nz) {
         static const bool is_v2_available = check_aclnn_kernel_available("aclnnGroupedMatmulFinalizeRoutingWeightNzV2");
+        TORCH_CHECK(!is_bfloat16_output || is_v2_available,
+                    "When dtype is bfloat16, aclnnGroupedMatmulFinalizeRoutingWeightNzV2 must be available.",
+                    OPS_ERROR(ErrCode::NOT_SUPPORT));
         if (is_v2_available) {
             EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingWeightNzV2, x_wrapper, w_wrapper, scale_wrapper, bias_real, offset_real, antiquant_scale_real, antiquant_offset_real, pertoken_scale_wrapper, group_list, shared_input_real, logit_real,
                          row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, tuning_config_real, result);
