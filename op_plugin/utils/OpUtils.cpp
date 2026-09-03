@@ -15,6 +15,7 @@
 
 #include "op_plugin/utils/NamedTensorCompat.h"
 #include <ATen/autocast_mode.h>
+#include <torch/csrc/jit/runtime/interpreter.h>
 
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
@@ -421,7 +422,7 @@ void check_packed_lstm_args(
     at::TensorList params, int64_t num_layers, bool bidirectional)
 {
     const auto& weight = params.at(0);
-    if (data.scalar_type() != weight.scalar_type()) {
+    if (data.scalar_type() != weight.scalar_type() && !torch::jit::in_torchscript_runtime()) {
         // Same device set as torch._C._is_any_autocast_enabled in RNNBase.check_input.
         bool autocast_enabled = false;
         for (auto device : {at::kCPU, at::kCUDA, at::kXPU, at::kIPU, at::kXLA,
