@@ -12,13 +12,13 @@
 
 采集等级，Enum类型。用于作为_ExperimentalConfig类的profiler_level参数。
 
-## 函数原型
+## 类签名
 
 ```python
 torch_npu.profiler.ProfilerLevel
 ```
 
-## 参数说明
+## 成员说明
 
 - **torch_npu.profiler.ProfilerLevel.Level_none**：可选参数，不采集所有Level层级控制的数据，即关闭profiler_level。
 
@@ -30,11 +30,7 @@ torch_npu.profiler.ProfilerLevel
 
 默认值为torch_npu.profiler.ProfilerLevel.Level0。
 
-## 返回值说明
-
-无
-
-## 调用示例
+## 使用示例
 
 以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 
