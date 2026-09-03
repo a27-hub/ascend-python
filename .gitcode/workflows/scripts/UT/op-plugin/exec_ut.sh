@@ -183,53 +183,24 @@ function main()
     rm -rf ${PYTORCH_PATH}/test/test_jit*.py
     rm -rf ${PYTORCH_PATH}/test/jit
     sed -i "s/'test_jit_fuser_te',/ /g" ${PYTORCH_PATH}/ci/access_control/constants.py
-#        if [ ${PYTORCH_VERSION} = "master" ] || [ "${PYTORCH_VERSION:0:6}" == "v2.6.0" ];then
-#            rm -rf ${PYTORCH_PATH}/test/distributed/test_register_sharding.py
-#        fi
+
     rm -rf ${PYTORCH_PATH}/test/distributed/test_register_sharding.py
     rm -rf ${PYTORCH_PATH}/test/distributed/fsdp2
     if [ "${ARCH}" == "aarch64" ]; then
         rm -rf ${PYTORCH_PATH}/test/trans_contiguous
     fi
 
-#    echo "Skip test_to_non_blocking in test_npu. [not stable]"
-#    sed -i 's/_test_to_non_blocking(src, try_non_blocking, dst)/ /g' ${PYTORCH_PATH}/test/npu/test_npu.py
-
-
     # exec ut
-    if [ "${PYTORCH_VERSION}" \> "v2.0.1" ] || [ "${PYTORCH_VERSION}" == "master" ]; then
+    if [ "${PYTORCH_VERSION}" == "master" ]; then
         export DISABLED_TESTS_FILE=${PYTORCH_PATH}/test/unsupported_test_cases/.pytorch-disabled-tests.json
     fi
     # no torchair in op-plugin access_control
     rm -rf ${PYTORCH_PATH}/test/dynamo/*
     rm -rf ${PYTORCH_PATH}/test/_inductor/*
-
-    if [ "${PY_VERSION}" == "3.7" ]; then
-        export PATH=/opt/_internal/cpython-3.7.5/bin:$PATH
-    elif [ "${PY_VERSION}" == "3.8" ]; then
-        if [ "${ARCH}" == "x86_64" ]; then
-            export PATH=/opt/_internal/cpython-3.8.1/bin:$PATH
-        else
-            export PATH=/opt/_internal/cpython-3.8.19/bin:$PATH
-        fi
-    elif [ "${PY_VERSION}" == "3.9" ]; then
-        if [ "${ARCH}" == "x86_64" ]; then
-            export PATH=/opt/_internal/cpython-3.9.21/bin:$PATH
-        else
-            export PATH=/opt/_internal/cpython-3.9.19/bin:$PATH
-        fi
-    elif [ "${PY_VERSION}" == "3.10" ]; then
-        if [ "${ARCH}" == "x86_64" ]; then
-            export PATH=/opt/_internal/cpython-3.10.16/bin:$PATH
-        else
-            export PATH=/opt/_internal/cpython-3.10.16/bin:$PATH
-        fi
-    fi
+    
     cd ${PYTORCH_PATH}/ci
     echo "Start to run access_control_test in PTA."
-    if [ "${PYTORCH_VERSION:0:6}" == "v2.6.0" ]; then
-        cp -f ${WORKSPACE}/cie/.gitcode/workflows/scripts/UT/pta/test_manager.py ${PYTORCH_PATH}/ci/access_control/test_manager.py
-    fi
+
     # export ASCEND_LAUNCH_BLOCKING=0
     python"${PY_VERSION}" access_control_test.py --rank=${TEST_RANK} --world_size=${TEST_WORLD_SIZE}
 
