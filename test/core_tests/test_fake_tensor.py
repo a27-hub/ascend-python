@@ -29,6 +29,7 @@ from torch._subclasses.fake_tensor import (
     DynamicOutputShapeException,
     UnsupportedOperatorException,
 )
+from torch.fx.experimental.symbolic_shapes import ShapeEnv
 from torch.fx.passes.fake_tensor_prop import FakeTensorProp
 from torch.testing import FileCheck
 from torch.testing._internal.common_device_type import instantiate_device_type_tests, OpDTypes
@@ -2930,6 +2931,33 @@ class TestGroupedMatmul(TestCase):
             with self.assertRaises(RuntimeError):
                 torch_npu.npu_grouped_matmul(x, w, bias=None, scale=scale, group_list=group_list, split_item=split_item, group_type=0, group_list_type=0, output_dtype=torch.float16)
 
+    def test_npu_grouped_matmul_meta_quant_dynamic_m(self):
+        shape_env = ShapeEnv()
+        with FakeTensorMode(shape_env=shape_env):
+            dynamic_m = shape_env.create_unbacked_symint()
+            k = 128
+            n = 128
+            num_experts = 2
+            x = [torch.empty((dynamic_m, k), dtype=torch.float8_e4m3fn, device="npu")]
+            weight = [torch.empty((num_experts, k, n), dtype=torch.float8_e5m2, device="npu")]
+            group_list = torch.empty((num_experts,), dtype=torch.int64, device="npu")
+            scale = [torch.empty((num_experts, n), dtype=torch.int64, device="npu")]
+
+            result = torch_npu.npu_grouped_matmul(
+                x,
+                weight,
+                bias=None,
+                scale=scale,
+                group_list=group_list,
+                split_item=2,
+                group_type=0,
+                group_list_type=0,
+                output_dtype=torch.float16,
+            )
+
+            self.assertEqual(result[0].shape[1], n)
+
+
 class TestQuantMatmul(TestCase):
     def test_npu_quant_matmul_meta(self):
         with FakeTensorMode():
@@ -5266,7 +5294,7 @@ class TestNpuDSA(TestCase):
             self.assertEqual(d_weights.dtype, weights.dtype)
             self.assertEqual(d_weights.shape, weights.shape)
 
-    def gen_npu_sparse_lightning_indexer_grad_kl_loss_inputs(self, seqlens_list_array, seqlens_list_kv_array, isTnd):
+    def gen_npu_sparse_lightning_indexer_grad_kl_loss_inputs(self, seqlens_list_array, seqlens_list_kv_array, isTnd, isSinks):
         B = 1
         NQuery = 64
         NQueryIndex = 64
@@ -5296,6 +5324,10 @@ class TestNpuDSA(TestCase):
         scale = (b - a) / (2 * kk)
         shift = (a + b) / 2
         weights = weights * scale + shift
+        if isSinks:
+            sinks = torch.randn(NQuery, dtype=torch.float, device=torch.device('npu'))
+        else:
+            sinks = None
         if isTnd:
             sparse_indices = torch.zeros(S1, N2, topK).to(torch.int32).npu()
             tIdx = 0
@@ -5328,7 +5360,7 @@ class TestNpuDSA(TestCase):
 
             softmax_max = torch.randn(N2, S1, NQueryIndex, dtype=torch.float, device=torch.device('npu'))
             softmax_sum = torch.randn(N2, S1, NQueryIndex, dtype=torch.float, device=torch.device('npu'))
-            return q_tnd, k_tnd, q_index_tnd, k_index_tnd, q_rope_tnd, k_rope_tnd, weights_tnd, sparse_indices, softmax_max, softmax_sum
+            return q_tnd, k_tnd, q_index_tnd, k_index_tnd, q_rope_tnd, k_rope_tnd, weights_tnd, sparse_indices, softmax_max, softmax_sum, sinks
         else:
             sparse_indices = torch.zeros(B, S1, N2, topK).to(torch.int32).npu()
             for s1Idx in range(S1):
@@ -5346,7 +5378,7 @@ class TestNpuDSA(TestCase):
 
             softmax_max = torch.randn(B, N2, S1, NQueryIndex, dtype=torch.float, device=torch.device('npu'))
             softmax_sum = torch.randn(B, N2, S1, NQueryIndex, dtype=torch.float, device=torch.device('npu'))
-            return q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum
+            return q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum, sinks
 
     def test_dsa_npu_sparse_lightning_indexer_grad_kl_loss(self):
         with FakeTensorMode():
@@ -5356,13 +5388,14 @@ class TestNpuDSA(TestCase):
             isTnd = True
             sparse_mode = 3
             scale = 1.0
-            q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum = self.gen_npu_sparse_lightning_indexer_grad_kl_loss_inputs(
-                actual_seq_qlen, actual_seq_kvlen, isTnd)
+            isSinks = True
+            q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum, sinks = self.gen_npu_sparse_lightning_indexer_grad_kl_loss_inputs(
+                actual_seq_qlen, actual_seq_kvlen, isTnd, isSinks)
 
             d_query_index, d_key_index, d_weights, loss = torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(
                 q, k, q_index, k_index, weights, sparse_indices, softmax_max, softmax_sum, scale,
                 query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_kvlen,
-                layout=input_layout, sparse_mode=sparse_mode, pre_tokens=65536, next_tokens=65536)
+                layout=input_layout, sparse_mode=sparse_mode, pre_tokens=65536, next_tokens=65536, sinks=sinks)
             expect_loss = torch.empty([1], dtype=torch.float32)
 
             self.assertEqual(d_query_index.dtype, q_index.dtype)
