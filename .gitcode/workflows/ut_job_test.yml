@@ -64,6 +64,7 @@ jobs:
           name: modify_files.txt
           path: ./
 
+      - name: checkout op-plugin
         uses: checkout
         with:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
