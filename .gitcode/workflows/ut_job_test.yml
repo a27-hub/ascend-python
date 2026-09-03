@@ -1,0 +1,85 @@
+name: UT Job
+
+on:
+  workflow_call:
+    inputs:
+      py_version:
+        required: false
+        type: string
+        default: "3.10"
+      REMOTE_URL:
+        required: false
+        type: string
+        default: ${{ env.ATOMGIT_REPOSITORY_URL }}
+      pr_id:
+        required: false
+        type: string
+        default: ${{ atomgit.event.pull_request.number }}
+      CP_DOCKER_IMG:
+        required: true
+        type: string
+      pytorch_branch:
+        required: true
+        type: string
+      runs_on_arch:
+        required: false
+        type: string
+        default: "x64"
+      runs_on_os:
+        required: false
+        type: string
+        default: "euler"
+      runs_on_spec:
+        required: false
+        type: string
+        default: "large"
+      TEST_RANK:
+        required: false
+        type: string
+      TEST_WORLD_SIZE:
+        required: false
+        type: string
+
+jobs:
+  JOB_UT:
+    name: JOB_UT
+    select: selected_by_default
+    runs-on: [ self-hosted, npu=1 ]
+    env:
+      TEST_RANK: ${{ inputs.TEST_RANK }}
+      TEST_WORLD_SIZE: ${{ inputs.TEST_WORLD_SIZE }}
+    steps:
+      - name: print env
+        run: |
+          env
+      - name: Download build artifact
+        uses: download-artifact
+        with:
+          name: op-plugin-${{ inputs.pytorch_branch }}-arm
+          path: ../output/${{ inputs.pr_id }}
+          
+      - name: download modify_files.txt artifact
+        uses: download-artifact
+        with:
+          name: modify_files.txt
+          path: ./
+
+        uses: checkout
+        with:
+          ref: refs/merge-requests/${{ inputs.pr_id }}/merge
+          fetch-depth: 1
+          path: ./CODE
+
+      - name: UT
+        run: |
+          # git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
+          git clone -b  master_0903 https://gitcode.com/ComputingActionTest/op-plugin_0731.git cie
+          ls -R cie/.gitcode/workflows
+          # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
+          cp -rf ../output/${{ inputs.pr_id }}/* ./
+          ls ${ATOMGIT_WORKSPACE}
+          bash cie/.gitcode/workflows/scripts/UT/op-plugin_ut_general.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          echo "pytorch_branch: ${{ inputs.pytorch_branch }}"
+          echo "py_version: 3.10"
+          echo "pr_id: ${{ env.pr_id }}"
+          echo "atomgit.event.pull_request.base.ref: ${{ atomgit.event.pull_request.base.ref }}"
