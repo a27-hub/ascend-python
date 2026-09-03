@@ -87,7 +87,7 @@ jobs:
         with:
           audience: pta_pr_obs_for_pytorch
           region: cn-north-4
-          agency_urn: iam::0d336831568090260fd5c01450729240:agency:pta_obs_pr
+          agency_urn: iam::0d336831568090260fd5c01450729240:agency:pta_obs_pr_trust
           provider_urn: iam::0d336831568090260fd5c01450729240:oidcProvider:pta_obs_pr
       - name: Upload to OBS
         uses: obs-upload
