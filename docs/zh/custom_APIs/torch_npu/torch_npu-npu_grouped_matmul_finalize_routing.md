@@ -96,9 +96,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
   <!-- end id15 -->
 
 - **`shared_input`**（`Tensor`）：**可选参数**，MoE计算中共享专家的输出，需要与MoE专家的输出进行combine操作，支持非连续的Tensor。数据类型支持`bfloat16`，数据格式支持$ND$，维度\(batch/dp, n\)，`n`与`scale`的`n`一致，`batch/dp`取值范围\[1, 2\*1024\]，`batch`取值范围\[1, 16\*1024\]。
-- **`logit`**（`Tensor`）：**可选参数**，MoE专家对各个token的logit大小，矩阵乘的计算输出与该logit做乘法，然后索引进行combine，支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度\(m,\)，`m`与`x`的`m`一致。
-
-  <!-- npu="950" id16 -->
+- **`logit`**（`Tensor`）：**可选参数**，MoE专家对各个token的logit大小，矩阵乘的计算输出与该logit做乘法，然后索引进行combine，支持非连续的Tensor。数据类型支持`float32`，在<term>Ascend 950PR/Ascend 950DT</term>的mx量化且输出为`bfloat16`场景下支持`float32`和`bfloat16`，数据格式支持$ND$，维度\(m,\)，`m`与`x`的`m`一致。
   - <term>Ascend 950PR/Ascend 950DT</term>：该参数必须传入。
   <!-- end id16 -->
 
@@ -109,11 +107,11 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
   <!-- end id17 -->
   <!-- npu="950" id18 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - mx量化场景下，必选参数，数据类型支持`int64`。
+    - mx量化场景下，必选参数，输出为`float32`时数据类型支持`int64`；输出为`bfloat16`时数据类型支持`int32`。
     - pertoken量化场景下，**必选参数**。当输入的`x`数据类型为`int8`时，`row_index`数据类型支持`int64`和`int32`；当输入的`x`数据类型为`float8_e4m3fn`或`hifloat8`时，`row_index`数据类型支持`int64`；
   <!-- end id18 -->
 
-- **`dtype`**（`ScalarType`）：**可选参数**，指定GroupedMatMul计算的输出类型。0表示`float32`，1表示`float16`，2表示`bfloat16`。默认值为0。
+- **`dtype`**（`ScalarType`）：**可选参数**，指定GroupedMatMul计算的输出类型。0表示`float32`，1表示`float16`，2表示`bfloat16`。默认值为0。当前接口支持输出`float32`；在<term>Ascend 950PR/Ascend 950DT</term>的mx量化、权重为FRACTAL\_NZ格式且`bias`为None场景下支持输出`bfloat16`。
 - **`shared_input_weight`**（`float`）：**可选参数**，共享专家与MoE专家进行combine的系数，`shared_input`先与该参数乘，然后再和MoE专家结果累加。默认为1.0。
 - **`shared_input_offset`**（`int`）：**可选参数**，共享专家输出的在总输出中的偏移。默认值为0，`shared_input_offset`+`shared_input`的第一维度总和不允许超过`batch`。
 - **`output_bs`**（`int`）：**可选参数**，输出的最高维大小。默认值为0。
@@ -160,7 +158,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 
 ## 返回值说明
 
-**`y`**（`Tensor`）：一个2D的Tensor，支持非连续的Tensor，输出的数据类型固定为`float32`，维度为\(batch, n\)。
+**`y`**（`Tensor`）：一个2D的Tensor，支持非连续的Tensor，输出的数据类型支持`float32`；在<term>Ascend 950PR/Ascend 950DT</term>的mx量化、权重为FRACTAL\_NZ格式且`bias`为None场景下支持`bfloat16`。维度为\(batch, n\)。
 
 ## 约束说明
 
@@ -188,6 +186,11 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     | float8_e4m3fn | float8_e5m2 | int64 | float8_e8m0 | bfloat16 | float32 | float8_e8m0 | bfloat16 | float32 | int64 | float32 |
     | float8_e4m3fn | float8_e4m3fn | int64 | float8_e8m0 | bfloat16 | float32 | float8_e8m0 | bfloat16 | float32 | int64 | float32 |
     | float4_e2m1fn_x2 | float4_e2m1fn_x2 | int64 | float8_e8m0 | bfloat16 | float32 | float8_e8m0 | bfloat16 | float32 | int64 | float32 |
+    | float8_e5m2 | float8_e5m2 | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
+    | float8_e5m2 | float8_e4m3fn | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
+    | float8_e4m3fn | float8_e5m2 | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
+    | float8_e4m3fn | float8_e4m3fn | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
+    | float4_e2m1fn_x2 | float4_e2m1fn_x2 | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
     | int8 | int8 | int64 | float32 | bfloat16/None | None | float32/None | bfloat16 | float32 | int64 | float32 |
     | int8 | int8 | int64 | bfloat16 | bfloat16/None | None | float32/None | bfloat16 | float32 | int64 | float32 |
     | int8 | int8 | int64 | float32 | bfloat16/None | None | float32/None | bfloat16 | float32 | int32 | float32 |
@@ -202,7 +205,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     > - `x`数据类型为`float8_e4m3fn`，`w`数据类型为`float4_e2m1fn_x2`。`w`数据格式要求FRACTAL\_NZ格式，可通过torch\_npu.npu\_format\_cast接口实现ND转FRACTAL\_NZ格式。
     > - `x`要求非转置，`w`要求转置，`w`的shape支持\(e, n, k\), 要求e<=1024、k和n满足32对齐。图模式场景下要求e不等于1，同时k\>64。
     > - `shared_input_offset`+`shared_input`的第一维度总和不允许超过`output_bs`。
-  <!-- end id28 -->
+    > - mx量化输出为`bfloat16`时，`w`数据格式要求FRACTAL\_NZ格式，`bias`必须为None，`row_index`必须为`int32`。
 
 ## 调用示例
 
