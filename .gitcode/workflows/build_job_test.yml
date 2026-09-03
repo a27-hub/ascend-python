@@ -82,6 +82,13 @@ jobs:
           head -c 1048576 /dev/urandom > "${test_file}"
           test "$(stat -c '%s' "${test_file}")" -eq 1048576
           sha256sum "${test_file}"
+      - name: Debug OIDC Token Claims
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" \
+            "${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}?audience=pta_pr_obs_for_pytorch")
+          TOKEN=$(echo "$RESPONSE" | jq -r '.value')
+          # 解码 JWT payload (第二段)
+          echo "$TOKEN" | cut -d'.' -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq .
       - name: oidc-auth
         uses: huaweicloud-oidc-auth
         with:
