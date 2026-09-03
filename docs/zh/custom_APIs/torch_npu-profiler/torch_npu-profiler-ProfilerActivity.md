@@ -15,9 +15,7 @@
 ## 类签名
 
 ```python
-class torch_npu.profiler.ProfilerActivity(Enum):
-    CPU = 1
-    NPU = 2
+torch_npu.profiler.ProfilerActivity
 ```
 
 ## 成员说明
