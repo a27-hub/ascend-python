@@ -25,12 +25,17 @@ on:
         required: false
         type: string
         default: "--user root -v /data/torchnpu-ccache:/ccache"
+      # 调度标签 (变量化): 编译任务默认调度到 8 卡机
+      RUNNER_LABEL:
+        required: false
+        type: string
+        default: "npu=8"
 
 jobs:
   Compile:
     name: Compile
     select: selected_by_default
-    runs-on: [ self-hosted, os=euler, role=compile ]
+    runs-on: [ self-hosted, "${{ inputs.RUNNER_LABEL }}" ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: ${{ inputs.CONTAINER_OPTIONS }}
@@ -40,7 +45,7 @@ jobs:
     steps:
       - name: print env
         run: |
-          echo "[ self-hosted, build=build ]"
+          echo "RUNNER_LABEL=${{ inputs.RUNNER_LABEL }}"
           echo "pytorch_branch=${{ inputs.pytorch_branch }}"
           echo "py_version=3.10"
           echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"

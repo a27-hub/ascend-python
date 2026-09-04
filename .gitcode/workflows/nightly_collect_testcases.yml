@@ -42,12 +42,17 @@ on:
         required: false
         type: string
         default: "32"
+      # 调度标签 (变量化): 收集任务默认调度到 8 卡机
+      RUNNER_LABEL:
+        required: false
+        type: string
+        default: "npu=8"
 
 jobs:
   Collect:
     name: Collect Test Cases
     select: selected_by_default
-    runs-on: [ self-hosted, os=euler ]
+    runs-on: [ self-hosted, "${{ inputs.RUNNER_LABEL }}" ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: ${{ inputs.CONTAINER_OPTIONS }}

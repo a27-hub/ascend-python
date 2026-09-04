@@ -43,6 +43,7 @@ stages:
         with:
           pytorch_branch: ${{ env.pytorch_branch }}
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          RUNNER_LABEL: "npu=8"
 
   collect:
     name: Collect Test Cases
@@ -56,6 +57,7 @@ stages:
           pytorch_branch: ${{ env.pytorch_branch }}
           REGULAR_NPU_SHARDS: ${{ env.TEST_WORLD_SIZE }}
           DISTRIBUTED_SHARDS: ${{ env.DISTRIBUTED_WORLD_SIZE }}
+          RUNNER_LABEL: "npu=8"
 
   unit_test:
     name: Unit Test (run sharded cases from collect stage)

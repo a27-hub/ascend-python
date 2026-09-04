@@ -25,13 +25,18 @@ on:
         required: false
         type: string
         default: "--user root"
+      # 调度标签 (变量化): 报告聚合默认调度到单卡机
+      RUNNER_LABEL:
+        required: false
+        type: string
+        default: "npu=1"
 
 jobs:
   report:
     name: Generate Test Report
     # 无论前面阶段成败都生成报告 (用例失败不阻断 nightly 流水线)
     select: always
-    runs-on: [ self-hosted, os=euler ]
+    runs-on: [ self-hosted, "${{ inputs.RUNNER_LABEL }}" ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: ${{ inputs.CONTAINER_OPTIONS }}
