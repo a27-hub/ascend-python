@@ -6,7 +6,7 @@ on:
       py_version:
         required: false
         type: string
-        default: ${{ '3.10' }}
+        default: "3.10"
       REMOTE_URL:
         required: false
         type: string
@@ -21,10 +21,18 @@ on:
       pytorch_branch:
         required: true
         type: string
-      TARGET_BRANCH:
+      runs_on_arch:
         required: false
         type: string
-        default: ${{ atomgit.event.pull_request.base.ref }}
+        default: "x64"
+      runs_on_os:
+        required: false
+        type: string
+        default: "euler"
+      runs_on_spec:
+        required: false
+        type: string
+        default: "large"
       TEST_RANK:
         required: false
         type: string
@@ -33,8 +41,8 @@ on:
         type: string
 
 jobs:
-  UT:
-    name: UT
+  JOB_UT:
+    name: JOB_UT
     select: selected_by_default
     runs-on: [ self-hosted, npu=1 ]
     container:
@@ -43,17 +51,6 @@ jobs:
       TEST_RANK: ${{ inputs.TEST_RANK }}
       TEST_WORLD_SIZE: ${{ inputs.TEST_WORLD_SIZE }}
     steps:
-      - name: print env
-        run: |
-          echo "pytorch_branch=${{ inputs.pytorch_branch }}"
-          echo "py_version=${{ inputs.py_version }}"
-          echo "pr_id=${{ inputs.pr_id }}"
-          echo "CP_DOCKER_IMG=swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}"
-          echo "REMOTE_URL=${{ inputs.REMOTE_URL }}"
-          echo "inputs.TARGET_BRANCH=${{ inputs.TARGET_BRANCH }}"
-          echo "TEST_RANK=${{ env.TEST_RANK }}"
-          echo "TEST_WORLD_SIZE=${{ env.TEST_WORLD_SIZE }}"
-
       - name: check branch support
         id: check_support
         run: |
@@ -81,53 +78,12 @@ jobs:
             echo "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" >> "$ATOMGIT_OUTPUT"
           fi
 
-      - name: checkout pytorch
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' && inputs.pytorch_branch == 'master' }}
-        uses: checkout
-        with:
-          repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/master
-          path: pytorch
-          fetch-depth: 1
-      - name: install torch
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' && inputs.pytorch_branch == 'master' }}
-        run: |
-          torch_version=$(cat pytorch/requirements.txt | grep torch== | cut -c 8-25)
-          nightly_date=${torch_version:10:8}
-          echo "torch_version=${torch_version}"
-          echo "nightly_date=${nightly_date}"
-
-          if [ ${#nightly_date} -ne 8 ]; then
-            ver=${torch_version:0:6}
-            url_base="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${ver}"
-          else
-            ver=${torch_version}
-            url_base="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}"
-          fi
-
-          torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl"
-          echo "torch_url=${torch_url}"
-          pip"${{ inputs.py_version }}" install $torch_url
-      - name: download op-plugin artifact
+      - name: Download build artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: download-artifact
         with:
           name: op-plugin-${{ inputs.pytorch_branch }}-arm
-          path: ./
-
-      - name: Verify artifact
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
-        run: |
-          ls -al
-          pip"${{ inputs.py_version }}" install torch_npu*.whl
-        working-directory: ./
-
-      - name: checkout op-plugin
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
-        uses: checkout
-        with:
-          ref: refs/merge-requests/${{ inputs.pr_id }}/merge
-          fetch-depth: 1
+          path: ../output/${{ inputs.pr_id }}
 
       - name: download modify_files.txt artifact
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
@@ -136,56 +92,21 @@ jobs:
           name: modify_files.txt
           path: ./
 
-      - name: UT_op-plugin
-        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
-        run: |
-          pwd
-          ls -al
-          pip"${{ inputs.py_version }}" list
-          source /etc/profile
-          export OMP_NUM_THREADS=32
-          export PTA_UT_EXEC_TIMEOUT=4800
-          source /usr/local/Ascend/cann/set_env.sh
-          source /usr/local/Ascend/nnal/atb/set_env.sh
-          python"${{ inputs.py_version }}" ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
-
-      - name: checkout pytorch
+      - name: checkout op-plugin
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         uses: checkout
         with:
-          repository: https://gitcode.com/Ascend/pytorch.git
-          ref: refs/heads/${{ steps.check_support.outputs.pytorch_build_branch }}
-          path: pytorch
-          submodules: true
+          ref: refs/merge-requests/${{ inputs.pr_id }}/merge
+          fetch-depth: 1
+          path: ./CODE
 
-      - name: UT_pytorch
+      - name: UT op-plugin
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
-          ls -al
-          if [ -f "pytorch/ci/split_by_time.py" ]; then
-            sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/split_by_time.py
-          fi
-          if [ -f "pytorch/ci/access_control_test.py" ]; then
-            sed -i "s/'op-plugin' in str(Path(ut_file))/str(NETWORK_OPS_DIR) in str(Path(ut_file))/g" pytorch/ci/access_control_test.py
-          fi
-          if [ "${{ inputs.pytorch_branch }}" = "master" ]; then
-              pip"${{ inputs.py_version }}" install -r pytorch/test/requirements.txt
-          fi
-          pip"${{ inputs.py_version }}" install einops
-          pip"${{ inputs.py_version }}" install tlparse==0.3.18
-          pip"${{ inputs.py_version }}" install tabulate==0.9.0
-          pip"${{ inputs.py_version }}" list
-          export OMP_NUM_THREADS=32
-          source /etc/profile
-          export PTA_UT_EXEC_TIMEOUT=4800
-          source /usr/local/Ascend/cann/set_env.sh
-          source /usr/local/Ascend/nnal/atb/set_env.sh
-          ln -sf /usr/local/bin/python"${{ inputs.py_version }}" /usr/local/bin/python
-          python_path=$(dirname $(dirname $(readlink -f $(which python"${{ inputs.py_version }}"))))
-          export PATH="${python_path}"/bin:$PATH
-          python"${{ inputs.py_version }}" -c "import acl;print('npu info:',acl.get_soc_name())" || echo "npu info  get error"
-
-          echo "------------------------------------- ENV PATH -------------------------------------"
-          echo ${PATH}
-          echo "------------------------------------------------------------------------------------"
-          python"${{ inputs.py_version }}" pytorch/ci/access_control_test.py --rank=${{ env.TEST_RANK }} --world_size=${{ env.TEST_WORLD_SIZE }}
+          # git clone -b ${{ atomgit.event.repository.default_branch }} ${{ inputs.REMOTE_URL }} cie
+          git clone -b  master_0903 https://gitcode.com/ComputingActionTest/op-plugin_0731.git cie
+          ls -R cie/.gitcode/workflows
+          # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
+          cp -rf ../output/${{ inputs.pr_id }}/* ./
+          ls ${ATOMGIT_WORKSPACE}
+          bash cie/.gitcode/workflows/scripts/UT/op-plugin_ut_general.sh ${{ inputs.pytorch_branch }} ${{ inputs.py_version }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}

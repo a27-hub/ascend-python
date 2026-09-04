@@ -73,7 +73,7 @@ stages:
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         outputs:
-          need_build: ${{ steps.set-skip.outputs.need_build }}
+          need_build_ut_ut: ${{ steps.set-skip.outputs.need_build_ut }}
         steps:
           - name: checkout
             uses: checkout
@@ -110,9 +110,9 @@ stages:
               echo "changed: ${{ steps.filter.outputs.changed_files }}"
               echo "non-doc: ${{ steps.filter.outputs.non-doc }}"
               if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
-                echo "need_build=yes" >> "$ATOMGIT_OUTPUT"
+                echo "need_build_ut_ut=yes" >> "$ATOMGIT_OUTPUT"
               else
-                echo "need_build=no" >> "$ATOMGIT_OUTPUT"
+                echo "need_build_ut=no" >> "$ATOMGIT_OUTPUT"
               fi
               echo "${{ steps.filter.outputs.changed_files }}" | tr -d '[]" ' | tr ',' '\n' > modify_files.txt
               cat modify_files.txt
@@ -129,7 +129,7 @@ stages:
     jobs:
       Build:
         name: Build
-        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
+        if : ${{ jobs.Detect_file_changes.outputs.need_build_ut == 'yes' }}
         uses: .gitcode/workflows/build_job.yml
         with:
           pytorch_branch: ${{ matrix.branch }}
@@ -183,8 +183,8 @@ stages:
     jobs:
       UT:
         name: UT
-        if : ${{ jobs.Detect_file_changes.outputs.need_build == 'yes' }}
-        uses: .gitcode/workflows/ut_job_test.yml
+        if : ${{ jobs.Detect_file_changes.outputs.need_build_ut == 'yes' }}
+        uses: .gitcode/workflows/ut_job.yml
         with:
           pytorch_branch: ${{ matrix.branch }}
           CP_DOCKER_IMG: ${{ matrix.img }}

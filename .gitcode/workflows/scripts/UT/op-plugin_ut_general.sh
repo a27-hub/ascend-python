@@ -53,17 +53,6 @@ function torch_install_master_2() {
 }
 
 function torch_npu_install() {
-    # if [ "${TARGET_BRANCH}" == "master" ]; then
-    #     tar_name=torch_npu_${pytorch_version}_${ARCH}.tar.gz
-    # else
-    #     tar_name=torch_npu_${pytorch_version}-${TARGET_BRANCH}_${ARCH}.tar.gz
-    # fi
-    # # 构建产物由 download-artifact 插件下载到 WORKSPACE，不再从 OBS 拉取
-    # if [ ! -f "${WORKSPACE}/${tar_name}" ]; then
-    #     echo "ERROR: build artifact ${tar_name} not found in ${WORKSPACE}, please check upload-artifact/download-artifact"
-    #     exit 1
-    # fi
-    # tar -zxvf "${WORKSPACE}/${tar_name}"
     pip"${py_version}" install -U "${WORKSPACE}"/torch-*${ARCH}.whl --force-reinstall
     ls "${WORKSPACE}"
     pip"${py_version}" install -U "${WORKSPACE}"/torch_npu*${ARCH}.whl --force-reinstall --no-deps
@@ -72,7 +61,6 @@ function torch_npu_install() {
 function main() {
     pip"${py_version}" install https://ascend-cann-open.obs.cn-north-4.myhuaweicloud.com/Triton_Innersource/triton-ascend/20260428190056/triton_ascend-3.2.1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
     cd ${WORKSPACE}
-    # handle residual files of torch
     rm -rf "${python_path}"/lib/python"${py_version}"/site-packages/torch
     rm -rf "${python_path}"/lib/python"${py_version}"/site-packages/~orch
     rm -rf "${python_path}"/lib/python"${py_version}"/site-packages/-orch
@@ -107,8 +95,6 @@ function main() {
             torch_install_master
         fi
         pip"${py_version}" install -r ${WORKSPACE}/tmp_pytorch/test/requirements.txt
-#        wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torchvision/master/torchvision-0.27.0.dev20260424%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl
-#        pip"${py_version}" install -U "${WORKSPACE}"/torchvision-*.whl --force-reinstall --no-deps
     fi
     torch_npu_install
     pip${py_version} install einops
@@ -149,19 +135,6 @@ function main() {
 
 set -e
 
-support_730="v2.6.0 v2.7.1 v2.8.0 v2.9.0"
-support_720="v2.1.0 v2.6.0 v2.7.1 v2.8.0"
-support_2600="v2.7.1 v2.8.0 v2.9.0 v2.10.0"
-support_2610="v2.7.1 v2.9.0 v2.10.0 v2.11.0 v2.12.0"
-
-suffix="${TARGET_BRANCH//./}"
-list="support"_${suffix}
-
-if [[ " $TARGET_BRANCH " != " master " ]] && [[ ! " ${!list} " =~ " $pytorch_version " ]]; then
-    echo "$TARGET_BRANCH no need execute $pytorch_version ut"
-    exit 0
-else
-    echo "start execute ut"
-    main
-    echo "end execute ut"
-fi
+echo "start execute ut"
+main
+echo "end execute ut"
