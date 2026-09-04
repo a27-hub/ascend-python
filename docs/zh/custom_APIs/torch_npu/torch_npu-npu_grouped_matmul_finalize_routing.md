@@ -101,7 +101,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 ## 约束说明
 
 - 该接口支持推理和训练场景下使用。
-- 该接口支持单算子模式和TorchAir图模式。
+- 该接口支持单算子模式和TorchAir图模式；输出为`bfloat16`时，仅支持单算子模式，暂不支持图模式。
 - 输入和输出Tensor支持的数据类型组合如下：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
@@ -140,7 +140,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     > - `x`数据类型为`float8_e4m3fn`，`w`数据类型为`float4_e2m1fn_x2`。`w`数据格式要求FRACTAL\_NZ格式，可通过torch\_npu.npu\_format\_cast接口实现ND转FRACTAL\_NZ格式。
     > - `x`要求非转置，`w`要求转置，`w`的shape支持\(e, n, k\), 要求e<=1024、k和n满足32对齐。图模式场景下要求e不等于1，同时k\>64。
     > - `shared_input_offset`+`shared_input`的第一维度总和不允许超过`output_bs`。
-    > - mx量化输出为`bfloat16`时，`w`数据格式要求FRACTAL\_NZ格式，`bias`必须为None，`row_index`必须为`int32`。
+    > - mx量化输出为`bfloat16`时，`w`数据格式要求FRACTAL\_NZ格式，`bias`必须为None，`row_index`必须为`int32`，仅支持单算子模式，暂不支持图模式。
 
 ## 调用示例
 
