@@ -57,7 +57,7 @@ stages:
           pytorch_branch: ${{ env.pytorch_branch }}
           REGULAR_NPU_SHARDS: ${{ env.TEST_WORLD_SIZE }}
           DISTRIBUTED_SHARDS: ${{ env.DISTRIBUTED_WORLD_SIZE }}
-          RUNNER_LABEL: "npu=8"
+          RUNNER_LABEL: "npu=1"
 
   unit_test:
     name: Unit Test (run sharded cases from collect stage)

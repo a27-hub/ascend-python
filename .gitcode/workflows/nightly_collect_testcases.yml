@@ -42,11 +42,11 @@ on:
         required: false
         type: string
         default: "32"
-      # 调度标签 (变量化): 收集任务默认调度到 8 卡机
+      # 调度标签 (变量化): 收集任务默认调度到单卡机
       RUNNER_LABEL:
         required: false
         type: string
-        default: "npu=8"
+        default: "npu=1"
 
 jobs:
   Collect:
