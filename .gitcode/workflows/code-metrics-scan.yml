@@ -18,7 +18,8 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout
-        uses: checkout
+        run: |
+          git clone --depth=1 https://gitcode.com/ComputingActionTest/op-plugin.git .
 
       - name: code-metrics-scan
         uses: openlibing/code-metrics-action@95623b0e88eaaed34eac28da21df52f4ac33a2b8
