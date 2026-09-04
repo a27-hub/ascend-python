@@ -200,6 +200,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
             cpu_antiquantoffset = torch.randint(-128, 127, (256,1), dtype=torch.float16)
             npu_out = torch_npu.npu_weight_quant_batchmatmul(cpu_x.npu(), cpu_weight.npu().transpose(-1, -2), cpu_antiquantscale.npu().transpose(-1, -2), cpu_antiquantoffset.npu().transpose(-1, -2))
             ```
+
     - weight transpose+antiquant\_scale+hifloat8场景，仅支持<term>Ascend 950PR/Ascend 950DT</term>。
 
             ```python
