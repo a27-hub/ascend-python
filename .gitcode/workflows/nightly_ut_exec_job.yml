@@ -33,11 +33,12 @@ on:
         default: "180"
       # 常规分片并发 worker 数 (每个 worker 轮转占用 1 张卡)
       # 32 并发时出现过大量简单算子用例卡死被空闲超时杀掉的情况,
-      # 10 并发时仍出现多 worker 同时卡死的雪崩现象, 降低到 8 (每卡 1 个)
+      # 10 并发时仍出现多 worker 同时卡死的雪崩现象, 8 并发依然偏高,
+      # 进一步降低到 4 以减少设备争用
       MAX_WORKERS:
         required: false
         type: string
-        default: "8"
+        default: "4"
       PYTORCH_REPO_URL:
         required: false
         type: string
@@ -46,6 +47,12 @@ on:
         required: false
         type: string
         default: "master"
+      # 执行机标签 (runs-on 第二个标签):
+      # 分布式用例需要整机 8 卡 -> npu=8; 常规用例单卡即可 -> npu=1
+      NPU_LABEL:
+        required: false
+        type: string
+        default: "npu=1"
 
 jobs:
   UT:
@@ -53,7 +60,7 @@ jobs:
     select: selected_by_default
     # 单分片执行超时: 5 小时
     timeout-minutes: 300
-    runs-on: [ self-hosted, os=euler, type=npu ]
+    runs-on: [ self-hosted, ${{ inputs.NPU_LABEL }} ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: ${{ inputs.CONTAINER_OPTIONS }}
@@ -70,6 +77,7 @@ jobs:
           echo "TEST_WORLD_SIZE=${{ env.TEST_WORLD_SIZE }}"
           echo "TIMEOUT=${{ inputs.TIMEOUT }}"
           echo "MAX_WORKERS=${{ inputs.MAX_WORKERS }}"
+          echo "NPU_LABEL=${{ inputs.NPU_LABEL }}"
 
       # 环境准备顺序与 collect 阶段保持一致:
       # 先 checkout pytorch 并从 requirements.txt 现场解析版本安装 torch,

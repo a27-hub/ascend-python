@@ -10,7 +10,7 @@ on:
       REGULAR_NPU_SHARDS:
         required: false
         type: string
-        default: "2"
+        default: "4"
       # 分布式分片总数, 用于构建分片矩阵
       DISTRIBUTED_SHARDS:
         required: false
@@ -82,6 +82,20 @@ jobs:
         with:
           name: test-reports-regular-2
           path: test-reports-regular-2
+
+      - name: download test reports (regular 3)
+        uses: download-artifact
+        continue-on-error: true
+        with:
+          name: test-reports-regular-3
+          path: test-reports-regular-3
+
+      - name: download test reports (regular 4)
+        uses: download-artifact
+        continue-on-error: true
+        with:
+          name: test-reports-regular-4
+          path: test-reports-regular-4
 
       - name: download test reports (distributed)
         uses: download-artifact

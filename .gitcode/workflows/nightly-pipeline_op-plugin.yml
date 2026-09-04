@@ -26,13 +26,9 @@ env:
   repo: ${{ atomgit.event.repository.name }}
   org_name: "ComputingActionTest"
   img_master_arm: "pytorch_master_a2_aarch64_builder:20260704"
-  # 编译使用的 PyTorch 分支
   pytorch_branch: "master"
-  # UT 分片总数,需与 unit_test 阶段中 UT job 的数量保持一致
-  # 注意: type=npu 执行机共 3 台, 所有 UT job 总数不可超过 3,
-  # 否则两个 job 会被调度到同一台机器, 共享工作区 /__w/... 互相覆盖
-  # 导致用例执行中文件被删 (No such file or directory)。
-  TEST_WORLD_SIZE: "2"
+  # 常规用例分片总数: 4 个 (1/2 调度到 2 卡机, 3/4 调度到 1 卡机)
+  TEST_WORLD_SIZE: "4"
   # 分布式用例分片数 (每个分片串行独占全卡)
   DISTRIBUTED_WORLD_SIZE: "1"
 
@@ -61,30 +57,49 @@ stages:
           REGULAR_NPU_SHARDS: ${{ env.TEST_WORLD_SIZE }}
           DISTRIBUTED_SHARDS: ${{ env.DISTRIBUTED_WORLD_SIZE }}
 
-  # 新版 UT stage: 消费 collect 阶段产出的 collected-cases artifact,
-  # 由 run_npu_test_shard.py 按分片执行
-  # (常规分片并行/单卡轮转, 分布式分片串行独占全卡)
   unit_test:
     name: Unit Test (run sharded cases from collect stage)
     select: selected_by_default
     jobs:
       ut_regular_1:
-        name: op-plugin UT regular 1/2
+        name: op-plugin UT regular 1/4
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           SHARD_TYPE: regular
           TEST_RANK: "1"
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          NPU_LABEL: "npu=2"
 
       ut_regular_2:
-        name: op-plugin UT regular 2/2
+        name: op-plugin UT regular 2/4
         uses: .gitcode/workflows/nightly_ut_exec_job.yml
         with:
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
           SHARD_TYPE: regular
           TEST_RANK: "2"
           TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          NPU_LABEL: "npu=2"
+
+      ut_regular_3:
+        name: op-plugin UT regular 3/4
+        uses: .gitcode/workflows/nightly_ut_exec_job.yml
+        with:
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          SHARD_TYPE: regular
+          TEST_RANK: "3"
+          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          NPU_LABEL: "npu=1"
+
+      ut_regular_4:
+        name: op-plugin UT regular 4/4
+        uses: .gitcode/workflows/nightly_ut_exec_job.yml
+        with:
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          SHARD_TYPE: regular
+          TEST_RANK: "4"
+          TEST_WORLD_SIZE: ${{ env.TEST_WORLD_SIZE }}
+          NPU_LABEL: "npu=1"
 
       ut_distributed_1:
         name: op-plugin UT distributed
@@ -94,9 +109,8 @@ stages:
           SHARD_TYPE: distributed
           TEST_RANK: "1"
           TEST_WORLD_SIZE: ${{ env.DISTRIBUTED_WORLD_SIZE }}
+          NPU_LABEL: "npu=8"
 
-  # 报告汇总阶段: 聚合各分片执行结果与收集产物, 生成总报告。
-  # 无论前面阶段成败均执行 (用例失败不阻断 nightly 流水线)
   report:
     name: Report
     select: always
