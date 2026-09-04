@@ -128,7 +128,7 @@ class TestLstm(TestCase):
                     for hx in (None, (h0, c0)):
                         with self.subTest(jit=jit, dtype=dtype, supplied_hx=hx is not None):
                             if dtype == torch.float16:
-                                with self.assertRaisesRegex(ValueError, "RNN input dtype"):
+                                with self.assertRaisesRegex(ValueError, r"RNN input dtype|input must have the type torch"):
                                     model(packed, hx)
                             with torch.autocast(device_type=self.device, dtype=torch.float16,
                                                 enabled=dtype == torch.float16):
