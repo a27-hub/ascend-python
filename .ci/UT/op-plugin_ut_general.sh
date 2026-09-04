@@ -92,8 +92,14 @@ function torch_npu_install() {
     else
         tar_name=torch_npu_${pytorch_version}-${TARGET_BRANCH}_${ARCH}.tar.gz
     fi
-    wget --no-host-directories -c --no-check-certificate "https://pta-pr.obs.cn-north-4.myhuaweicloud.com/op-plugin/PR/${pr_id}/${tar_name}"
-    tar -zxvf "${tar_name}"
+    # 旧的 OBS 下载方式保留，切换回 OBS 传输时可取消注释
+    # wget --no-host-directories -c --no-check-certificate "https://pta-pr.obs.cn-north-4.myhuaweicloud.com/op-plugin/PR/${pr_id}/${tar_name}"
+    # tar -zxvf "${tar_name}"
+    if [ ! -f "${WORKSPACE}/${tar_name}" ]; then
+        echo "ERROR: build artifact ${tar_name} not found in ${WORKSPACE}, please check upload-artifact/download-artifact"
+        exit 1
+    fi
+    tar -zxvf "${WORKSPACE}/${tar_name}"
     pip"${py_version}" install -U "${WORKSPACE}"/torch-*${ARCH}.whl --force-reinstall
     pip"${py_version}" install -U "${WORKSPACE}"/torch_npu*${ARCH}.whl --force-reinstall --no-deps
 }

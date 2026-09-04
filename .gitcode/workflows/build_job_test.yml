@@ -82,17 +82,25 @@ jobs:
           head -c 1048576 /dev/urandom > "${test_file}"
           test "$(stat -c '%s' "${test_file}")" -eq 1048576
           sha256sum "${test_file}"
-      - name: oidc-auth
-        uses: huaweicloud-oidc-auth
+      # - name: oidc-auth
+      #   uses: huaweicloud-oidc-auth
+      #   with:
+      #     audience: pta_pr_obs_for_pytorch
+      #     region: cn-north-4
+      #     agency_urn: iam::0d336831568090260fd5c01450729240:agency:pta_obs_pr_trust
+      #     provider_urn: iam::0d336831568090260fd5c01450729240:oidcProvider:pta_obs_pr
+      # - name: Upload to OBS
+      #   uses: obs-upload
+      #   with:
+      #     endpoint: "obs.cn-north-4.myhuaweicloud.com"
+      #     bucket: "pta-pr"
+      #     artifact-path: "oidc-upload-test.bin"
+      #     object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
+      - name: Upload artifact
+        uses: upload-artifact
         with:
-          audience: pta_pr_obs_for_pytorch
-          region: cn-north-4
-          agency_urn: iam::0d336831568090260fd5c01450729240:agency:pta_obs_pr_trust
-          provider_urn: iam::0d336831568090260fd5c01450729240:oidcProvider:pta_obs_pr
-      - name: Upload to OBS
-        uses: obs-upload
-        with:
-          endpoint: "obs.cn-north-4.myhuaweicloud.com"
-          bucket: "pta-pr"
-          artifact-path: "oidc-upload-test.bin"
-          object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
+          name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
+          path: |
+            *.tar.gz*
+            oidc-upload-test.bin
+          overwrite: true
