@@ -32,7 +32,7 @@ torch_npu.profiler.AiCMetrics
 - **torch_npu.profiler.AiCMetrics.L2Cache**：读写cache命中次数和缺失后重新分配次数。
 - **torch_npu.profiler.AiCMetrics.MemoryAccess**：算子在核上访存的带宽数据量。
 
-## 使用示例
+## 调用示例
 
 以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 

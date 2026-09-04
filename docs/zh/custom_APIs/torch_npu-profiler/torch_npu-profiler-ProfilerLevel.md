@@ -28,7 +28,7 @@ torch_npu.profiler.ProfilerLevel
 
 - **torch_npu.profiler.ProfilerLevel.Level2**：在Level1的基础上多采集CANN层Runtime数据以及AI CPU（data_preprocess.csv文件）。
 
-## 使用示例
+## 调用示例
 
 以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 
