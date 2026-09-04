@@ -29,7 +29,9 @@ from torch._subclasses.fake_tensor import (
     DynamicOutputShapeException,
     UnsupportedOperatorException,
 )
+from torch.fx.experimental.symbolic_shapes import ShapeEnv
 from torch.fx.passes.fake_tensor_prop import FakeTensorProp
+from torch.fx.experimental.symbolic_shapes import ShapeEnv
 from torch.testing import FileCheck
 from torch.testing._internal.common_device_type import instantiate_device_type_tests, OpDTypes
 from torch.testing._internal.common_device_type import ops
@@ -2930,6 +2932,33 @@ class TestGroupedMatmul(TestCase):
             with self.assertRaises(RuntimeError):
                 torch_npu.npu_grouped_matmul(x, w, bias=None, scale=scale, group_list=group_list, split_item=split_item, group_type=0, group_list_type=0, output_dtype=torch.float16)
 
+    def test_npu_grouped_matmul_meta_quant_dynamic_m(self):
+        shape_env = ShapeEnv()
+        with FakeTensorMode(shape_env=shape_env):
+            dynamic_m = shape_env.create_unbacked_symint()
+            k = 128
+            n = 128
+            num_experts = 2
+            x = [torch.empty((dynamic_m, k), dtype=torch.float8_e4m3fn, device="npu")]
+            weight = [torch.empty((num_experts, k, n), dtype=torch.float8_e5m2, device="npu")]
+            group_list = torch.empty((num_experts,), dtype=torch.int64, device="npu")
+            scale = [torch.empty((num_experts, n), dtype=torch.int64, device="npu")]
+
+            result = torch_npu.npu_grouped_matmul(
+                x,
+                weight,
+                bias=None,
+                scale=scale,
+                group_list=group_list,
+                split_item=2,
+                group_type=0,
+                group_list_type=0,
+                output_dtype=torch.float16,
+            )
+
+            self.assertEqual(result[0].shape[1], n)
+
+
 class TestQuantMatmul(TestCase):
     def test_npu_quant_matmul_meta(self):
         with FakeTensorMode():
@@ -4334,6 +4363,32 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
 
             self.assertEqual(grad_permuted_tokens.dtype, permuted_tokens.dtype)
             self.assertEqual(grad_permuted_tokens.shape, permuted_tokens.shape)
+            self.assertIsNone(grad_probs)
+
+    @SupportedDevices(['Ascend910B', 'Ascend910C'])
+    def test_npu_moe_token_unpermute_grad_v2_dynamic_token_count(self):
+        """Test npu_moe_token_unpermute_grad_v2 keeps a symbolic token count."""
+        hidden_size = 64
+        shape_env = ShapeEnv()
+        dynamic_num_tokens = shape_env.create_unbacked_symint()
+
+        with FakeTensorMode(shape_env=shape_env):
+            grad_unpermuted_tokens = torch.randn(100, hidden_size).npu().to(torch.bfloat16)
+            sorted_indices = torch.arange(100).npu()
+
+            grad_permuted_tokens, grad_probs = torch_npu.npu_moe_token_unpermute_grad_v2(
+                grad_unpermuted_tokens=grad_unpermuted_tokens,
+                sorted_indices=sorted_indices,
+                permuted_tokens_size_0=dynamic_num_tokens,
+                permuted_tokens_dtype=torch.bfloat16,
+                probs=None,
+                padded_mode=False,
+                restore_shape=None,
+                permuted_tokens=None,
+            )
+
+            self.assertEqual(str(grad_permuted_tokens.shape[0]), str(dynamic_num_tokens))
+            self.assertEqual(grad_permuted_tokens.shape[1], hidden_size)
             self.assertIsNone(grad_probs)
 
     @SupportedDevices(['Ascend910B', 'Ascend910C'])
