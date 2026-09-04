@@ -21,10 +21,6 @@
 torch_npu.npu.get_task_queue_enable()
 ```
 
-## 参数说明
-
-无
-
 ## 返回值说明
 
 **int**：当前生效的TaskQueue优化等级，含义如下：
@@ -32,10 +28,6 @@ torch_npu.npu.get_task_queue_enable()
 - 0：TaskQueue优化关闭。
 - 1：Level 1优化。
 - 2：Level 2优化。
-
-## 约束说明
-
-无
 
 ## 调用示例
 
