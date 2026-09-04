@@ -432,10 +432,15 @@ void check_packed_lstm_args(
         if (!autocast_enabled) {
             const auto input_dtype = c10::getDtypeNames(data.scalar_type()).first;
             const auto weight_dtype = c10::getDtypeNames(weight.scalar_type()).first;
+#if VERSION_BETWEEN(V2R11, VERSION_NEWEST)
             TORCH_CHECK_VALUE(false,
                 "RNN input dtype (torch.", input_dtype, ") does not match weight dtype (torch.", weight_dtype,
                 "). Convert input: input.to(torch.", weight_dtype,
                 "), or convert model: model.to(torch.", input_dtype, ")");
+#else
+            TORCH_CHECK_VALUE(false,
+                "input must have the type torch.", weight_dtype, ", got type torch.", input_dtype);
+#endif
         }
     }
     TORCH_CHECK(data.dim() == 2, "input must have 2 dimensions, got ", data.dim());
