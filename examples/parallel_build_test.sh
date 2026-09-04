@@ -7,7 +7,7 @@
 #
 # 说明:
 #   - 9 个工程以独立后台任务方式并行执行：whl 编译 -> 安装 -> test 脚本执行
-#   - 各工程日志直接回显到终端，每行带 [工程名] 前缀以区分并行输出
+#   - 各工程日志输出到 parallel_logs/<工程名>.log
 #   - pip install 阶段使用 flock 串行化 (pip 不支持并发安装)
 #   - op_extension 模块由 3 个工程共享 (cpp_extension + kernel_extension_aclgraph
 #     的 pybind/torch_library)，其「安装+测试」经 mod_op_extension.lock 串行，
@@ -153,6 +153,7 @@ run_project() {
     shift 6
     local tests=("$@")
 
+    local log="${LOG_DIR}/${name}.log"
     local start_ts=$(date +%s)
 
     echo "[$(date '+%H:%M:%S')] [START] ${name}" | tee -a "${SUMMARY_LOG}"
@@ -177,9 +178,9 @@ run_project() {
         echo "----------- [${name}] install: ${whl_glob} -----------"
         install_and_test "${dir}" "${whl_glob}" "${mod_lock}" "${tests[@]}"
         exit $?
-    ) | sed "s/^/[${name}] /"
+    )
 
-    local rc=${PIPESTATUS[0]}
+    local rc=$?
     local end_ts=$(date +%s)
     local duration=$((end_ts - start_ts))
 
@@ -227,8 +228,8 @@ run_subproject() {
 
         echo "----------- [${name}] install: ${whl_glob} -----------"
         install_and_test "${dir}" "${whl_glob}" "${mod_lock}" "${tests[@]}"
-    ) | sed "s/^/[${name}] /"
-    return ${PIPESTATUS[0]}
+    )
+    return $?
 }
 
 # 工程任务包装器: 把整个工程任务写到独立日志
@@ -299,8 +300,8 @@ task_cpp_extension_full() {
         local rc2=$?
 
         [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ]
-    ) | sed "s/^/[cpp_extension_full] /"
-    local rc=${PIPESTATUS[0]}
+    )
+    local rc=$?
     local end_ts=$(date +%s)
     local duration=$((end_ts - start_ts))
     if [ $rc -eq 0 ]; then
@@ -369,8 +370,8 @@ task_kernel_extension_aclgraph() {
         local rc2=$?
 
         [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ]
-    ) | sed "s/^/[kernel_extension_aclgraph] /"
-    local rc=${PIPESTATUS[0]}
+    )
+    local rc=$?
     local end_ts=$(date +%s)
     local duration=$((end_ts - start_ts))
     if [ $rc -eq 0 ]; then
