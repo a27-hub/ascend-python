@@ -264,7 +264,7 @@ void _fused_adam_(
 	const c10::optional<at::Tensor>& grad_scale,
 	const c10::optional<at::Tensor>& found_inf)
 {
-	_fused_adam_(
+	op_api::_fused_adam_(
 		self,
 		grads,
 		exp_avgs,
