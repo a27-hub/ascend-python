@@ -1,4 +1,4 @@
-# torch\_npu.npu\_grouped\_matmul\_add
+# torch_npu.npu_grouped_matmul_add
 
 ## 产品支持情况
 
@@ -36,10 +36,10 @@ torch_npu.npu_grouped_matmul_add(self, x, weight, group_list, *, transpose_x=Tru
 
 ## 参数说明
 
-- **self**（`Tensor`）：必选参数，表示原地累加的输入矩阵，公式中的$yRef$。shape为[g, M, N]，其中g为分组个数。数据类型支持`float32`，数据格式支持ND。
-- **x**（`Tensor`）：必选参数，公式中的输入x。维度支持2维，数据格式支持ND，数据类型支持`float16`、`bfloat16`，需与weight的数据类型一致。支持非连续Tensor。x必须转置，即`transpose_x`仅支持True。
-- **weight**（`Tensor`）：必选参数，表示权重，公式中的weight。维度支持2维，数据格式支持ND，数据类型支持`float16`、`bfloat16`，需与x的数据类型一致。支持非连续Tensor。weight不支持转置，即`transpose_weight`仅支持False。
-- **group\_list**（`Tensor`）：必选参数，表示输入和输出分组轴方向的matmul大小分布。数据类型支持`int64`，数据格式支持ND。第1维最大支持1024，即最多支持1024个group。
+- **self**（`Tensor`）：必选参数，表示原地累加的输入矩阵，公式中的$yRef$。shape为[g, M, N]，其中g为分组个数。数据类型支持`torch.float32`，数据格式支持ND。
+- **x**（`Tensor`）：必选参数，公式中的输入x。维度支持2维，数据格式支持ND，数据类型支持`torch.float16`、`torch.bfloat16`，需与weight的数据类型一致。支持非连续Tensor。x必须转置，即`transpose_x`仅支持True。
+- **weight**（`Tensor`）：必选参数，表示权重，公式中的weight。维度支持2维，数据格式支持ND，数据类型支持`torch.float16`、`torch.bfloat16`，需与x的数据类型一致。支持非连续Tensor。weight不支持转置，即`transpose_weight`仅支持False。
+- **group\_list**（`Tensor`）：必选参数，表示输入和输出分组轴方向的matmul大小分布。数据类型支持`torch.int64`，数据格式支持ND。第1维最大支持1024，即最多支持1024个group。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **transpose\_x**（`bool`）：可选参数，表示x矩阵是否转置，当前仅支持True。默认值为True。
 - **transpose\_weight**（`bool`）：可选参数，表示weight矩阵是否转置，当前仅支持False。默认值为False。
@@ -47,13 +47,12 @@ torch_npu.npu_grouped_matmul_add(self, x, weight, group_list, *, transpose_x=Tru
 - **group\_list\_type**（`int`）：可选参数，表示group\_list中数值的解读方式。目前仅支持两个取值，默认值为0：
   - 0：group\_list中的数值为分组轴大小的cumsum结果（累积和），group\_list须为非负单调非递减数列，最后一个值不大于x中tensor的第一维。以K=256、E=4（各组大小依次为64、0、128、64）为例：`[64, 64, 192, 256]`。
   - 1：group\_list中的数值为分组轴上每组大小，group\_list须为非负数列，数值总和不大于x中tensor的第一维。以K=256、E=4为例：`[64, 0, 128, 64]`。
-  - 当回退调用aclnnGroupedMatmulAdd算子时，该参数不生效。
 
 ## 返回值说明
 
 `Tensor`
 
-表示分组矩阵乘累加的结果，公式中的$yRef^{out}$。shape为[g, M, N]，与输入self的shape一致，数据类型为`float32`。
+表示分组矩阵乘累加的结果，公式中的$yRef^{out}$。shape为[g, M, N]，与输入self的shape一致，数据类型为`torch.float32`。
 
 ## 约束说明
 
@@ -61,13 +60,13 @@ torch_npu.npu_grouped_matmul_add(self, x, weight, group_list, *, transpose_x=Tru
 - 该接口支持单算子模式和图模式调用。
 - 确定性计算：默认确定性实现。
 - 支持的输入类型组合为：
-  - x为`float16`、weight为`float16`、self为`float32`。
-  - x为`bfloat16`、weight为`bfloat16`、self为`float32`。
+  - x为`torch.float16`、weight为`torch.float16`、self为`torch.float32`。
+  - x为`torch.bfloat16`、weight为`torch.bfloat16`、self为`torch.float32`。
 - x与weight的数据类型必须一致。
 - x必须转置（`transpose_x`仅支持True），weight不支持转置（`transpose_weight`仅支持False）。
 - `group_type`当前仅支持2（K轴分组）。
 - group\_list第1维最大支持1024，即最多支持1024个group。
-- x和weight中每一组tensor的每一维大小在32字节对齐后都应小于int32的最大值2147483647。
+- x和weight中每一组tensor的每一维大小在32字节对齐后都应小于`torch.int32`的最大值2147483647。
 - x和weight中每一组tensor的最后一维大小都应小于65536。x的最后一维指当x不转置时x的K轴或当x转置时x的M轴；weight的最后一维指当weight不转置时weight的N轴或当weight转置时weight的K轴。
 
 ## 调用示例

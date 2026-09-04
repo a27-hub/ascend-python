@@ -1,4 +1,4 @@
-# torch\_npu.npu\_grouped\_matmul\_swiglu\_quant
+# torch_npu.npu_grouped_matmul_swiglu_quant
 
 ## 产品支持情况
 
@@ -15,7 +15,7 @@
   2. dquant：矩阵乘结果与激活量化因子$x\_scale$、权重量化因子$w\_scale$逐元素相乘，完成反量化；
   3. swiglu：反量化结果沿N轴对半切分为$C_{i,act}$与$gate_{i}$，计算$S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$；
   4. quant：$Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$，$Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil$，得到量化输出Q与量化因子Q\_scale。
-- 量化场景**A8W8**（A指激活矩阵，W指权重矩阵，8指`int8`数据类型）：
+- 量化场景**A8W8**（A指激活矩阵，W指权重矩阵，8指`torch.int8`数据类型）：
   - 输入：$X∈\mathbb{Z_8}^{M \times K}$为激活矩阵（左矩阵），M是总token数，K是特征维度；$W∈\mathbb{Z_8}^{E \times K \times N}$为分组权重矩阵（右矩阵），E是专家个数，N是输出维度；$w\_scale∈\mathbb{R}^{E \times N}$为权重逐通道缩放因子；$x\_scale∈\mathbb{R}^{M}$为激活逐token缩放因子；$groupList∈\mathbb{N}^{E}$为cumsum的分组索引列表。
   - 输出：$Q∈\mathbb{Z_8}^{M \times N / 2}$为量化后的输出矩阵；$Q\_scale∈\mathbb{R}^{M}$为量化缩放因子。
   - 计算过程：
@@ -40,7 +40,7 @@
     Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
     $$
 
-- 量化场景**A8W4**（A指激活矩阵，W指权重矩阵，4指`int4`数据类型）：激活为`int8`、权重为`int4`，通过将左矩阵拆分为高低4bit两部分分别与权重做矩阵乘，再结合离线生成的辅助矩阵bias还原结果，其余计算过程与A8W8一致。该场景下`weight_scale`支持2维（per-channel）或3维（per-group）输入。
+- 量化场景**A8W4**（A指激活矩阵，W指权重矩阵，4指`torch.int4`数据类型）：激活为`torch.int8`、权重为`torch.int4`，通过将左矩阵拆分为高低4bit两部分分别与权重做矩阵乘，再结合离线生成的辅助矩阵bias还原结果，其余计算过程与A8W8一致。该场景下`weight_scale`支持2维（per-channel）或3维（per-group）输入。
 
 - group\_list分组说明：根据groupList[i]确定当前分组的token，$i \in [0,Len(groupList))$。例如groupList=[3,4,4,6]：第0个右矩阵W[0,:,:]对应token x[0:3]；第1个对应x[3:4]；第2个对应x[4:4]（0个token）；第3个对应x[4:6]。groupList中未指定的部分不会参与更新：例如groupList=[12,14,18]、x的shape为[30,N/2]时，Q[18:, :]与Q\_scale[18:]不会进行更新或初始化，其中数据为显存空间申请时的原数据，即输出的Q[:groupList[-1],:]和Q\_scale[:groupList[-1]]为有效数据部分。
 
@@ -57,20 +57,20 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 
 ## 参数说明
 
-- **x**（`Tensor`）：必选参数，左矩阵，公式中的X。shape支持2维[M, K]，数据类型支持`int8`，数据格式支持ND，支持非连续Tensor。A8W8场景K必须小于65536，A8W4场景K必须小于20000。
-- **weight**（`Tensor`）：必选参数，权重矩阵，公式中的W。需先通过`torch_npu.npu_format_cast(weight, 29)`转换为FRACTAL\_NZ格式（5维存储shape），数据类型支持`int8`、`int4`、`int32`（`int32`为适配用途，实际1个`int32`会被解释为8个`int4`数据），支持非连续Tensor。该接口会忽略weight的数据格式，强制视为FRACTAL\_NZ格式。
-- **group\_list**（`Tensor`）：必选参数，指示每个分组参与计算的Token个数，公式中的groupList。shape支持1维，长度需与weight的首轴维度（专家数E）相等，数据类型支持`int64`，数据格式支持ND，支持非连续Tensor。为cumsum形式的分组索引列表，最后一个值约束了输出数据的有效部分。
-- **weight\_scale**（`Tensor`）：必选参数，右矩阵的量化因子，公式中的w\_scale。shape支持2维（per-channel）或3维（per-group），首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴（N）相同。数据类型支持`float32`、`float16`、`bfloat16`、`int64`（per-channel），数据格式支持ND，支持非连续Tensor。
-- **x\_scale**（`Tensor`）：必选参数，左矩阵的量化因子，公式中的x\_scale。shape支持1维，长度需与x的首轴维度（M）相等。数据类型支持`float32`，数据格式支持ND，支持非连续Tensor。
+- **x**（`Tensor`）：必选参数，左矩阵，公式中的X。shape支持2维[M, K]，数据类型支持`torch.int8`，数据格式支持ND，支持非连续Tensor。A8W8场景K必须小于65536，A8W4场景K必须小于20000。
+- **weight**（`Tensor`）：必选参数，权重矩阵，公式中的W。需先通过`torch_npu.npu_format_cast(weight, 29)`转换为FRACTAL\_NZ格式（5维存储shape），数据类型支持`torch.int8`、`torch.int4`、`torch.int32`（`torch.int32`为适配用途，实际1个`torch.int32`会被解释为8个`torch.int4`数据），支持非连续Tensor。该接口会忽略weight的数据格式，强制视为FRACTAL\_NZ格式。
+- **group\_list**（`Tensor`）：必选参数，指示每个分组参与计算的Token个数，公式中的groupList。shape支持1维，长度需与weight的首轴维度（专家数E）相等，数据类型支持`torch.int64`，数据格式支持ND，支持非连续Tensor。为cumsum形式的分组索引列表，最后一个值约束了输出数据的有效部分。
+- **weight\_scale**（`Tensor`）：必选参数，右矩阵的量化因子，公式中的w\_scale。shape支持2维（per-channel）或3维（per-group），首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴（N）相同。数据类型支持`torch.float32`、`torch.float16`、`torch.bfloat16`、`torch.int64`（per-channel），数据格式支持ND，支持非连续Tensor。
+- **x\_scale**（`Tensor`）：必选参数，左矩阵的量化因子，公式中的x\_scale。shape支持1维，长度需与x的首轴维度（M）相等。数据类型支持`torch.float32`，数据格式支持ND，支持非连续Tensor。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **bias**（`Tensor`）：可选参数，计算矩阵乘时的辅助矩阵，对应公式中的weightAssistMatrix。shape支持2维[E, N]，数据类型支持`float32`，数据格式支持ND。仅在A8W4场景生效，A8W8场景需传入None。默认值为None。
+- **bias**（`Tensor`）：可选参数，计算矩阵乘时的辅助矩阵，对应公式中的weightAssistMatrix。shape支持2维[E, N]，数据类型支持`torch.float32`，数据格式支持ND。仅在A8W4场景生效，A8W8场景需传入None。默认值为None。
 - **offset**（`Tensor`）：可选参数，per-channel非对称反量化的偏移。预留输入，暂不支持，需传入None。默认值为None。
 
 ## 返回值说明
 
-- **output**（`Tensor`）：输出的量化结果，公式中的Q。数据类型支持`int8`，shape支持2维[M, N/2]，数据格式支持ND。group\_list指导了输入和输出中的有效值范围，有效数据截至到group\_list[-1]，即`output[:group_list[-1], :]`为有效数据，其余部分不会更新。
-- **output\_scale**（`Tensor`）：输出的量化因子，公式中的Q\_scale。数据类型支持`float32`，shape支持1维[M]，数据格式支持ND。有效数据截至到group\_list[-1]，即`output_scale[:group_list[-1]]`为有效数据。
-- **output\_offset**（`Tensor`）：输出的非对称量化的偏移，公式中的Q\_offset。预留输出，暂未使用，返回空Tensor（0维float32）。
+- **output**（`Tensor`）：输出的量化结果，公式中的Q。数据类型支持`torch.int8`，shape支持2维[M, N/2]，数据格式支持ND。group\_list指定了输入和输出中的有效值范围，有效数据截至group\_list[-1]，即`output[:group_list[-1], :]`为有效数据，其余部分不会更新。
+- **output\_scale**（`Tensor`）：输出的量化因子，公式中的Q\_scale。数据类型支持`torch.float32`，shape支持1维[M]，数据格式支持ND。有效数据截至group\_list[-1]，即`output_scale[:group_list[-1]]`为有效数据。
+- **output\_offset**（`Tensor`）：输出的非对称量化的偏移，公式中的Q\_offset。预留输出，暂未使用，返回空Tensor（0维`torch.float32`）。
 
 ## 约束说明
 
@@ -124,7 +124,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
         x_scale = torch.randn(M, dtype=torch.float32).npu()
         group_list = generate_non_decreasing_sequence(E, M).npu()
         output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(x, weight_npu, group_list, weight_scale, x_scale,bias=None, offset=None)
-        # 有效数据截至到group_list[-1]
+        # 有效数据group_list[-1]
         valid_output = output[:group_list[-1], :]
         valid_output_scale = output_scale[:group_list[-1]]
         return output, output_scale, output_offset
@@ -182,7 +182,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
         group_list = generate_non_decreasing_sequence(E, M).npu()
         output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(
             x, weight_npu, group_list, weight_scale, x_scale, bias=bias, offset=None)
-        # 有效数据截至到group_list[-1]
+        # 有效数据截至group_list[-1]
         valid_output = output[:group_list[-1], :]
         valid_output_scale = output_scale[:group_list[-1]]
         return output, output_scale, output_offset

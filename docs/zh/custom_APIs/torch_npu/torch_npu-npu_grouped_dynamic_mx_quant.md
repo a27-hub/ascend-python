@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- API功能：根据传入的分组索引的起始值（`group_index`）对输入x按组进行分组，以基本块（`blocksize`）为粒度，对数据执行目标数据类型为float8/float4的动态MX量化，并输出量化尺度`mxscale`（float8\_e8m0）。
+- API功能：根据传入的分组索引的起始值（`group_index`）对输入x按组进行分组，以基本块（`blocksize`）为粒度，对数据执行目标数据类型为**float8**（`torch.float8_e4m3fn`，`torch.float8_e5m2`，下同）或**float4（`torch_npu.float4_e2m1fn_x2`，`torch_npu.float4_e1m2fn_x2`，下同）的动态MX量化，并输出量化尺度`mxscale`（`torch.float8_e8m0fnu`）。
 
 - 计算公式：
   - 场景1，当scale\_alg为0时：
@@ -33,12 +33,12 @@
 
       | dst_type | emax |
       | --- | --- |
-      | float4\_e2m1fn\_x2 | 2 |
-      | float4\_e1m2fn\_x2 | 0 |
-      | float8\_e4m3fn | 8 |
-      | float8\_e5m2 | 15 |
+      | `torch_npu.float4_e2m1fn_x2` | 2 |
+      | `torch_npu.float4_e1m2fn_x2` | 0 |
+      | `torch.float8_e4m3fn` | 8 |
+      | `torch.float8_e5m2` | 15 |
 
-  - 场景2，当scale\_alg为1时（只涉及float8类型）：
+  - 场景2，当scale\_alg为1时（只涉及float8）：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型float8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值：
 
@@ -46,13 +46,13 @@
     Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
     $$
 
-    - 将FP32映射到目标数据类型float8可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值：
+    - 将fp32映射到目标数据类型float8可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值：
 
     $$
     S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
     $$
 
-    - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$，即从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+    - 将块缩放因子$S_{fp32}^b$转换为fp8格式下可表示的缩放值$S_{ue8m0}^b$，即从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在fp8可表示的范围内：
 
     $$
     E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
@@ -61,7 +61,7 @@
     - 计算块缩放因子$S_{ue8m0}^b=2^{E_{int}^b}$，块转换因子$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$，对每个块内元素$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$。最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子（即$S_{ue8m0}^b$），$[d^i]_{i=1}^k$代表块内量化后的数据。
 
   - 场景3，当scale\_alg为2时（只涉及float4类型）：
-    - 当dst\_type\_max为0.0/6.0/7.0（float4\_e2m1fn\_x2）或1.875（float4\_e1m2fn\_x2）时：
+    - 当dst\_type\_max为0.0/6.0/7.0（`torch_npu.float4_e2m1fn_x2`）或1.875（`torch_npu.float4_e1m2fn_x2`）时：
       - 将输入x在第0维上按k = blocksize个数分组，一组k个数$\{\{V_i\}_{i=1}^{k}\}$动态量化为$\{mxscale, \{P_i\}_{i=1}^{k}\}$，k = blocksize：
 
       $$
@@ -73,7 +73,7 @@
       $$
 
       - 量化后的$P_i$按对应的$V_i$的位置组成输出y，按对应维度上的分组组成输出mxscale。
-    - 当dst\_type\_max不为上述特殊取值时（float4\_e2m1fn\_x2为6.0-12.0中的其它取值，float4\_e1m2fn\_x2为1.75-3.5中的其它取值）：
+    - 当dst\_type\_max不为上述特殊取值时（`torch_npu.float4_e2m1fn_x2`为6.0-12.0中的其它取值，`torch_npu.float4_e1m2fn_x2`为1.75-3.5中的其它取值）：
       - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
       - 找到该块中数值的最大绝对值：
 
@@ -87,7 +87,7 @@
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$
 
-      - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$，从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+      - 将块缩放因子$S_{fp32}^b$转换为fp8格式下可表示的缩放值$S_{ue8m0}^b$，从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
 
       $$
       E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
@@ -104,12 +104,12 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
 
 ## 参数说明
 
-- **x**（`Tensor`）：必选参数，表示算子输入的Tensor，公式中的输入x。维度仅支持2维，数据格式支持ND，数据类型支持`float16`、`bfloat16`。支持非连续Tensor，支持空Tensor。
-- **group\_index**（`Tensor`）：必选参数，表示量化分组的起始索引。维度仅支持1维，数据格式支持ND，数据类型支持`int32`。支持非连续Tensor，不支持空Tensor。索引要求大于等于0、非递减，且最后一个数与x的第0维大小相等。
+- **x**（`Tensor`）：必选参数，表示算子输入的Tensor，公式中的输入x。维度仅支持2维，数据格式支持ND，数据类型支持`torch.float16`、`torch.bfloat16`。支持非连续Tensor，支持空Tensor。
+- **group\_index**（`Tensor`）：必选参数，表示量化分组的起始索引。维度仅支持1维，数据格式支持ND，数据类型支持`torch.int32`。支持非连续Tensor，不支持空Tensor。索引要求大于等于0、非递减，且最后一个数与x的第0维大小相等。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **round\_mode**（`str`）：可选参数，表示数据转换的模式，公式中的round\_mode。默认值为"rint"。
-  - 当dst\_type为`float8_e5m2`、`float8_e4m3fn`时，仅支持"rint"。
-  - 当dst\_type为`float4_e2m1fn_x2`、`float4_e1m2fn_x2`时，支持"rint"、"round"、"floor"。
+  - 当dst\_type为`torch.float8_e5m2`、`torch.float8_e4m3fn`时，仅支持"rint"。
+  - 当dst\_type为`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`时，支持"rint"、"round"、"floor"。
 - **dst\_type**（`int`）：可选参数，表示数据转换后y的数据类型。默认值为23，支持取值：
   - 23：`torch.float8_e5m2`。
   - 24：`torch.float8_e4m3fn`。
@@ -122,13 +122,13 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
   - 2：场景3（FP4动态量化），仅float4支持。
 - **dst\_type\_max**（`float`）：可选参数，表示maxType的取值，对应公式中的Amax(DType)，仅dst\_type为float4时生效。默认值为0.0。
   - 0.0：Amax(DType)为量化结果数据类型的最大值。
-  - float4\_e2m1fn\_x2：支持0.0和6.0-12.0。
-  - float4\_e1m2fn\_x2：支持0.0和1.75-3.5。
+  - `torch_npu.float4_e2m1fn_x2`：支持0.0和6.0-12.0。
+  - `torch_npu.float4_e1m2fn_x2`：支持0.0和1.75-3.5。
 
 ## 返回值说明
 
-- **y**（`Tensor`）：表示量化后的输出Tensor，公式中的y。shape与输入x保持一致。当dst\_type为float8时，数据类型为`float8_e5m2`或`float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`uint8`，最后一维为输入x最后一维的一半（每个uint8元素打包2个float4数据），查看具体值需自行解包，如`y.view(torch_npu.float4_e2m1fn_x2)`。支持空Tensor。float8支持非连续Tensor，float4不支持非连续Tensor。
-- **mxscale**（`Tensor`）：表示每个分组对应的量化尺度，公式中的`mxscale`。数据类型为float8_e8m0，实际返回的数据类型为`uint8`，查看具体值需自行转换，如`mxscale.view(torch.float8_e8m0fnu)`。假设x的shape为[m, n]，`group_index`的shape为[g]，则`mxscale`的shape为[(m/(blocksize∗2)+g), n, 2]。支持空Tensor，不支持非连续Tensor。
+- **y**（`Tensor`）：表示量化后的输出Tensor，公式中的y。shape与输入x保持一致。当dst\_type为float8时，数据类型为`torch.float8_e5m2`或`torch.float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半（每个`torch.uint8`元素打包2个float4数据），查看具体值需自行解包，如`y.view(torch_npu.float4_e2m1fn_x2)`。支持空Tensor。float8支持非连续Tensor，float4不支持非连续Tensor。
+- **mxscale**（`Tensor`）：表示每个分组对应的量化尺度，公式中的`mxscale`。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale.view(torch.float8_e8m0fnu)`。假设x的shape为[m, n]，`group_index`的shape为[g]，则`mxscale`的shape为[(m/(blocksize∗2)+g), n, 2]。支持空Tensor，不支持非连续Tensor。
 
 ## 约束说明
 
@@ -149,10 +149,10 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
 
 | dst_type | scale_alg | round_mode | dst_type_max |
 | --- | --- | --- | --- |
-| float8_e5m2 | 0、1 | "rint" | 不支持设置（仅默认值0.0） |
-| float8_e4m3fn | 0、1 | "rint" | 不支持设置（仅默认值0.0） |
-| float4_e2m1fn_x2 | 0、2 | "rint"/"round"/"floor" | 0.0和6.0-12.0 |
-| float4_e1m2fn_x2 | 0、2 | "rint"/"round"/"floor" | 0.0和1.75-3.5 |
+| `torch.float8_e5m2` | 0、1 | "rint" | 不支持设置（仅默认值0.0） |
+| `torch.float8_e4m3fn` | 0、1 | "rint" | 不支持设置（仅默认值0.0） |
+| `torch_npu.float4_e2m1fn_x2` | 0、2 | "rint"/"round"/"floor" | 0.0和6.0-12.0 |
+| `torch_npu.float4_e1m2fn_x2` | 0、2 | "rint"/"round"/"floor" | 0.0和1.75-3.5 |
 
 ## 调用示例
 

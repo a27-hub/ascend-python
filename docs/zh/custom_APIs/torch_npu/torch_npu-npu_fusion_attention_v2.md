@@ -1,4 +1,4 @@
-# torch\_npu.npu\_fusion\_attention\_v2
+# torch_npu.npu_fusion_attention_v2
 
 ## 产品支持情况
 
@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- API功能：训练场景下，使用FlashAttention算法实现self-attention（自注意力）的融合计算，支持非varlen（BSH、SBH、BSND、BNSD）与varlen（TND）两种场景，支持query/key的Rope扩展输入（`query_rope, key_rope`）、每个注意力头的偏置sink，以及GQA（grouped-query attention）等特性。
+- API功能：训练场景下，使用FlashAttention算法实现self-attention（自注意力）的融合计算，支持非varlen（BSH、SBH、BSND、BNSD）与varlen（TND）两种场景，支持query/key的RoPE扩展输入（`query_rope, key_rope`）、每个注意力头的偏置sink，以及GQA（grouped-query attention）等特性。
 - 计算公式：
   - pse\_type为1（默认值）时，注意力的正向计算公式如下：
 
@@ -45,7 +45,7 @@
     $$
 
 > [!NOTE]
-> 在Atlas A2/A3产品上，query\_rope/key\_rope仅在varlen场景（input\_layout为TND）下生效，且要求actual\_seq\_qlen、actual\_seq\_kvlen传入有效值。
+> <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>上，query\_rope/key\_rope仅在varlen场景（input\_layout为TND）下生效，且要求actual\_seq\_qlen、actual\_seq\_kvlen传入有效值。
 
 ## 函数原型
 
@@ -55,29 +55,29 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 
 ## 参数说明
 
-- **query**（`Tensor`）：必选参数，公式中的query。维度支持3-4维，数据格式支持$ND$，数据类型支持`float16`、`bfloat16`、`float32`（传入query\_rope/key\_rope时仅支持`bfloat16`），需与key、value的数据类型一致。
-- **key**（`Tensor`）：必选参数，公式中的key。维度支持3-4维，数据格式支持$ND$，数据类型支持`float16`、`bfloat16`、`float32`（传入query\_rope/key\_rope时仅支持`bfloat16`），需与query、value的数据类型一致。
-- **value**（`Tensor`）：必选参数，公式中的value。维度支持3-4维，数据格式支持$ND$，数据类型支持`float16`、`bfloat16`、`float32`（传入query\_rope/key\_rope时仅支持`bfloat16`），需与query、key的数据类型一致。
+- **query**（`Tensor`）：必选参数，公式中的query。维度支持3-4维，数据格式支持$ND$，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`（传入query\_rope/key\_rope时仅支持`torch.bfloat16`），需与key、value的数据类型一致。
+- **key**（`Tensor`）：必选参数，公式中的key。维度支持3-4维，数据格式支持$ND$，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`（传入query\_rope/key\_rope时仅支持`torch.bfloat16`），需与query、value的数据类型一致。
+- **value**（`Tensor`）：必选参数，公式中的value。维度支持3-4维，数据格式支持$ND$，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`（传入query\_rope/key\_rope时仅支持`torch.bfloat16`），需与query、key的数据类型一致。
 - **head\_num**（`int`）：必选参数，代表单卡的head个数，即输入query的N轴长度。
 - **input\_layout**（`str`）：必选参数，代表输入`query`、`key`、`value`的数据排布格式，支持BSH、SBH、BSND、BNSD、TND（不区分大小写）。`input_layout`为TND时即为varlen场景，此时`actual_seq_qlen`/`actual_seq_kvlen`需传值。后续章节如无特殊说明，S表示`query`或`key`、`value`的sequence length，Sq表示query的sequence length，Skv表示`key`、`value`的sequence length，SS表示Sq\*Skv。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **pse**（`Tensor`）：可选参数，公式中的pse，位置编码，需与`pse_type`配套使用，默认值为None。数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$。
+- **pse**（`Tensor`）：可选参数，公式中的pse，位置编码，需与`pse_type`配套使用，默认值为None。数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`，数据格式支持$ND$。
   - 非varlen场景支持四维输入，包含BNSS格式、BN1Skv格式、1NSS格式。
   - 若非varlen场景Sq大于1024且每个batch的Sq与Skv等长且是`sparse_mode`为0、2、3的下三角掩码场景，可开启alibi位置编码压缩，此时只需要输入原始PSE最后1024行进行内存优化，即alibi\_compress = ori\_pse[:, :, -1024:, :]，参数每个batch不相同时输入BNHSkv(H=1024)，每个batch相同时输入1NHSkv(H=1024)。
   - varlen场景支持BNHSkv(H=1024)、1NHSkv(H=1024)、pseTotalLen三种shape；pseTotalLen为所有batch段pse元素个数之和，第i个batch段的pse元素个数为N \* Sq\_i \* Skv\_i。
-  - 当`pse_type`为2或3时，数据类型需为`float32`，对应shape支持范围是\[B, N\]或\[N\]。
+  - 当`pse_type`为2或3时，数据类型需为`torch.float32`，对应shape支持范围是\[B, N\]或\[N\]。
 - **padding\_mask**（`Tensor`）：可选参数，预留参数，暂未使用，传入None即可。
-- **atten\_mask**（`Tensor`）：可选参数，公式中的atten\_mask。取值为1（或True）代表该位不参与计算（被遮蔽），取值为0（或False）代表该位参与计算（被保留），数据类型支持`bool`、`uint8`，数据格式支持$ND$，输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式。varlen场景只支持SS格式，SS分别是maxSq和maxSkv。
-- **query\_rope**（`Tensor`）：可选参数，公式中的query\_rope，为query的Rope扩展输入，需与`key_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型支持`bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRopeD == kRopeD)、D为8的整数倍且小于等于query、key、value的D。
-- **key\_rope**（`Tensor`）：可选参数，公式中的key\_rope，为key的Rope扩展输入，需与`query_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型支持`bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRopeD == kRopeD)、D为8的整数倍且小于等于query、key、value的D。
+- **atten\_mask**（`Tensor`）：可选参数，公式中的atten\_mask。取值为1（或True）代表该位不参与计算（被遮蔽），取值为0（或False）代表该位参与计算（被保留），数据类型支持`bool`、`torch.uint8`，数据格式支持$ND$，输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式。varlen场景只支持SS格式，SS分别是maxSq和maxSkv。
+- **query\_rope**（`Tensor`）：可选参数，公式中的query\_rope，为query的RoPE扩展输入，需与`key_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型支持`torch.bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRoPED == kRoPED)、D为8的整数倍且小于等于query、key、value的D。
+- **key\_rope**（`Tensor`）：可选参数，公式中的key\_rope，为key的RoPE扩展输入，需与`query_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型支持`torch.bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRoPED == kRoPED)、D为8的整数倍且小于等于query、key、value的D。
 - **scale**（`float`）：可选参数，代表缩放系数，作为计算流中Muls的scalar值，默认值为1.。
 - **keep\_prob**（`float`）：可选参数，代表Dropout中1的比例，取值范围为(0, 1\]，默认值为1.，表示全部保留。传入query\_rope/key\_rope时keep\_prob必须为1。
 - **pre\_tokens**（`int`）：可选参数，用于稀疏计算，表示sliding window的左边界，默认值为2147483647。
 - **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示sliding window的右边界，默认值为2147483647。`next_tokens`和`pre_tokens`取值与`atten_mask`的关系请参见`sparse_mode`参数，参数取值与`atten_mask`分布不一致会导致精度问题。
 - **inner\_precise**（`int`）：可选参数，用于提升精度，默认值为0。当前0、1为保留配置值，2为开启无效行计算，其功能是避免在计算过程中存在整行mask进而导致精度有损失，但是该配置会导致性能下降。如果算子可判断出存在无效行场景，会自动开启无效行计算，例如`sparse_mode`为3、Sq > Skv场景。
-- **prefix**（`List[int]`）：可选参数，代表prefix稀疏计算场景每个Batch的N值，默认值为None。数据类型支持`int64`。当Sq > Skv时，prefix的N值取值范围\[0, Skv\]，当Sq <= Skv时，prefix的N值取值范围\[Skv-Sq, Skv\]。varlen场景不支持非压缩prefix（即不支持sparse\_mode=5）。
-- **actual\_seq\_qlen**（`List[int]`）：可选参数，varlen场景时需要传入此参数，表示`query`每个S的累加和长度，默认值为None。数据类型支持`int64`，长度取值范围为1\~2K，每个元素取值小于等于1M。比如真正的S长度列表为：2 2 2 2 2，则`actual_seq_qlen`传：2 4 6 8 10。
-- **actual\_seq\_kvlen**（`List[int]`）：可选参数，varlen场景时需要传入此参数，表示`key`/`value`每个S的累加和长度，默认值为None。数据类型支持`int64`，长度取值范围为1\~2K，每个元素取值小于等于1M。比如真正的S长度列表为：2 2 2 2 2，则`actual_seq_kvlen`传：2 4 6 8 10。
+- **prefix**（`List[int]`）：可选参数，代表prefix稀疏计算场景每个Batch的N值，默认值为None。数据类型支持`torch.int64`。当Sq > Skv时，prefix的N值取值范围\[0, Skv\]，当Sq <= Skv时，prefix的N值取值范围\[Skv-Sq, Skv\]。varlen场景不支持非压缩prefix（即不支持sparse\_mode=5）。
+- **actual\_seq\_qlen**（`List[int]`）：可选参数，varlen场景时需要传入此参数，表示`query`每个S的累加和长度，默认值为None。数据类型支持`torch.int64`，长度取值范围为1\~2K，每个元素取值小于等于1M。比如真正的S长度列表为：2 2 2 2 2，则`actual_seq_qlen`传：2 4 6 8 10。
+- **actual\_seq\_kvlen**（`List[int]`）：可选参数，varlen场景时需要传入此参数，表示`key`/`value`每个S的累加和长度，默认值为None。数据类型支持`torch.int64`，长度取值范围为1\~2K，每个元素取值小于等于1M。比如真正的S长度列表为：2 2 2 2 2，则`actual_seq_kvlen`传：2 4 6 8 10。
 - **sparse\_mode**（`int`）：可选参数，表示sparse的模式，默认值为0。当`atten_mask`输入为None时，`sparse_mode`、`pre_tokens`、`next_tokens`参数不生效，固定为全计算。不同取值场景说明如下表：
 
   | sparse_mode | 含义 | 备注 |
@@ -103,16 +103,16 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
   | --- | --- | --- |
   | 0 | 外部传入pse先mul再add | - |
   | 1 | 外部传入pse先add再mul | 默认值，与aclnnFlashAttentionScore实现一致 |
-  | 2 | 内部生成pse先mul再add | pse需为`float32`，shape为\[B, N\]或\[N\] |
-  | 3 | 内部生成pse先mul再add再sqrt | pse需为`float32`，shape为\[B, N\]或\[N\] |
+  | 2 | 内部生成pse先mul再add | pse需为`torch.float32`，shape为\[B, N\]或\[N\] |
+  | 3 | 内部生成pse先mul再add再sqrt | pse需为`torch.float32`，shape为\[B, N\]或\[N\] |
 
   - `pse_type`为2或3时，当前只支持Sq和Skv等长。
   - 传入query\_rope/key\_rope时，`pse_type`仅支持取值为1。
 
-- **q\_start\_idx**（`List[int]`）：可选参数，代表外切场景，当前分块的query的sequence在全局中的起始索引，默认值为None。数据类型支持`int64`。
-- **kv\_start\_idx**（`List[int]`）：可选参数，代表外切场景，当前分块的key和value的sequence在全局中的起始索引，默认值为None。数据类型支持`int64`。
+- **q\_start\_idx**（`List[int]`）：可选参数，代表外切场景，当前分块的query的sequence在全局中的起始索引，默认值为None。数据类型支持`torch.int64`。
+- **kv\_start\_idx**（`List[int]`）：可选参数，代表外切场景，当前分块的key和value的sequence在全局中的起始索引，默认值为None。数据类型支持`torch.int64`。
 - **softmax\_layout**（`str`）：可选参数，用于控制TND场景下softmax的输出（softmax\_max和softmax\_sum）的数据排布方式，默认值为""。仅支持传入""和"TND"，且仅当`input_layout`为TND时才可传入"TND"。默认情况下，softmax的输出排布为NTD排布；传入"TND"时，softmax的输出排布为TND排布。
-- **sink**（`Tensor`）：可选参数，每个注意力头的偏置，默认值为None。shape为\[head\_num\]，数据类型仅支持`float32`。
+- **sink**（`Tensor`）：可选参数，每个注意力头的偏置，默认值为None。shape为\[head\_num\]，数据类型仅支持`torch.float32`。
 - **dropout\_mask**（`Tensor`）：可选参数，外部传入的dropout mask，默认值为None。不传入时，由接口内部根据`keep_prob`、`seed`、`offset`自动生成。
 - **seed**（`int`）：可选参数，DSA生成dropout mask中Philox算法的seed，默认值为0。返回值中的seed为实际使用的seed，可用于反向计算。
 - **offset**（`int`）：可选参数，DSA生成dropout mask中Philox算法的offset，默认值为0。返回值中的offset为实际使用的offset，可用于反向计算。
@@ -122,8 +122,8 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 共7个输出，类型依次为**Tensor、Tensor、Tensor、Tensor、int、int、int。**
 
 - **attention\_out**（`Tensor`）：计算公式的最终输出，数据类型和shape类型与query保持一致（BNSD场景输出shape为\[B, N, Sq, Dv\]，TND场景输出shape为\[T, N, Dv\]，其中Dv为value的Head-Dim）。
-- **softmax\_max**（`Tensor`）：Softmax计算的Max中间结果，用于反向计算。数据类型为`float32`。非varlen场景shape为\[B, N, Sq, 8\]，varlen场景（TND）shape为\[T, N, 8\]。
-- **softmax\_sum**（`Tensor`）：Softmax计算的Sum中间结果，用于反向计算。数据类型为`float32`。非varlen场景shape为\[B, N, Sq, 8\]，varlen场景（TND）shape为\[T, N, 8\]。
+- **softmax\_max**（`Tensor`）：Softmax计算的Max中间结果，用于反向计算。数据类型为`torch.float32`。非varlen场景shape为\[B, N, Sq, 8\]，varlen场景（TND）shape为\[T, N, 8\]。
+- **softmax\_sum**（`Tensor`）：Softmax计算的Sum中间结果，用于反向计算。数据类型为`torch.float32`。非varlen场景shape为\[B, N, Sq, 8\]，varlen场景（TND）shape为\[T, N, 8\]。
 - **softmax\_out**（`Tensor`）：预留参数，暂未使用，返回空Tensor。
 - **seed**（`int`）：DSA生成dropout mask中Philox算法的seed，返回实际使用的seed，可用于反向计算。
 - **offset**（`int`）：DSA生成dropout mask中Philox算法的offset，返回实际使用的offset，可用于反向计算。
@@ -135,7 +135,7 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 - 该接口暂不支持图模式，不支持aclgraph。
 - 确定性计算：默认确定性实现。当`keep_prob`小于1时，dropout mask由随机数生成，计算结果的确定性受`seed`、`offset`参数控制。
 - 输入`query`、`key`、`value`的维度必须为3维或4维，且`input_layout`必须一致。
-- 输入`query`、`key`、`value`的数据类型必须一致；传入query\_rope/key\_rope时仅支持`bfloat16`。
+- 输入`query`、`key`、`value`的数据类型必须一致；传入query\_rope/key\_rope时仅支持`torch.bfloat16`。
 - 输入`query`、`key`、`value`、`pse`的数据类型必须一致。
 - 输入`key`和`value`的shape必须一致（除Head-Dim外）。
 - D：Head-Dim必须满足(qD == kD && kD >= vD)，取值范围1\~768。
@@ -164,9 +164,9 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 - `prefix`稀疏计算场景B不大于32；varlen场景不支持非压缩prefix，即不支持sparse\_mode=5。
 - 传入`query_rope`、`key_rope`时：
   - 仅在varlen场景（input\_layout为TND）下支持，且必须传入`atten_mask`。
-  - qRopeD必须等于kRopeD，且D必须是8的整数倍、小于等于query、key和value的D。
+  - qRoPED必须等于kRoPED，且D必须是8的整数倍、小于等于query、key和value的D。
   - 不支持传入`pse`和dropout mask。
-- 传入`sink`时，sink的shape必须为\[head\_num\]，且要求当前CANN版本已提供aclnnFlashAttentionVarLenScoreV5/aclnnFlashAttentionScoreV3算子。
+- 传入`sink`时，sink的shape必须为\[head\_num\]。
 - `softmax_layout`仅支持传入""和"TND"，且仅当`input_layout`为TND时才能传入"TND"。
 - `input_layout`为TND时，`sparse_mode`取值范围为\[0, 5)或(5, 8\]；`input_layout`为其他取值时，`sparse_mode`取值范围为\[0, 6\]。
 - 部分场景下，如果计算量过大可能会导致算子执行超时（aicore error类型报错，errorStr为：timeout or trap error），此时建议做轴切分处理，注：这里的计算量会受B、S、N、D等参数的影响，值越大计算量越大。
