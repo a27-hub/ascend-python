@@ -60,7 +60,7 @@ jobs:
     select: selected_by_default
     # 单分片执行超时: 5 小时
     timeout-minutes: 300
-    runs-on: [ self-hosted, ${{ inputs.NPU_LABEL }} ]
+    runs-on: [ self-hosted, "${{ inputs.NPU_LABEL }}" ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: ${{ inputs.CONTAINER_OPTIONS }}
