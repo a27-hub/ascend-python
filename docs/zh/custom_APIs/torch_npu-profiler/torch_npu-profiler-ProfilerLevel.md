@@ -26,7 +26,7 @@ torch_npu.profiler.ProfilerLevel
 - **torch_npu.profiler.ProfilerLevel.Level1**：在Level0的基础上多采集CANN层AscendCL数据和NPU上执行的AI Core性能指标信息、开启aic_metrics=torch_npu.profiler.AiCMetrics.PipeUtilization以及HCCL的communication.json和communication_matrix.json文件。
 - **torch_npu.profiler.ProfilerLevel.Level2**：在Level1的基础上多采集CANN层Runtime数据以及AI CPU数据（data_preprocess.csv文件）。
 
-## 使用示例
+## 调用示例
 
 以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 

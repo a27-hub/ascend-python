@@ -23,7 +23,7 @@ torch_npu.profiler.ProfilerActivity
 - **torch_npu.profiler.ProfilerActivity.CPU**：枚举成员，用于开启框架侧数据采集。
 - **torch_npu.profiler.ProfilerActivity.NPU**：枚举成员，用于开启CANN软件栈及NPU数据采集。
 
-## 使用示例
+## 调用示例
 
 以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 
