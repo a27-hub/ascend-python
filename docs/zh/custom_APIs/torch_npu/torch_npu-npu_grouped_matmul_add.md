@@ -67,7 +67,7 @@ torch_npu.npu_grouped_matmul_add(self, x, weight, group_list, *, transpose_x=Tru
 - `group_type`当前仅支持2（K轴分组）。
 - group\_list第1维最大支持1024，即最多支持1024个group。
 - x和weight中每一组tensor的每一维大小在32字节对齐后都应小于`torch.int32`的最大值2147483647。
-- x和weight中每一组tensor的最后一维大小都应小于65536。x的最后一维指当x不转置时x的K轴或当x转置时x的M轴；weight的最后一维指当weight不转置时weight的N轴或当weight转置时weight的K轴。
+- x和weight中每一组tensor的最后一维大小都应小于65536。x的最后一维指转置后的M轴；weight的最后一维指不转置时的N轴。
 
 ## 调用示例
 

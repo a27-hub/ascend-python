@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- API功能：根据传入的分组索引的起始值（`group_index`）对输入x按组进行分组，以基本块（`blocksize`）为粒度，对数据执行目标数据类型为**float8**（`torch.float8_e4m3fn`，`torch.float8_e5m2`，下同）或**float4（`torch_npu.float4_e2m1fn_x2`，`torch_npu.float4_e1m2fn_x2`，下同）的动态MX量化，并输出量化尺度`mxscale`（`torch.float8_e8m0fnu`）。
+- API功能：根据传入的分组索引的起始值（`group_index`）对输入x按组进行分组，以基本块（`blocksize`）为粒度，对数据执行目标数据类型为`float8`（`torch.float8_e4m3fn`，`torch.float8_e5m2`，下同）或`float4`（`torch_npu.float4_e2m1fn_x2`，`torch_npu.float4_e1m2fn_x2`，下同）的动态MX量化，并输出量化尺度`mxscale`（`torch.float8_e8m0fnu`）。
 
 - 计算公式：
   - 场景1，当scale\_alg为0时：

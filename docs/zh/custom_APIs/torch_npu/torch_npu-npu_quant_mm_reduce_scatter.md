@@ -33,7 +33,7 @@
     其中
 
     $$
-    ceildiv = \left \lfloor \frac{k}{blockSize=128} \right \rfloor
+    ceildiv = \left \lceil \frac{k}{blockSize=128} \right \rceil
     $$
 
   - 情形4：x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景，且不输出amax时，当x1的shape为(m, k)、x2的shape为(n, k)，x1Scale的shape为(m, ceildiv(k, 64), 2)、x2Scale的shape为(ceildiv(k, 64), n, 2)时，入参x1、x2进行matmul计算和dequant计算后，再进行ReduceScatter通信。mx量化仅支持x2、x2Scale转置场景。
@@ -45,7 +45,7 @@
     其中
 
     $$
-    ceildiv = \left \lfloor \frac{k}{blockSize=32} \right \rfloor
+    ceildiv = \left \lceil \frac{k}{blockSize=32} \right \rceil
     $$
 
 > [!NOTE]
@@ -143,7 +143,7 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
     self_t = torch.randn(x1_shape, dtype=dtype).npu()
     x2 = torch.randn(x2_shape, dtype=dtype).npu()
     output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None, x1_scale=None, x2_scale=None, amax_output=amax_output)
-    print(output.shape, output.dtype) # (torch.Size([256, 256]), torch.float16)
+    print(output.shape, output.dtype)
     # amax_output为False时返回空Tensor
     print(amax)  # torch.Size([0])
 
@@ -156,8 +156,6 @@ if __name__ == "__main__":
     dtype = torch.float16
     amax_output = False  # amax_output为False时返回空Tensor
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-    # torch.Size([64, 64]) torch.float16
-    # torch.Size([64, 64]) torch.float16
     amax_output = True  # amax_output为True时返回[1]的float32最大值结果
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 ```
@@ -301,7 +299,7 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
         hcomm_info = default_pg.get_hccl_comm_name(rank)
 
     m, k = x1_shape   # x1_shape为(m, k)
-    n = x2_shape[1]   # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(n, k)
+    n = x2_shape[1]   # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(k, n)
     self_t = torch.randn(x1_shape).to(dtype).npu()
     x2 = torch.randn(x2_shape).to(dtype).npu()
     # mx量化场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceildiv(k, 64), 2)、(ceildiv(k, 64), n, 2)
@@ -319,7 +317,7 @@ if __name__ == "__main__":
     master_ip = '127.0.0.1'
     master_port = '50001'
     x1_shape = [128, 256]
-    x2_shape = [256, 64]  # 转置输入
+    x2_shape = [256, 64] 
     dtype = torch.float8_e4m3fn
     amax_output = False  # 情形4不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)

@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- API功能：在输入张量的-1轴和-2轴上同时进行目的数据类型为**float4**（`torch_npu.float4_e1m2fn_x2`，`torch_npu.float4_e2m1fn_x2`，下同）、**float8**（`torch.float8_e4m3fn`，`torch.float8_e5m2`，下同）的MX量化。在-1轴和-2轴上，每32个数计算出对应的量化尺度mxscale1、mxscale2作为输出mxscale1、mxscale2的对应部分，然后分别将两组数所有元素除以对应的量化尺度，根据round\_mode转换到对应的dst\_type，得到量化结果y1和y2。
+- API功能：在输入张量的-1轴和-2轴上同时进行目的数据类型为`float4`（`torch_npu.float4_e1m2fn_x2`，`torch_npu.float4_e2m1fn_x2`，下同）、`float8`（`torch.float8_e4m3fn`，`torch.float8_e5m2`，下同）的MX量化。在-1轴和-2轴上，每32个数计算出对应的量化尺度mxscale1、mxscale2作为输出mxscale1、mxscale2的对应部分，然后分别将两组数所有元素除以对应的量化尺度，根据round\_mode转换到对应的dst\_type，得到量化结果y1和y2。
 - 合轴说明：算子实现时，会对-2轴（不包含）之前的所有轴进行合轴处理。即对于输入shape为$(d_0, d_1, ..., d_{n-3}, d_{n-2}, d_{n-1})$的张量，-2轴之前的维度$(d_0, d_1, ..., d_{n-3})$会被合并为一个维度，等效于将输入reshape为$(d_0 \times d_1 \times ... \times d_{n-3}, d_{n-2}, d_{n-1})$后再进行量化计算。
 - 计算公式：
   - 场景1，当scale\_alg为0时，即OCP Microscaling Formats (Mx) Specification实现：
@@ -127,7 +127,7 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 ## 返回值说明
 
 - **y1**（`Tensor`）：表示输入x量化-1轴后的对应结果。shape和输入x一致。当dst\_type为float8时，数据类型为`torch.float8_e5m2`或`torch.float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半（每个`torch.uint8`元素打包2个float4数据），查看具体值需自行解包，如`y1.view(torch_npu.float4_e2m1fn_x2)`。不支持非连续Tensor。
-- **mxscale1**（`Tensor`）：表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。数据类型为`torch.float8_e8m0fmu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale1.view(torch.float8_e8m0fnu)`。shape为输入x的-1轴的值除以32向上取整，并对其进行偶数pad（pad填充值为0），最后追加一维大小为2。不支持非连续Tensor。
+- **mxscale1**（`Tensor`）：表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale1.view(torch.float8_e8m0fnu)`。shape为输入x的-1轴的值除以32向上取整，并对其进行偶数pad（pad填充值为0），最后追加一维大小为2。不支持非连续Tensor。
 - **y2**（`Tensor`）：表示输入x量化-2轴后的对应结果。shape和输入x一致。数据类型与y1相同（float4时实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半）。不支持非连续Tensor。
 - **mxscale2**（`Tensor`）：表示-2轴每个分组对应的量化尺度，对应公式中的mxscale2。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换。shape为输入x的-2轴的值除以32向上取整，并对其进行偶数pad（pad填充值为0），最后追加一维大小为2，且输出需要对每两行数据进行交织处理。不支持非连续Tensor。
 
@@ -151,8 +151,8 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 - 关于input、mxscale1、mxscale2的shape约束说明如下：
   - rank(mxscale1) = rank(input) + 1。
   - rank(mxscale2) = rank(input) + 1。
-  - mxscale1.shape[-2] = (ceil(input.shape[-1] / 32) + 2 - 1) / 2。
-  - mxscale2.shape[-3] = (ceil(input.shape[-2] / 32) + 2 - 1) / 2。
+  - mxscale1.shape[-2] = (ceil(input.shape[-1] / 32) + 2 - 1) // 2。
+  - mxscale2.shape[-3] = (ceil(input.shape[-2] / 32) + 2 - 1) // 2。
   - mxscale1.shape[-1] = 2。
   - mxscale2.shape[-1] = 2。
   - 其他维度与输入input一致。

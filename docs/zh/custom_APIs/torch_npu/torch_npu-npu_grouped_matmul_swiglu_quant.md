@@ -86,7 +86,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
   - N轴长度不能超过10240。
   - bias（weightAssistMatrix）为必传参数。
 - weight需为FRACTAL\_NZ格式的5维存储，首轴长度为专家数E。
-- group\_list的长度需与weight的首轴维度相等，元素个数不能大于weight的首轴长度；group\_list为cumsum形式，其最后一个值约束了输出的有效数据范围。
+- group\_list的长度需与weight的首轴维度相等；group\_list为cumsum形式，其最后一个值约束了输出的有效数据范围。
 - offset为预留输入，暂不支持，需传入None。
 
 ## 调用示例

@@ -159,7 +159,7 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
   - `sparse_mode`配置为1、2、3、5、6时，用户配置的`pre_tokens`、`next_tokens`不会生效。
   - `sparse_mode`配置为0、4时，需保证`atten_mask`与`pre_tokens`、`next_tokens`的范围一致。
   - band场景，`pre_tokens`和`next_tokens`之间必须要有交集。
-  - `sparse_mode`配置为3时，不支持无效行计算，需要满足每个batch的Sq <= Skv。
+  - `sparse_mode`配置为3时，Sq > Skv的场景自动开启无效行计算。
   - `sparse_mode`配置为7、8时，不支持可选参数`pse`。
 - `prefix`稀疏计算场景B不大于32；varlen场景不支持非压缩prefix，即不支持sparse\_mode=5。
 - 传入`query_rope`、`key_rope`时：
