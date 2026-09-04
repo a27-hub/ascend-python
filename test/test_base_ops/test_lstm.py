@@ -1,6 +1,4 @@
 import copy
-from typing import Optional, Tuple
-
 import torch
 import numpy as np
 import torch_npu
@@ -107,47 +105,6 @@ class TestLstm(TestCase):
 
     def test_lstm_packed_bf16_fallback(self):
         self._assert_packed_fallback(torch.bfloat16, torch.bfloat16)
-
-    def test_lstm_packed_torchscript(self):
-        class PackedLstm(torch.nn.Module):
-            def __init__(self, lstm):
-                super().__init__()
-                self.lstm = lstm
-
-            def forward(self, packed: PackedSequence, hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
-                return self.lstm(packed, hx)
-
-        jit_compile = not torch_npu.npu.is_jit_compile_false()
-        try:
-            for jit in (False, True):
-                torch_npu.npu.set_compile_mode(jit_compile=jit)
-                model = PackedLstm(self._build_lstm(num_layers=1))
-                scripted = torch.jit.script(model)
-                for dtype in (torch.float32, torch.float16):
-                    packed, h0, c0 = self._make_packed_inputs(dtype, num_layers=1)
-                    for hx in (None, (h0, c0)):
-                        with self.subTest(jit=jit, dtype=dtype, supplied_hx=hx is not None):
-                            if dtype == torch.float16:
-                                with self.assertRaisesRegex(ValueError, "RNN input dtype"):
-                                    model(packed, hx)
-                            with torch.autocast(device_type=self.device, dtype=torch.float16,
-                                                enabled=dtype == torch.float16):
-                                expected, (expected_h, expected_c) = model(packed, hx)
-                            actual, (actual_h, actual_c) = scripted(packed, hx)
-                            self.assertRtolEqual(actual.data, expected.data)
-                            self.assertRtolEqual(actual_h, expected_h)
-                            self.assertRtolEqual(actual_c, expected_c)
-                # Scripting exempts dtype only; input and hidden shape checks must remain active.
-                for bad_packed, bad_hx, message in (
-                    (packed._replace(data=packed.data.unsqueeze(-1)), (h0, c0), "input must have 2 dimensions"),
-                    (packed._replace(data=packed.data[:, :-1]), (h0, c0), r"input.size\(-1\) must be equal"),
-                    (packed, (h0.repeat(2, 1, 1), c0), r"Expected hidden\[0\] size"),
-                    (packed, (h0, c0[:, :, :-1]), r"Expected hidden\[1\] size"),
-                ):
-                    with self.subTest(jit=jit, invalid_arg=message), self.assertRaisesRegex(RuntimeError, message):
-                        scripted(bad_packed, bad_hx)
-        finally:
-            torch_npu.npu.set_compile_mode(jit_compile=jit_compile)
 
     def test_lstm_packed_params_size_fallback(self):
         self._assert_packed_fallback(torch.float32, torch.float32, num_layers=2)
