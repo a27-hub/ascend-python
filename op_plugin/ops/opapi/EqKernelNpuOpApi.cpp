@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/TensorIterator.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -40,8 +41,9 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
     return op_api::eq_out(other, self.item(), result);
   }
 
-  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-  npu_preparation::check_tensor({self, other}, result, at::IntArrayRef(output_size));
+  // Build the iterator to validate/resize the output with ATen-compatible
+  // memory-dense strides.
+  at::TensorIterator::comparison_op(result, self, other);
   EXEC_NPU_CMD(aclnnEqTensor, self, other, result);
   at::namedinference::propagate_names_if_nonempty(result, maybe_names);
   return result;
@@ -68,11 +70,13 @@ at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
     return op_api::eq(other, self.item());
   }
 
-  // calculate the output size
-  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-
-  // construct the output tensor of the NPU
-  at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
+  // Allocate the output through TensorIterator so its strides follow the
+  // memory-dense layout of the inputs, matching ATen native semantics.
+  // Pre-create an empty contiguous output: the iterator then resizes it via
+  // as_strided_, avoiding empty() with a non-contiguous memory format that
+  // some strided inputs would otherwise propagate.
+  at::Tensor result = at::empty(0, self.options().dtype(at::kBool));
+  at::TensorIterator::comparison_op(result, self, other);
 
   // calculate the output result of the NPU
   EXEC_NPU_CMD(aclnnEqTensor, self, other, result);
