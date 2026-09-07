@@ -220,7 +220,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     - 2：`group_list` shape为\[E, 2\]，E表示Group大小，数据排布为\[\[groupIdx0, groupSize0\], \[groupIdx1, groupSize1\], ...\]，其中groupSize为分组轴上每组大小。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅当`x`和`weight`参数输入类型为int8，并且`group_type`取0（m轴分组）时，支持取2。
     - <term>Atlas 推理系列产品</term>：不支持取2。
-    - <term>Ascend 950PR/Ascend 950DT</term>：仅当全量化场景下，并且`group_type`取0（m轴分组）时，支持取2。
+    - <term>Ascend 950PR/Ascend 950DT</term>：仅当全量化场景或MX A8W4伪量化场景下，并且`group_type`取0（m轴分组）时，支持取2。
 
 - **`act_type`**（`int`）：**可选参数**，代表激活函数类型。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
