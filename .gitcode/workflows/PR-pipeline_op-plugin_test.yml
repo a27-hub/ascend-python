@@ -177,7 +177,7 @@ stages:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
           - name: Only Doc Commit Check
             id: only-doc-check
-            uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@v1
+            uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@v1.0.2
             with:
               pr_id: ${{ env.pr_id }}
               target_branch: ${{ atomgit.event.pull_request.base.ref }}
