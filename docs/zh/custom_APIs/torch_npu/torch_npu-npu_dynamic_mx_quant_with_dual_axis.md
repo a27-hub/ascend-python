@@ -136,7 +136,7 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 - 该接口支持训练、推理场景下使用。
 - 该接口支持单算子模式和图模式调用。
 - 确定性计算：默认确定性实现。
-- 当dst\_type为float4时，input的最后一维必须是2的整数倍。
+- 当dst\_type为float4（即296、297对应的类型）时，input的最后一维必须是2的整数倍。
 - dst\_type、scale\_alg、round\_mode、dst\_type\_max的参数组合约束如下表：
 
 | dst_type | scale_alg | round_mode | dst_type_max |
