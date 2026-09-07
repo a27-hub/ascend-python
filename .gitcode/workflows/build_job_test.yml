@@ -82,6 +82,26 @@ jobs:
           head -c 1048576 /dev/urandom > "${test_file}"
           test "$(stat -c '%s' "${test_file}")" -eq 1048576
           sha256sum "${test_file}"
+      # - name: Debug OIDC Token Claims
+      #   run: |
+      #     URL="${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}"
+      #     if echo "$URL" | grep -q '?'; then
+      #       FULL_URL="${URL}&audience=pta_pr_obs_for_pytorch"
+      #     else
+      #       FULL_URL="${URL}?audience=pta_pr_obs_for_pytorch"
+      #     fi
+      #     RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
+      #       -H "Authorization: Bearer ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" \
+      #       "$FULL_URL")
+      #     echo "$RESPONSE"
+      #     JWT=$(echo "$RESPONSE" | sed -n 's/.*"value":[ ]*"\([^"]*\)".*/\1/p')
+      #     echo "JWT length: ${#JWT}"
+      #     PAYLOAD=$(echo "$JWT" | cut -d'.' -f2 | tr '_-' '/+')
+      #     case $((${#PAYLOAD} % 4)) in
+      #       2) PAYLOAD="${PAYLOAD}==";;
+      #       3) PAYLOAD="${PAYLOAD}=";;
+      #     esac
+      #     echo "$PAYLOAD" | base64 -d 2>/dev/null || echo "base64 decode failed"
       - name: oidc-auth
         uses: huaweicloud-oidc-auth
         with:
