@@ -4,28 +4,28 @@
 
 | 产品 | 是否支持 |
 | --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Ascend 950DT</term> | √ |
 
 ## 功能说明
 
-- API功能：根据传入的分组索引的起始值（`group_index`）对输入x按组进行分组，以基本块（`blocksize`）为粒度，对数据执行目标数据类型为`float8`（`torch.float8_e4m3fn`，`torch.float8_e5m2`，下同）或`float4`（`torch_npu.float4_e2m1fn_x2`，`torch_npu.float4_e1m2fn_x2`，下同）的动态MX量化，并输出量化尺度`mxscale`（`torch.float8_e8m0fnu`）。
+- API功能：根据传入的分组索引的起始值（`group_index`）对输入x按组进行分组，以基本块（`blocksize`）为粒度，对数据执行目标数据类型为`float8`（`torch.float8_e4m3fn`，`torch.float8_e5m2`）或`float4`（`torch_npu.float4_e2m1fn_x2`，`torch_npu.float4_e1m2fn_x2`）的动态MX量化，并输出量化尺度`mxscale`（`torch.float8_e8m0fnu`）。
 
 - 计算公式：
   - 场景1，当scale\_alg为0时：
-    - 将输入x在第0维上先按照group\_index进行分组，每个group内按k = blocksize个数分组，一组k个数$\{\{V_i\}_{i=1}^{k}\}$计算出这组数对应的量化尺度mxscale\_pre，$\{mxscale\_pre, \{P_i\}_{i=1}^{k}\}$，计算公式为下面公式(1)(2)。
+    - 将输入x在第0维上先按照group\_index进行分组，每个group内按k = blocksize个数分组，一组k个数$\{\{V_i\}_{i=1}^{k}\}$计算出这组数对应的量化尺度mxscale\_pre，$\{mxscale\_pre, \{P_i\}_{i=1}^{k}\}$，计算公式如下：
 
     $$
-    shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1}
+    shared\_exp = floor(log_2(max_i(|V_i|))) - emax
     $$
 
     $$
-    mxscale\_pre = 2^{shared\_exp}  \tag{2}
+    mxscale\_pre = 2^{shared\_exp}
     $$
 
-    - 这组数每一个除以mxscale\_pre，根据round\_mode转换到对应的dst\_type，得到量化结果y，计算公式为下面公式(3)。
+    - 这组数每一个除以mxscale\_pre，根据round\_mode转换到对应的dst\_type，得到量化结果y，计算公式如下：
 
     $$
-    P_i = cast\_to\_dst\_type(V_i/mxscale\_pre, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
+    P_i = cast\_to\_dst\_type(V_i/mxscale\_pre, round\_mode), \space i\space from\space 1\space to\space blocksize
     $$
 
     - 量化后的$P_i$按对应的$V_i$的位置组成输出y，mxscale\_pre按对应的group\_index分组，分组内第一个维度pad为偶数，组成输出mxscale。
@@ -81,13 +81,13 @@
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
 
-      - 将FP32映射到目标数据类型可表示的范围内，其中当dst\_type\_max为0时，$Amax(DType)$是目标精度能表示的最大值；当dst\_type\_max不为0时，$Amax(DType)$是dst\_type\_max传入值：
+      - 将fp32映射到目标数据类型可表示的范围内，其中当dst\_type\_max为0时，$Amax(DType)$是目标精度能表示的最大值；当dst\_type\_max不为0时，$Amax(DType)$是dst\_type\_max传入值：
 
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$
 
-      - 将块缩放因子$S_{fp32}^b$转换为fp8格式下可表示的缩放值$S_{ue8m0}^b$，从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+      - 将块缩放因子$S_{fp32}^b$转换为fp8格式下可表示的缩放值$S_{ue8m0}^b$，从$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$，为保证量化时不溢出，对指数进行向上取整，且在fp8可表示的范围内：
 
       $$
       E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
@@ -104,10 +104,10 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
 
 ## 参数说明
 
-- **x**（`Tensor`）：必选参数，表示算子输入的Tensor，公式中的输入x。维度仅支持2维，数据格式支持ND，数据类型支持`torch.float16`、`torch.bfloat16`。支持非连续Tensor，支持空Tensor。
+- **x**（`Tensor`）：必选参数，表示算子输入的Tensor，公式中的输入$x$。维度仅支持2维，数据格式支持ND，数据类型支持`torch.float16`、`torch.bfloat16`。支持非连续Tensor，支持空Tensor。
 - **group\_index**（`Tensor`）：必选参数，表示量化分组的起始索引。维度仅支持1维，数据格式支持ND，数据类型支持`torch.int32`。支持非连续Tensor，不支持空Tensor。索引要求大于等于0、非递减，且最后一个数与x的第0维大小相等。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **round\_mode**（`str`）：可选参数，表示数据转换的模式，公式中的round\_mode。默认值为"rint"。
+- **round\_mode**（`str`）：可选参数，表示数据转换的模式，公式中的$round\_mode$。默认值为"rint"。
   - 当dst\_type为`torch.float8_e5m2`、`torch.float8_e4m3fn`时，仅支持"rint"。
   - 当dst\_type为`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`时，支持"rint"、"round"、"floor"。
 - **dst\_type**（`int`）：可选参数，表示数据转换后y的数据类型。默认值为23，支持取值：
@@ -115,31 +115,26 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
   - 24：`torch.float8_e4m3fn`。
   - 296：`torch_npu.float4_e2m1fn_x2`。
   - 297：`torch_npu.float4_e1m2fn_x2`。
-- **blocksize**（`int`）：可选参数，表示每次量化的元素个数，公式中的blocksize。当前取值仅支持32，默认值为32。
+- **blocksize**（`int`）：可选参数，表示每次量化的元素个数，公式中的$blocksize$。当前取值仅支持32，默认值为32。
 - **scale\_alg**（`int`）：可选参数，表示mxscale计算时采用的算法。支持取值为0、1、2，默认值为0。
   - 0：场景1（共享指数MX量化），float8、float4均支持。
   - 1：场景2（逐块缩放），仅float8支持。
-  - 2：场景3（FP4动态量化），仅float4支持。
-- **dst\_type\_max**（`float`）：可选参数，表示maxType的取值，对应公式中的Amax(DType)，仅dst\_type为float4时生效。默认值为0.0。
+  - 2：场景3（fp4动态量化），仅float4支持。
+- **dst\_type\_max**（`float`）：可选参数，表示maxType的取值，对应公式中的$Amax(DType)$，仅dst\_type为float4时生效。默认值为0.0。
   - 0.0：Amax(DType)为量化结果数据类型的最大值。
   - `torch_npu.float4_e2m1fn_x2`：支持0.0和6.0-12.0。
   - `torch_npu.float4_e1m2fn_x2`：支持0.0和1.75-3.5。
 
 ## 返回值说明
 
-- **y**（`Tensor`）：表示量化后的输出Tensor，公式中的y。shape与输入x保持一致。当dst\_type为float8时，数据类型为`torch.float8_e5m2`或`torch.float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半（每个`torch.uint8`元素打包2个float4数据），查看具体值需自行解包，如`y.view(torch_npu.float4_e2m1fn_x2)`。支持空Tensor。float8支持非连续Tensor，float4不支持非连续Tensor。
-- **mxscale**（`Tensor`）：表示每个分组对应的量化尺度，公式中的`mxscale`。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale.view(torch.float8_e8m0fnu)`。假设x的shape为[m, n]，`group_index`的shape为[g]，则`mxscale`的shape为[(m/(blocksize∗2)+g), n, 2]。支持空Tensor，不支持非连续Tensor。
+- **y**（`Tensor`）：表示量化后的输出Tensor，公式中的$y$。shape与输入x保持一致。当dst\_type为float8时，数据类型为`torch.float8_e5m2`或`torch.float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半（每个`torch.uint8`元素打包2个float4数据），查看具体值需自行解包，如`y.view(torch_npu.float4_e2m1fn_x2)`。支持空Tensor。float8支持非连续Tensor，float4不支持非连续Tensor。
+- **mxscale**（`Tensor`）：表示每个分组对应的量化尺度，公式中的$mxscale$。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale.view(torch.float8_e8m0fnu)`。假设x的shape为[m, n]，`group_index`的shape为[g]，则`mxscale`的shape为[(m/(blocksize∗2)+g), n, 2]。支持空Tensor，不支持非连续Tensor。
 
 ## 约束说明
 
 - 该接口支持训练、推理场景下使用。
 - 该接口支持单算子模式和图模式调用。
-- 该接口仅在<term>Ascend 950PR/Ascend 950DT</term>上支持。
 - 确定性计算：默认确定性实现。
-- 输入x必须为2维，group\_index必须为1维。
-- group\_index中的元素必须大于等于0、非递减，且最后一个元素与x的第0维大小相等。group\_index不支持空Tensor。
-- blocksize仅支持取值32。
-- 当dst\_type为float4时，x的最后一维必须是2的整数倍。
 - 关于x、group\_index、y、mxscale的shape约束说明如下（假设x的shape为[m, n]，group\_index的shape为[g]）：
   - rank(mxscale) = rank(x) + 1。
   - mxscale.shape[0] = m / (blocksize ∗ 2) + g。
