@@ -16080,17 +16080,17 @@ input与weight数据类型必须一致。softmax为None时logits_max和sum_exp_l
 )
 
 _add_torch_npu_docstr(
-    "npu_add_quant_gmm",
+    "npu_add_quant_gmm_",
     """
 接口原型:
-torch_npu.npu_add_quant_gmm(self, x1, x2, x2_scale, group_list, *, x1_scale=None, group_list_type=0, group_sizes=None, x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None) -> Tensor
+torch_npu.npu_add_quant_gmm_(self, x1, x2, x2_scale, group_list, *, x1_scale=None, group_list_type=0, group_sizes=None, x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None) -> Tensor
 
 功能描述
-在micro-batch训练场景，需要做micro-batch的梯度累计，会存在大量GroupedMatMul后接InplaceAdd的融合场景。本算子（QuantGroupedMatmulInplaceAdd）将上述算子融合起来，提高网络性能。实现分组矩阵乘计算和加法计算，基本功能为矩阵乘和加法的组合，如T-C量化场景下y_i[m,n]=(x1_i[m,k_i] x x2_i[k_i,n]) * scale2_i[n] * scale1_i + y_i[m,n], i=1...g，其中g为分组个数。仅支持量化场景（1.mx量化；2.T-C量化；3.T-T量化）。仅支持x1、x2是FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8的输入。另有原地版本torch_npu.npu_add_quant_gmm_，参数一致，区别为原地版本直接在self上累加。
+在micro-batch训练场景，需要做micro-batch的梯度累计，会存在大量GroupedMatMul后接InplaceAdd的融合场景。本算子（QuantGroupedMatmulInplaceAdd）将上述算子融合起来，提高网络性能。实现分组矩阵乘计算和加法计算，基本功能为矩阵乘和加法的组合，如T-C量化场景下y_i[m,n]=(x1_i[m,k_i] x x2_i[k_i,n]) * scale2_i[n] * scale1_i + y_i[m,n], i=1...g，其中g为分组个数。仅支持量化场景（1.mx量化；2.T-C量化；3.T-T量化）。仅支持x1、x2是FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8的输入。本接口为原地版本，直接在self上累加并返回self。另有非原地版本torch_npu.npu_add_quant_gmm，参数一致，区别为非原地版本不修改self，返回新结果。
 
 
 参数说明:
-self(torch.Tensor)：必选输入，待累加矩阵，数据类型支持float32，tensor支持3维，shape为(g, M, N)，数据格式支持ND。当x1的M轴或者x2的N轴为0时，self为空tensor。
+self(torch.Tensor)：必选输入，待累加矩阵，原地累加后作为结果返回，数据类型支持float32，tensor支持3维，shape为(g, M, N)，数据格式支持ND。当x1的M轴或者x2的N轴为0时，self为空tensor。
 x1(torch.Tensor)：必选输入，矩阵乘法中的左矩阵，数据类型支持float8_e5m2、float8_e4m3fn、hifloat8，tensor支持2维，shape为(K, M)，数据格式支持ND，支持非连续Tensor。
 x2(torch.Tensor)：必选输入，矩阵乘法中的右矩阵，数据类型支持float8_e5m2、float8_e4m3fn、hifloat8，tensor支持2维，shape为(K, N)，数据格式支持ND，支持非连续Tensor。
 x2_scale(torch.Tensor)：必选输入，由x2量化引入的缩放因子，数据类型支持float32、float8_e8m0fnu，数据格式支持ND。float8_e8m0fnu需配置可选参数x2_scale_dtype为对应类型，此时x2_scale本身的dtype不再生效，但仍需保证x2_scale本身的dtype为8bit位的数据类型，以保证shape正确。
@@ -16105,7 +16105,7 @@ x1_scale_dtype(int, optional)：可选输入，默认值为None，表示输入�
 x2_scale_dtype(int, optional)：可选输入，默认值为None，表示输入真实数据类型与输入x2_scale的dtype相同。用于在x2_scale无法用torch原生数据类型表示时显式指定x2_scale的数据类型，当前仅支持torch_npu.float8_e8m0fnu。
 
 输出说明:
-y(torch.Tensor)：GroupedMatMul计算完成后与待累加矩阵相加得到的最后结果矩阵。数据类型支持float32，shape为(g, M, N)，与输入self保持一致。
+self(torch.Tensor)：GroupedMatMul计算完成后与待累加矩阵相加得到的最后结果矩阵，原地更新后返回。数据类型支持float32，shape为(g, M, N)，与输入self保持一致。
 
 约束说明:
 该接口支持训练场景下使用。
@@ -16136,8 +16136,8 @@ x2_scale = torch.randint(-1, 1, (g, N), dtype=torch.float32).npu()
 x1_scale = torch.randint(-1, 1, (g, 1), dtype=torch.float32).npu()
 group_list = torch.tensor([8, 16], dtype=torch.int64).npu()
 
-y = torch_npu.npu_add_quant_gmm(y, x1, x2, x2_scale, group_list, x1_scale=x1_scale,
-                                x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8)
+y = torch_npu.npu_add_quant_gmm_(y, x1, x2, x2_scale, group_list, x1_scale=x1_scale,
+                                 x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8)
 """
 )
 
