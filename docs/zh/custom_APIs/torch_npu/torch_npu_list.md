@@ -877,7 +877,7 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_print_npugraph_tensor_desc"><a name="p_print_npugraph_tensor_desc"></a><a name="p_print_npugraph_tensor_desc"></a><span>print_npugraph_tensor接口提供了类似原生Python的print接口特性且不影响aclgraph捕获、重放的tensor打印能力，允许将aclgraph中间节点的tensor数据、数据类型、shape信息直接打印出来，以便用户观察aclgraph的执行过程中的tensor数据，以快速定位问题。</span></p>
 </td>
 </tr>
-<tr id="npu_add_quant_gmm"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_add_quant_gmm"><a name="p_npu_add_quant_gmm"></a><a name="p_npu_add_quant_gmm"></a><a href="torch_npu-npu_add_quant_gmm.md">torch_npu.npu_add_quant_gmm</a></p>
+<tr id="npu_add_quant_gmm_"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_add_quant_gmm_"><a name="p_npu_add_quant_gmm_"></a><a name="p_npu_add_quant_gmm_"></a><a href="torch_npu-npu_add_quant_gmm_.md">torch_npu.npu_add_quant_gmm</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_add_quant_gmm_desc"><a name="p_npu_add_quant_gmm_desc"></a><a name="p_npu_add_quant_gmm_desc"></a><span>训练场景下micro-batch的梯度累计会存在大量GroupedMatMul操作接InplaceAdd操作，本接口将操作融合起来，实现分组矩阵乘计算和加法计算，仅支持mx量化、T-C量化和T-T量化场景。</span></p>
 </td>
