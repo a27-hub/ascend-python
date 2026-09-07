@@ -3751,8 +3751,10 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     is_hifloat8 = x_dtype == torch_npu.hifloat8 and weight_dtype == torch_npu.hifloat8
     is_fp8 = (x[0].dtype == torch.float8_e4m3fn or x[0].dtype == torch.float8_e5m2) and (weight[0].dtype == torch.float8_e4m3fn or weight[0].dtype == torch.float8_e5m2)
     if is_a8w8 or is_a4w4_mxfp or is_fp8 or is_hifloat8:
-        if m > 0 and n > 0:
-            torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
+        torch._check(
+            (m <= 0) | (n <= 0) | (k > 0),
+            lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),
+        )
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
     if group_type == 2 and (split_item == 0 or split_item == 1):
@@ -4027,8 +4029,10 @@ def npu_all_to_all_quant_matmul_meta(x1, x2, hcom, world_size, all2all_out_flag=
 def add_quant_gmm_check(*args):
     m, n, k, group_sizes, x1_dtype, x2_dtype, x1_scale_dtype, x2_scale_dtype = args
 
-    if m > 0 and n > 0:
-        torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
+    torch._check(
+        (m <= 0) | (n <= 0) | (k > 0),
+        lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),
+    )
     torch._check(
         group_sizes is None,
         lambda: "group_sizes is not supported for now",
@@ -4149,9 +4153,11 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
     is_a4w4_input = False
     if x_dtype is not None and w_dtype is not None:
         is_a4w4_input = x_dtype == torch_npu.float4_e2m1fn_x2 and w_dtype == torch_npu.float4_e2m1fn_x2
+    has_native_fp4 = hasattr(torch, 'float4_e2m1fn_x2')
+    is_native_mxfp4 = has_native_fp4 and x.dtype == torch.float4_e2m1fn_x2 and has_native_fp4 and w.dtype == torch.float4_e2m1fn_x2
     if w.dtype == torch.int32:
         dim_n = dimn * INT4_IN_INT32
-    elif is_a4w4_input and not w_trans:
+    elif (is_a4w4_input or is_native_mxfp4) and not w_trans:
         dim_n = dimn * FP4_IN_INT8
     else:
         dim_n = dimn
@@ -4162,7 +4168,6 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
         return x.new_empty(tuple(dim_list), dtype=torch.float32)
     else:
         raise RuntimeError("Not supportted output dtype is " + str(dtype))
-
 
 @impl(m, "npu_group_norm_silu")
 def group_norm_silu_meta(self, gemma, beta, group, eps=0.00001):

@@ -203,7 +203,7 @@
       out[m,n] = \sum_{j=0}^{kLoops-1} \left(\left(\sum_{k=0}^{gsK-1} \text{x1Slice} * \text{x2Slice}\right) * \left(\text{x1Scale}[m/gsM,j] * \text{x2Scale}[j,n/gsN]\right)\right) + bias[n]
       $$
 
-      其中，gsM、gsN和gsK分别代表groupSizeM、groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j * groupSizeK起始切片，j的取值范围为$[0, kLoops)$，$kLoops = \lceil K / groupSizeK \rceil$，K为K轴长度，支持最后的切片长度不足groupSizeK。仅MX量化模式下包含bias。对于G-B、B-B和MX量化模式，`[groupSizeM, groupSizeN, groupSizeK]`取值分别仅支持`[1, 128, 128]`、`[128, 128, 128]`和`[1, 1, 32]`。
+      其中，gsM、gsN和gsK分别代表groupSizeM、groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j * groupSizeK起始切片，j的取值范围为$[0, kLoops)$，$kLoops = \lceil K / groupSizeK \rceil$，K为K轴长度，支持最后的切片长度不足groupSizeK。对于G-B、B-B和MX量化模式，`[groupSizeM, groupSizeN, groupSizeK]`取值分别仅支持`[1, 128, 128]`、`[128, 128, 128]`和`[1, 1, 32]`。
 
     </details>
 
@@ -236,20 +236,20 @@ torch_npu.npu_quant_matmul(x1, x2, scale, *, offset=None, pertoken_scale=None, b
       - 对于`hifloat8`、`float4_e2m1fn_x2`，需配置可选参数`x1_dtype`为对应类型，此时x1本身dtype不再生效，但仍需保证x1 dtype为8bit位数据类型，以保证shape正确。
       - 当数据类型为`float4_e2m1fn_x2`时，用两个float4的数拼成一个8bit类型的数。
 
-- **x2** (`Tensor`)：必选参数，输入张量，表示矩阵乘法中的右矩阵，其与`x1`的数据类型须保持一致。数据格式支持$ND$，shape需要在2-6维范围。
+- **x2** (`Tensor`)：必选参数，输入张量，表示矩阵乘法中的右矩阵，数据格式支持$ND$，shape需要在2-6维范围。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`int8`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`和`int32`（`int32`含义同`x1`，表示`int4`类型计算）。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`int8`和`int32`（`int32`含义同`x1`，表示`int4`类型计算）。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`和`int32`，须与`x1`的数据类型保持一致（`int32`含义同`x1`，表示`int4`类型计算）。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`int8`和`int32`，须与`x1`的数据类型保持一致（`int32`含义同`x1`，表示`int4`类型计算）。
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`int8`、`float8_e4m3fn`、`float8_e5m2`、`hifloat8`、`float4_e2m1fn_x2`、`float32`、`int32`。
         - 对于`hifloat8`、`float4_e2m1fn_x2`，需配置可选参数`x2_dtype`为对应类型，此时x2本身dtype不再生效，但仍需保证x2 dtype为8bit位数据类型，以保证shape正确。
         - 当数据类型为`float4_e2m1fn_x2`时，用两个float4的数拼成一个8bit类型的数。
         - 当数据类型为`float32`时，通过float32承载float4\_e2m1fn\_x2的输入，具体参考[torch\_npu.npu\_convert\_weight\_to\_int4pack](torch_npu-npu_convert_weight_to_int4pack.md)调用示例。仅在FRACTAL\_NZ场景支持。
         - 全量化场景且数据类型为`int8`（仅T-C量化、T-T量化、K-C量化或K-T量化）、`hifloat8`\(T-C量化、T-T量化、K-C量化、K-T量化、G-B量化或B-B量化\)、`float8_e4m3fn`（mx全量化、T-C量化、T-T量化、K-C量化、K-T量化、G-B量化或B-B量化）、`float4_e2m1fn_x2`\(mx全量化\)，或mx伪量化场景、T-CG伪量化场景，且数据类型为`float32`时，数据格式还支持FRACTAL\_NZ，可通过torch\_npu.npu\_format\_cast接口实现ND转FRACTAL\_NZ格式。
 
-- **scale** (`Tensor`)：必选参数，量化缩放因子。该参数支持1维shape $(t, )$（其中$t=1$或$n$，$n$表示`x2`的最后一维）。如需传入`int64`数据类型的`scale`，需要提前调用`torch_npu.npu_trans_quant_param`来获取`int64`数据类型的`scale`。
-    - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float32`、`int64`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`int64`、`bfloat16`。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`int64`、`bfloat16`。
+- **scale** (`Tensor`)：必选参数，量化缩放因子，数据格式支持$ND$。如需传入`int64`数据类型的`scale`，需要提前调用`torch_npu.npu_trans_quant_param`来获取`int64`数据类型的`scale`。
+    - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float32`、`int64`。shape需要是1维$(t, )$，其中$t=1$或$n$，$n$表示`x2`的最后一维。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`int64`、`bfloat16`。shape需要是1维$(t, )$，其中$t=1$或$n$，$n$表示`x2`的最后一维。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`int64`、`bfloat16`。shape需要是1维$(t, )$，其中$t=1$或$n$，$n$表示`x2`的最后一维。
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float32`、`int64`、`float16`、`bfloat16`、`float8_e8m0fnu`（需配置可选参数scale\_dtype为对应类型，此时scale本身dtype不再生效，但仍需保证scale dtype为8bit位数据类型，以保证shape正确）。shape支持1维或多维，1维场景要求shape为\(t, \)，t=1或n，其中n与x2的n一致；多维场景的shape和dtype约束参见[约束说明](#约束说明)。
 
 - <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
@@ -321,7 +321,7 @@ torch_npu.npu_quant_matmul(x1, x2, scale, *, offset=None, pertoken_scale=None, b
 
 ## 约束说明
 
-- <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：该接口支持单算子模式和TorchAir图模式。
+- 该接口支持单算子模式和TorchAir图模式。
 - **公共约束**：
   - 当`x2`的数据格式需要为FRACTAL\_NZ时，一般通过`torch_npu.npu_format_cast`将ND格式转为FRACTAL\_NZ格式。
   - 当输出`out`的数据类型为`int8`或`float16`且无`pertoken_scale`时，图模式不支持`scale`直接传入`float32`。
@@ -363,8 +363,8 @@ torch_npu.npu_quant_matmul(x1, x2, scale, *, offset=None, pertoken_scale=None, b
     | --- | --- | --- | --- | --- | --- | --- |
     | int8 | int8 | int64/float32 | None | int32/None | None | float16 |
     | int8 | int8 | int64/float32 | float32/None | int32/None | None | int8 |
-    | int8 | int8 | float32/bfloat16 | None | int32/bfloat16/float32/None | float32/None | bfloat16 |
-    | int8 | int8 | float32 | None | int32/float16/float32/None | float32 | float16 |
+    | int8 | int8 | float32/bfloat16 | None | int32/bfloat16/float32/float16/None | float32/None | bfloat16 |
+    | int8 | int8 | float32 | None | int32/bfloat16/float32/float16/None | float32 | float16 |
     | int32 | int32 | int64/float32 | None | int32/None | None | float16 |
     | int8 | int8 | float32/bfloat16 | None | int32/None | None | int32 |
 
