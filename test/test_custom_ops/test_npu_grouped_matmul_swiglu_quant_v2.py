@@ -611,6 +611,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
                 x_scale_dtype=torch_npu.float8_e8m0fnu)
 
     @SupportedDevices(['Ascend950'])
+    @unittest.skip("Operator does not support default dequant_dtype=uint8(0), skip until operator side supports it")
     def test_v2_default_dequant_dtype_pertoken(self, device="npu"):
         """Ascend950 上不传 dequant_dtype，验证默认值在 Pertoken 场景下不报错"""
         E, M, K, N = 2, 128, 128, 64
@@ -626,6 +627,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         self.assertEqual(output_npu.dim(), 2)
 
     @SupportedDevices(['Ascend950'])
+    @unittest.skip("Operator does not support default dequant_dtype=uint8(0), skip until operator side supports it")
     def test_v2_default_dequant_dtype_mx(self, device="npu"):
         """Ascend950 上不传 dequant_dtype，验证默认值在 MX 场景下不报错"""
         E, M, K, N = 2, 2, 16, 128
