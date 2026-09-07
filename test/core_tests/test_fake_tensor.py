@@ -31,6 +31,7 @@ from torch._subclasses.fake_tensor import (
 )
 from torch.fx.experimental.symbolic_shapes import ShapeEnv
 from torch.fx.passes.fake_tensor_prop import FakeTensorProp
+from torch.fx.experimental.symbolic_shapes import ShapeEnv
 from torch.testing import FileCheck
 from torch.testing._internal.common_device_type import instantiate_device_type_tests, OpDTypes
 from torch.testing._internal.common_device_type import ops
@@ -4252,6 +4253,36 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
                 self.assertEqual(grad_tokens_v2.dtype, tokens.dtype)
                 self.assertEqual(grad_tokens_v2.shape, tokens.shape)
 
+    def test_npu_moe_token_permute_grad_v2_unbacked_symint_meta(self):
+        shape_env = ShapeEnv()
+        with FakeTensorMode(shape_env=shape_env):
+            num_permuted_tokens = shape_env.create_unbacked_symint()
+            tokens_size_0 = shape_env.create_unbacked_symint()
+            num_topk = shape_env.create_unbacked_symint()
+            hidden_size = 64
+            dtype = torch.bfloat16
+
+            grad_permuted_tokens = torch.empty(
+                (num_permuted_tokens, hidden_size), dtype=dtype, device="npu"
+            )
+            sorted_indices = torch.empty(
+                (num_permuted_tokens,), dtype=torch.int32, device="npu"
+            )
+
+            grad_tokens = torch_npu.npu_moe_token_permute_grad_v2(
+                grad_permuted_tokens=grad_permuted_tokens,
+                sorted_indices=sorted_indices,
+                tokens_size_0=tokens_size_0,
+                tokens_dtype=dtype,
+                num_topK=num_topk,
+                padded_mode=False,
+            )
+
+            self.assertIsInstance(grad_tokens, FakeTensor)
+            self.assertEqual(grad_tokens.dtype, dtype)
+            self.assertEqual(grad_tokens.shape[0].node.expr, tokens_size_0.node.expr)
+            self.assertEqual(grad_tokens.shape[1], hidden_size)
+
     def test_npu_moe_token_unpermute_grad_mixed_dtype(self):
         """Test grad_probs dtype matches probs when probs and grad_unpermuted_tokens have different dtypes"""
         num_tokens = 100
@@ -4362,6 +4393,32 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
 
             self.assertEqual(grad_permuted_tokens.dtype, permuted_tokens.dtype)
             self.assertEqual(grad_permuted_tokens.shape, permuted_tokens.shape)
+            self.assertIsNone(grad_probs)
+
+    @SupportedDevices(['Ascend910B', 'Ascend910C'])
+    def test_npu_moe_token_unpermute_grad_v2_dynamic_token_count(self):
+        """Test npu_moe_token_unpermute_grad_v2 keeps a symbolic token count."""
+        hidden_size = 64
+        shape_env = ShapeEnv()
+        dynamic_num_tokens = shape_env.create_unbacked_symint()
+
+        with FakeTensorMode(shape_env=shape_env):
+            grad_unpermuted_tokens = torch.randn(100, hidden_size).npu().to(torch.bfloat16)
+            sorted_indices = torch.arange(100).npu()
+
+            grad_permuted_tokens, grad_probs = torch_npu.npu_moe_token_unpermute_grad_v2(
+                grad_unpermuted_tokens=grad_unpermuted_tokens,
+                sorted_indices=sorted_indices,
+                permuted_tokens_size_0=dynamic_num_tokens,
+                permuted_tokens_dtype=torch.bfloat16,
+                probs=None,
+                padded_mode=False,
+                restore_shape=None,
+                permuted_tokens=None,
+            )
+
+            self.assertEqual(str(grad_permuted_tokens.shape[0]), str(dynamic_num_tokens))
+            self.assertEqual(grad_permuted_tokens.shape[1], hidden_size)
             self.assertIsNone(grad_probs)
 
     @SupportedDevices(['Ascend910B', 'Ascend910C'])

@@ -7449,13 +7449,8 @@ custom:
         actual_num_out_tokens: '(num_out_tokens_value > 0) ? std::min(num_out_tokens_value, flatten_size) : num_out_tokens_value + flatten_size'
       exec: aclnnMoeTokenPermute, tokens, indices, actual_num_out_tokens, padded_mode, permuted_tokens, sorted_indices
 
-  - func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, int tokens_size_0, ScalarType tokens_dtype, int num_topK, bool padded_mode=False) -> Tensor
+  - func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, SymInt tokens_size_0, ScalarType tokens_dtype, SymInt num_topK, bool padded_mode=False) -> Tensor
     op_api: [v2.1, newest]
-    gen_opapi:
-      grad_tokens:
-        size: 'npu_moe_token_permute_grad_v2_out_size(tokens_size_0, grad_permuted_tokens, sorted_indices)'
-        dtype: tokens_dtype
-      exec: aclnnMoeTokenPermuteGrad, grad_permuted_tokens, sorted_indices, num_topK, padded_mode, grad_tokens
 
   - func: npu_moe_token_permute_grad(Tensor tokens, Tensor grad_permuted_tokens, Tensor indices, Tensor sorted_indices, bool padded_mode=False) -> Tensor
     op_api: [v2.1, newest]
@@ -7520,18 +7515,8 @@ custom:
         restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
       exec: aclnnMoeTokenUnpermuteGrad, permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, grad_permuted_tokens, grad_probs
 
-  - func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, int permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)
+  - func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, SymInt permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
-    gen_opapi:
-      grad_permuted_tokens:
-        size: 'npu_moe_token_unpermute_grad_v2_permuted_tokens_out_size(permuted_tokens_size_0, grad_unpermuted_tokens, sorted_indices, probs)'
-        dtype: permuted_tokens_dtype
-      grad_probs:
-        size: 'npu_moe_token_unpermute_grad_v2_probs_out_size(grad_unpermuted_tokens, sorted_indices, probs)'
-        dtype: 'probs.has_value() && probs->defined() ? probs->scalar_type() : grad_unpermuted_tokens.scalar_type()'
-      new_params:
-        restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
-      exec: aclnnMoeTokenUnpermuteGrad, permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, grad_permuted_tokens, grad_probs
 
   - func: npu_moe_token_unpermute_with_routing_map(Tensor permuted_tokens, Tensor sorted_indices, int[] restore_shape, *, Tensor? probs=None, Tensor? routing_map=None, bool drop_and_pad=False) -> Tensor
     op_api: [v2.1, newest]
@@ -7727,6 +7712,12 @@ symint:
 
   - func: npu_moe_token_permute_with_routing_map_grad(Tensor permuted_token_out_grad, Tensor? probs_grad, Tensor sorted_indices, Tensor routing_map, SymInt experts_num, SymInt tokens_num, bool drop_and_pad) -> (Tensor, Tensor)
     op_api: all_version
+
+  - func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, SymInt permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)
+    op_api: [v2.1, newest]
+
+  - func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, SymInt tokens_size_0, ScalarType tokens_dtype, SymInt num_topK, bool padded_mode=False) -> Tensor
+    op_api: [v2.1, newest]
 
   - func: repeat_interleave.self_int(Tensor self, SymInt repeats, int? dim=None, *, int? output_size=None) -> Tensor
     acl_op: v2.1
