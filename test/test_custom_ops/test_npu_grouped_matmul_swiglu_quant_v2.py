@@ -657,7 +657,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
 
     @SupportedDevices(['Ascend950'])
     def test_v2_mode_mismatch(self, device="npu"):
-        """Ascend950 上 dequantMode != quantMode 应抛出异常"""
+        """Ascend950: dequantMode != quantMode should raise RuntimeError"""
         E, M, K, N = 2, 128, 128, 64
         x = torch.randint(0, 256, (M, K), dtype=torch.uint8).to(torch.float8_e4m3fn)
         weight = torch.randint(0, 256, (E, K, N), dtype=torch.uint8).to(torch.float8_e4m3fn)
