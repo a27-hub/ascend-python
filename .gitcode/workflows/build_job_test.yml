@@ -109,6 +109,35 @@ jobs:
           region: cn-north-4
           agency_urn: iam::0d336831568090260fd5c01450729240:agency:pta_obs_pr_trust
           provider_urn: iam::0d336831568090260fd5c01450729240:oidcProvider:pta_obs_pr
+      - name: Debug OIDC credential handoff
+        run: |
+          report_credential() {
+            local name="$1"
+            local value="$2"
+            if [ -n "$value" ]; then
+              printf '%s: present (length=%s)\n' "$name" "${#value}"
+            else
+              printf '%s: MISSING\n' "$name"
+            fi
+          }
+
+          # Print only presence and length; never print credential values.
+          report_credential HUAWEICLOUD_OIDC_AK "${HUAWEICLOUD_OIDC_AK:-}"
+          report_credential HUAWEICLOUD_OIDC_SK "${HUAWEICLOUD_OIDC_SK:-}"
+          report_credential HUAWEICLOUD_SECURITY_TOKEN "${HUAWEICLOUD_SECURITY_TOKEN:-}"
+          report_credential HUAWEICLOUD_SDK_AK "${HUAWEICLOUD_SDK_AK:-}"
+          report_credential HUAWEICLOUD_SDK_SK "${HUAWEICLOUD_SDK_SK:-}"
+          report_credential HUAWEICLOUD_SDK_SECURITY_TOKEN "${HUAWEICLOUD_SDK_SECURITY_TOKEN:-}"
+          report_credential OBS_AK "${OBS_AK:-}"
+          report_credential OBS_SK "${OBS_SK:-}"
+
+          if [ -n "${HUAWEICLOUD_OIDC_AK:-}" ] && \
+             [ -n "${HUAWEICLOUD_OIDC_SK:-}" ] && \
+             [ -n "${HUAWEICLOUD_SECURITY_TOKEN:-}" ]; then
+            echo "OIDC credential handoff: all expected variables are present"
+          else
+            echo "::warning::OIDC credential handoff: one or more expected variables are missing"
+          fi
       - name: Upload to OBS
         uses: obs-upload
         with:
