@@ -4,6 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>            |    √     |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>   |     √    |
 
@@ -38,7 +39,7 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
 
 - **value** (`Tensor`)：必选输入，对应公式中的$v$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$, $D_v$）。
 
-- **state** (`Tensor`)：必选输入&输出，对应公式中的状态矩阵$S$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$BlockNum$, $N_v$, $D_v$, $D_k$）。
+- **state** (`Tensor`)：必选输入&输出，对应公式中的状态矩阵$S$，数据类型支持`bfloat16`、`float32`，数据格式支持ND，shape为（$BlockNum$, $N_v$, $D_v$, $D_k$）。`float32`数据类型仅在Ascend 950PR/Ascend 950DT支持。
 
 - **beta** (`Tensor`)：可选输入。对应公式中的$β$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$）。
 
@@ -56,9 +57,7 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
 
 ## 返回值说明
 
-`Tensor`
-
-公式中的$o$，注意力计算结果。输出的数据类型为`bfloat16`，数据格式为ND，shape为($T$, $N_v$, $D_v$)。
+**out** (`Tensor`)：表示计算结果，公式中的$o$，注意力计算结果。输出的数据类型为`bfloat16`，数据格式为ND，shape为($T$, $N_v$, $D_v$)。
 
 ## 约束说明
 
@@ -67,12 +66,22 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
     - $B$ 表示batch size。
     - $L_i$ 表示第i个序列的长度，由actual_seq_lengths传入，其取值范围为$1 \le L_i \le 8$。
     - $N_k$ 表示key的头数，其取值范围为$1 \le N_k \le 256$。
-    - $N_v$ 表示value的头数，其取值范围为$1 \le N_v \le 256$。
+    - $N_v$ 表示value的头数，其取值范围为$1 \le N_v \le 256$，$N_v \bmod N_k = 0$。
     - $D_k$ 表示key向量的维度，其取值范围为$1 \le D_k \le 512$。
     - $D_v$ 表示value向量的维度，其取值范围为$1 \le D_v \le 512$。
-    - $BlockNum$为状态矩阵分块数量，其值不小于$T$。
-- 该接口仅支持在推理场景下使用。
-- 该接口仅支持单算子和静态图模式。
+    - $BlockNum$为状态矩阵分块数量，其取值范围为$T \le BlockNum$。
+- 该接口支持训练、推理场景下使用，当前TND场景，beta、scale、actual_seq_lengths、ssm_state_indices必传。
+- 该接口仅支持单算子模式和静态图模式调用。
+- state仅支持0轴、1轴非连续Tensor。
+- 以下约束由于算子无法获取tensor中具体数值，故需用户保证，算子不校验：
+    - $ssm\_state\_indices[i] \lt BlockNum$
+    - $1 \le actual\_seq\_lengths[i] \le 8$，且actual_seq_lengths[i]累加和等于$T$
+    - $1 \le num\_accepted\_tokens[i] \le actual\_seq\_lengths[i]$
+    - $-1 \le query[i][j][k] \le 1$
+    - $-1 \le key[i][j][k] \le 1$
+    - $g[i][j] \lt 0$
+    - $gk[i][j][k] \lt 0$
+    - $0 \lt beta[i][j] \lt 1$
 
 ## 调用示例
 
