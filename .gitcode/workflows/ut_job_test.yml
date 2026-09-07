@@ -57,10 +57,41 @@ jobs:
       - name: print env
         run: |
           env
-      - name: Download build artifact
-        uses: download-artifact
+      - name: oidc-auth
+        uses: huaweicloud-oidc-auth
         with:
-          name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
+          audience: pta_pr_obs_for_pytorch
+          region: cn-north-4
+          agency_urn: iam::0d336831568090260fd5c01450729240:agency:pta_obs_pr_trust
+          provider_urn: iam::0d336831568090260fd5c01450729240:oidcProvider:pta_obs_pr
+      - name: Resolve build object key
+        id: resolve-build-key
+        run: |
+          set -e
+          case "$(uname -m)" in
+            x86_64) artifact_arch="x86_64" ;;
+            aarch64) artifact_arch="aarch64" ;;
+            *)
+              echo "Unsupported runner architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          if [ "${{ atomgit.event.pull_request.base.ref }}" = "master" ]; then
+            artifact_name="torch_npu_${{ inputs.pytorch_branch }}_${artifact_arch}.tar.gz"
+          else
+            artifact_name="torch_npu_${{ inputs.pytorch_branch }}-${{ atomgit.event.pull_request.base.ref }}_${artifact_arch}.tar.gz"
+          fi
+
+          artifact_key="op-plugin/PR/${{ inputs.pr_id }}/${artifact_name}"
+          echo "Resolved OBS object key: ${artifact_key}"
+          echo "obs-key=${artifact_key}" >> "$ATOMGIT_OUTPUT"
+      - name: Download build output from OBS
+        uses: obs-download
+        with:
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pta-pr"
+          key: ${{ steps.resolve-build-key.outputs.obs-key }}
           path: ../output/${{ inputs.pr_id }}
       - name: UT
         run: |
@@ -73,7 +104,7 @@ jobs:
           git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
           cat ../modify_files.txt
           cd -
-          # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
+          # 将 OBS 下载的构建产物拷回工作目录供 UT 脚本使用
           cp -rf ../output/${{ inputs.pr_id }}/* ./
           bash cie/.ci/UT/op-plugin_ut_general.sh ${{ inputs.pytorch_branch }} 3.10 ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
           echo "pytorch_branch: ${{ inputs.pytorch_branch }}"

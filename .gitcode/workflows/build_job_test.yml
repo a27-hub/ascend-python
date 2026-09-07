@@ -138,18 +138,12 @@ jobs:
           else
             echo "::warning::OIDC credential handoff: one or more expected variables are missing"
           fi
-      - name: Upload to OBS
+      - name: Upload build outputs to OBS
         uses: obs-upload
         with:
           endpoint: "obs.cn-north-4.myhuaweicloud.com"
           bucket: "pta-pr"
-          artifact-path: "oidc-upload-test.bin"
-          object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
-      - name: Upload artifact
-        uses: upload-artifact
-        with:
-          name: op-plugin-${{ inputs.pytorch_branch }}-${{ inputs.runs_on_arch }}
-          path: |
+          artifact-path: |
             *.tar.gz*
             oidc-upload-test.bin
-          overwrite: true
+          object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
