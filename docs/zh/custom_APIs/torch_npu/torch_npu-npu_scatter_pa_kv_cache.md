@@ -22,7 +22,8 @@
     key_cache: [num_blocks, num_head * k_head_size // last_dim_k, block_size, last_dim_k]
     value_cache: [num_blocks, num_head * v_head_size // last_dim_k, block_size, last_dim_k]
     slot_mapping: [batch *seq_len]
-    ```    
+    ```   
+
     其中`k_head_size`、`v_head_size`可以不同、也可以相同。
 
 - 场景二：
@@ -81,6 +82,7 @@ torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mappi
 ## 调用示例
 
 单算子模式调用：
+
 - 场景一
 
     ```python
@@ -157,6 +159,7 @@ torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mappi
     ```
 
 图模式调用：
+
 - 场景一
 
     ```python

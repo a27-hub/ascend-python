@@ -10,7 +10,6 @@
 | <term>Atlas 推理系列产品</term>        |    √     |
 | <term>Atlas 训练系列产品</term>        |    √     |
 
-
 ## 功能说明
 
 将`updates`中的值按指定的索引`indices`更新`input`中的值，并将结果保存到输出Tensor，`input`本身的数据不变。
