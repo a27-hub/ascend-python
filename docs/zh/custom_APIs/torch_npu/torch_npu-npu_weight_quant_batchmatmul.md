@@ -203,38 +203,38 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
 
     - weight transpose+antiquant\_scale+hifloat8场景，仅支持<term>Ascend 950PR/Ascend 950DT</term>。
 
-            ```python
-            import torch
-            import torch_npu
-            # 输入int8+ND
-            cpu_x = torch.randn((96, 320),dtype=torch.float16)
-            # hifloat8数据类型用int8表示
-            cpu_weight = torch.randint(low=-8, high=8, size=(256, 320),dtype=torch.int8)
-            cpu_antiquantscale = torch.randn((256,1),dtype=torch.float16)
-            npu_out = torch_npu.npu_weight_quant_batchmatmul(cpu_x.npu(), cpu_weight.npu().transpose(-1, -2), cpu_antiquantscale.npu().transpose(-1, -2), weight_dtype = torch_npu.hifloat8)
-            ```
+        ```python
+        import torch
+        import torch_npu
+        # 输入int8+ND
+        cpu_x = torch.randn((96, 320),dtype=torch.float16)
+        # hifloat8数据类型用int8表示
+        cpu_weight = torch.randint(low=-8, high=8, size=(256, 320),dtype=torch.int8)
+        cpu_antiquantscale = torch.randn((256,1),dtype=torch.float16)
+        npu_out = torch_npu.npu_weight_quant_batchmatmul(cpu_x.npu(), cpu_weight.npu().transpose(-1, -2), cpu_antiquantscale.npu().transpose(-1, -2), weight_dtype = torch_npu.hifloat8)
+        ```
 
     - weight为FRACTAL\_NZ格式且类型为`float4_e2m1`场景，仅支持<term>Ascend 950PR/Ascend 950DT</term>。
 
-            ```python
-            import torch
-            import torch_npu
-            import numpy as np
-            from ml_dtypes import float4_e2m1fn
-            import math
-            m = 1
-            k = 64
-            n = 64
-            antiquant_group_size = 32
-            x = torch.randn((m, k),device='npu',dtype=torch.float16)
-            cpu_weight = np.random.random(k * n).reshape((k, n)).astype(float4_e2m1fn)
-            cpu_weight = torch.from_numpy(cpu_weight.astype(np.float32))
-            npu_weight = cpu_weight.npu()
-            npu_weight = torch_npu.npu_format_cast(npu_weight, 29, customize_dtype=torch.float16)
-            weight_packed = torch_npu.npu_convert_weight_to_int4pack(npu_weight)
-            antiquantscale = torch.randn((math.ceil(k/antiquant_group_size), n),device='npu',dtype=torch.float16)
-            npu_out = torch_npu.npu_weight_quant_batchmatmul(x.npu(), weight_packed, antiquantscale,antiquant_group_size = antiquant_group_size)
-            ```
+        ```python
+        import torch
+        import torch_npu
+        import numpy as np
+        from ml_dtypes import float4_e2m1fn
+        import math
+        m = 1
+        k = 64
+        n = 64
+        antiquant_group_size = 32
+        x = torch.randn((m, k),device='npu',dtype=torch.float16)
+        cpu_weight = np.random.random(k * n).reshape((k, n)).astype(float4_e2m1fn)
+        cpu_weight = torch.from_numpy(cpu_weight.astype(np.float32))
+        npu_weight = cpu_weight.npu()
+        npu_weight = torch_npu.npu_format_cast(npu_weight, 29, customize_dtype=torch.float16)
+        weight_packed = torch_npu.npu_convert_weight_to_int4pack(npu_weight)
+        antiquantscale = torch.randn((math.ceil(k/antiquant_group_size), n),device='npu',dtype=torch.float16)
+        npu_out = torch_npu.npu_weight_quant_batchmatmul(x.npu(), weight_packed, antiquantscale,antiquant_group_size = antiquant_group_size)
+        ```
 
 - 图模式调用
     - weight输入为ND格式
