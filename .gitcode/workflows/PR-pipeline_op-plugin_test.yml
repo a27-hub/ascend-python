@@ -164,7 +164,7 @@ stages:
         name: Only_doc_commit
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
+        runs-on: [ self-hosted, x86, cpu=8 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
