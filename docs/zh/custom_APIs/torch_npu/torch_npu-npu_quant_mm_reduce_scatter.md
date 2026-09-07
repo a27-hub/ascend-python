@@ -335,5 +335,3 @@ None
 torch.Size([64, 64]) torch.float16
 None
 ```
-
-
