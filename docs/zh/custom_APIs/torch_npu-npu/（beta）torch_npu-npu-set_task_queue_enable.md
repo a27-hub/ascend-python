@@ -21,7 +21,9 @@
 - 1：Level 1优化，使用TaskQueue进行算子下发。
 - 2：Level 2优化，基于固定内存池进行二级流水线。
 
-模式生效优先级为：`ASCEND_LAUNCH_BLOCKING=1` > 本接口设置值 > `TASK_QUEUE_ENABLE`环境变量（默认值为1）。当`ASCEND_LAUNCH_BLOCKING=1`时，无论本接口如何设置，TaskQueue优化均不生效。
+模式生效优先级为：`ASCEND_LAUNCH_BLOCKING=1` > 本接口设置值 > `TASK_QUEUE_ENABLE`环境变量（默认值为1）。
+
+`ASCEND_LAUNCH_BLOCKING=1`为同步执行模式（故障定位用），与TaskQueue的异步流水线机制互斥。该模式开启时，本接口设置不生效，TaskQueue优化始终关闭。
 
 ## 函数原型
 
