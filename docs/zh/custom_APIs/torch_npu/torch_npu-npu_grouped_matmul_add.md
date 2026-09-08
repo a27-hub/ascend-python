@@ -50,9 +50,7 @@ torch_npu.npu_grouped_matmul_add(self, x, weight, group_list, *, transpose_x=Tru
 
 ## 返回值说明
 
-`Tensor`
-
-表示分组矩阵乘累加的结果，公式中的$yRef^{out}$。shape为[g, M, N]，与输入self的shape一致，数据类型为`torch.float32`。
+**output**(`Tensor`)：表示分组矩阵乘累加的结果，公式中的$yRef^{out}$。shape为[g, M, N]，与输入self的shape一致，数据类型为`torch.float32`。
 
 ## 约束说明
 

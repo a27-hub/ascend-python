@@ -190,6 +190,10 @@ tensor([0.], device='npu:1')
 
 ### 情形2：`x1，x2`数据类型为`torch.int8`的perchannel、pertoken场景（不输出amax）
 
+> [!NOTE]
+>
+> 情形2中`torch.int8`的perchannel、pertoken场景（<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>）与此类似：x1、x2数据类型为`torch.int8`，pertoken时`x1_scale`的shape为(m, 1)、`x2_scale`不传；perchannel时`x2_scale`的shape为(1, n)、`x1_scale`不传，scale数据类型支持`torch.float32`（perchannel的`x2_scale`还支持`torch.int64`）。
+
 ```python
 import torch
 import torch_npu
@@ -234,10 +238,6 @@ if __name__ == "__main__":
 torch.Size([64, 64]) torch.float16
 torch.Size([64, 64]) torch.float16
 ```
-
-> [!NOTE]
->
-> 情形2中`torch.int8`的perchannel、pertoken场景（<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>）与此类似：x1、x2数据类型为`torch.int8`，pertoken时`x1_scale`的shape为(m, 1)、`x2_scale`不传；perchannel时`x2_scale`的shape为(1, n)、`x1_scale`不传，scale数据类型支持`torch.float32`（perchannel的`x2_scale`还支持`torch.int64`）。
 
 ### 情形3：`x1，x2`数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景（不输出amax）
 
