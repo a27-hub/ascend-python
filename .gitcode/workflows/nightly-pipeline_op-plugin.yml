@@ -125,5 +125,3 @@ stages:
           REGULAR_NPU_SHARDS: ${{ env.TEST_WORLD_SIZE }}
           DISTRIBUTED_SHARDS: ${{ env.DISTRIBUTED_WORLD_SIZE }}
           pytorch_branch: ${{ env.pytorch_branch }}
-
-
