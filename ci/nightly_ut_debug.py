@@ -5,6 +5,7 @@ Nightly UT debug wrapper.
 Runs environment diagnostics before executing access_control_test.py.
 """
 
+import glob
 import os
 import sys
 import subprocess
@@ -16,7 +17,7 @@ BASE_DIR = Path(__file__).absolute().parent.parent
 def run_check(label, cmd):
     print(f"\n=== {label} ===")
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
@@ -32,12 +33,17 @@ def main():
     print("=" * 60)
 
     # 1. NPU devices
-    run_check("NPU-SMI", "npu-smi info")
-    run_check("Davinci Devices", "ls -la /dev/davinci* 2>/dev/null || echo 'No davinci devices found'")
+    run_check("NPU-SMI", ["npu-smi", "info"])
+    davinci_devices = sorted(glob.glob("/dev/davinci*"))
+    if davinci_devices:
+        run_check("Davinci Devices", ["ls", "-la"] + davinci_devices)
+    else:
+        print("\n=== Davinci Devices ===")
+        print("No davinci devices found")
 
     # 2. Ascend CANN
-    run_check("Ascend Directory", "ls /usr/local/Ascend/ 2>/dev/null || echo 'Ascend dir not found'")
-    run_check("CANN Version", "cat /usr/local/Ascend/cann/version.info 2>/dev/null || echo 'CANN version.info not found'")
+    run_check("Ascend Directory", ["ls", "/usr/local/Ascend/"])
+    run_check("CANN Version", ["cat", "/usr/local/Ascend/cann/version.info"])
 
     # 3. torch_npu device check
     print("\n=== torch_npu Device Check ===")
