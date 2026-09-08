@@ -5116,5 +5116,11 @@
   },
   "func: bitwise_right_shift.Tensor_Scalar(Tensor self, Scalar other) -> Tensor": {
     "version": ["v2.7", "newest"]
+  },
+  "func: npu_matmul_abft_verify(Tensor a, Tensor b, Tensor c, Tensor checksum_weight, *, float e_max=0.001) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "op_api: torch_npu.npu_matmul_abft_verify(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["all_version"]
   }
 }
