@@ -420,6 +420,6 @@ post:
             owner: ${{ env.org_name }}
             repo: ${{ env.repo }}
             run_id: ${{ atomgit.workflow_run_id }}
-            token: ${{ secrets.GIT_TOKEN_LABELS }}
+            token: ${{ atomgit.token }}
             pr_number: ${{ env.pr_id }}
             apply_label: 'true'
