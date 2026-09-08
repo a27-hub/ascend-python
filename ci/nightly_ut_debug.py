@@ -78,7 +78,7 @@ def main():
     # Run original access_control_test.py with same args
     original_script = os.path.join(BASE_DIR, "ci", "access_control_test.py")
     os.chdir(BASE_DIR)
-    result = subprocess.run([sys.executable, original_script] + sys.argv[1:], 
+    result = subprocess.run([sys.executable, original_script] + sys.argv[1:],
                             stdout=sys.stdout, stderr=sys.stderr)
     sys.exit(result.returncode)
 

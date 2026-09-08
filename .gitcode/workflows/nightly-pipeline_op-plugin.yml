@@ -38,7 +38,7 @@ stages:
     select: selected_by_default
     jobs:
       Build_master:
-        name: Build ARM 
+        name: Build ARM
         uses: .gitcode/workflows/nightly_build_job.yml
         with:
           pytorch_branch: ${{ env.pytorch_branch }}
