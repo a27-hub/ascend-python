@@ -33,7 +33,7 @@
 
 不同产品支持的量化模式不同，如下所示：
 
-- <term>Ascend 950PR/Ascend 950DT</term>：pertensor、perchannel、pergroup、mx（MicroScaling）
+- <term>Ascend 950PR/Ascend 950DT</term>：pertensor、perchannel、pergroup、MX（MicroScaling）
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：pertensor、perchannel、pergroup
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：pertensor、perchannel、pergroup
 - <term>Atlas 推理系列产品</term>：pertensor、perchannel、pergroup
@@ -60,14 +60,14 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
       - 对于不同的伪量化算法模式，`weight`的数据格式为$FRACTAL\_NZ$仅在如下场景下支持：
         - perchannel模式：`weight`的数据类型为`int4`/`int32`，`weight`非转置，`x`非转置。`weight`的数据类型为`int8`，`x`非转置。
         - pergroup模式：`weight`的数据类型为`int4`/`int32`/`float4_e2m1`/`float`/`int8`，`weight`非转置，`x`非转置。
-        - mx模式：`weight`的数据类型为`float4_e2m1`/`float`，`weight`非转置，`x`非转置。
+        - MX模式：`weight`的数据类型为`float4_e2m1`/`float`，`weight`非转置，`x`非转置。
 
 - **antiquant\_scale** (`Tensor`)：必选参数。反量化的缩放因子，用于weight矩阵反量化，对应反量化公式中的$antiquantScale$，数据格式支持$ND$。支持带transpose的非连续的Tensor。`antiquant_scale`支持的shape与量化方式相关：
 
     - pertensor模式：输入shape为\(1,\)或\(1, 1\)。
     - perchannel模式：输入shape为\(1, N\)或\(N,\)。
     - pergroup模式：输入shape为\(ceil\(K, antiquant\_group\_size\),  N\)。
-    - mx模式：输入shape为\(⌈K/antiquant\_group\_size⌉, N\)，其中`antiquant_group_size`表示k被分组的每组大小，仅支持32。
+    - MX模式：输入shape为\(⌈K/antiquant\_group\_size⌉, N\)，其中`antiquant_group_size`表示k被分组的每组大小，仅支持32。
 
     `antiquant_scale`支持的dtype如下：
 
@@ -78,7 +78,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int64`。
         - 若输入为`float16`、`bfloat16`，其数据类型需与`x`保持一致。
         - 若输入为`int64`，`x`数据类型必须为`float16`且不带transpose输入，同时`weight`数据类型必须为`int8`、数据格式为$ND$、带transpose输入，可参考[调用示例](#zh-cn_topic_0000001771071862_section14459801435)。此时只支持perchannel场景，M范围为\[1, 96\]，且K和N要求64对齐。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`bfloat16`，其数据类型需与`x`保持一致。特别地，在mx场景，要求`antiquant_scale`类型为`uint8`，用以承载`float8_e8m0fnu`数据，此时`x`类型为`float16`或`bfloat16`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`bfloat16`，其数据类型需与`x`保持一致。在MX场景，要求`antiquant_scale`类型为`uint8`，用以承载`float8_e8m0fnu`数据，此时`x`类型为`float16`或`bfloat16`。
 
 - **antiquant\_offset** (`Tensor`)：可选参数。反量化的偏移量，用于weight矩阵反量化。对应反量化公式中的$antiquantOffset$，默认值为None，数据格式支持$ND$，支持带transpose的非连续的Tensor，支持输入维度为两维\(1, N\)或一维\(N, \)、\(1, \)。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`，其数据类型需与`antiquant_scale`保持一致。pergroup场景shape要求为\(ceil\_div\(K, antiquant\_group\_size\), N\)。
@@ -89,7 +89,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int32`。pergroup场景shape要求为\(ceil\_div\(K, antiquant\_group\_size\), N\)。
         - 若输入为`float16`、`bfloat16`，其数据类型需与`antiquant_scale`保持一致。
         - 若输入为`int32`，`antiquant_scale`的数据类型必须为`int64`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`bfloat16`，其数据类型需与`x`保持一致。特别地，在`weight`为浮点类型时要求`antiquant_offset`为None。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`bfloat16`，其数据类型需与`x`保持一致。在`weight`为浮点类型时要求`antiquant_offset`为None。
 
 - **quant\_scale** (`Tensor`)：可选参数。量化的缩放因子，用于输出矩阵的量化，默认值为None，仅在`weight`格式为$ND$时支持。数据类型支持`float32`、`int64`，数据格式支持$ND$，支持输入维度为两维\(1, N\)或一维\(N, \)、\(1, \)。当`antiquant_scale`的数据类型为`int64`时，此参数必须为空。
     - <term>Atlas 推理系列加速卡产品</term>：暂不支持此参数。
@@ -107,7 +107,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
 
 - **antiquant\_group\_size** (`int`)：可选参数。用于控制pergroup场景下group大小，其他量化场景不生效，默认值为0。
   - pergroup场景下要求传入值的范围为\[32, K-1\]且必须是32的倍数。
-  - mx场景下要求`antiquant_group_size`取值为32。
+  - MX场景下要求`antiquant_group_size`取值为32。
 - **inner\_precise** (`int`)：可选参数。计算模式选择，默认为0。0表示高精度模式，1表示高性能模式，可能会影响精度。当`weight`以`int32`类型且以$FRACTAL\_NZ$格式输入，M不大于16的pergroup场景下可以设置为1，提升性能。其他场景不建议使用高性能模式。
 - **weight\_dtype**（`int`）：可选参数，表示torch\_npu对`weight`的扩展数据类型。
   - <term>Atlas 推理系列产品</term>：暂不支持此参数。
@@ -141,7 +141,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
 - 当`antiquant_scale`为`float16`、`bfloat16`，单算子模式要求`x`和`antiquant_scale`数据类型一致，图模式允许不一致，如果出现不一致，接口内部会自行判断是否转换成一致的数据类型。用户可dump图信息查看实际参与计算的数据类型。
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - 当`x`是`float16`、`bfloat16`，同时`weight`是`float32`、`float4_e2m1`、`float8_e4m3fn`、`hifloat8`时，不支持`antiquant_offset`参数。
-  - 当`x`是`float16`、`bfloat16`，同时`weight`是`float32`时，此时为mx场景，要求`antiquant_scale`类型为`uint8`，`antiquant_offset`必须为None，`antiquant_group_size`为32。可参考[torch\_npu.npu\_convert\_weight\_to\_int4pack](torch_npu-npu_convert_weight_to_int4pack.md)调用示例。
+  - 当`x`是`float16`、`bfloat16`，同时`weight`是`float32`时，此时为MX场景，要求`antiquant_scale`类型为`uint8`，`antiquant_offset`必须为None，`antiquant_group_size`为32。可参考[torch\_npu.npu\_convert\_weight\_to\_int4pack](torch_npu-npu_convert_weight_to_int4pack.md)调用示例。
   - 当`weight`数据类型为`hifloat8`，使用8bits数据类型进行承载，`weight_dtype`传入`hifloat8`。
   - 当`x`是`float16`、`bfloat16`，同时`weight`是`int8`，数据格式为$FRACTAL\_NZ$格式时，仅支持图模式。K、N的范围是\[2, 65535\]。pergroup场景需满足`x`为转置输入，`weight`为非转置输入，`antiquant_group_size`为64或128，K为`antiquant_group_size`对齐，N为64对齐。
 
