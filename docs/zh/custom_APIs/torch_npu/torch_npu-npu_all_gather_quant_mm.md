@@ -114,7 +114,6 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
 - 该接口支持推理、训练场景下使用。
 - 该接口支持图模式。
 - 默认确定性实现。
-- world_size必须为2的幂，取值范围为2、4、8、16、32、64。
 - 输入self必须是2维，其shape为$(m, k)$；输入x2必须是2维，其shape为$(k, n)$，k轴相等，且k轴取值范围为$[256, 65535)$，m和n的值不得超过2147483647。
 - self仅支持不转置场景，x2支持转置/不转置场景。
 - x1和x2的数据类型需保持一致；当x1、x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`时，两者可以为其中任意一种。

@@ -108,7 +108,7 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 
 ## 参数说明
 
-- **input**（`Tensor`）：必选参数，表示输入x。维度支持2-7维，数据格式支持ND，数据类型支持`torch.float16`、`torch.bfloat16`。支持非连续Tensor。当dst\_type为float4时，input的最后一维必须是偶数。
+- **input**（`Tensor`）：必选参数，表示输入x。维度支持2-7维，数据格式支持ND，数据类型支持`torch.float16`、`torch.bfloat16`。支持非连续Tensor。当dst\_type为float4（即296、297对应的类型）时，input的最后一维必须是偶数。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **round\_mode**（`str`）：可选参数，表示数据转换的模式，对应公式中的$round\_mode$。默认值为"rint"。
   - 当dst\_type为`torch.float8_e5m2`、`torch.float8_e4m3fn`时，仅支持"rint"。
@@ -126,7 +126,7 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 
 ## 返回值说明
 
-- **y1**（`Tensor`）：表示输入x量化-1轴后的对应结果。shape和输入x一致。当dst\_type为float8时，数据类型为`torch.float8_e5m2`或`torch.float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半（每个`torch.uint8`元素打包2个float4数据），查看具体值需自行解包，如`y1.view(torch_npu.float4_e2m1fn_x2)`。不支持非连续Tensor。
+- **y1**（`Tensor`）：表示输入x量化-1轴后的对应结果。shape和输入x一致。当dst\_type为float8（23，24）时，数据类型为`torch.float8_e5m2`或`torch.float8_e4m3fn`；当dst\_type为float4（296，297）时，实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半（每个`torch.uint8`元素打包2个float4数据），查看具体值需自行解包，如`y1.view(torch_npu.float4_e2m1fn_x2)`。不支持非连续Tensor。
 - **mxscale1**（`Tensor`）：表示-1轴每个分组对应的量化尺度，对应公式中的$mxscale1$。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale1.view(torch.float8_e8m0fnu)`。shape为输入x的-1轴的值除以32向上取整，并对其进行偶数pad（pad填充值为0），最后追加一维大小为2。不支持非连续Tensor。
 - **y2**（`Tensor`）：表示输入x量化-2轴后的对应结果。shape和输入x一致。数据类型与y1相同（float4时实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半）。不支持非连续Tensor。
 - **mxscale2**（`Tensor`）：表示-2轴每个分组对应的量化尺度，对应公式中的$mxscale2$。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换。shape为输入x的-2轴的值除以32向上取整，并对其进行偶数pad（pad填充值为0），最后追加一维大小为2，且输出需要对每两行数据进行交织处理。不支持非连续Tensor。
@@ -136,7 +136,6 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
 - 该接口支持训练、推理场景下使用。
 - 该接口支持单算子模式和图模式调用。
 - 确定性计算：默认确定性实现。
-- 当dst\_type为float4（即296、297对应的类型）时，input的最后一维必须是2的整数倍。
 - dst\_type、scale\_alg、round\_mode、dst\_type\_max的参数组合约束如下表：
 
 | dst_type | scale_alg | round_mode | dst_type_max |
