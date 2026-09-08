@@ -55,19 +55,11 @@ torch_npu.npu_group_norm_silu(input, weight, bias, group, eps=0.00001) -> (Tenso
 
 ## 返回值说明
 
-- **out** (`Tensor`)：数据类型和shape与`input`相同，支持$ND$，支持非连续的Tensor。
-    - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`、`bfloat16`。
+- **out** (`Tensor`)：shape与`input`相同，数据格式支持$ND$，支持非连续的Tensor。数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
 
-- **meanOut** (`Tensor`)：数据类型与`input`相同，shape为\(N, group\)，其中N为`input`第0维度值。数据格式支持$ND$，支持非连续的Tensor。
-    - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`、`bfloat16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`float32`、`bfloat16`。当`weight`或`bias`不为空时，数据类型与`weight`、`bias`相同；当`weight`和`bias`均为空时，数据类型与`input`相同。
+- **meanOut** (`Tensor`)：shape为\(N, group\)，其中N为`input`第0维度值。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
 
-- **rstdOut** (`Tensor`)：数据类型与`input`相同，shape为\(N, group\)，其中N为`input`第0维度值。数据格式支持$ND$，支持非连续的Tensor。
-    - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`、`bfloat16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`float32`、`bfloat16`。当`weight`或`bias`不为空时，数据类型与`weight`、`bias`相同；当`weight`和`bias`均为空时，数据类型与`input`相同。
+- **rstdOut** (`Tensor`)：shape为\(N, group\)，其中N为`input`第0维度值。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
 
 ## 约束说明
 
