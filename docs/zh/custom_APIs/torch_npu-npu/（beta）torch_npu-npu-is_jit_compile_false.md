@@ -14,6 +14,8 @@
 
 确认JIT编译模式是否被禁用，如果被禁用，返回True，否则返回False。
 
+<term>Ascend 950DT</term>仅返回True，即JIT编译模式默认禁用。
+
 ## 函数原型
 
 ```python
