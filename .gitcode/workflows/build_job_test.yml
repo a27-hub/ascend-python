@@ -102,17 +102,9 @@ jobs:
       - name: Print OBS download links to summary
         env:
           OBS_PRIMARY_URL: ${{ steps.upload_obs.outputs.primary-url }}
-          OBS_UPLOADED_COUNT: ${{ steps.upload_obs.outputs.uploaded-count }}
-          OBS_RESULT_SUMMARY: ${{ steps.upload_obs.outputs.result-summary }}
         run: |
           set -eu
           test -n "${OBS_PRIMARY_URL}"
           {
-            echo "## OBS 产物下载链接"
-            echo
-            echo "- 上传文件数：${OBS_UPLOADED_COUNT}"
-            echo "- 首个产物：[${OBS_PRIMARY_URL}](${OBS_PRIMARY_URL})"
-            echo
-            echo "### OBS 上传结果"
-            printf '%s\n' "${OBS_RESULT_SUMMARY}"
+            echo "[${OBS_PRIMARY_URL}](${OBS_PRIMARY_URL})"
           } >> "${ATOMGIT_STEP_SUMMARY}"
