@@ -107,15 +107,12 @@ jobs:
           echo "WHL_FILE=${WHL_FILE}"
           echo "WHL_FILE=${WHL_FILE}" >> $ATOMGIT_ENV
 
-      - name: download op-plugin from OBS
-        uses: obs-download
+      # whl 从 build 阶段的流水线 artifact 获取, 不再走 OBS
+      - name: download op-plugin from artifact
+        uses: download-artifact
         with:
-          endpoint: "obs.cn-north-4.myhuaweicloud.com"
-          bucket: "pytorch-package"
-          access-key: "${{ secrets.OBS_AK }}"
-          secret-key: "${{ secrets.OBS_SK }}"
-          key: "artifacts/${{ env.WHL_FILE }}"
-          local-path: "./"
+          name: op-plugin-master-arm
+          path: ./
 
       - name: install torch_npu
         run: |

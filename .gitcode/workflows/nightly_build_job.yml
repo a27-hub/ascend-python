@@ -119,14 +119,12 @@ jobs:
         run: |
           ccache -s
 
-      - name: Upload whl to OBS
-        uses: obs-upload
+      # whl 通过流水线 artifact 传递给下游 (collect/UT), 不再上传 OBS
+      - name: Upload whl to artifact
+        uses: upload-artifact
         with:
-          endpoint: "obs.cn-north-4.myhuaweicloud.com"
-          bucket: "pytorch-package"
-          access-key: "${{ secrets.OBS_AK }}"
-          secret-key: "${{ secrets.OBS_SK }}"
-          artifact-path: "dist/torch_npu*.whl"
+          name: op-plugin-master-arm
+          path: dist/torch_npu*.whl
 
       - name: Upload build info to artifact
         uses: upload-artifact
