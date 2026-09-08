@@ -36,19 +36,19 @@ torch_npu.npu_group_norm_silu(input, weight, bias, group, eps=0.00001) -> (Tenso
 ## 参数说明
 
 - **input** (`Tensor`)：必选参数，源数据张量，维度需要为2~8维且第1维度能被`group`整除。数据格式支持$ND$，支持非连续的Tensor。
-    - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`、`bfloat16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`float32`、`bfloat16`。
+    - <term>Atlas 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
 
 - **weight** (`Tensor`)：可选参数，缩放张量，维度为1且元素数量需与输入`input`的第1维度保持相同，数据格式支持$ND$，支持非连续的Tensor。
-    - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`、`bfloat16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`float32`、`bfloat16`。
+    - <term>Atlas 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
 
 - **bias** (`Tensor`)：可选参数，偏移张量，维度为1且元素数量需与输入`input`的第1维度保持相同，数据格式支持$ND$，支持非连续的Tensor。
-    - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`float32`、`bfloat16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float16`、`float32`、`bfloat16`。
+    - <term>Atlas 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
 
 - **group** (`int`)：必选参数，表示将输入`input`的第1维度分为group组，group需大于0。
 - **eps** (`float`)：可选参数，为保持数值稳定性而加到分母上的值，若保持精度，则eps需大于0。默认值为0.00001。
