@@ -45,7 +45,7 @@ jobs:
     # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
     # runs-on:  [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]
     # runs-on: [ self-hosted, "${{ inputs.runs_on_os }}", "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
-    runs-on: [ self-hosted, x86, cpu=8 ]
+    runs-on: [ self-hosted, pvc, arm, cpu=30 ]
     # runs-on: [ dedicate-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
@@ -82,6 +82,10 @@ jobs:
           head -c 1048576 /dev/urandom > "${test_file}"
           test "$(stat -c '%s' "${test_file}")" -eq 1048576
           sha256sum "${test_file}"
+          mkdir -p "${ATOMGIT_WORKSPACE}/sfs_output"
+          cp -f "${test_file}" "${ATOMGIT_WORKSPACE}/sfs_output/"
+          test "$(sha256sum "${test_file}" | awk '{print $1}')" = "$(sha256sum "${ATOMGIT_WORKSPACE}/sfs_output/${test_file}" | awk '{print $1}')"
+          (cd "${ATOMGIT_WORKSPACE}/sfs_output" && sha256sum "${test_file}" > "${test_file}.sha256")
       - name: oidc-auth
         uses: huaweicloud-oidc-auth
         with:
@@ -108,3 +112,24 @@ jobs:
           {
             echo "[${OBS_PRIMARY_URL}](${OBS_PRIMARY_URL})"
           } >> "${ATOMGIT_STEP_SUMMARY}"
+
+  JOB_check_sfs_output:
+    name: JOB_check_sfs_output
+    # 串行：等 JOB_compile 成功后执行
+    needs: JOB_compile
+    select: selected_by_default
+    runs-on: [ self-hosted, pvc, arm, cpu=30 ]
+    steps:
+      - name: check sfs_output test file
+        run: |
+          target_dir="${ATOMGIT_WORKSPACE}/sfs_output"
+          test_file=oidc-upload-test.bin
+          echo "checking ${target_dir}/${test_file}"
+          # 存在性检查
+          test -f "${target_dir}/${test_file}"
+          # 大小检查：1048576 字节
+          test "$(stat -c '%s' "${target_dir}/${test_file}")" -eq 1048576
+          # 内容校验：与 JOB_compile 落盘的 sha256 比对
+          cd "${target_dir}"
+          sha256sum -c "${test_file}.sha256"
+          echo "OK: ${target_dir}/${test_file} written correctly"
