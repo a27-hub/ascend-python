@@ -57,7 +57,7 @@ torch_npu.npu_format_cast_(input, src, *, customize_dtype=None, input_dtype=None
   - <term>Ascend 950PR/Ascend 950DT</term>：对于仅对权重量化的MatMul场景，对权重W做私有格式转换时，需传入A矩阵的数据类型来推断W的C0轴大小。数据类型支持`int8`、`float8_e4m3fn`、`float16`、`bfloat16`。若使用默认值`None`，表示A的dtype和W的dtype一样，推断出W的C0轴大小。
 - **input\_dtype**（`int`）：表示`input`的真实数据类型，主要用于非torch原生数据类型，例如`float4`。
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas A2 训练系列产品</term>、<term>Atlas A3 训练系列产品</term>：暂不支持该参数，使用默认值`None`即可。
-  - <term>Ascend 950PR/Ascend 950DT</term>：支持该参数。若使用默认值`None`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：支持该参数。默认值`None`表示`input`的真实类型和tensor的数据类型一致。
 
 ## 约束说明
 
