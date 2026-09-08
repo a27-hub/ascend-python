@@ -102,7 +102,7 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
   | pse_type | 含义 | 备注 |
   | --- | --- | --- |
   | 0 | 外部传入pse先mul再add | - |
-  | 1 | 外部传入pse先add再mul | 默认值，与aclnnFlashAttentionScore实现一致 |
+  | 1 | 外部传入pse先add再mul | 默认值 |
   | 2 | 内部生成pse先mul再add | pse需为`torch.float32`，shape为\[B, N\]或\[N\] |
   | 3 | 内部生成pse先mul再add再sqrt | pse需为`torch.float32`，shape为\[B, N\]或\[N\] |
 

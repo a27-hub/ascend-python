@@ -13,7 +13,7 @@
 - API功能：在TP切分场景下，对输入的MM左矩阵x1执行AllGather集合通信后，与右矩阵x2进行MatMul计算，支持量化场景下的反量化计算，并可同时输出AllGather通信结果gatherOut与MatMul计算结果的最大值amaxOut。该接口是`torch_npu.npu_all_gather_base_mm`接口的功能扩展，<term>Ascend 950DT</term> 新增了对低精度数据类型`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`/`torch_npu.float4_e2m1fn_x2`的支持（支持pertensor、perblock、mx量化方式，其中mx量化支持mxfp8和mxfp4场景）；<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>新增了对`torch.int8`的支持（支持pertoken/perchannel量化方式）。
 - 计算公式：
 
-  - 情形1：当x1和x2数据类型为`torch.float16`/`torch.bfloat16`时，对入参x1进行AllGather后，对x1、x2进行MatMul计算：
+  - 场景1：当x1和x2数据类型为`torch.float16`/`torch.bfloat16`时，对入参x1进行AllGather后，对x1、x2进行MatMul计算：
 
     $$
     output=AllGather(x1)@x2 + bias
@@ -23,7 +23,7 @@
     gatherOut=AllGather(x1)
     $$
 
-  - 情形2：当x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的pertensor场景，或x1和x2数据类型为`torch.int8`/`torch.int4`的perchannel、pertoken场景，且不输出amaxOut时，对入参x1进行AllGather后，对x1、x2进行MatMul计算，然后进行dequant操作：
+  - 场景2：当x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的pertensor场景，或x1和x2数据类型为`torch.int8`/`torch.int4`的perchannel、pertoken场景，且不输出amaxOut时，对入参x1进行AllGather后，对x1、x2进行MatMul计算，然后进行dequant操作：
 
     $$
     output=(x1Scale*x2Scale)*(AllGather(x1)@x2 + bias)
@@ -33,7 +33,7 @@
     gatherOut=AllGather(x1)
     $$
 
-  - 情形3：当x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景，且不输出amaxOut时，当x1为(m, k)、x2为(k, n)，x1Scale为(ceilDiv(m, 128), ceilDiv(k, 128))、x2Scale为(ceilDiv(k, 128), ceilDiv(n, 128))时，对入参x1和x1Scale进行AllGather后，对x1、x2进行perblock量化MatMul计算，然后进行dequant操作：
+  - 场景3：当x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景，且不输出amaxOut时，当x1为(m, k)、x2为(k, n)，x1Scale为(ceilDiv(m, 128), ceilDiv(k, 128))、x2Scale为(ceilDiv(k, 128), ceilDiv(n, 128))时，对入参x1和x1Scale进行AllGather后，对x1、x2进行perblock量化MatMul计算，然后进行dequant操作：
 
     $$
     output=\sum_{0}^{\left \lfloor \frac{k}{blockSize=128} \right \rfloor} (AllGather(x1)_{pr}@x2_{rq}*(AllGather(x1Scale)_{pr}*x2Scale_{rq}))
@@ -43,7 +43,7 @@
     gatherOut=AllGather(x1)
     $$
 
-  - 情形4：当x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景，x1为(m, k)、x2为(n, k)，且x1Scale为(m, ceilDiv(k, 64), 2)、x2Scale为(ceilDiv(k, 64), n, 2)时，对入参x1和x1Scale进行AllGather后，对x1、x2进行MatMul计算，然后进行dequant操作：
+  - 场景4：当x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景，x1为(m, k)、x2为(n, k)，且x1Scale为(m, ceilDiv(k, 64), 2)、x2Scale为(ceilDiv(k, 64), n, 2)时，对入参x1和x1Scale进行AllGather后，对x1、x2进行MatMul计算，然后进行dequant操作：
 
     $$
     output=\sum_{0}^{\left \lfloor \frac{k}{blockSize=32} \right \rfloor} (AllGather(x1)_{pr}@x2_{rq}*(AllGather(x1Scale)_{pr}*x2Scale_{rq}))
@@ -134,7 +134,7 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
 
 ## 调用示例
 
-### 情形1：8卡场景，每张卡上的m为16，AllGather后的总m为128
+### 场景1：8卡场景，每张卡上的m为16，AllGather后的总m为128
 
 ```python
 import torch
@@ -193,7 +193,7 @@ torch.Size([128, 256]) torch.float16
 torch.Size([128, 512]) torch.float16
 ```
 
-### 情形2：`x1、x2`数据类型为`torch.int8`的perchannel、pertoken场景（<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>）
+### 场景2：`x1、x2`数据类型为`torch.int8`的perchannel、pertoken场景（<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>）
 
 ```python
 import torch
@@ -254,7 +254,7 @@ torch.Size([128, 256]) torch.float16
 torch.Size([128, 512]) torch.int8
 ```
 
-### 情形3：`x1、x2`数据类型为`torch.float8_e4m3fn`的perblock场景（仅<term>Ascend 950DT</term>）
+### 场景3：`x1、x2`数据类型为`torch.float8_e4m3fn`的perblock场景（仅<term>Ascend 950DT</term>）
 
 ```python
 import torch
@@ -309,7 +309,7 @@ torch.Size([256, 512]) torch.float8_e4m3fn
 None
 ```
 
-### 情形4：`x1、x2`数据类型为`torch.float8_e4m3fn`的mx量化场景（仅<term>Ascend 950DT</term>）
+### 场景4：`x1、x2`数据类型为`torch.float8_e4m3fn`的mx量化场景（仅<term>Ascend 950DT</term>）
 
 ```python
 import torch

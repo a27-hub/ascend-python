@@ -11,7 +11,7 @@
 - API功能：在输入张量的-1轴和-2轴上同时进行目的数据类型为`float4`（`torch_npu.float4_e1m2fn_x2`，`torch_npu.float4_e2m1fn_x2`）、`float8`（`torch.float8_e4m3fn`，`torch.float8_e5m2`）的MX量化。在-1轴和-2轴上，每32个数计算出对应的量化尺度mxscale1、mxscale2作为输出mxscale1、mxscale2的对应部分，然后分别将两组数所有元素除以对应的量化尺度，根据round\_mode转换到对应的dst\_type，得到量化结果y1和y2。
   - 合轴说明：算子实现时，会对-2轴（不包含）之前的所有轴进行合轴处理。即对于输入shape为$(d_0, d_1, ..., d_{n-3}, d_{n-2}, d_{n-1})$的张量，-2轴之前的维度$(d_0, d_1, ..., d_{n-3})$会被合并为一个维度，等效于将输入reshape为$(d_0 \times d_1 \times ... \times d_{n-3}, d_{n-2}, d_{n-1})$后再进行量化计算。
 - 计算公式：
-  - 情形1，当scale\_alg为0时，即OCP Microscaling Formats (Mx) Specification实现：
+  - 场景1，当scale\_alg为0时，即OCP Microscaling Formats (Mx) Specification实现：
     - 将输入x在-1轴上按照32个数进行分组，一组32个数$\{\{V_i\}_{i=1}^{32}\}$量化为$\{mxscale1, \{P_i\}_{i=1}^{32}\}$：
 
       $$
@@ -50,7 +50,7 @@
       | `torch.float8_e4m3fn` | 8 |
       | `torch.float8_e5m2` | 15 |
 
-  - 情形2，当scale\_alg为1时，只涉及float8（CuBALS Scale计算算法）：
+  - 场景2，当scale\_alg为1时，只涉及float8（CuBALS Scale计算算法）：
     - -1轴量化：将输入x在-1轴上按照32个数进行分组，每组长度为32，对每组单独计算一个块缩放因子$S_{fp32}^b$，再把组内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型float8。如果最后一组不足32个元素，把缺失值视为0，按照完整组处理。找到该组中数值的最大绝对值：
 
       $$
@@ -73,7 +73,7 @@
     - -2轴量化：同时，将输入x在-2轴上按照32个数进行分组，采用与-1轴相同的CuBALS Scale计算算法，对每组独立计算块缩放因子并量化，-2轴输出的量化结果是$\left(S^b, [d^j]_{j=1}^{32}\right)$。
     - -1轴量化结果组成输出y1，对应的块缩放因子组成输出mxscale1。-2轴量化结果组成输出y2，对应的块缩放因子组成输出mxscale2。
 
-  - 情形3，当scale\_alg为2时，只涉及`torch_npu.float4_e2m1fn_x2`类型：
+  - 场景3，当scale\_alg为2时，只涉及`torch_npu.float4_e2m1fn_x2`类型：
     - 当dst\_type\_max为0.0/6.0/7.0时，将输入x在-1轴和-2轴上分别按照32个数进行分组，动态量化为$\{mxscale, \{P\}\}$：
 
       $$
@@ -84,7 +84,7 @@
       P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space 32
       $$
 
-    - 当dst\_type\_max不为上述特殊取值时，将输入x在-1轴和-2轴上分别按照32个数进行分组，每组长度为32，采用与情形2相同的块缩放算法：对每组单独计算块缩放因子$S_{fp32}^b$，映射到目标低精度类型`torch_npu.float4_e2m1fn_x2`。其中$Amax(DType)$在dst\_type\_max为0时是目标精度能表示的最大值，不为0时是dst\_type\_max传入值：
+    - 当dst\_type\_max不为上述特殊取值时，将输入x在-1轴和-2轴上分别按照32个数进行分组，每组长度为32，采用与场景2相同的块缩放算法：对每组单独计算块缩放因子$S_{fp32}^b$，映射到目标低精度类型`torch_npu.float4_e2m1fn_x2`。其中$Amax(DType)$在dst\_type\_max为0时是目标精度能表示的最大值，不为0时是dst\_type\_max传入值：
 
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
@@ -96,7 +96,7 @@
       E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
       $$
 
-      其余步骤（计算$S_{ue8m0}^b$、$R_{fp32}^b$、$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$）与情形2相同。
+      其余步骤（计算$S_{ue8m0}^b$、$R_{fp32}^b$、$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$）与场景2相同。
     - -1轴量化结果组成输出y1，对应的块缩放因子组成输出mxscale1。-2轴量化结果组成输出y2，对应的块缩放因子组成输出mxscale2。
 
 ## 函数原型
@@ -119,9 +119,9 @@ torch_npu.npu_dynamic_mx_quant_with_dual_axis(input, *, round_mode="rint", dst_t
   - 296：`torch_npu.float4_e2m1fn_x2`。
   - 297：`torch_npu.float4_e1m2fn_x2`。
 - **scale\_alg**（`int`）：可选参数，表示mxscale1和mxscale2的计算方法。支持取值为0、1、2，默认值为0。
-  - 0：情形1（OCP MX规格实现），float8、float4均支持。
-  - 1：情形2（CuBALS Scale计算算法），仅float8支持。
-  - 2：情形3（fp4动态量化），仅`torch_npu.float4_e2m1fn_x2`支持。
+  - 0：场景1（OCP MX规格实现），float8、float4均支持。
+  - 1：场景2（CuBALS Scale计算算法），仅float8支持。
+  - 2：场景3（fp4动态量化），仅`torch_npu.float4_e2m1fn_x2`支持。
 - **dst\_type\_max**（`float`）：可选参数，表示maxType的取值，对应公式中的$Amax(DType)$。默认值为0.0。仅支持在dst\_type为`torch_npu.float4_e2m1fn_x2`且scale\_alg为2时设置该值，支持取值0.0和6.0-12.0。取值为0.0代表Amax(DType)为量化结果数据类型的最大值，取值为6.0-12.0代表Amax(DType)为传入值。
 
 ## 返回值说明
