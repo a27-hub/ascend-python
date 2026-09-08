@@ -38,16 +38,6 @@ const int64_t HIFLOAT4 = 298;
 bool is_cann_version_gte_required =
     IsGteCANNVersion(REQUIRED_CANN_VERSION, CANN_PRODUCT); // whether cann version >= 8.5.0.alpha003
 
-inline int64_t GetDtypeRatio(int64_t quant_mode)
-{
-    // hif4 时 q/k/v 在 Python 端被 pack 成 uint8（每 byte 2 个 fp4 元素），
-    // 因此 v.size(-1) 是 packed 维度（d/2），output 需要展开为逻辑 d（即 2 倍）。
-    if (quant_mode == MODE_6) {
-        return 2;
-    }
-    return 1;
-}
-
 TensorWrapper make_wrapper_Hif4(const at::Tensor &tensor, const int64_t real_dtype)
 {
     TensorWrapper wrapper = {tensor, ACL_DT_UNDEFINED};
@@ -330,9 +320,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
       TensorWrapper weight_uq_qr_wrapper = make_wrapper_Hif4(weight_uq_qr, HIFLOAT4);
       TensorWrapper weight_dkv_kr_wrapper = make_wrapper_Hif4(weight_dkv_kr, HIFLOAT4);
       if (kv_cache_quant_mode == MODE_1) {
-        TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache, HIFLOAT4);
-        TensorWrapper query_wrapper = make_wrapper(query, HIFLOAT4);
-        TensorWrapper query_norm_wrapper = make_wrapper(query_norm, HIFLOAT4);
+        TensorWrapper kv_cache_wrapper = make_wrapper_Hif4(kv_cache, HIFLOAT4);
+        TensorWrapper query_wrapper = make_wrapper_Hif4(query, HIFLOAT4);
+        TensorWrapper query_norm_wrapper = make_wrapper_Hif4(query_norm, HIFLOAT4);
         EXEC_NPU_CMD(
             aclnnMlaPrologV3WeightNz,
             token_x_wrapper,
@@ -373,8 +363,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             query_norm_wrapper,
             dequant_scale_q_norm);
       } else if (kv_cache_quant_mode == MODE_3) {
-        TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache, HIFLOAT4);
-        TensorWrapper query_norm_wrapper = make_wrapper(query_norm, HIFLOAT4);
+        TensorWrapper kv_cache_wrapper = make_wrapper_Hif4(kv_cache, HIFLOAT4);
+        TensorWrapper query_norm_wrapper = make_wrapper_Hif4(query_norm, HIFLOAT4);
         EXEC_NPU_CMD(
             aclnnMlaPrologV3WeightNz,
             token_x_wrapper,
@@ -415,7 +405,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             query_norm_wrapper,
             dequant_scale_q_norm);
       } else {
-        TensorWrapper query_norm_wrapper = make_wrapper(query_norm, HIFLOAT4);
+        TensorWrapper query_norm_wrapper = make_wrapper_Hif4(query_norm, HIFLOAT4);
         EXEC_NPU_CMD(
             aclnnMlaPrologV3WeightNz,
             token_x_wrapper,
@@ -959,14 +949,14 @@ npu_mla_prolog_v3_functional(
 
   if (is_cann_version_gte_required) {
     if (is_hifloat4_dtype) {
-      TensorWrapper token_x_wrapper = make_wrapper(token_x, HIFLOAT4);
-      TensorWrapper weight_dq_wrapper = make_wrapper(weight_dq, HIFLOAT4);
-      TensorWrapper weight_uq_qr_wrapper = make_wrapper(weight_uq_qr, HIFLOAT4);
-      TensorWrapper weight_dkv_kr_wrapper = make_wrapper(weight_dkv_kr, HIFLOAT4);
+      TensorWrapper token_x_wrapper = make_wrapper_Hif4(token_x, HIFLOAT4);
+      TensorWrapper weight_dq_wrapper = make_wrapper_Hif4(weight_dq, HIFLOAT4);
+      TensorWrapper weight_uq_qr_wrapper = make_wrapper_Hif4(weight_uq_qr, HIFLOAT4);
+      TensorWrapper weight_dkv_kr_wrapper = make_wrapper_Hif4(weight_dkv_kr, HIFLOAT4);
       if (kv_cache_quant_mode == MODE_1) {
-        TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache_inplace, HIFLOAT4);
-        TensorWrapper query_wrapper = make_wrapper(query, HIFLOAT4);
-        TensorWrapper query_norm_wrapper = make_wrapper(query_norm, HIFLOAT4);
+        TensorWrapper kv_cache_wrapper = make_wrapper_Hif4(kv_cache_inplace, HIFLOAT4);
+        TensorWrapper query_wrapper = make_wrapper_Hif4(query, HIFLOAT4);
+        TensorWrapper query_norm_wrapper = make_wrapper_Hif4(query_norm, HIFLOAT4);
         EXEC_NPU_CMD(
             aclnnMlaPrologV3WeightNz,
             token_x_wrapper,
@@ -1007,8 +997,8 @@ npu_mla_prolog_v3_functional(
             query_norm_wrapper,
             dequant_scale_q_norm);
       } else if (kv_cache_quant_mode == MODE_3) {
-        TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache_inplace, HIFLOAT4);
-        TensorWrapper query_norm_wrapper = make_wrapper(query_norm, HIFLOAT4);
+        TensorWrapper kv_cache_wrapper = make_wrapper_Hif4(kv_cache_inplace, HIFLOAT4);
+        TensorWrapper query_norm_wrapper = make_wrapper_Hif4(query_norm, HIFLOAT4);
         EXEC_NPU_CMD(
             aclnnMlaPrologV3WeightNz,
             token_x_wrapper,
@@ -1049,7 +1039,7 @@ npu_mla_prolog_v3_functional(
             query_norm_wrapper,
             dequant_scale_q_norm);
       } else {
-        TensorWrapper query_norm_wrapper = make_wrapper(query_norm, HIFLOAT4);
+        TensorWrapper query_norm_wrapper = make_wrapper_Hif4(query_norm, HIFLOAT4);
         EXEC_NPU_CMD(
             aclnnMlaPrologV3WeightNz,
             token_x_wrapper,
