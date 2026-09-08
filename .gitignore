@@ -193,3 +193,6 @@ TAGS
 
 # bazel symlinks
 bazel-*
+
+# op-adaptation skill process logs
+skill_logs/

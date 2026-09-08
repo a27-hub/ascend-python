@@ -15890,6 +15890,64 @@ input与weight数据类型必须一致。vocabStartIndex不可小于0。vocabEnd
 )
 
 _add_torch_npu_docstr(
+    "npu_matmul_abft_verify",
+    """
+功能描述:
+算子功能: 基于方差估计自适应门限算法（V-ABFT）的GEMM容错检测算子。接收矩阵A、B以及预先计算的矩阵乘结果C，对C进行分块ABFT校验，检测静默计算错误并输出逐行检测结果。
+计算公式: C = A * B (A为[M,K]，B为[K,N])；C^r = C*r，B^r = B*r；阈值Threshold_i由输入矩阵A、B的局部统计特征（均值、标准差）动态估计，无需依赖C矩阵输出结果。
+
+接口原型:
+torch_npu.npu_matmul_abft_verify(Tensor a, Tensor b, Tensor c, Tensor checksum_weight, *, float e_max=0.001) -> Tensor
+
+参数说明:
+a: Tensor类型, 矩阵乘法输入A, 必选, shape为[M, K], 数据类型支持float16/bfloat16/float32, 数据格式支持ND, 不支持非连续的Tensor.
+b: Tensor类型, 矩阵乘法输入B, 必选, shape为[K, N], 数据类型须与a一致, 数据格式支持ND, 不支持非连续的Tensor.
+c: Tensor类型, 预先计算的矩阵乘结果C = A*B, 必选, shape为[M, N], 数据类型仅支持float32, 数据格式支持ND, 不支持非连续的Tensor.
+checksum_weight: Tensor类型, 列编码值向量, 对应ABFT中的行校验和编码向量r（加权向量）, 必选, shape为[N], 数据类型须与a一致, 数据格式支持ND.
+*: 位置参数与关键字参数的分隔符.
+e_max: float类型, 误差阈值系数, 控制故障检测的灵敏度, 可选, 默认值为0.001. bfloat16精度推荐值0.001, float32精度推荐值0.00002. 使用小于推荐值的e_max会增大检出率, 但也可能出现误检; 出现误报时可将e_max调大. e_max不得为负数.
+
+输出说明：
+comp_row: Tensor类型, 压缩后的行方向故障检测位流输出, 数据类型为uint8, shape为[ceil(M/8)*splitN], 其中splitN = ceil(N/256). 每个bit表示一行一段的检测结果, 1表示正确, 0表示检测到错误.
+
+约束说明:
+该接口支持推理、训练场景下使用.
+该接口不支持图模式.
+该接口默认确定性实现.
+输入矩阵a、b和c必须为2维, shape分别为[M, K]、[K, N]和[M, N], 且a的第1维（K）与b的第0维（K）必须相等.
+输入向量checksum_weight的shape必须为[N].
+支持的数据类型组合: (a, b, c, checksum_weight) 为 (float16, float16, float32, float16)、(bfloat16, bfloat16, float32, bfloat16)或(float32, float32, float32, float32).
+不支持ND格式以外的数据格式; 不支持非连续的Tensor.
+
+支持的PyTorch版本
+PyTorch 2.1及以上版本.
+
+支持的型号:
+Atlas A3 训练系列产品/Atlas A3 推理系列产品, Atlas A2 训练系列产品/Atlas A2 推理系列产品.
+
+调用示例:
+单算子模式调用
+对正确的矩阵乘结果进行校验, 全部行段通过时输出全255:
+import torch
+import torch_npu
+
+m, n, k = 16, 16, 16
+a = (torch.randn(m, k, dtype=torch.float32) * 0.1).half().npu()
+b = (torch.randn(k, n, dtype=torch.float32) * 0.1).half().npu()
+c = torch.matmul(a.float(), b.float()).npu()
+checksum_weight = torch.ones(n, dtype=torch.float16).npu()
+result = torch_npu.npu_matmul_abft_verify(a, b, c, checksum_weight)
+# tensor([255, 255], device='npu:0', dtype=torch.uint8)
+
+对C注入破坏后, 对应行段检测结果为0:
+c_corrupted = c.clone()
+c_corrupted[0, :] += 50.0
+result = torch_npu.npu_matmul_abft_verify(a, b, c_corrupted, checksum_weight)
+# tensor([0, 255], device='npu:0', dtype=torch.uint8)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_fused_cross_entropy_loss_with_max_sum",
     """
 torch_npu.npu_fused_cross_entropy_loss_with_max_sum(Tensor logits_max, Tensor sum_exp_logits, Tensor predicted_logits, *, float? label_smoothing=0.0, Tensor? input=None, Tensor? weight=None, Tensor? vocab_parallel_logits=None) -> (Tensor, Tensor)

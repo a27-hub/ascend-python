@@ -911,5 +911,9 @@
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"></a><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"></a><span>词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点input和weight的梯度。需要获得npu_fused_linear_online_max_sum和npu_fused_cross_entropy_loss_with_max_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入logits_max和sum_exp_logits）。</span></p></td>
 </tr>
+<tr id="npu_matmul_abft_verify"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_matmul_abft_verify"><a name="p_npu_matmul_abft_verify"></a><a name="p_npu_matmul_abft_verify"></a><a href="torch_npu-npu_matmul_abft_verify.md">torch_npu.npu_matmul_abft_verify</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_matmul_abft_verify_desc"><a name="p_npu_matmul_abft_verify_desc"></a><a name="p_npu_matmul_abft_verify_desc"></a><span>基于方差估计自适应门限算法（V-ABFT）的GEMM容错检测算子。接收矩阵A、B以及预先计算的矩阵乘结果C，对C进行分块ABFT校验，检测静默计算错误并输出逐行检测结果。</span></p></td>
+</tr>
 </tbody>
 </table>
