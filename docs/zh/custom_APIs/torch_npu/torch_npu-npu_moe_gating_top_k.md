@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term> | √ |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>           |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √   |
 
@@ -143,8 +144,8 @@ npu_moe_gating_top_k(x, k, *, bias=None, input_ids=None, tid2eid=None, k_group=1
 
 - **group_select_mode**（`int`）：可选参数，表示一个专家组的总得分计算方式。默认值为`0`，`0`表示组内取最大值，作为专家组得分；`1`表示取组内Top2的专家进行得分累加，作为专家组得分。
 
-- **renorm**（`int`）：可选参数，表示renorm标记，默认值为`0`，表示先进行norm再进行topk计算。当前仅支持`0`。
-- **norm_type**（`int`）：可选参数，表示norm函数类型，`1`表示使用Sigmoid函数，`0`表示Softmax函数。默认值为`0`。
+- **renorm**（`int`）：可选参数，表示renorm标记，默认值为`0`。支持`0`和`1`，`0`表示不做renorm，`1`表示做renorm。仅`norm_type`为`0`时该参数生效，`norm_type`为`1`或`2`时无效。
+- **norm_type**（`int`）：可选参数，表示norm函数类型，`0`表示使用Softmax函数，`1`表示使用Sigmoid函数，`2`表示使用SqrtSoftplus函数（仅<term>Ascend 950PR/Ascend 950DT</term>支持）。默认值为`0`。
 
 - **out_flag**（`bool`）：可选参数，是否输出norm函数中间结果。默认值为`False`。
 - **routed_scaling_factor**（`float`）：可选参数，表示计算`yOut`使用的`routed_scaling_factor`系数，默认值为`1.0`。
