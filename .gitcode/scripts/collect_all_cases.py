@@ -158,16 +158,21 @@ def collect_cases_for_file(test_file: str, test_dir: Path) -> Tuple[str, str, Li
             # Diagnostic info for first failure: capture env state
             diag_lines = []
             try:
-                import subprocess as sp
                 diag_lines.append("--- Diagnostics ---")
                 diag_lines.append("LD_LIBRARY_PATH: " + os.environ.get("LD_LIBRARY_PATH", "NOT SET"))
                 diag_lines.append("PATH: " + os.environ.get("PATH", "NOT SET"))
-                r = sp.run(["find", "/usr/local/Ascend", "-name", "libhccl.so"], capture_output=True, text=True, timeout=10)
-                diag_lines.append("find libhccl.so: " + (r.stdout.strip() or "NOT FOUND"))
-                r2 = sp.run(["cat", "/usr/local/Ascend/cann/version.cfg"], capture_output=True, text=True, timeout=5)
-                diag_lines.append("CANN version: " + (r2.stdout.strip() or "MISSING"))
-                r3 = sp.run(["python3", "-c", "import torch; print('torch:', torch.__version__)"], capture_output=True, text=True, timeout=10, env=os.environ, cwd="/tmp")
-                diag_lines.append("torch version: " + (r3.stdout.strip() or r3.stderr.strip()))
+                # 用原生文件遍历代替 find 子进程, 避免 bandit B607 告警
+                libhccl_paths = list(Path("/usr/local/Ascend").rglob("libhccl.so")) if Path("/usr/local/Ascend").exists() else []
+                diag_lines.append("find libhccl.so: " + (str(libhccl_paths[0]) if libhccl_paths else "NOT FOUND"))
+                # 直接读文件代替 cat 子进程
+                version_cfg = Path("/usr/local/Ascend/cann/version.cfg")
+                diag_lines.append("CANN version: " + (version_cfg.read_text(encoding="utf-8").strip() if version_cfg.exists() else "MISSING"))
+                # 当前进程直接 import torch 获取版本, 代替 python3 -c 子进程
+                try:
+                    import torch
+                    diag_lines.append("torch version: torch: " + torch.__version__)
+                except Exception as torch_err:
+                    diag_lines.append("torch version: " + str(torch_err))
             except Exception:
                 diag_lines.append("--- Diagnostics FAILED ---")
             error_msg += "\n" + "\n".join(diag_lines)
