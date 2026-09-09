@@ -15,6 +15,11 @@
 // limitations under the License.
 
 #include <ATen/native/Pool.h>
+// 临时方案：2.15在研版本用__has_include区分是否合入PR#196230（PoolingChecks.h随之引入）；
+// 待2.15正式发包、Version.h补充V2R15适配后，改回VERSION_BETWEEN按torch_version区分。
+#if __has_include(<ATen/native/PoolingChecks.h>)
+#include <ATen/native/PoolingChecks.h>
+#endif
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
@@ -180,8 +185,12 @@ at::Tensor max_pool3d_with_indices_backward(
   const int64_t oheight = grad_output.size(-2);
   const int64_t owidth = grad_output.size(-1);
 
-#if VERSION_BETWEEN(V2R1, V2R14)
-  at::native::max_pool3d_backward_shape_check(
+// 临时方案：2.15在研版本用__has_include区分是否合入PR#196230；
+// 待2.15正式发包后，改用VERSION_BETWEEN按torch_version区分。
+#if __has_include(<ATen/native/PoolingChecks.h>)
+  // Since pytorch #196230 (v2.15), max_pool3d_backward_shape_check is merged
+  // into pool3d_backward_shape_check where `indices` is a std::optional.
+  at::native::pool3d_backward_shape_check(
       self,
       grad_output,
       indices,
@@ -206,9 +215,7 @@ at::Tensor max_pool3d_with_indices_backward(
       owidth,
       "max_pool3d_with_indices_backward()");
 #else
-  // Since pytorch #196230 (v2.15), max_pool3d_backward_shape_check is merged
-  // into pool3d_backward_shape_check where `indices` is a std::optional.
-  at::native::pool3d_backward_shape_check(
+  at::native::max_pool3d_backward_shape_check(
       self,
       grad_output,
       indices,

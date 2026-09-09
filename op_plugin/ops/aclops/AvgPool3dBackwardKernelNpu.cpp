@@ -15,6 +15,11 @@
 // limitations under the License.
 
 #include <ATen/native/Pool.h>
+// 临时方案：2.15在研版本用__has_include区分是否合入PR#196230（PoolingChecks.h随之引入）；
+// 待2.15正式发包、Version.h补充V2R15适配后，改回VERSION_BETWEEN按torch_version区分。
+#if __has_include(<ATen/native/PoolingChecks.h>)
+#include <ATen/native/PoolingChecks.h>
+#endif
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
@@ -117,28 +122,9 @@ void avg_pool3d_backward_shape_check(
     int64_t otime,
     int64_t oheight,
     int64_t owidth) {
-#if VERSION_BETWEEN(V2R1, V2R14)
-  at::native::avg_pool3d_backward_shape_check(
-      input,
-      grad_output,
-      nslices,
-      k_T,
-      k_H,
-      k_W,
-      d_T,
-      d_H,
-      d_W,
-      p_T,
-      p_H,
-      p_W,
-      itime,
-      iheight,
-      iwidth,
-      otime,
-      oheight,
-      owidth,
-      "avg_pool3d_backward_out()");
-#else
+// 临时方案：2.15在研版本用__has_include区分是否合入PR#196230；
+// 待2.15正式发包后，改用VERSION_BETWEEN按torch_version区分。
+#if __has_include(<ATen/native/PoolingChecks.h>)
   // Since pytorch #196230 (v2.15), avg_pool3d_backward_shape_check is merged
   // into pool3d_backward_shape_check: `indices` becomes a std::optional and
   // avg_pool3d corresponds to dilation of 1 and check_input_size of true.
@@ -167,6 +153,27 @@ void avg_pool3d_backward_shape_check(
       owidth,
       "avg_pool3d_backward_out()",
       true);
+#else
+  at::native::avg_pool3d_backward_shape_check(
+      input,
+      grad_output,
+      nslices,
+      k_T,
+      k_H,
+      k_W,
+      d_T,
+      d_H,
+      d_W,
+      p_T,
+      p_H,
+      p_W,
+      itime,
+      iheight,
+      iwidth,
+      otime,
+      oheight,
+      owidth,
+      "avg_pool3d_backward_out()");
 #endif
 }
 } // namespace
