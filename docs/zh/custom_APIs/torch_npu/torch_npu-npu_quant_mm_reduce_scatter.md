@@ -12,19 +12,19 @@
 
 - API功能：融合MatMul（矩阵乘）与ReduceScatter（归约散射）集合通信计算，对入参x1（self）、x2进行矩阵乘（可选加bias、反量化）计算后，按卡数对M轴切分并进行ReduceScatter通信，常用于MoE等分布式场景（MC2）。该接口是`torch_npu.npu_mm_reduce_scatter_base`接口的功能扩展，在支持x1和x2输入类型为`torch.float16`/`torch.bfloat16`的基础上，<term>Ascend 950DT</term>新增了对低精度数据类型`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`/`torch_npu.float4_e2m1fn_x2`的支持（支持pertensor、perblock、mx量化方式，其中mx量化支持mxfp8和mxfp4场景）；<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>新增了对`torch.int8`的支持（支持pertoken/perchannel量化方式）。
 - 计算公式：
-  - 情形1：x1和x2数据类型为`torch.float16`/`torch.bfloat16`时，对入参x1、x2、bias进行matmul计算后，进行ReduceScatter通信。
+  - 场景1：x1和x2数据类型为`torch.float16`/`torch.bfloat16`时，对入参x1、x2、bias进行matmul计算后，进行ReduceScatter通信。
 
     $$
     output=ReduceScatter(x1@x2 + bias_{optional})
     $$
 
-  - 情形2：x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的pertensor场景，或x1和x2数据类型为`torch.int8`的perchannel、pertoken场景，且不输出amax时，入参x1、x2进行matmul计算和dequant计算后，进行ReduceScatter通信。
+  - 场景2：x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的pertensor场景，或x1和x2数据类型为`torch.int8`的perchannel、pertoken场景，且不输出amax时，入参x1、x2进行matmul计算和dequant计算后，进行ReduceScatter通信。
 
     $$
     output=ReduceScatter((x1Scale*x2Scale)*(x1@x2) + bias_{optional})
     $$
 
-  - 情形3：x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景，且不输出amax时，当x1的shape为(m, k)、x2的shape为(k, n)，x1Scale的shape为(ceildiv(m, 128), ceildiv(k, 128))、x2Scale的shape为(ceildiv(k, 128), ceildiv(n, 128))时，入参x1、x2进行matmul计算和dequant计算后，再进行ReduceScatter通信。
+  - 场景3：x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景，且不输出amax时，当x1的shape为(m, k)、x2的shape为(k, n)，x1Scale的shape为(ceildiv(m, 128), ceildiv(k, 128))、x2Scale的shape为(ceildiv(k, 128), ceildiv(n, 128))时，入参x1、x2进行matmul计算和dequant计算后，再进行ReduceScatter通信。
 
     $$
     output=ReduceScatter(\sum_{0}^{ceildiv} (x1_{pr}@x2_{rq}*(x1Scale_{pr}*x2Scale_{rq})))
@@ -36,7 +36,7 @@
     ceildiv = \left \lceil \frac{k}{blockSize=128} \right \rceil
     $$
 
-  - 情形4：x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景，且不输出amax时，当x1的shape为(m, k)、x2的shape为(n, k)，x1Scale的shape为(m, ceildiv(k, 64), 2)、x2Scale的shape为(ceildiv(k, 64), n, 2)时，入参x1、x2进行matmul计算和dequant计算后，再进行ReduceScatter通信。mx量化仅支持x2、x2Scale转置场景。
+  - 场景4：x1和x2数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景，且不输出amax时，当x1的shape为(m, k)、x2的shape为(n, k)，x1Scale的shape为(m, ceildiv(k, 64), 2)、x2Scale的shape为(ceildiv(k, 64), n, 2)时，入参x1、x2进行matmul计算和dequant计算后，再进行ReduceScatter通信。mx量化仅支持x2、x2Scale转置场景。
 
     $$
     output=ReduceScatter(\sum_{0}^{ceildiv} (x1_{pr}@x2_{rq}*(x1Scale_{pr}*x2Scale_{rq})))
@@ -136,7 +136,7 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
 
 ## 调用示例
 
-### 情形1：`x1，x2`均为`torch.float16`或`torch.bfloat16`
+### 场景1：`x1，x2`均为`torch.float16`或`torch.bfloat16`
 
 ```python
 import torch
@@ -188,11 +188,11 @@ tensor([0.], device='npu:0')
 tensor([0.], device='npu:1')
 ```
 
-### 情形2：`x1，x2`数据类型为`torch.int8`的perchannel、pertoken场景（不输出amax）
+### 场景2：`x1，x2`数据类型为`torch.int8`的perchannel、pertoken场景（不输出amax）
 
 > [!NOTE]
 >
-> 情形2中`torch.int8`的perchannel、pertoken场景（<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>）与此类似：x1、x2数据类型为`torch.int8`，pertoken时`x1_scale`的shape为(m, 1)、`x2_scale`不传；perchannel时`x2_scale`的shape为(1, n)、`x1_scale`不传，scale数据类型支持`torch.float32`（perchannel的`x2_scale`还支持`torch.int64`）。
+> 场景2中`torch.int8`的perchannel、pertoken场景（<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>）与此类似：x1、x2数据类型为`torch.int8`，pertoken时`x1_scale`的shape为(m, 1)、`x2_scale`不传；perchannel时`x2_scale`的shape为(1, n)、`x1_scale`不传，scale数据类型支持`torch.float32`（perchannel的`x2_scale`还支持`torch.int64`）。
 
 ```python
 import torch
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     x1_shape = [128, 512]
     x2_shape = [512, 64]
     dtype = torch.int8
-    amax_output = False  # 情形2不输出amax
+    amax_output = False  # 场景2不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 ```
 
@@ -239,7 +239,7 @@ torch.Size([64, 64]) torch.float16
 torch.Size([64, 64]) torch.float16
 ```
 
-### 情形3：`x1，x2`数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景（不输出amax）
+### 场景3：`x1，x2`数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景（不输出amax）
 
 ```python
 import torch
@@ -279,7 +279,7 @@ if __name__ == "__main__":
     x1_shape = [128, 512]
     x2_shape = [512, 128]
     dtype = torch.float8_e4m3fn
-    amax_output = False  # 情形3不输出amax
+    amax_output = False  # 场景3不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 
 ```
@@ -293,11 +293,11 @@ torch.Size([64, 128]) torch.float16
 None
 ```
 
-### 情形4：`x1，x2`数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景（不输出amax，以MXFP8为例）
+### 场景4：`x1，x2`数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景（不输出amax，以MXFP8为例）
 
 > [!NOTE]
 >
-> 情形4的MXFP4场景（x1、x2数据类型为`torch_npu.float4_e2m1fn_x2`）还需额外传入`x1_dtype`、`x2_dtype`（取值为`torch_npu.float4_e2m1fn_x2`）以及`x1_scale_dtype`、`x2_scale_dtype`（取值为`torch.float8_e8m0fnu`），且k须为偶数。
+> 场景4的MXFP4场景（x1、x2数据类型为`torch_npu.float4_e2m1fn_x2`）还需额外传入`x1_dtype`、`x2_dtype`（取值为`torch_npu.float4_e2m1fn_x2`）以及`x1_scale_dtype`、`x2_scale_dtype`（取值为`torch.float8_e8m0fnu`），且k须为偶数。
 
 ```python
 import torch
@@ -337,7 +337,7 @@ if __name__ == "__main__":
     x1_shape = [128, 256]
     x2_shape = [256, 64] 
     dtype = torch.float8_e4m3fn
-    amax_output = False  # 情形4不输出amax
+    amax_output = False  # 场景4不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 ```
 

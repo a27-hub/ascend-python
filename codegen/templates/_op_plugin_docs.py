@@ -15969,10 +15969,10 @@ mx量化场景: 按blockSize=32分块累加, output = sum(AllGather(x1)_pr @ x2_
 量化方式(pertensor、perchannel、pertoken、perblock、mx)由x1_scale、x2_scale的shape隐式确定, 接口不提供显式的量化方式参数.
 
 参数说明
-self: Tensor类型, 必选参数, MM左矩阵, 2维shape(m, k), 仅支持不转置场景, 数据格式支持ND. Ascend 950PR/950DT数据类型支持float16、bfloat16、float8_e4m3fn、float8_e5m2、hifloat8(torch_npu.hifloat8)、float4_e2m1(torch_npu.float4_e2m1fn_x2); Atlas A3/A2训练推理系列产品数据类型支持float16、bfloat16、int8、int4(torch_npu.int4).
+self: Tensor类型, 必选参数, MM左矩阵, 2维shape(m, k), 仅支持不转置场景, 数据格式支持ND. Ascend 950DT数据类型支持float16、bfloat16、float8_e4m3fn、float8_e5m2、hifloat8(torch_npu.hifloat8)、float4_e2m1(torch_npu.float4_e2m1fn_x2); Atlas A3/A2训练推理系列产品数据类型支持float16、bfloat16、int8、int4(torch_npu.int4).
 x2: Tensor类型, 必选参数, MM右矩阵, 2维shape(k, n), 支持转置/不转置场景, 仅转置场景支持非连续Tensor, 数据格式支持ND. 数据类型支持范围与self一致, x1和x2的数据类型需保持一致(float8_e4m3fn与float8_e5m2可混用).
 hcom: String类型, 必选参数, 通信域名称, 通过group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)获取.
-world_size: int类型, 必选参数, 通信域内的rank总数, 必须为2的幂. Ascend 950PR/950DT支持2、4、8、16、32、64卡; Atlas A3/A2训练推理系列产品支持2、4、8卡.
+world_size: int类型, 必选参数, 通信域内的rank总数, 必须为2的幂. Ascend 950DT支持2、4、8、16、32、64卡; Atlas A3/A2训练推理系列产品支持2、4、8卡.
 *: 代表其之前的变量是位置相关, 按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值).
 bias: Tensor类型, 可选输入, 默认值为None, 偏置, 1维shape(n,), 数据格式支持ND. Ascend 950PR/950DT: 数据类型支持float16、bfloat16、float32, x1为float16/bfloat16时bias数据类型必须与x1一致, x1为float8/hifloat8/float4_e2m1时pertensor和mx量化场景下必须为float32, perblock场景下仅支持None; Atlas A3/A2训练推理系列产品当前版本仅支持None.
 x1_scale: Tensor类型, 可选输入, 默认值为None, MM左矩阵反量化参数. x1和x2为float16/bfloat16时仅支持None. Ascend 950PR/950DT: pertensor场景shape为[1], perblock场景shape为(ceilDiv(m, 128), ceilDiv(k, 128)), 数据类型支持float32, mx量化场景数据类型为float8_e8m0(torch_npu.float8_e8m0fnu), shape为(m, ceilDiv(k, 64), 2); Atlas A3/A2训练推理系列产品: 数据类型支持float32, pertoken场景shape为(m, 1).
@@ -16004,7 +16004,7 @@ comm_mode: String类型, 可选输入, 默认值为None(等效"ai_cpu"). 通信�
 world_size必须为2的幂, 取值范围为2、4、8、16、32、64.
 输入self必须是2维, 其shape为(m, k); 输入x2必须是2维, 其shape为(k, n), k轴相等, 且k轴取值范围为[256, 65535), m和n的值不得超过2147483647.
 self仅支持不转置场景, x2支持转置/不转置场景.
-Ascend 950PR/950DT: 支持2、4、8、16、32、64卡; 支持空Tensor场景(m和n可以为空, k不可为空); x1、x2为float4_e2m1时x2仅支持转置场景且k轴需要为偶数; group_size取值为549764202624时bias必须为None; comm_mode为"ccu"时仅支持单机UB域内互联, "ai_cpu"可支持跨机UB域内互联.
+Ascend 950DT: 支持2、4、8、16、32、64卡; 支持空Tensor场景(m和n可以为空, k不可为空); x1、x2为float4_e2m1时x2仅支持转置场景且k轴需要为偶数; group_size取值为549764202624时bias必须为None; comm_mode为"ccu"时仅支持单机UB域内互联, "ai_cpu"可支持跨机UB域内互联.
 Atlas A3/A2训练推理系列产品: 支持2、4、8卡; bias仅支持None; 不支持空Tensor; x1和x2为int4时k与n必须为偶数; comm_mode仅支持"aiv"; 通信缓冲区大于等于200MB.
 
 支持的PyTorch版本
@@ -16016,12 +16016,12 @@ PyTorch 2.5
 PyTorch 2.6
 
 支持的型号
-Ascend 950PR/Ascend 950DT
+Ascend Ascend 950DT
 Atlas A3 训练系列产品/Atlas A3 推理系列产品
 Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
 调用示例
-情形1：8卡场景，每张卡上的m为16，AllGather后的总m为128
+场景1：8卡场景，每张卡上的m为16，AllGather后的总m为128
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16055,7 +16055,7 @@ if __name__ == "__main__":
     dtype = torch.float16
 
     mp.spawn(run_all_gather_base_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
-情形2：`x1、x2`数据类型为`int8`的perchannel、pertoken场景（Atlas A3/A2）
+场景2：`x1、x2`数据类型为`int8`的perchannel、pertoken场景（Atlas A3/A2）
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16091,7 +16091,7 @@ if __name__ == "__main__":
     x2_shape = [512, 256]
     dtype = torch.int8
     mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
-情形3：`x1、x2`数据类型为`float8_e4m3fn`的perblock场景（仅Ascend 950PR/Ascend 950DT）
+场景3：`x1、x2`数据类型为`float8_e4m3fn`的perblock场景（仅Ascend 950PR/Ascend 950DT）
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16370,7 +16370,7 @@ input_layout为TND时sparse_mode取值范围为[0,5)或(5,8], 为其他取值时
 PyTorch 2.1及以上
 
 支持的型号
-Ascend 950PR/Ascend 950DT
+Ascend 950DT
 Atlas A3 训练系列产品/Atlas A3 推理系列产品
 Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
@@ -16485,7 +16485,7 @@ mxscale: Tensor类型, 表示每个分组对应的量化尺度, 数据类型为f
 该接口支持训练、推理场景下使用.
 该接口支持单算子模式和图模式调用.
 该接口默认确定性实现.
-该接口仅在Ascend 950PR/Ascend 950DT上支持.
+该接口仅在Ascend 950DT上支持.
 输入x必须为2维, group_index必须为1维.
 group_index中的元素必须大于等于0、非递减, 且最后一个元素与x的第0维大小相等. group_index不支持空Tensor.
 blocksize仅支持取值32.
@@ -16496,7 +16496,7 @@ shape约束: rank(mxscale)=rank(x)+1, mxscale.shape[0]=m/(blocksize*2)+g, mxscal
 PyTorch 2.1及以上
 
 支持的型号:
-Ascend 950PR/Ascend 950DT
+Ascend 950DT
 
 调用示例
 单算子模式调用，float8量化（`scale_alg`使用默认值0）
@@ -16578,7 +16578,7 @@ x和weight中每一组tensor的最后一维大小都应小于65536. x的最后�
 PyTorch 2.1及以上
 
 支持的型号
-Ascend 950PR/Ascend 950DT
+Ascend 950DT
 Atlas A3 训练系列产品/Atlas A3 推理系列产品
 Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
@@ -16629,7 +16629,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='sum', bias=None, x1_scale=None, x2_scale=None, quant_scale=None, block_size=0, comm_turn=0, group_sizes=None, amax_output=False, y_dtype=None, x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None) -> (Tensor, Tensor)
 
 功能描述:
-算子功能: 融合MatMul(矩阵乘)与ReduceScatter(归约散射)集合通信计算, 对入参x1(self)、x2进行矩阵乘(可选加bias、反量化)计算后, 按卡数对M轴切分并进行ReduceScatter通信, 常用于MoE等分布式场景(MC2). 该接口是aclnnMatmulReduceScatter接口的功能扩展, 在支持x1和x2输入类型为float16/bfloat16的基础上, Ascend 950PR/Ascend 950DT新增了对低精度数据类型float8_e4m3fn/float8_e5m2/hifloat8/float4_e2m1fn_x2的支持(支持pertensor、perblock、mx量化方式, 其中mx量化支持MXFP8和MXFP4场景); Atlas A3/A2新增了对int8的支持(支持pertoken/perchannel量化方式).
+算子功能: 融合MatMul(矩阵乘)与ReduceScatter(归约散射)集合通信计算, 对入参x1(self)、x2进行矩阵乘(可选加bias、反量化)计算后, 按卡数对M轴切分并进行ReduceScatter通信, 常用于MoE等分布式场景(MC2). 该接口是aclnnMatmulReduceScatter接口的功能扩展, 在支持x1和x2输入类型为float16/bfloat16的基础上, Ascend 950DT新增了对低精度数据类型float8_e4m3fn/float8_e5m2/hifloat8/float4_e2m1fn_x2的支持(支持pertensor、perblock、mx量化方式, 其中mx量化支持MXFP8和MXFP4场景); Atlas A3/A2新增了对int8的支持(支持pertoken/perchannel量化方式).
 计算公式:
 情形1: x1和x2数据类型为float16/bfloat16时, output = ReduceScatter(x1@x2 + bias_optional).
 情形2: x1和x2数据类型为float8_e4m3fn/float8_e5m2/hifloat8的pertensor场景, 或int8的perchannel、pertoken场景, 且不输出amax时, output = ReduceScatter((x1Scale*x2Scale)*(x1@x2) + bias_optional).
@@ -16643,7 +16643,7 @@ torch_npu.npu_quant_mm_reduce_scatter(Tensor self, Tensor x2, str hcom, int worl
 self: Tensor类型, MM左矩阵, 即计算公式中的x1, 必选参数. 仅支持两维输入, shape为[m,k], 仅支持不转置场景, m须为卡数(world_size)的整数倍, k轴取值范围为[256,65535). 数据格式支持ND, 不支持非连续Tensor. 数据类型支持float16、bfloat16、float8_e4m3fn、float8_e5m2、hifloat8、float4_e2m1fn_x2(950)、int8(A3/A2).
 x2: Tensor类型, MM右矩阵, 即计算公式中的x2, 必选参数. 仅支持两维输入, shape为[k,n], 支持转置/不转置场景. 数据格式支持ND、FRACTAL_NZ(A3/A2), 仅支持两根轴转置情况下的非连续Tensor. 数据类型支持float16、bfloat16、float8_e4m3fn、float8_e5m2、hifloat8、float4_e2m1fn_x2(950)、int8(A3/A2).
 hcom: str类型, 通信域名称, 必选参数. 通过Hccl提供的接口HcclGetCommName(HcclComm comm, char* commName)获取, 其中commName即为hcom.
-world_size: int类型, 卡数(rank_size), 必选参数. Atlas A3/A2支持2、4、8卡, Ascend 950PR/Ascend 950DT支持2、4、8、16、32、64卡.
+world_size: int类型, 卡数(rank_size), 必选参数. Atlas A3/A2支持2、4、8卡, Ascend 950DT支持2、4、8、16、32、64卡.
 reduce_op: str类型, reduce操作类型, 可选参数, 当前版本仅支持"sum", 默认值为'sum'.
 bias: Tensor类型, 即计算公式中的bias, 可选参数, 默认值为None. 仅支持一维输入, shape为(n,), 支持传入None. 数据类型支持float16、bfloat16、float32. A3/A2上: 当x1和x2数据类型为int8时bias数据类型可以是float16、bfloat16、float32; 当x1和x2数据类型为float16时bias数据类型必须为float16、float32; 当x1和x2数据类型为bfloat16时bias数据类型必须为bfloat16、float32.
 x1_scale: Tensor类型, mm左矩阵反量化参数, 可选参数, 默认值为None. 当x1和x2数据类型为float16/bfloat16时仅支持传入None. A3/A2上pertoken场景shape为(m,1), 数据类型支持float32. 950上: pertensor场景shape为[1], perblock场景shape为[ceildiv(m,128),ceildiv(k,128)], 数据类型支持float32; mx量化场景(MXFP8和MXFP4)数据类型为float8_e8m0fnu, shape为(m,ceilDiv(k,64),2).
@@ -16667,7 +16667,7 @@ amax: Tensor类型, MM计算的最大值结果, 即公式中的amaxOut. amax_out
 约束说明:
 该接口支持训练、推理场景下使用.
 默认采用确定性计算实现.
-通信约束: Atlas A2/A3仅支持comm_mode为"aiv", 且通信缓冲区大于等于200MB; Ascend 950PR/Ascend 950DT仅支持comm_mode为"ai_cpu"或"ccu", 支持CCU通信和AICPU通信, CCU仅支持单机UB域内互联, AICPU可支持跨机UB域内互联.
+通信约束: Atlas A2/A3仅支持comm_mode为"aiv", 且通信缓冲区大于等于200MB; Ascend 950DT仅支持comm_mode为"ai_cpu"或"ccu", 支持CCU通信和AICPU通信, CCU仅支持单机UB域内互联, AICPU可支持跨机UB域内互联.
 输入约束: 只支持x2矩阵转置/不转置, x1矩阵仅支持不转置; 输入x1为2维shape为(m,k), m须为卡数rank_size的整数倍, k轴取值范围为[256,65535); 输入x2必须是2维shape为(k,n), k轴相等; bias为1维shape为(n,); 输出为2维shape为(m/rank_size,n).
 950约束: float16/bfloat16时x1/x2支持空tensor场景(m和n可以为空, k不可为空), float8/hifloat8/float4时不支持空tensor; float16/bfloat16/hifloat8/float4_e2m1fn_x2时x1和x2的数据类型需要保持一致, float8_e4m3fn/float8_e5m2时x1和x2的数据类型可以为其中任意一种; mx量化场景下x2/x2Scale仅支持转置输入, MXFP4量化时k必须是偶数; 支持2、4、8、16、32、64卡; ReduceScatter集合通信数据总量不能超过16*256MB, 计算方式为m*n*sizeof(output_dtype).
 A3/A2约束: 不支持空tensor; x1和x2的数据类型需要保持一致; 支持2、4、8卡.
@@ -16680,7 +16680,7 @@ mx量化场景(MXFP4)下x1_dtype、x2_dtype、x1_scale_dtype、x2_scale_dtype为
 PyTorch 2.1及以上
 
 支持的型号:
-Ascend 950PR/Ascend 950DT
+Ascend 950DT
 Atlas A3训练系列产品/Atlas A3推理系列产品
 Atlas A2训练系列产品/Atlas A2推理系列产品
 
