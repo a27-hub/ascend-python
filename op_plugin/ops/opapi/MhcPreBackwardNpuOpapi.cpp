@@ -27,20 +27,20 @@ constexpr int64_t NUM_ONE = 1;
 constexpr int64_t CUBE_USE_FP32 = 0;
 constexpr int64_t CUBE_USE_HF32 = 1;
 
-// 优先使用V2接口透传inner_precise；FP32模式可回退旧接口以兼容旧版CANN。
+// FP32模式固定调用V1接口；仅HF32模式调用V2接口透传inner_precise。
 // 返回true表示本次应调用aclnnMhcPreBackwardV2。
 inline bool check_mhc_pre_backward_supported(int64_t inner_precise) {
   static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_900();
   static const bool is_mhc_pre_backward_available = check_aclnn_kernel_available("aclnnMhcPreBackward");
   static const bool is_mhc_pre_backward_v2_available = check_aclnn_kernel_available("aclnnMhcPreBackwardV2");
   TORCH_CHECK(
-      is_cann_ready && (is_mhc_pre_backward_v2_available ||
-          (inner_precise == CUBE_USE_FP32 && is_mhc_pre_backward_available)),
-      "torch_npu.npu_mhc_pre_backward requires CANN >= 9.0.0. inner_precise=1 additionally requires "
-      "aclnnMhcPreBackwardV2. "
+      is_cann_ready && ((inner_precise == CUBE_USE_FP32 && is_mhc_pre_backward_available) ||
+          (inner_precise == CUBE_USE_HF32 && is_mhc_pre_backward_v2_available)),
+      "torch_npu.npu_mhc_pre_backward requires CANN >= 9.0.0. inner_precise=0 requires "
+      "aclnnMhcPreBackward, while inner_precise=1 requires aclnnMhcPreBackwardV2. "
       "Please upgrade CANN.",
       OPS_ERROR(ErrCode::NOT_SUPPORT));
-  return is_mhc_pre_backward_v2_available;
+  return inner_precise == CUBE_USE_HF32;
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_pre_backward(
