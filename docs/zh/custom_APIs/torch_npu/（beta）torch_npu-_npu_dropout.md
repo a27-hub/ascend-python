@@ -34,7 +34,7 @@ torch_npu._npu_dropout(self, p) -> (Tensor, Tensor)
 ## 约束说明
 
 - 该接口支持推理、训练场景下使用。
-- 该接口仅支持单算子模式。
+- 该接口支持单算子模式和图模式调用，图模式调用仅适用于<term>Ascend 950PR/Ascend 950DT</term>。
 
 ## 调用示例
 
