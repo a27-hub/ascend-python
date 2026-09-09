@@ -27,7 +27,7 @@ torch_npu.npu_scatter_nd_update(input, indices, updates) -> Tensor
   - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
-  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`、`float8_e4m3fn`、`float8_e5m2`、`hifloat8`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float32`、`torch.float16`、`torch.bool`、`torch.bfloat16`、`torch.int64`、`torch.int8`、`torch.float8_e4m3fn`、`torch.float8_e5m2`、`torch_npu.hifloat8`。
       
 - **indices** (`Tensor`)：必选输入，索引张量，数据类型支持`int32`、`int64`，数据格式支持$ND$，支持非连续的Tensor，`indices`中的索引数据不支持越界。
 - **updates** (`Tensor`)：必选输入，更新数据张量，数据格式支持$ND$，支持非连续的Tensor，数据类型需要与`input`一致。
@@ -35,7 +35,7 @@ torch_npu.npu_scatter_nd_update(input, indices, updates) -> Tensor
   - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
-  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`、`float8_e4m3fn`、`float8_e5m2`、`hifloat8`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float32`、`torch.float16`、`torch.bool`、`torch.bfloat16`、`torch.int64`、`torch.int8`、`torch.float8_e4m3fn`、`torch.float8_e5m2`、`torch_npu.hifloat8`。
 
 ## 返回值
 

@@ -25,14 +25,14 @@ torch_npu.scatter_update(data, indices, updates, axis) -> Tensor
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`bfloat16`、`int32`。
     - <term>Atlas A3 训练系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`bfloat16`、`int32`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`int32`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`int8`、`uint8`、`float16`、`float32`、`bfloat16`、`int32`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.int8`、`torch.uint8`、`torch.float16`、`torch.float32`、`torch.bfloat16`、`torch.int32`。
 
 - **indices** (`Tensor`)：必选参数。代表索引，数据类型支持`int32`、`int64`；目前仅支持一维和二维；支持非连续的tensor；数据格式支持$ND$；不支持空Tensor。仅支持非负索引。indices中的索引数据不支持越界。
 - **updates** (`Tensor`)：必选参数。代表更新的数据，`updates`的维度大小需要与`data`一致；支持非连续的tensor；数据格式支持$ND$；不支持空Tensor。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`bfloat16`、`int32`。
     - <term>Atlas A3 训练系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`bfloat16`、`int32`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`int32`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`int8`、`uint8`、`float16`、`float32`、`bfloat16`、`int32`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.int8`、`torch.uint8`、`torch.float16`、`torch.float32`、`torch.bfloat16`、`torch.int32`。
 
 - **axis** (`int`)：必选参数。代表轴，用来表示scatter的维度，数据类型为`int64`，取值范围为\(-data\_rank, data\_rank\)（data\_rank为data的维度数）且axis不能为0。
 
@@ -45,7 +45,7 @@ torch_npu.scatter_update(data, indices, updates, axis) -> Tensor
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`bfloat16`、`int32`。
 - <term>Atlas A3 训练系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`bfloat16`、`int32`。
 - <term>Atlas 训练系列产品</term>：数据类型支持`int8`、`float16`、`float32`、`int32`。
-- <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`int8`、`uint8`、`float16`、`float32`、`bfloat16`、`int32`。
+- <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.int8`、`torch.uint8`、`torch.float16`、`torch.float32`、`torch.bfloat16`、`torch.int32`。
 
 ## 约束说明
 
