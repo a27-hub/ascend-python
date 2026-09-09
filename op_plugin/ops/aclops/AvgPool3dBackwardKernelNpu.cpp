@@ -98,6 +98,77 @@ void avg_pool3d_backward_parameter_check(
       !divisor_override.has_value() || divisor_override.value() != 0,
       "avg_pool3d_backward divisor must be not zero" + OPS_ERROR(ErrCode::PARAM));
 }
+void avg_pool3d_backward_shape_check(
+    const at::Tensor& input,
+    const at::Tensor& grad_output,
+    int64_t nslices,
+    int k_T,
+    int k_H,
+    int k_W,
+    int d_T,
+    int d_H,
+    int d_W,
+    int p_T,
+    int p_H,
+    int p_W,
+    int64_t itime,
+    int64_t iheight,
+    int64_t iwidth,
+    int64_t otime,
+    int64_t oheight,
+    int64_t owidth) {
+#if VERSION_BETWEEN(V2R1, V2R14)
+  at::native::avg_pool3d_backward_shape_check(
+      input,
+      grad_output,
+      nslices,
+      k_T,
+      k_H,
+      k_W,
+      d_T,
+      d_H,
+      d_W,
+      p_T,
+      p_H,
+      p_W,
+      itime,
+      iheight,
+      iwidth,
+      otime,
+      oheight,
+      owidth,
+      "avg_pool3d_backward_out()");
+#else
+  // Since pytorch #196230 (v2.15), avg_pool3d_backward_shape_check is merged
+  // into pool3d_backward_shape_check: `indices` becomes a std::optional and
+  // avg_pool3d corresponds to dilation of 1 and check_input_size of true.
+  at::native::pool3d_backward_shape_check(
+      input,
+      grad_output,
+      std::nullopt,
+      nslices,
+      k_T,
+      k_H,
+      k_W,
+      d_T,
+      d_H,
+      d_W,
+      p_T,
+      p_H,
+      p_W,
+      1,
+      1,
+      1,
+      itime,
+      iheight,
+      iwidth,
+      otime,
+      oheight,
+      owidth,
+      "avg_pool3d_backward_out()",
+      true);
+#endif
+}
 } // namespace
 
 at::Tensor& avg_pool3d_backward_out(
@@ -145,7 +216,7 @@ at::Tensor& avg_pool3d_backward_out(
   const int64_t owidth_for_shape_check =
       at::native::pooling_output_shape<int64_t>(iwidth, k_W, pad_W, d_W, 1, ceil_mode);
 
-  at::native::avg_pool3d_backward_shape_check(
+  avg_pool3d_backward_shape_check(
       self,
       grad_output,
       nslices,
@@ -163,8 +234,7 @@ at::Tensor& avg_pool3d_backward_out(
       iwidth,
       otime_for_shape_check,
       oheight_for_shape_check,
-      owidth_for_shape_check,
-      "avg_pool3d_backward_out()");
+      owidth_for_shape_check);
 
   npu_preparation::CheckOut({grad_output, self}, grad_input, ACL_FORMAT_NCDHW, self.scalar_type(), self.sizes());
   if (!npu_utils::check_match(&grad_input)) {
@@ -246,7 +316,7 @@ at::Tensor avg_pool3d_backward(
   const int64_t owidth_for_shape_check =
       at::native::pooling_output_shape<int64_t>(iwidth, k_W, pad_W, d_W, 1, ceil_mode);
 
-  at::native::avg_pool3d_backward_shape_check(
+  avg_pool3d_backward_shape_check(
       input,
       grad_input,
       nslices,
@@ -264,8 +334,7 @@ at::Tensor avg_pool3d_backward(
       iwidth,
       otime_for_shape_check,
       oheight_for_shape_check,
-      owidth_for_shape_check,
-      "avg_pool3d_backward_out()");
+      owidth_for_shape_check);
 
   at::Tensor output = npu_preparation::apply_tensor_with_format(input, ACL_FORMAT_NCDHW);
   avg_pool3d_backward_out_nocheck(

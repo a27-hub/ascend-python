@@ -180,6 +180,7 @@ at::Tensor max_pool3d_with_indices_backward(
   const int64_t oheight = grad_output.size(-2);
   const int64_t owidth = grad_output.size(-1);
 
+#if VERSION_BETWEEN(V2R1, V2R14)
   at::native::max_pool3d_backward_shape_check(
       self,
       grad_output,
@@ -204,6 +205,34 @@ at::Tensor max_pool3d_with_indices_backward(
       oheight,
       owidth,
       "max_pool3d_with_indices_backward()");
+#else
+  // Since pytorch #196230 (v2.15), max_pool3d_backward_shape_check is merged
+  // into pool3d_backward_shape_check where `indices` is a std::optional.
+  at::native::pool3d_backward_shape_check(
+      self,
+      grad_output,
+      indices,
+      nslices,
+      k_T,
+      k_H,
+      k_W,
+      d_T,
+      d_H,
+      d_W,
+      p_T,
+      p_H,
+      p_W,
+      dilation_T,
+      dilation_H,
+      dilation_W,
+      itime,
+      iheight,
+      iwidth,
+      otime,
+      oheight,
+      owidth,
+      "max_pool3d_with_indices_backward()");
+#endif
   at::Tensor self_cp = self;
   at::Tensor grad_output_cp = grad_output.clone();
   at::Tensor indices_cp = indices;
