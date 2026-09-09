@@ -15957,7 +15957,7 @@ input与weight数据类型必须一致。softmax为None时logits_max和sum_exp_l
 _add_torch_npu_docstr(
     "npu_all_gather_quant_mm",
     """
-torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_scale=None, x2_scale=None, quant_scale=None, block_size=0, gather_index=0, gather_output=True, comm_turn=0, group_sizes=None, amax_output=False, y_dtype=None, x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None) -> (Tensor, Tensor, Tensor) 
+torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_scale=None, x2_scale=None, quant_scale=None, block_size=0, gather_index=0, gather_output=True, comm_turn=0, group_sizes=None, amax_output=False, y_dtype=None, x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None) -> (Tensor, Tensor, Tensor)
 
 功能描述
 TP切分场景下, 对输入的MM左矩阵x1执行AllGather集合通信后, 与右矩阵x2进行MatMul计算, 支持量化场景下的反量化计算, 并可同时输出AllGather通信结果gatherOut与MatMul计算结果的最大值amaxOut.
@@ -16538,7 +16538,7 @@ torch_npu.npu_grouped_matmul_add(self, x, weight, group_list, *, transpose_x=Tru
 算子功能: 实现分组矩阵乘累加(GroupedMatmulAdd)计算, 每组矩阵乘的维度大小可以不同, 基本功能为矩阵乘加, K轴分组, k_i各不相同但m_i/n_i每组相同.
 计算公式:
 yRef_i^out = x_i * weight_i + yRef_i^in, i=1...g, 其中g为分组个数, yRef对应输入参数self, 输出为self与分组矩阵乘结果的累加.
-实现说明: 
+实现说明:
 该接口提供原地版本torch_npu.npu_grouped_matmul_add_, 参数与返回值一致, 直接在输入self上累加并返回self本身.
 
 接口原型:
