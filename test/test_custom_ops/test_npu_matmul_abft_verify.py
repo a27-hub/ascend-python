@@ -19,7 +19,7 @@ import numpy as np
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import SupportedDevices
+from torch_npu.testing.common_utils import SkipIfNotGteCANNVersion, SupportedDevices
 
 
 class TestNpuMatmulAbftVerify(TestCase):
@@ -48,6 +48,7 @@ class TestNpuMatmulAbftVerify(TestCase):
             out = torch_npu.npu_matmul_abft_verify(a, b, c, w, e_max=e_max)
         return out.cpu().numpy()
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_basic_fp16(self, device="npu"):
         torch.manual_seed(0)
@@ -58,6 +59,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_basic_bf16(self, device="npu"):
         torch.manual_seed(0)
@@ -68,6 +70,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_basic_fp32(self, device="npu"):
         torch.manual_seed(0)
@@ -78,6 +81,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_e_max_default(self, device="npu"):
         torch.manual_seed(0)
@@ -88,6 +92,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.shape, expected.shape)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_e_max_explicit_bf16(self, device="npu"):
         torch.manual_seed(0)
@@ -98,6 +103,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.shape, expected.shape)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_e_max_explicit_fp32(self, device="npu"):
         torch.manual_seed(0)
@@ -108,6 +114,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.shape, expected.shape)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_ceil_boundary_shape(self, device="npu"):
         torch.manual_seed(0)
@@ -123,6 +130,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertRtolEqual(expected[:4], actual[:4])
         self.assertTrue(actual[4] > 0)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_large_scale(self, device="npu"):
         torch.manual_seed(0)
@@ -133,6 +141,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.shape, expected.shape)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_error_detection(self, device="npu"):
         torch.manual_seed(0)
@@ -146,6 +155,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.shape, expected.shape)
         self.assertRtolEqual(expected, actual)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_output_shape_dtype(self, device="npu"):
         torch.manual_seed(0)
@@ -160,6 +170,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         self.assertEqual(actual.dtype, np.uint8)
         self.assertGreaterEqual(np.count_nonzero(actual == 255), actual.size - 2)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_a_invalid_dtype(self, device="npu"):
         # a/b/checksum_weight 均为 int64 (c 保持 float32) → dtype 不在支持范围
@@ -170,6 +181,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "only support float16/bfloat16/float32"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_b_invalid_dtype(self, device="npu"):
         # b 为 int64, a 为 float16 → dtype 不一致
@@ -180,6 +192,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "must have the same dtype"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_c_invalid_dtype(self, device="npu"):
         # c 为 int64 → c 仅支持 float32
@@ -190,6 +203,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "c only supports float32"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_checksum_weight_invalid_dtype(self, device="npu"):
         # checksum_weight 为 int64, a 为 float16 → dtype 不一致
@@ -200,6 +214,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "must have the same dtype"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_a_invalid_dim(self, device="npu"):
         # a 为 3D → 必须 2 维
@@ -210,6 +225,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "a must be a 2D tensor"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_k_mismatch(self, device="npu"):
         # a 的 K(64) 与 b 的 K(128) 不相等
@@ -220,6 +236,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "must be equal to the K dim of b"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_c_shape_mismatch(self, device="npu"):
         # c shape (128, 127) ≠ [M, N]
@@ -230,6 +247,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "c must have shape"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_checksum_weight_shape(self, device="npu"):
         # checksum_weight shape (127,) ≠ [N]
@@ -240,6 +258,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "checksum_weight must have shape"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_dtype_linkage(self, device="npu"):
         # a float16, b bfloat16 → dtype 联动违规
@@ -250,6 +269,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "must have the same dtype"):
             torch_npu.npu_matmul_abft_verify(a, b, c, w)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_e_max_negative(self, device="npu"):
         # e_max 为负数
@@ -257,6 +277,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         with self.assertRaisesRegex(RuntimeError, "must be non-negative"):
             torch_npu.npu_matmul_abft_verify(a.npu(), b.npu(), c.npu(), w.npu(), e_max=-0.001)
 
+    @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_non_contiguous(self, device="npu"):
         # a 非连续 (NPU 上由 (128, 256) 切片得到 (128, 128); 不能先切片再 .npu() — H2D 拷贝会重新连续化)
