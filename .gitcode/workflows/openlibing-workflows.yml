@@ -1,0 +1,274 @@
+name: openlibing-workflows
+
+# 本文件由以下 4 个工作流迁移整合而来（原触发方式统一变更为 pull_request_comment）：
+#   - openlibing-actions-runtime-acceptance.yml
+#   - code-metrics-scan.yml
+#   - sca-pr-event-acceptance.yml
+#   - sec-option-scan.yml
+on:
+  pull_request_comment:
+    types:
+      - created
+    branches:
+      - '*'
+
+permissions:
+  repository: read
+  id-token: write
+
+jobs:
+  # ==================== 迁移自 openlibing-actions-runtime-acceptance.yml ====================
+  pre-commit:
+    name: pre-commit action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Prepare pre-commit fixture
+        shell: bash
+        run: |
+          mkdir -p .openlibing-acceptance
+          printf 'workflow acceptance fixture\n' > .openlibing-acceptance/pre-commit-fixture.txt
+          cat > .pre-commit-config.yaml <<'EOF'
+          repos:
+            - repo: https://gitcode.com/gh_mirrors/pr/pre-commit-hooks
+              rev: v4.6.0
+              hooks:
+                - id: trailing-whitespace
+                - id: end-of-file-fixer
+          EOF
+      - name: Setup Python
+        uses: setup-python
+        with:
+          python-version: "3.14"
+      - name: Run openlibing-pre-commit-action
+        continue-on-error: true
+        uses: openlibing-pre-commit-action
+        with:
+          extra_args: --files .openlibing-acceptance/pre-commit-fixture.txt
+
+  security-compilation-options:
+    name: security compilation options action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Prepare action input fixture
+        id: prepare-security-input
+        shell: bash
+        run: |
+          mkdir -p .openlibing-acceptance
+          printf 'workflow action acceptance fixture\n' > .openlibing-acceptance/README.txt
+          tar czf .openlibing-acceptance/security-artifact.tar.gz .openlibing-acceptance/README.txt
+          echo "artifact-path=$(pwd)/.openlibing-acceptance/security-artifact.tar.gz" >> "$ATOMGIT_OUTPUT"
+      - name: Run security-compilation-options-action
+        continue-on-error: true
+        uses: openlibing/security-compilation-options-action@v1.0.0
+        with:
+          artifact-path: ${{ steps.prepare-security-input.outputs.artifact-path }}
+
+  metadata-collect:
+    name: metadata collect action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Prepare pytest fixture
+        shell: bash
+        run: |
+          mkdir -p .openlibing-acceptance/tests
+          printf 'def test_workflow_acceptance():\n    assert True\n' > .openlibing-acceptance/tests/test_workflow_acceptance.py
+      - name: Run metadata-collect
+        continue-on-error: true
+        uses: openlibing/test-action/metadata-collect@v1.0.0
+        with:
+          testcase-path: .openlibing-acceptance/tests
+          metadata-output-path: metadata_acceptance.xml
+
+  upload-reports:
+    name: upload reports action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Prepare report fixtures
+        shell: bash
+        run: |
+          mkdir -p .openlibing-acceptance
+          printf '<testsuite tests="1"><testcase name="workflow-acceptance"/></testsuite>\n' > .openlibing-acceptance/results.xml
+          printf '<metadata><testCases><testCase><name>workflow-acceptance</name></testCase></testCases></metadata>\n' > .openlibing-acceptance/metadata.xml
+      - name: Run upload-reports
+        continue-on-error: true
+        uses: openlibing/test-action/upload-reports@v1.0.0
+        with:
+          files: .openlibing-acceptance/metadata.xml .openlibing-acceptance/results.xml
+          label: workflow-acceptance
+
+  pytest-orch:
+    name: pytest orchestrator action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Prepare pytest config placeholder
+        shell: bash
+        run: |
+          mkdir -p .openlibing-acceptance
+          printf '[pytest]\ntestpaths = test\n' > .openlibing-acceptance/pytest.ini
+      - name: Run pytest-orch
+        continue-on-error: true
+        uses: openlibing/test-action/pytest-orch@v1.0.0
+        with:
+          testcase-config-file: .openlibing-acceptance/pytest.ini
+          scheduler-secret: ${{ secrets.SCHEDULER_SECRET }}
+          obs-bucket-name: ${{ vars.OBS_BUCKET_NAME }}
+          obs-server: ${{ vars.OBS_SERVER }}
+          obs-base-url: ${{ vars.OBS_BASE_URL }}
+          oidc-config: ${{ secrets.OIDC_CONFIG }}
+
+  test-result-display:
+    name: test result display action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Prepare result fixture
+        shell: bash
+        run: |
+          mkdir -p .openlibing-acceptance
+          cat > .openlibing-acceptance/test-result.json << 'EOF'
+          {
+            "testCasesResult": [
+              {"number":"workflow-pass","state":"passed","beginTime":1000,"endTime":1500},
+              {"number":"workflow-fail","state":"failed","beginTime":1000,"endTime":2000}
+            ]
+          }
+          EOF
+      - name: Run test-result-display
+        continue-on-error: true
+        uses: openlibing/test-action/test-result-display@v1.0.0
+        with:
+          json-file: .openlibing-acceptance/test-result.json
+
+  precision-test:
+    name: precision test action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Run precision-test
+        continue-on-error: true
+        uses: openlibing/test-action/precision-test@v1.0.0
+        with:
+          gitcode-pr: ComputingActionTest/op-plugin#1
+          source-dir: .openlibing-acceptance
+          map-file: .openlibing-acceptance/test_case_map.json
+          coverage-dir: .openlibing-acceptance/coverage
+          repo-name: op-plugin
+
+  api-scan:
+    name: api scan action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Setup Python
+        uses: setup-python
+        with:
+          version: 3.12
+      - name: Run api-scan-action
+        continue-on-error: true
+        uses: openlibing/api-scan-action@2c7e082937c1389bf2efd6a2d846249ee33d4114
+
+  sca-pr-action:
+    name: sca PR action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Run sca-pr-action
+        continue-on-error: true
+        uses: openlibing/sca-action/sca-pr-action@v1.0.0
+        with:
+          project-name: ComputingActionTest-op-plugin
+
+  malicious-code-pr-scan-action:
+    name: malicious code PR action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Run malicious-code-pr-scan-action
+        continue-on-error: true
+        uses: openlibing/malicious-code-scan-action/malicious-code-pr-scan-action@v1.0.0
+        with:
+          repository-name: ComputingActionTest/op-plugin
+          pr-id: "1"
+          project-name: ComputingActionTest-op-plugin
+
+  code-metrics:
+    name: code metrics action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout current project
+        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+      - name: Run code-metrics-action
+        continue-on-error: true
+        uses: openlibing/code-metrics-action@v1.0.0
+        with:
+          exclude-dirs: .git,.gitcode,.openlibing-acceptance,build,vendor
+
+  # ==================== 迁移自 code-metrics-scan.yml ====================
+  code-metrics-scan:
+    name: 代码度量检测
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout
+        run: |
+          git clone --depth=1 https://gitcode.com/ComputingActionTest/op-plugin.git .
+
+      - name: code-metrics-scan
+        uses: openlibing/code-metrics-action@95623b0e88eaaed34eac28da21df52f4ac33a2b8
+        with:
+          # 可选：排除指定目录/文件，不传 exclude-dirs 默认全路径扫描
+          exclude-dirs: ".git,.gitcode,build,vendor"
+          # 可选：指定扫描的文件扩展名（覆盖式）；不传时按内置缺省白名单扫描
+          # allowed-extensions: ".c,.cpp,.h,.py"
+
+  # ==================== 迁移自 sca-pr-event-acceptance.yml ====================
+  sca-pr-event:
+    name: SCA PR event action
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Run SCA PR action
+        continue-on-error: true
+        uses: openlibing/sca-action/sca-pr-action@v1.0.0
+        with:
+          project-name: ComputingActionTest-op-plugin
+
+  # ==================== 迁移自 sec-option-scan.yml ====================
+  build-and-scan:
+    name: 构建产物安全编译选项扫描
+    runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    steps:
+      - name: Checkout
+        run: |
+          git clone --depth=1 https://gitcode.com/ComputingActionTest/op-plugin.git .
+
+      # 构建受控样例产物：一个按安全基线编译（合规），一个不带安全选项（不合规）
+      - name: build sample artifact
+        id: build
+        run: |
+          echo "===== 构建样例产物 ====="
+          mkdir -p artifacts && cd artifacts
+          printf '#include <stdio.h>\n#include <string.h>\nvoid copy_it(char *dst, const char *src){strcpy(dst, src);}\nint main(int argc, char **argv){char buf[64];copy_it(buf, argc>1?argv[1]:"hello");printf("%%s\\n", buf);return 0;}\n' > sample.c
+          gcc -fPIE -pie -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fvisibility=hidden -fstack-clash-protection -frecord-gcc-switches -Wl,-z,relro,-z,now -o secure_app sample.c
+          gcc -no-pie -fno-stack-protector -O0 -o insecure_app sample.c
+          tar czf sec-sample-artifact.tar.gz secure_app insecure_app
+          ls -la
+          echo "artifact-path=$(pwd)/sec-sample-artifact.tar.gz" >> "$ATOMGIT_OUTPUT"
+
+      - name: security-compilation-options-scan
+        uses: openlibing/security-compilation-options-action@723583dde3102e34bf7dda1bb321979155a9ed1f
+        with:
+          artifact-path: ${{ steps.build.outputs.artifact-path }}
