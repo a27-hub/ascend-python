@@ -136,7 +136,7 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 - 确定性计算：默认确定性实现。当`keep_prob`小于1时，dropout mask由随机数生成，计算结果的确定性受`seed`、`offset`参数控制。
 - 输入`query`、`key`、`value`的维度必须为3维或4维，且`input_layout`必须一致。
 - 输入`query`、`key`、`value`的数据类型必须一致；传入query\_rope/key\_rope时仅支持`torch.bfloat16`。
-- 输入`query`、`key`、`value`、`pse`的数据类型必须一致。
+- 输入`pse`时数据类型必须与`query`、`key`、`value`的数据类型一致。
 - 输入`key`和`value`的shape必须一致（除Head-Dim外）。
 - D：Head-Dim必须满足(qD == kD && kD >= vD)，取值范围1\~768。
 - 关于数据shape的约束（B表示batchsize，N表示head个数，S表示sequence length，T表示B\*S）：
@@ -167,7 +167,6 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
   - qRoPED必须等于kRoPED，且D必须是8的整数倍、小于等于query、key和value的D。
   - 不支持传入`pse`和dropout mask。
 - 传入`sink`时，sink的shape必须为\[head\_num\]。
-- `softmax_layout`仅支持传入""和"TND"，且仅当`input_layout`为TND时才能传入"TND"。
 - `input_layout`为TND时，`sparse_mode`取值范围为\[0, 5)或(5, 8\]；`input_layout`为其他取值时，`sparse_mode`取值范围为\[0, 6\]。
 - 部分场景下，如果计算量过大可能会导致算子执行超时（aicore error类型报错，errorStr为：timeout or trap error），此时建议做轴切分处理，注：这里的计算量会受B、S、N、D等参数的影响，值越大计算量越大。
 

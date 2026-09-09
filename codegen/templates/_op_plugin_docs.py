@@ -16016,7 +16016,7 @@ PyTorch 2.5
 PyTorch 2.6
 
 支持的型号
-Ascend Ascend 950DT
+Ascend 950DT
 Atlas A3 训练系列产品/Atlas A3 推理系列产品
 Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
@@ -16091,7 +16091,7 @@ if __name__ == "__main__":
     x2_shape = [512, 256]
     dtype = torch.int8
     mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
-场景3：`x1、x2`数据类型为`float8_e4m3fn`的perblock场景（仅Ascend 950PR/Ascend 950DT）
+场景3：`x1、x2`数据类型为`float8_e4m3fn`的perblock场景（仅Ascend 950DT）
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16131,7 +16131,7 @@ if __name__ == "__main__":
     x2_shape = [512, 256]
     dtype = torch.float8_e4m3fn
     mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
-情形4：`x1、x2`数据类型为`float8_e4m3fn`的mx量化场景（仅Ascend 950PR/Ascend 950DT）
+场景4：`x1、x2`数据类型为`float8_e4m3fn`的mx量化场景（仅Ascend 950DT）
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16196,7 +16196,6 @@ S_fp32^b = Amax(D_fp32^b)/Amax(DType), 其中Amax(DType)是目标精度能表示
 场景3, scale_alg为2时, 只涉及float4_e2m1fn_x2类型(仅aclnnDynamicMxQuantWithDualAxisV2支持):
 当dst_type_max为0.0/6.0/7.0时, 按场景1的方式动态量化, 其中shared_exp在尾数位的高比特前1/2位为1且尾数不全为0时取ceil(log2(max(|V|)))-emax, 其它情况取floor(log2(max(|V|)))-emax.
 当dst_type_max为其它取值时, 按场景2的块缩放方式量化, 其中Amax(DType)在dst_type_max为0时为目标精度能表示的最大值, 不为0时为dst_type_max传入值.
-实现说明: 优先调用aclnnDynamicMxQuantWithDualAxisV2算子执行计算, 当前CANN版本不支持时回退调用aclnnDynamicMxQuantWithDualAxis算子, 此时不支持scale_alg=2的场景3, 且传入的dst_type_max参数会被忽略并打印告警提示, 建议升级CANN包.
 
 接口原型:
 torch_npu.npu_dynamic_mx_quant_with_dual_axis(Tensor input, *, str round_mode="rint", int dst_type=296, int scale_alg=0, float? dst_type_max=0.0) -> (Tensor, Tensor, Tensor, Tensor)
@@ -16217,19 +16216,16 @@ mxscale2: Tensor类型, 表示-2轴每个分组对应的量化尺度, 数据类�
 约束说明:
 该接口支持训练、推理场景下使用.
 该接口支持单算子模式和图模式调用.
-该接口仅在Ascend 950PR/Ascend 950DT上支持.
+该接口仅在Ascend 950DT上支持.
 默认确定性实现.
-输入input的维度支持2-7维.
-当dst_type为float4时, input的最后一维必须是2的整数倍.
 参数组合约束: float8_e5m2/float8_e4m3fn支持scale_alg为0、1, round_mode仅支持"rint", 不支持设置dst_type_max; float4_e2m1fn_x2支持scale_alg为0、2, round_mode支持"rint"/"floor"/"round", 仅scale_alg=2时dst_type_max生效且支持0.0和6.0-12.0; float4_e1m2fn_x2仅支持scale_alg为0, 不支持设置dst_type_max.
 shape约束: rank(mxscale1)=rank(input)+1, rank(mxscale2)=rank(input)+1, mxscale1.shape[-2]=(ceil(input.shape[-1]/32)+2-1)/2, mxscale2.shape[-3]=(ceil(input.shape[-2]/32)+2-1)/2, mxscale1.shape[-1]=2, mxscale2.shape[-1]=2, 其他维度与输入input一致. 举例: 输入input的shape为[B,M,N]时, y1和y2的shape为[B,M,N], mxscale1的shape为[B,M,(ceil(N/32)+2-1)/2,2], mxscale2的shape为[B,(ceil(M/32)+2-1)/2,N,2].
-当当前CANN版本不支持aclnnDynamicMxQuantWithDualAxisV2时, 回退调用aclnnDynamicMxQuantWithDualAxis, 此时不支持scale_alg=2, 且传入的dst_type_max参数会被忽略并打印告警提示, 建议升级CANN包.
 
 支持的PyTorch版本
 PyTorch 2.1及以上
 
 支持的型号:
-Ascend 950PR/Ascend 950DT
+Ascend 950DT
 
 调用示例
 单算子模式调用，float8量化（`scale_alg`使用默认值0）
@@ -16361,7 +16357,7 @@ keep_prob取值范围为(0, 1]. 传入query_rope/key_rope时keep_prob必须为1(
 sparse_mode取值约束: sparse_mode为1、2、3、4、5、6、7、8时应传入对应正确的atten_mask, 否则计算结果错误; sparse_mode配置为1、2、3、5、6时用户配置的pre_tokens、next_tokens不会生效; sparse_mode配置为0、4时需保证atten_mask与pre_tokens、next_tokens的范围一致; band场景pre_tokens和next_tokens之间必须要有交集; sparse_mode配置为3时需满足每个batch的Sq<=Skv; sparse_mode配置为7、8时不支持可选参数pse.
 prefix稀疏计算场景B不大于32, varlen场景不支持非压缩prefix(sparse_mode=5).
 传入query_rope、key_rope时: 仅在varlen场景(input_layout为TND)下支持, 必须传入atten_mask, qRopeD必须等于kRopeD且D必须是8的整数倍、小于等于query、key和value的D, 不支持传入pse和dropout mask.
-传入sink时, sink的shape必须为[head_num], 且要求当前CANN版本已提供aclnnFlashAttentionVarLenScoreV5/aclnnFlashAttentionScoreV3算子.
+传入sink时, sink的shape必须为[head_num].
 softmax_layout仅支持传入""和"TND", 且仅当input_layout为TND时才能传入"TND".
 input_layout为TND时sparse_mode取值范围为[0,5)或(5,8], 为其他取值时sparse_mode取值范围为[0,6].
 部分场景下, 如果计算量过大可能会导致算子执行超时(aicore error类型报错, errorStr为timeout or trap error), 此时建议做轴切分处理.
@@ -16542,7 +16538,7 @@ torch_npu.npu_grouped_matmul_add(self, x, weight, group_list, *, transpose_x=Tru
 算子功能: 实现分组矩阵乘累加(GroupedMatmulAdd)计算, 每组矩阵乘的维度大小可以不同, 基本功能为矩阵乘加, K轴分组, k_i各不相同但m_i/n_i每组相同.
 计算公式:
 yRef_i^out = x_i * weight_i + yRef_i^in, i=1...g, 其中g为分组个数, yRef对应输入参数self, 输出为self与分组矩阵乘结果的累加.
-实现说明: 优先调用aclnnGroupedMatmulAddV2算子执行计算(要求当前平台为aclnn-only且CANN版本已提供该算子); 不满足条件时回退调用aclnnGroupedMatmulAdd算子, 此时group_list_type参数不生效, group_list中的数值一律按累积和(cumsum)方式解读, 且该参数被静默忽略.
+实现说明: 
 该接口提供原地版本torch_npu.npu_grouped_matmul_add_, 参数与返回值一致, 直接在输入self上累加并返回self本身.
 
 接口原型:
@@ -16572,7 +16568,6 @@ group_type当前仅支持2(K轴分组).
 group_list第1维最大支持1024, 即最多支持1024个group.
 x和weight中每一组tensor的每一维大小在32字节对齐后都应小于int32的最大值2147483647.
 x和weight中每一组tensor的最后一维大小都应小于65536. x的最后一维指当x不转置时x的K轴或当x转置时x的M轴; weight的最后一维指当weight不转置时weight的N轴或当weight转置时weight的K轴.
-当回退调用aclnnGroupedMatmulAdd算子时(当前平台非aclnn-only或CANN版本未提供aclnnGroupedMatmulAddV2), group_list_type参数不生效, group_list中的数值一律按累积和(cumsum)方式解读.
 
 支持的PyTorch版本
 PyTorch 2.1及以上
@@ -16631,10 +16626,10 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
 功能描述:
 算子功能: 融合MatMul(矩阵乘)与ReduceScatter(归约散射)集合通信计算, 对入参x1(self)、x2进行矩阵乘(可选加bias、反量化)计算后, 按卡数对M轴切分并进行ReduceScatter通信, 常用于MoE等分布式场景(MC2). 该接口是aclnnMatmulReduceScatter接口的功能扩展, 在支持x1和x2输入类型为float16/bfloat16的基础上, Ascend 950DT新增了对低精度数据类型float8_e4m3fn/float8_e5m2/hifloat8/float4_e2m1fn_x2的支持(支持pertensor、perblock、mx量化方式, 其中mx量化支持MXFP8和MXFP4场景); Atlas A3/A2新增了对int8的支持(支持pertoken/perchannel量化方式).
 计算公式:
-情形1: x1和x2数据类型为float16/bfloat16时, output = ReduceScatter(x1@x2 + bias_optional).
-情形2: x1和x2数据类型为float8_e4m3fn/float8_e5m2/hifloat8的pertensor场景, 或int8的perchannel、pertoken场景, 且不输出amax时, output = ReduceScatter((x1Scale*x2Scale)*(x1@x2) + bias_optional).
-情形3: x1和x2数据类型为float8_e4m3fn/float8_e5m2/hifloat8的perblock场景, 且不输出amax时, 当x1的shape为(m,k)、x2的shape为(k,n), x1Scale的shape为(ceildiv(m,128), ceildiv(k,128))、x2Scale的shape为(ceildiv(k,128), ceildiv(n,128))时, output = ReduceScatter(sum(x1_pr@x2_rq*(x1Scale_pr*x2Scale_rq))), blockSize=128.
-情形4: x1和x2数据类型为float8_e4m3fn/float8_e5m2/float4_e2m1fn_x2的mx量化场景, 且不输出amax时, 当x1的shape为(m,k)、x2的shape为(n,k), x1Scale的shape为(m,ceildiv(k,64),2)、x2Scale的shape为(n,ceildiv(k,64),2)时, output = ReduceScatter(sum(x1_pr@x2_rq*(x1Scale_pr*x2Scale_rq))), blockSize=32. mx量化仅支持x2、x2Scale转置场景.
+场景1: x1和x2数据类型为float16/bfloat16时, output = ReduceScatter(x1@x2 + bias_optional).
+场景2: x1和x2数据类型为float8_e4m3fn/float8_e5m2/hifloat8的pertensor场景, 或int8的perchannel、pertoken场景, 且不输出amax时, output = ReduceScatter((x1Scale*x2Scale)*(x1@x2) + bias_optional).
+场景3: x1和x2数据类型为float8_e4m3fn/float8_e5m2/hifloat8的perblock场景, 且不输出amax时, 当x1的shape为(m,k)、x2的shape为(k,n), x1Scale的shape为(ceildiv(m,128), ceildiv(k,128))、x2Scale的shape为(ceildiv(k,128), ceildiv(n,128))时, output = ReduceScatter(sum(x1_pr@x2_rq*(x1Scale_pr*x2Scale_rq))), blockSize=128.
+场景4: x1和x2数据类型为float8_e4m3fn/float8_e5m2/float4_e2m1fn_x2的mx量化场景, 且不输出amax时, 当x1的shape为(m,k)、x2的shape为(n,k), x1Scale的shape为(m,ceildiv(k,64),2)、x2Scale的shape为(n,ceildiv(k,64),2)时, output = ReduceScatter(sum(x1_pr@x2_rq*(x1Scale_pr*x2Scale_rq))), blockSize=32. mx量化仅支持x2、x2Scale转置场景.
 
 接口原型:
 torch_npu.npu_quant_mm_reduce_scatter(Tensor self, Tensor x2, str hcom, int world_size, *, str reduce_op='sum', Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? quant_scale=None, int block_size=0, int comm_turn=0, int[]? group_sizes=None, bool amax_output=False, int? y_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, str? comm_mode=None) -> (Tensor, Tensor)
@@ -16658,7 +16653,7 @@ x1_dtype: int类型, x1的数据类型(ScalarType枚举值), 用于将x1的存�
 x2_dtype: int类型, x2的数据类型(ScalarType枚举值), 用于将x2的存储类型解释为指定低精度类型, 可选参数, 默认值为None. mx量化场景(MXFP4)下必须传入, 取值须为torch_npu.float4_e2m1fn_x2.
 x1_scale_dtype: int类型, x1_scale的数据类型(ScalarType枚举值), 可选参数, 默认值为None. mx量化场景(MXFP4)下必须传入, 取值须为torch.float8_e8m0fnu.
 x2_scale_dtype: int类型, x2_scale的数据类型(ScalarType枚举值), 可选参数, 默认值为None. mx量化场景(MXFP4)下必须传入, 取值须为torch.float8_e8m0fnu.
-comm_mode: str类型, 通信模式, 可选参数, 默认值为None. Atlas A3/A2上当前版本仅支持输入"aiv"(未传入时默认"aiv"); Ascend 950PR/Ascend 950DT上当前版本支持输入"ai_cpu"或"ccu"(未传入时默认"ai_cpu").
+comm_mode: str类型, 通信模式, 可选参数, 默认值为None. Atlas A3/A2上当前版本仅支持输入"aiv"(未传入时默认"aiv"); Ascend 950DT上当前版本支持输入"ai_cpu"或"ccu"(未传入时默认"ai_cpu").
 
 输出说明:
 output: Tensor类型, ReduceScatter通信与MatMul计算的结果, 即计算公式中的output. shape为(m/world_size, n), 其中world_size为卡数. 当x1类型为float16、bfloat16时输出类型与x1保持一致; 当x1类型为float8_e4m3fn、float8_e5m2、hifloat8、float4_e2m1fn_x2时输出数据类型支持float16、bfloat16、float32. 数据格式支持ND. 仅当输出类型为float16、bfloat16时支持空Tensor.
@@ -16722,7 +16717,7 @@ if __name__ == "__main__":
     amax_output = True  # amax_output为True时返回[1]的float32最大值结果
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 
-情形2：`x1，x2`数据类型为`int8`的perchannel、pertoken场景（不输出amax）
+场景2：`x1，x2`数据类型为`int8`的perchannel、pertoken场景（不输出amax）
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16756,10 +16751,10 @@ if __name__ == "__main__":
     x1_shape = [128, 512]
     x2_shape = [512, 64]
     dtype = torch.int8
-    amax_output = False  # 情形2不输出amax
+    amax_output = False  # 场景2不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 
-情形3：`x1，x2`数据类型为`float8_e4m3fn`/`float8_e5m2`/`hifloat8`的perblock场景（不输出amax）
+场景3：`x1，x2`数据类型为`float8_e4m3fn`/`float8_e5m2`/`hifloat8`的perblock场景（不输出amax）
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16797,10 +16792,10 @@ if __name__ == "__main__":
     x1_shape = [128, 512]
     x2_shape = [512, 128]
     dtype = torch.float8_e4m3fn
-    amax_output = False  # 情形3不输出amax
+    amax_output = False  # 场景3不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 
-情形4：`x1，x2`数据类型为`float8_e4m3fn`/`float8_e5m2`/`float4_e2m1fn_x2`的mx量化场景（不输出amax，以MXFP8为例）
+场景4：`x1，x2`数据类型为`float8_e4m3fn`/`float8_e5m2`/`float4_e2m1fn_x2`的mx量化场景（不输出amax，以MXFP8为例）
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -16838,7 +16833,7 @@ if __name__ == "__main__":
     x1_shape = [128, 256]
     x2_shape = [256, 64]  # 转置输入
     dtype = torch.float8_e4m3fn
-    amax_output = False  # 情形4不输出amax
+    amax_output = False  # 场景4不输出amax
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 """
 )

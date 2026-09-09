@@ -110,9 +110,6 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
 
 - 该接口支持训练、推理场景下使用。
 - 确定性计算：默认采用确定性计算实现。
-- 通信约束：
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持comm\_mode为"aiv"，且通信缓冲区大于等于200MB。
-  - <term>Ascend 950DT</term>：当前版本仅支持输入comm\_mode为"ai\_cpu"或"ccu"，支持CCU通信和AICPU通信，CCU仅支持单机UB域内互联，AICPU可支持跨机UB域内互联。
 - 输入约束（所有产品）：
   - 只支持x2矩阵转置/不转置，x1矩阵仅支持不转置场景。
   - 输入x1为2维，其shape为(m, k)，m须为卡数rank\_size的整数倍，k轴取值范围为[256, 65535)。
@@ -120,12 +117,14 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
   - bias为1维，shape为(n,)。
   - 输出为2维，其shape为(m / rank\_size, n)，rank\_size为卡数。
 - <term>Ascend 950DT</term>约束：
+  - 通信约束：当前版本仅支持输入comm\_mode为"ai\_cpu"或"ccu"，支持CCU通信和AICPU通信，CCU仅支持单机UB域内互联，AICPU可支持跨机UB域内互联。
   - 当x1、x2的数据类型为`torch.float16`/`torch.bfloat16`时，x1/x2支持空tensor场景，m和n可以为空，k不可为空；当x1、x2的数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`/`torch_npu.float4_e2m1fn_x2`时，不支持空tensor。
   - 当x1、x2的数据类型为`torch.float16`/`torch.bfloat16`/`torch_npu.hifloat8`/`torch_npu.float4_e2m1fn_x2`时，x1和x2的数据类型需要保持一致；当x1、x2的数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`时，x1和x2的数据类型可以为其中任意一种。
   - mx量化场景下，x2/x2Scale仅支持转置输入；且x1和x2输入为`torch_npu.float4_e2m1fn_x2`（MXFP4量化）时，k必须是偶数。
   - 支持2、4、8、16、32、64卡。
   - ReduceScatter集合通信数据总量不能超过16 \* 256MB，集合通信数据总量计算方式为：m \* n \* sizeof(output\_dtype)。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>约束：
+  - 仅支持comm\_mode为"aiv"，且通信缓冲区大于等于200MB。
   - 不支持空tensor。
   - x1和x2的数据类型需要保持一致。
   - 支持2、4、8卡。
