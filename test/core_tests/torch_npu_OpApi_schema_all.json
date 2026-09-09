@@ -838,7 +838,7 @@
   "func: npu_moe_token_unpermute_grad(Tensor permuted_tokens, Tensor grad_unpermuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, int permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)": {
+  "func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, SymInt permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: index_copy.out(Tensor self, int dim, Tensor index, Tensor source, *, Tensor(a!) out) -> Tensor(a!)": {
@@ -898,7 +898,7 @@
   "func: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, int tokens_size_0, ScalarType tokens_dtype, int num_topK, bool padded_mode=False) -> Tensor": {
+  "func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, SymInt tokens_size_0, ScalarType tokens_dtype, SymInt num_topK, bool padded_mode=False) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_moe_token_permute_grad(Tensor tokens, Tensor grad_permuted_tokens, Tensor indices, Tensor sorted_indices, bool padded_mode=False) -> Tensor": {
@@ -1555,7 +1555,7 @@
   "func: npu_dense_lightning_indexer_grad_kl_loss(Tensor query, Tensor key, Tensor query_index, Tensor key_index, Tensor weights, Tensor softmax_max, Tensor softmax_sum, Tensor softmax_max_index, Tensor softmax_sum_index, float scale_value, *, Tensor? query_rope=None, Tensor? key_rope=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_klen=None, str? layout='BSND', int? sparse_mode=3, int? pre_tokens=9223372036854775807, int? next_tokens=9223372036854775807) -> (Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query=\"BSND\", str layout_kv=\"BSND\", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None, Tensor? sinks=None) -> Tensor": {
+  "func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query=\"BSND\", str layout_kv=\"BSND\", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_convolution_transpose_backward(Tensor input, Tensor grad, Tensor weight, int[] padding, int[] output_padding, int[] stride, int[] dilation, int groups, bool[3] grad_input_mask) -> (Tensor, Tensor, Tensor)": {
@@ -4556,6 +4556,12 @@
   "func: view_as_complex(Tensor(a) self) -> Tensor(a)": {
     "version": ["all_version"]
   },
+  "func: _fused_adam_(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] exp_avgs, Tensor(d!)[] exp_avg_sqs, Tensor(e!)[] max_exp_avg_sqs, Tensor[] state_steps, *, float lr, float beta1, float beta2, float weight_decay, float eps, bool amsgrad, bool maximize, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()": {
+    "version": ["all_version"]
+  },
+  "func: _fused_adam_.tensor_lr(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] exp_avgs, Tensor(d!)[] exp_avg_sqs, Tensor(e!)[] max_exp_avg_sqs, Tensor[] state_steps, *, Tensor lr, float beta1, float beta2, float weight_decay, float eps, bool amsgrad, bool maximize, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()": {
+    "version": ["all_version"]
+  },
   "func: _fused_adamw_(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] exp_avgs, Tensor(d!)[] exp_avg_sqs, Tensor(e!)[] max_exp_avg_sqs, Tensor[] state_steps, *, float lr, float beta1, float beta2, float weight_decay, float eps, bool amsgrad, bool maximize, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()": {
     "version": ["all_version"]
   },
@@ -5087,7 +5093,31 @@
   "func: bitwise_left_shift.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["v2.7", "newest"]
   },
+  "func: bitwise_left_shift.Tensor_Scalar(Tensor self, Scalar other) -> Tensor": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: bitwise_left_shift.Tensor_Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: bitwise_left_shift_.Tensor_Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: bitwise_left_shift.Scalar_Tensor(Scalar self, Tensor other) -> Tensor": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: bitwise_right_shift.Tensor_Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: bitwise_right_shift_.Tensor_Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: bitwise_right_shift.Scalar_Tensor(Scalar self, Tensor other) -> Tensor": {
+    "version": ["v2.7", "newest"]
+  },
   "func: bitwise_right_shift.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: bitwise_right_shift.Tensor_Scalar(Tensor self, Scalar other) -> Tensor": {
     "version": ["v2.7", "newest"]
   }
 }
