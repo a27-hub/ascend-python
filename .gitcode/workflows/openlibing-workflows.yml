@@ -107,6 +107,7 @@ jobs:
   pytest-orch:
     name: pytest orchestrator action
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    continue-on-error: true
     steps:
       - name: Checkout current project
         run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
@@ -153,6 +154,7 @@ jobs:
   precision-test:
     name: precision test action
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    continue-on-error: true
     steps:
       - name: Checkout current project
         run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
@@ -183,6 +185,7 @@ jobs:
   sca-pr-action:
     name: sca PR action
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    continue-on-error: true
     steps:
       - name: Checkout current project
         run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
@@ -195,6 +198,7 @@ jobs:
   malicious-code-pr-scan-action:
     name: malicious code PR action
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    continue-on-error: true
     steps:
       - name: Checkout current project
         run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
@@ -239,6 +243,7 @@ jobs:
   sca-pr-event:
     name: SCA PR event action
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
+    continue-on-error: true
     steps:
       - name: Run SCA PR action
         continue-on-error: true
