@@ -49,7 +49,7 @@ torch_npu.npu_format_cast(input, acl_format, *, customize_dtype=None, input_dtyp
     > [!NOTE]
     > 数据排布格式具体可参考《CANN Ascend C算子开发》中的“<a href="https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E6%8A%80%E6%9C%AF%E9%99%84%E5%BD%95/%E6%A6%82%E5%BF%B5%E5%8E%9F%E7%90%86%E5%92%8C%E6%9C%AF%E8%AF%AD/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E5%92%8C%E7%AE%97%E5%AD%90/%E6%95%B0%E6%8D%AE%E6%8E%92%E5%B8%83%E6%A0%BC%E5%BC%8F.md">数据排布格式</a>”章节。
 
-- **customize_dtype**（`int`）：可选参数，用于指定格式转换时的目标数据类型。该参数可控制C0值，默认值为`None`，`torch.float32`和`torch.int32`数据类型的默认C0值为16，`torch.int8`数据类型的默认C0值为32。
+- **customize_dtype**（`int`）：可选参数，用于指定格式转换时的目标数据类型。该参数可控制C0值，默认值为`None`，`float32`和`int32`数据类型的默认C0值为16，`int8`数据类型的默认C0值为32。
   - <term>Atlas A2 训练系列产品</term>、<term>Atlas A3 训练系列产品</term>：传入`3`（对应int(torch.int32)）时，FRACTAL_NZ格式的C0值为8。
   - <term>Ascend 950PR/Ascend 950DT</term>：对于仅对权重量化的MatMul场景，对权重W做私有格式转换时，需传入A矩阵的数据类型来推断W的C0轴大小。数据类型支持`torch.int8`、`torch.float8_e4m3fn`、`torch.float16`、`torch.bfloat16`。若使用默认值`None`，表示A的dtype和W的dtype一样，推断出W的C0轴大小。
 - **input\_dtype**（`int`）：可选参数，表示`input`的真实数据类型，支持`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`。
@@ -75,8 +75,8 @@ torch_npu.npu_format_cast(input, acl_format, *, customize_dtype=None, input_dtyp
     | `torch.int32` | $ND$ | 29 | `torch.float16`/`torch.bfloat16` | NA |
     | `torch.float16` | $ND$ | 29 | `torch.float16` | NA |
     | `torch.bfloat16` | $ND$ | 29 | `torch.bfloat16` | NA |
-    | `torch_npu.float4_e2m1fn_x2`（`torch.float32`承载） | $ND$ | 29 | `float8_e4m3` | NA |
-    | `torch_npu.float4_e2m1fn_x2`（`torch.uint8`/`torch.int8`承载） | $ND$ | 29 | `float8_e4m3` | `torch_npu.float4_e2m1fn_x2` |
+    | `torch_npu.float4_e2m1fn_x2`（`torch.float32`承载） | $ND$ | 29 | `torch.float8_e4m3fn` | NA |
+    | `torch_npu.float4_e2m1fn_x2`（`torch.uint8`/`torch.int8`承载） | $ND$ | 29 | `torch.float8_e4m3fn` | `torch_npu.float4_e2m1fn_x2` |
     | `torch_npu.float4_e2m1fn_x2`（`torch.uint8`/`torch.int8`承载） | $FRACTAL\_NZ$ | 2 | NA | `torch_npu.float4_e2m1fn_x2` |
     | `torch_npu.float4_e2m1fn_x2`（`torch.uint8`/`torch.int8`承载） | $FRACTAL\_NZ\_C0\_32$ | 2 | NA | `torch_npu.float4_e2m1fn_x2` |
     | `torch_npu.float4_e1m2fn_x2`（`torch.uint8`/`torch.int8` 承载） | $ND$ | 29 | NA | `torch_npu.float4_e1m2fn_x2` |
