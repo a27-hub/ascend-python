@@ -7438,8 +7438,8 @@ def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype
         out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
     return (out_weight, out_weight_scale, out_weight_offset, out_bias)
 
-@impl(m, "npu_matmul_abft_verify")
-def npu_matmul_abft_verify_meta(a, b, c, checksum_weight, *, e_max=0.001):
+@impl(m, "_npu_matmul_abft_verify")
+def _npu_matmul_abft_verify_meta(a, b, c, checksum_weight, *, e_max=0.001):
     torch._check(
         a.dim() == 2 and b.dim() == 2 and c.dim() == 2,
         lambda: "a, b and c must be 2D tensors, but got "

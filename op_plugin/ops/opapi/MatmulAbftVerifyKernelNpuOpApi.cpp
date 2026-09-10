@@ -35,7 +35,7 @@ c10::SmallVector<int64_t, SIZE> matmul_abft_verify_out_size(const at::Tensor& a,
 }
 } // namespace
 
-at::Tensor npu_matmul_abft_verify(
+at::Tensor _npu_matmul_abft_verify(
     const at::Tensor& a,
     const at::Tensor& b,
     const at::Tensor& c,

@@ -6728,7 +6728,7 @@ class TestNpuMatmulAbftVerify(TestCase):
             b = torch.randn(k, n, dtype=torch.float16).npu()
             c = torch.randn(m, n, dtype=torch.float32).npu()
             checksum_weight = torch.ones(n, dtype=torch.float16).npu()
-            result = torch_npu.npu_matmul_abft_verify(a, b, c, checksum_weight)
+            result = torch_npu._npu_matmul_abft_verify(a, b, c, checksum_weight)
             # comp_row shape = [ceil(16/8) * ceil(64/256)] = [2 * 1]
             self.assertEqual(result.shape, torch.Size([2]))
             self.assertEqual(result.dtype, torch.uint8)
@@ -6742,7 +6742,7 @@ class TestNpuMatmulAbftVerify(TestCase):
                 b = torch.randn(k, n, dtype=dtype).npu()
                 c = torch.randn(m, n, dtype=torch.float32).npu()
                 checksum_weight = torch.ones(n, dtype=dtype).npu()
-                result = torch_npu.npu_matmul_abft_verify(a, b, c, checksum_weight, e_max=0.001)
+                result = torch_npu._npu_matmul_abft_verify(a, b, c, checksum_weight, e_max=0.001)
                 # comp_row shape = [ceil(33/8) * ceil(300/256)] = [5 * 2]
                 self.assertEqual(result.shape, torch.Size([10]))
                 self.assertEqual(result.dtype, torch.uint8)

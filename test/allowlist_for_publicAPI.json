@@ -238,8 +238,7 @@
       "npu_chunk_gated_delta_rule",
       "npu_rotate_quant",
       "npu_mhc_pre_backward",
-      "npu_quant_max",
-      "npu_matmul_abft_verify"
+      "npu_quant_max"
     ]
   }
 

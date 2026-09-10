@@ -43,9 +43,9 @@ class TestNpuMatmulAbftVerify(TestCase):
     def npu_op_exec(self, a, b, c, w, e_max=None):
         a, b, c, w = a.npu(), b.npu(), c.npu(), w.npu()
         if e_max is None:
-            out = torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            out = torch_npu._npu_matmul_abft_verify(a, b, c, w)
         else:
-            out = torch_npu.npu_matmul_abft_verify(a, b, c, w, e_max=e_max)
+            out = torch_npu._npu_matmul_abft_verify(a, b, c, w, e_max=e_max)
         return out.cpu().numpy()
 
     @SkipIfNotGteCANNVersion("9.2.0")
@@ -179,7 +179,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.randint(0, 10, (128,), dtype=torch.int64).npu()
         with self.assertRaisesRegex(RuntimeError, "only support float16/bfloat16/float32"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -190,7 +190,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.ones(128, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "must have the same dtype"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -201,7 +201,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randint(0, 10, (128, 128), dtype=torch.int64).npu()
         w = torch.ones(128, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "c only supports float32"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -212,7 +212,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.randint(0, 10, (128,), dtype=torch.int64).npu()
         with self.assertRaisesRegex(RuntimeError, "must have the same dtype"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -223,7 +223,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.ones(128, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "a must be a 2D tensor"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -234,7 +234,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.ones(128, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "must be equal to the K dim of b"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -245,7 +245,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 127, dtype=torch.float32).npu()
         w = torch.ones(128, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "c must have shape"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -256,7 +256,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.ones(127, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "checksum_weight must have shape"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -267,7 +267,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.ones(128, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "must have the same dtype"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -275,7 +275,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         # e_max 为负数
         a, b, c, w = self.generate_abft_inputs(128, 128, 128, torch.float32)
         with self.assertRaisesRegex(RuntimeError, "must be non-negative"):
-            torch_npu.npu_matmul_abft_verify(a.npu(), b.npu(), c.npu(), w.npu(), e_max=-0.001)
+            torch_npu._npu_matmul_abft_verify(a.npu(), b.npu(), c.npu(), w.npu(), e_max=-0.001)
 
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
@@ -287,7 +287,7 @@ class TestNpuMatmulAbftVerify(TestCase):
         c = torch.randn(128, 128, dtype=torch.float32).npu()
         w = torch.ones(128, dtype=torch.float16).npu()
         with self.assertRaisesRegex(RuntimeError, "only support contiguous tensors"):
-            torch_npu.npu_matmul_abft_verify(a, b, c, w)
+            torch_npu._npu_matmul_abft_verify(a, b, c, w)
 
 
 if __name__ == "__main__":
