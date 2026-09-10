@@ -48,7 +48,7 @@ jobs:
         continue-on-error: true
         uses: openlibing/pre-commit-action@v1.0.0
         with:
-          extra_args: --files .openlibing-acceptance/pre-commit-fixture.txt
+          extra_args: --files=.openlibing-acceptance/pre-commit-fixture.txt
 
   security-compilation-options:
     name: security compilation options action
