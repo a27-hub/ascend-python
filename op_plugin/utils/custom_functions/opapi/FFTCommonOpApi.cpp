@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "op_plugin/utils/custom_functions/opapi/FFTCommonOpApi.h"
+#include "acl/acl.h"
 
 namespace op_api {
 
@@ -33,6 +34,18 @@ FFTCacheValue FFTMixCache::get(FFTCacheKey& cacheKey) {
   }
 
   if (static_cast<int>(list.size()) >= capacity) {
+    // The evicted plan holds device tensors of rotate matrices, which are async
+    // inputs of aclnnMatmul. Since aclnn* calls are asynchronous, destroying
+    // these tensors while the matmul kernels are still in flight would return
+    // the device memory to the caching allocator, which may immediately reuse
+    // it for the H2D copy of the new plan. The in-flight matmul then reads a
+    // corrupted coefficient matrix and produces garbage output (observed as
+    // e+29 magnitude garbage / NaN in batch execution scenarios). Synchronize
+    // the device before eviction to make sure all async tasks referencing the
+    // plan are finished.
+    if (!list.front().first.isAsdSip) {
+      (void)aclrtSynchronizeDevice();
+    }
     if (list.front().first.isAsdSip) {
       destoryHandle(list.front().second.handle);
     }
@@ -57,11 +70,18 @@ void FFTMixCache::setCapacity(int64_t maxSize) {
   }
 
   capacity = maxSize;
+  bool hasEvictedPlan = false;
   while (static_cast<int>(list.size()) > capacity) {
+    if (!list.front().first.isAsdSip) {
+      hasEvictedPlan = true;
+    }
     if (list.front().first.isAsdSip) {
       destoryHandle(list.front().second.handle);
     }
     list.pop_front();
+  }
+  if (hasEvictedPlan) {
+    (void)aclrtSynchronizeDevice();
   }
 }
 
@@ -74,11 +94,18 @@ int64_t FFTMixCache::getSize() {
 }
 
 void FFTMixCache::clear() {
+  bool hasEvictedPlan = false;
   for (auto it = list.begin(); it != list.end(); ++it) {
     FFTPair tmp = *it;
+    if (!tmp.first.isAsdSip) {
+      hasEvictedPlan = true;
+    }
     if (tmp.first.isAsdSip) {
       destoryHandle(tmp.second.handle);
     }
+  }
+  if (hasEvictedPlan) {
+    (void)aclrtSynchronizeDevice();
   }
   list.clear();
 }
