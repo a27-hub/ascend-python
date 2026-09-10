@@ -2,65 +2,66 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| ------------------------------------------------------------ | :------: |
-|<term>Atlas A3 训练系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品</term>  | √   |
-|<term>Atlas 推理系列产品</term>                                       |    √     |
-|<term>Atlas 训练系列产品</term>                                       |    √     |
+| 产品                                    | 是否支持 |
+| -------------------------------------- | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term>  | √   |
+|<term>Atlas A3 训练系列产品</term>       | √   |
+|<term>Atlas A2 训练系列产品</term>       | √   |
+|<term>Atlas 推理系列产品</term>          | √   |
+|<term>Atlas 训练系列产品</term>          | √   |
 
 ## 功能说明
 
 - API功能：使用预期输入计算变形卷积（deformable convolution）的输出。
 
 - 计算公式：
-  
+
   假定输入（self）的shape是[N, inC, inH, inW]，输出（out）的shape为[N, outC, outH, outW]，根据已有参数计算outH、outW:
-  
+
   $$
   outH = (inH + padding[0] + padding[1] - ((K_H - 1) * dilation[2] + 1)) // stride[2] + 1
   $$
-  
+
   $$
   outW = (inW + padding[2] + padding[3] - ((K_W - 1) * dilation[3] + 1)) // stride[3] + 1
   $$
-  
+
   标准卷积计算采样点下标：
-  
+
   $$
   x = -padding[2] + ow*stride[3] + kw*dilation[3], kw的取值为(0, K\_W-1)
   $$
-  
+
   $$
   y = -padding[0] + oh*stride[2] + kh*dilation[2], kh的取值为(0, K\_H-1)
   $$
-  
+
   根据传入的offset，进行变形卷积，计算偏移后的下标：
-  
+
   $$
   (x,y) = (x + offsetX, y + offsetY)
   $$
 
   使用双线性插值计算偏移后点的值：
-  
+
   $$
   (x_{0}, y_{0}) = (int(x), int(y)) \\
   (x_{1}, y_{1}) = (x_{0} + 1, y_{0} + 1)
   $$
-  
+
   $$
   weight_{00} = (x_{1} - x) * (y_{1} - y) \\
-  weight_{01} = (x_{1} - x) * (y - y_{0}) \\ 
-  weight_{10} = (x - x_{0}) * (y_{1} - y) \\ 
-  weight_{11} = (x - x_{0}) * (y - y_{0}) \\ 
+  weight_{01} = (x_{1} - x) * (y - y_{0}) \\
+  weight_{10} = (x - x_{0}) * (y_{1} - y) \\
+  weight_{11} = (x - x_{0}) * (y - y_{0}) \\
   $$
-  
+
   $$
   deformOut(x, y) = weight_{00} * self(x0, y0) + weight_{01} * self(x0,y1) + weight_{10} * self(x1, y0) + weight_{11} * self(x1,y1)
   $$
-  
+
   进行卷积计算得到最终输出：
-  
+
   $$
   \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{deformOut}(N_i, k)
   $$
@@ -68,7 +69,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_deformable_conv2d(self, weight, offset, bias, kernel_size, stride, padding, dilation=[1,1,1,1], groups=1, deformable_groups=1, modulated=True) -> (Tensor, Tensor)
+torch_npu.npu_deformable_conv2d(self, weight, offset, bias=None, kernel_size, stride, padding, dilation=[1,1,1,1], groups=1, deformable_groups=1, modulated=True) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -92,7 +93,10 @@ torch_npu.npu_deformable_conv2d(self, weight, offset, bias, kernel_size, stride,
 
 ## 约束说明
 
-所有Tensor类型的输入参数，无论输入何种数据类型都会被自动转换为`float32`；输出参数的数据类型为`float32`。
+- 该接口支持推理场景下使用。
+- 该接口仅支持单算子模式调用。
+- Atlas A3 训练系列产品、Atlas A2 训练系列产品、Atlas 推理系列产品、Atlas 训练系列产品：所有Tensor类型的输入参数，无论输入何种数据类型都会被自动转换为`torch.float32`；输出参数的数据类型为`torch.float32`。
+- Ascend 950PR/Ascend 950DT: 输入输出数据类型保持一致，支持`torch.float16`、`torch.float32`、`torch.bfloat16`。`modulated`参数仅支持配置为True。
 
 ## 调用示例
 
