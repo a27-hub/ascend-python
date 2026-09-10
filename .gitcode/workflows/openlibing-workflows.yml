@@ -7,10 +7,9 @@ name: openlibing-workflows
 #   - sec-option-scan.yml
 on:
   pull_request_comment:
-    types:
-      - created
-    branches:
-      - '*'
+    types: [created]
+    branches: [ '*' ]
+    comments: [ '^(?:\/)?compile*' ]
 
 permissions:
   repository: read
