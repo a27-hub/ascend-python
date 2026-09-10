@@ -442,6 +442,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p836911165560"><a name="p836911165560"></a><a name="p836911165560"></a>适配增量&amp;全量推理场景的FlashAttention算子，既可以支持全量计算场景（PromptFlashAttention），也可支持增量计算场景（IncreFlashAttention）。新增支持MLA（MultiHead Latent Attention）全量化功能。</p>
 </td>
 </tr>
+<tr id="row_npu_fused_matmul"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_fused_matmul.md">torch_npu.npu_fused_matmul</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>矩阵乘与通用向量计算融合，减少数据搬运提升性能。</p>
+</td>
+</tr>
 <tr id="row14601311184810"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1799710217294"><a name="p1799710217294"></a><a name="p1799710217294"></a><a href="torch_npu-npu_fusion_attention.md">torch_npu.npu_fusion_attention</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p129971221112919"><a name="p129971221112919"></a><a name="p129971221112919"></a>实现“Transformer Attention Score”的融合计算。</p>
@@ -515,6 +520,11 @@
 <tr id="row1545717422219"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p58181296368"><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-npu_kv_quant_sparse_flash_attention.md">torch_npu.npu_kv_quant_sparse_flash_attention</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1281815913362"><a name="p1281815913362"></a><a name="p1281815913362"></a>Sparse Flash Attention伪量化实现。</p>
+</td>
+</tr>
+<tr id="row_npu_kronecker_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_kronecker_quant.md">torch_npu.npu_kronecker_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>对输入张量依次进行两次矩阵乘法，并对矩阵乘结果量化至int4类型或float4_e2m1fn_x2类型。</p>
 </td>
 </tr>
 <tr id="row1545717422219"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p58181296368"><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-npu_lightning_indexer.md">torch_npu.npu_lightning_indexer</a></p>
