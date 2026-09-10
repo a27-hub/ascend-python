@@ -14,7 +14,7 @@
 </thead>
 <tbody><tr id="row1149711715114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p13497217191119"><a name="p13497217191119"></a><a name="p13497217191119"></a><a href="（beta）torch_npu-_npu_dropout.md">（beta）torch_npu._npu_dropout</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p349751701118"><a name="p349751701118"></a><a name="p349751701118"></a>不使用种子（seed）进行dropout操作。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p349751701118"><a name="p349751701118"></a><a name="p349751701118"></a>不使用种子（seed）进行dropout结果计数。</p>
 </td>
 </tr>
 <tr id="row13497417121111"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p11170526121211"><a name="p11170526121211"></a><a name="p11170526121211"></a><a href="（beta）torch_npu-copy_memory_.md">（beta）torch_npu.copy_memory_</a></p>
@@ -910,6 +910,10 @@
 <tr id="npu_fused_linear_cross_entropy_loss_with_max_sum_backward"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward"><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward"></a><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward"></a><a href="torch_npu-npu_fused_linear_cross_entropy_loss_with_max_sum_backward.md">torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"></a><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"></a><span>词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点input和weight的梯度。需要获得npu_fused_linear_online_max_sum和npu_fused_cross_entropy_loss_with_max_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入logits_max和sum_exp_logits）。</span></p></td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_dual_level_quant_matmul.md">torch_npu.npu_dual_level_quant_matmul</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><span>QuantMatmul的二级量化功能，减少精度损失。</span></p></td>
 </tr>
 </tbody>
 </table>
