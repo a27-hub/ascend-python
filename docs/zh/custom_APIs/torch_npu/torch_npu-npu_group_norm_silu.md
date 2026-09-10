@@ -12,7 +12,7 @@
 
 - API功能：对输入张量`input`依次执行GroupNorm和SiLU激活，返回三个张量：out（SiLU激活后的输出）、meanOut（归一化均值）、rstdOut（归一化标准差的倒数）。
 - 计算公式：
-    - GroupNorm：$x$为输入`input`，$\gamma$和$\beta$分别代表输入`weight`和`bias`，$E[x] = \bar{x}$代表$x$的均值，$ Var[x]=\frac{1}{n}\sum_{i=1}^{n} (x_i - E[x])^2 $ 代表$x$的方差，则
+    - GroupNorm：$x$为输入`input`，公式中$\gamma$和$\beta$分别对应可选参数`weight`和`bias`，当`weight`、`bias`均为空时不进行仿射变换（等价于$\gamma = 1$、$\beta = 0$），$E[x] = \bar{x}$代表$x$的均值，$ Var[x]=\frac{1}{n}\sum_{i=1}^{n} (x_i - E[x])^2 $ 代表$x$的方差，则
     $$
     \begin{cases}
     \text{groupnormOut} = \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
@@ -50,8 +50,8 @@ torch_npu.npu_group_norm_silu(input, weight, bias, group, eps=0.00001) -> (Tenso
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`。
 
-- **group** (`int`)：必选参数，表示将输入`input`的第1维度分为group组，group需大于0。
-- **eps** (`float`)：可选参数，为保持数值稳定性而加到分母上的值，若保持精度，则eps需大于0。默认值为0.00001。
+- **group** (`int`)：必选参数，表示将输入`input`的第1维度分为group组，group需大于0。数据类型为`torch.int64`。
+- **eps** (`float`)：可选参数，为保持数值稳定性而加到分母上的值，若保持精度，则eps需大于0。默认值为0.00001。数据类型为`torch.float32`。
 
 ## 返回值说明
 

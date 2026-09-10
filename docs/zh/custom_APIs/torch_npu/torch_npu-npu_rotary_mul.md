@@ -91,6 +91,8 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
 
 ## 参数说明
 
+> 以下参数的数据类型，各产品型号均支持：`torch.float16`、`torch.bfloat16`、`torch.float32`。
+
 - **input** (`Tensor`)：必选参数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`。
 - **r1** (`Tensor`)：必选参数，表示$cos$旋转系数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`。
 - **r2** (`Tensor`)：必选参数，表示$sin$旋转系数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`。
