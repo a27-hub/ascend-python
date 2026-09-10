@@ -5,6 +5,8 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Ascend 950PR/Ascend 950DT</term> | √ |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>           |    √     |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 
 ## 功能说明
 
@@ -59,20 +61,24 @@ torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens=None, padded_mod
 > - $H$：每个token的特征长度，为列数。
 > - $F$：`indices`的元素个数，$F = NUM\_TOKENS * K$。
 
-- **tokens** (`Tensor`)：必选参数，MoE的输入token特征，要求为一个2维张量，shape为(NUM_TOKENS, H)。数据类型支持`float16`、`bfloat16`、`float32`，<term>Ascend 950PR/Ascend 950DT</term>额外支持`int8`（按非量化方式处理），数据格式要求为$ND$。
-- **indices** (`Tensor`)：必选参数，token对应的专家索引，要求为1维或2维张量，shape为(NUM_TOKENS, )或(NUM_TOKENS, K)。数据类型支持`int32`、`int64`，数据格式要求为$ND$。元素个数需要小于16777215，元素值需要大于等于0且小于16777215；<term>Ascend 950PR/Ascend 950DT</term>且`tokens`数据类型为`int8`时，元素表示专家id，取值范围为[0, 10240)。
+- **tokens** (`Tensor`)：必选参数，MoE的输入token特征，要求为一个2维张量，shape为(NUM_TOKENS, H)。数据格式要求为$ND$。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`、`torch.int8`（`torch.int8`按非量化方式处理）。
+- **indices** (`Tensor`)：必选参数，token对应的专家索引，要求为1维或2维张量，shape为(NUM_TOKENS, )或(NUM_TOKENS, K)。数据类型支持`torch.int32`、`torch.int64`，数据格式要求为$ND$。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：元素个数需要小于16777215，元素值需要大于等于0且小于16777215。
+    - <term>Ascend 950PR/Ascend 950DT</term>：元素个数需要小于16777215，元素值需要大于等于0且小于16777215；`tokens`数据类型为`torch.int8`时，元素表示专家id，取值范围为[0, 10240)。
 - **num_out_tokens** (`int`)：可选参数，默认值为None，控制输出`permuted_tokens`的有效行数$M$。None或0表示保留全部行，即$M=F$；正数表示按排序后顺序最多保留`num_out_tokens`行，即$M=min(num\_out\_tokens, F)$；负数表示从完整结果尾部删除对应行数，即$M=max(F+num\_out_tokens, 0)$。
 - **padded_mode** (`bool`)：可选参数，默认值为False，表示是否使用padded模式。如果为True，表示`indices`已被填充为每个专家选中的`token`索引，此时不对`indices`进行排序。当前仅支持`False`。
 
 ## 返回值说明
 
 - **permuted_tokens** (`Tensor`)：根据`indices`扩展并按专家索引排序后的token特征，要求是一个2维张量，shape为(M, H)，数据类型与`tokens`一致，数据格式要求为$ND$。
-- **sorted_indices** (`Tensor`)：`permuted_tokens`与原始`tokens`的行映射关系，要求是一个1维张量，shape为(F, )，数据类型支持`int32`，数据格式要求为$ND$。
+- **sorted_indices** (`Tensor`)：`permuted_tokens`与原始`tokens`的行映射关系，要求是一个1维张量，shape为(F, )，数据类型支持`torch.int32`，数据格式要求为$ND$。
 
 ## 约束说明
 
 - 该接口支持训练和推理场景下使用，支持对`tokens`的自动微分。
-- 该接口支持图模式。
+- 该接口支持PTA图模式。
 - 该接口默认支持确定性计算。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>上，$K$不大于512。
 - <term>Ascend 950PR/Ascend 950DT</term>上，该接口由框架内部转调其他算子实现，报错信息中的参数名可能与本文档不一致。
@@ -82,48 +88,11 @@ torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens=None, padded_mod
 - 单算子模式调用
 
     ```python
-    >>> import torch
-    >>> import torch_npu
-    >>> tokens = torch.randn(4, 128, dtype=torch.bfloat16).npu()
-    >>> indices = torch.randint(0, 8, (4, 2), dtype=torch.int32).npu()
-    >>> permuted_tokens, sorted_indices = torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens=6)
-    >>> print(permuted_tokens.shape)
-    torch.Size([6, 128])
-    >>> print(sorted_indices.shape)
-    torch.Size([8])
-    ```
-
-- 图模式调用
-
-    ```python
     import torch
     import torch_npu
-    import torchair as tng
-    from torchair.configs.compiler_config import CompilerConfig
-
-    config = CompilerConfig()
-    npu_backend = tng.get_npu_backend(compiler_config=config)
-
-    class MoeTokenPermuteModel(torch.nn.Module):
-        def __init__(self):
-            super().__init__()
-
-        def forward(self, tokens, indices, num_out_tokens):
-            return torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens=num_out_tokens)
-
-    def main():
-        tokens = torch.randn(4, 128, dtype=torch.bfloat16).npu()
-        indices = torch.randint(0, 8, (4, 2), dtype=torch.int32).npu()
-        num_out_tokens = 6
-
-        model = MoeTokenPermuteModel().npu()
-        model = torch.compile(model, backend=npu_backend, dynamic=False)
-        permuted_tokens, sorted_indices = model(tokens, indices, num_out_tokens)
-        print(permuted_tokens.shape, sorted_indices.shape)
-
-    if __name__ == '__main__':
-        main()
-
-    # 执行上述代码的输出类似如下
-    torch.Size([6, 128]) torch.Size([8])
+    dtype = torch.bfloat16
+    tokens = torch.tensor([[1, 1, 1], [2, 2, 2], [3, 3, 3], [0, 0, 0]]).npu().to(dtype)
+    indices = torch.tensor([[0, 4], [4, 3], [4, 2], [1, 1]]).npu()
+    num_out_tokens = indices.numel()
+    permuted_tokens, sorted_indices = torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens)
     ```
