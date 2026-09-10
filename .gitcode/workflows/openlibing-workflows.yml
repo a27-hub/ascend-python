@@ -21,10 +21,13 @@ jobs:
     name: pre-commit action
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
+      # pre-commit 插件未配置 extra_args 时为 PR 增量自动模式：以 PR base 分支为基准做 diff。
+      # 本作业为验收夹具（被检配置与文件均在作业内生成），检出 base 分支使增量 diff 为空，
+      # 插件按设计走"无变更文件，跳过增量检查"路径；检出 7.3.0 会因分支差异触发全量修复而失败。
       - name: Checkout current project
         uses: checkout
         with:
-          ref: 7.3.0
+          ref: master
           path: .
       - name: Prepare pre-commit fixture
         shell: bash
