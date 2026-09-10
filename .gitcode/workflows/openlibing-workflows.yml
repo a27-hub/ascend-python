@@ -23,7 +23,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout current project
-        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
       - name: Prepare pre-commit fixture
         shell: bash
         run: |
@@ -41,9 +44,9 @@ jobs:
         uses: setup-python
         with:
           python-version: "3.14"
-      - name: Run openlibing-pre-commit-action
+      - name: Run pre-commit-action
         continue-on-error: true
-        uses: openlibing-pre-commit-action
+        uses: openlibing/pre-commit-action@v1.0.0
         with:
           extra_args: --files .openlibing-acceptance/pre-commit-fixture.txt
 
@@ -52,7 +55,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout current project
-        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
       - name: Prepare action input fixture
         id: prepare-security-input
         shell: bash
@@ -72,7 +78,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout current project
-        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
       - name: Prepare pytest fixture
         shell: bash
         run: |
@@ -90,7 +99,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout current project
-        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
       - name: Prepare report fixtures
         shell: bash
         run: |
@@ -135,7 +147,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout current project
-        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
       - name: Prepare result fixture
         shell: bash
         run: |
@@ -178,7 +193,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout current project
-        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
       - name: Setup Python
         uses: setup-python
         with:
@@ -224,7 +242,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout current project
-        run: git clone --depth=1 --branch 7.3.0 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
       - name: Run code-metrics-action
         continue-on-error: true
         uses: openlibing/code-metrics-action@v1.0.0
@@ -237,8 +258,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout
-        run: |
-          git clone --depth=1 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
 
       - name: code-metrics-scan
         uses: openlibing/code-metrics-action@95623b0e88eaaed34eac28da21df52f4ac33a2b8
@@ -268,8 +291,10 @@ jobs:
     runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "slim"]
     steps:
       - name: Checkout
-        run: |
-          git clone --depth=1 https://gitcode.com/ComputingActionTest/op-plugin.git .
+        uses: checkout
+        with:
+          ref: 7.3.0
+          path: .
 
       # 构建受控样例产物：一个按安全基线编译（合规），一个不带安全选项（不合规）
       - name: build sample artifact
