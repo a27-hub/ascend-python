@@ -23,21 +23,26 @@ from torch_npu.testing.common_utils import SkipIfNotGteCANNVersion, SupportedDev
 
 
 class TestNpuMatmulAbftVerify(TestCase):
-    # V-ABFT GEMM 容错校验算子: a[M,K] b[K,N] c[M,N](预计算 A×B, 恒 fp32) w[N](行校验和编码向量)
-    # 输出 comp_row[ceil(M/8)*ceil(N/256)] uint8 位流, 每 bit 一行一段检错结果, 1 正确 0 错误.
-    # 金标准策略(CANN 侧测试 G4 约定): 正确 C → 全部行段通过 → comp_row 全 255;
-    #   破坏 C 的若干行 → 对应字节(每字节 8 行)非 255. 全 255/全 0 字节断言与 bit 序无关.
+    # V-ABFT GEMM fault-tolerance verification op: a[M,K] b[K,N] c[M,N]
+    # (precomputed A×B, always fp32) w[N] (row-checksum encoding vector).
+    # Output comp_row[ceil(M/8)*ceil(N/256)] uint8 bitstream, one bit per
+    # row-segment verdict: 1 = correct, 0 = error detected.
+    # Golden-reference strategy (CANN-side test convention G4): a correct C
+    # means all row segments pass, so comp_row is all 255; corrupting rows of
+    # C makes the corresponding bytes (8 rows per byte) non-255. The all-255 /
+    # all-0 byte assertions are independent of the bit order.
 
     def generate_abft_inputs(self, m, n, k, dtype):
         a = (torch.randn(m, k, dtype=torch.float32) * 0.1).to(dtype)
         b = (torch.randn(k, n, dtype=torch.float32) * 0.1).to(dtype)
         w = torch.ones(n, dtype=dtype)
-        # c 由 float64 金标准矩阵乘得到, 转成算子要求的 float32
+        # c comes from a float64 golden-reference matmul, cast to the fp32
+        # required by the op contract.
         c = torch.matmul(a.to(torch.float64), b.to(torch.float64)).to(torch.float32)
         return a, b, c, w
 
     def cpu_op_exec(self, m, n):
-        """参考实现: 正确 C 时全部行段校验通过 → comp_row 全 255."""
+        """Reference: a correct C means all row segments pass, so comp_row is all 255."""
         return np.full((m + 7) // 8 * ((n + 255) // 256), 255, dtype=np.uint8)
 
     def npu_op_exec(self, a, b, c, w, e_max=None):
@@ -85,7 +90,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_e_max_default(self, device="npu"):
         torch.manual_seed(0)
-        # 不传 e_max → 使用默认值 0.001
+        # e_max omitted → the default value 0.001 is used
         a, b, c, w = self.generate_abft_inputs(128, 128, 128, torch.float32)
         expected = self.cpu_op_exec(128, 128)
         actual = self.npu_op_exec(a, b, c, w)
@@ -96,7 +101,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_e_max_explicit_bf16(self, device="npu"):
         torch.manual_seed(0)
-        # BF16 推荐值 0.001
+        # BF16 recommended value 0.001
         a, b, c, w = self.generate_abft_inputs(128, 128, 128, torch.bfloat16)
         expected = self.cpu_op_exec(128, 128)
         actual = self.npu_op_exec(a, b, c, w, e_max=0.001)
@@ -107,7 +112,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_e_max_explicit_fp32(self, device="npu"):
         torch.manual_seed(0)
-        # FP32 推荐值 0.00002
+        # FP32 recommended value 0.00002
         a, b, c, w = self.generate_abft_inputs(128, 128, 128, torch.float32)
         expected = self.cpu_op_exec(128, 128)
         actual = self.npu_op_exec(a, b, c, w, e_max=0.00002)
@@ -118,9 +123,9 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_ceil_boundary_shape(self, device="npu"):
         torch.manual_seed(0)
-        # M=33 非 8 倍数, N=100 非 256 倍数 → 输出 [ceil(33/8)*ceil(100/256)] = [5*1] = [5]
-        # splitN=1 时 byte i ↔ 行 8i..8i+7: 行 0..31 (字节 0..3) 为完整字节, 值断言全 255;
-        # 字节 4 含 7 个 padding bit(取值未定义), 仅断言其有效位非全 0 (>0).
+        # M=33 is not a multiple of 8 and N=100 not of 256 → output [ceil(33/8)*ceil(100/256)] = [5*1] = [5].
+        # With splitN=1, byte i covers rows 8i..8i+7: rows 0..31 (bytes 0..3) are full bytes, asserted all 255;
+        # byte 4 has 7 padding bits (undefined value), so only its valid bits are asserted non-zero (>0).
         m, n, k = 33, 100, 67
         a, b, c, w = self.generate_abft_inputs(m, n, k, torch.float16)
         expected = self.cpu_op_exec(m, n)
@@ -134,7 +139,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_large_scale(self, device="npu"):
         torch.manual_seed(0)
-        # Matrix ops 推荐规模 M,N,K ≥ 1024
+        # Recommended scale for matrix ops: M, N, K >= 1024
         a, b, c, w = self.generate_abft_inputs(1024, 1024, 1024, torch.bfloat16)
         expected = self.cpu_op_exec(1024, 1024)
         actual = self.npu_op_exec(a, b, c, w)
@@ -145,7 +150,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_error_detection(self, device="npu"):
         torch.manual_seed(0)
-        # 检错场景: 破坏 C 的前 8 行 → 行 0..7 校验失败 → 字节 0 全 bit 为 0, 其余字节全 255
+        # Detection case: corrupt the first 8 rows of C → rows 0..7 fail verification → byte 0 is all-zero bits, remaining bytes all 255
         m, n, k = 128, 128, 128
         a, b, c, w = self.generate_abft_inputs(m, n, k, torch.float16)
         c[0:8, :] += 50.0
@@ -159,9 +164,9 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_output_shape_dtype(self, device="npu"):
         torch.manual_seed(0)
-        # M=37, N=300 → 输出 [ceil(37/8)*ceil(300/256)] = [5*2] = [10], dtype uint8
-        # splitN=2 时字节内 bit 序未定义: 完整字节(行 0..31, 每列分块 4 字节)值断言全 255,
-        # 两个含 padding 的末字节仅计数断言 (非 255 字节数 ≤ splitN=2).
+        # M=37, N=300 → output [ceil(37/8)*ceil(300/256)] = [5*2] = [10], dtype uint8.
+        # With splitN=2 the bit order inside a byte is undefined: full bytes (rows 0..31, 4 bytes per column segment)
+        # are asserted all 255; the two trailing padding bytes are only counted (non-255 bytes <= splitN=2).
         m, n, k = 37, 300, 129
         a, b, c, w = self.generate_abft_inputs(m, n, k, torch.float16)
         expected = self.cpu_op_exec(m, n)
@@ -173,7 +178,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_a_invalid_dtype(self, device="npu"):
-        # a/b/checksum_weight 均为 int64 (c 保持 float32) → dtype 不在支持范围
+        # a/b/checksum_weight all int64 (c stays float32) → dtype outside the supported set
         a = torch.randint(0, 10, (128, 128), dtype=torch.int64).npu()
         b = torch.randint(0, 10, (128, 128), dtype=torch.int64).npu()
         c = torch.randn(128, 128, dtype=torch.float32).npu()
@@ -184,7 +189,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_b_invalid_dtype(self, device="npu"):
-        # b 为 int64, a 为 float16 → dtype 不一致
+        # b is int64 while a is float16 → dtype mismatch
         a = torch.randn(128, 128, dtype=torch.float16).npu()
         b = torch.randint(0, 10, (128, 128), dtype=torch.int64).npu()
         c = torch.randn(128, 128, dtype=torch.float32).npu()
@@ -195,7 +200,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_c_invalid_dtype(self, device="npu"):
-        # c 为 int64 → c 仅支持 float32
+        # c is int64 → c only supports float32
         a = torch.randn(128, 128, dtype=torch.float16).npu()
         b = torch.randn(128, 128, dtype=torch.float16).npu()
         c = torch.randint(0, 10, (128, 128), dtype=torch.int64).npu()
@@ -206,7 +211,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_checksum_weight_invalid_dtype(self, device="npu"):
-        # checksum_weight 为 int64, a 为 float16 → dtype 不一致
+        # checksum_weight is int64 while a is float16 → dtype mismatch
         a = torch.randn(128, 128, dtype=torch.float16).npu()
         b = torch.randn(128, 128, dtype=torch.float16).npu()
         c = torch.randn(128, 128, dtype=torch.float32).npu()
@@ -217,7 +222,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_a_invalid_dim(self, device="npu"):
-        # a 为 3D → 必须 2 维
+        # a is 3D → must be 2D
         a = torch.randn(2, 128, 128, dtype=torch.float16).npu()
         b = torch.randn(128, 128, dtype=torch.float16).npu()
         c = torch.randn(128, 128, dtype=torch.float32).npu()
@@ -228,7 +233,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_k_mismatch(self, device="npu"):
-        # a 的 K(64) 与 b 的 K(128) 不相等
+        # K dim of a (64) does not equal the K dim of b (128)
         a = torch.randn(128, 64, dtype=torch.float16).npu()
         b = torch.randn(128, 128, dtype=torch.float16).npu()
         c = torch.randn(128, 128, dtype=torch.float32).npu()
@@ -261,7 +266,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_dtype_linkage(self, device="npu"):
-        # a float16, b bfloat16 → dtype 联动违规
+        # a is float16, b is bfloat16 → dtype linkage violation
         a = torch.randn(128, 128, dtype=torch.float16).npu()
         b = torch.randn(128, 128, dtype=torch.bfloat16).npu()
         c = torch.randn(128, 128, dtype=torch.float32).npu()
@@ -272,7 +277,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_e_max_negative(self, device="npu"):
-        # e_max 为负数
+        # e_max is negative
         a, b, c, w = self.generate_abft_inputs(128, 128, 128, torch.float32)
         with self.assertRaisesRegex(RuntimeError, "must be non-negative"):
             torch_npu._npu_matmul_abft_verify(a.npu(), b.npu(), c.npu(), w.npu(), e_max=-0.001)
@@ -280,7 +285,7 @@ class TestNpuMatmulAbftVerify(TestCase):
     @SkipIfNotGteCANNVersion("9.2.0")
     @SupportedDevices(['Ascend910B'])
     def test_neg_non_contiguous(self, device="npu"):
-        # a 非连续 (NPU 上由 (128, 256) 切片得到 (128, 128); 不能先切片再 .npu() — H2D 拷贝会重新连续化)
+        # non-contiguous a (sliced from (128, 256) to (128, 128) on the NPU; slicing on CPU then .npu() would not work — the H2D copy makes it contiguous again)
         a_base = torch.randn(128, 256, dtype=torch.float16).npu()
         a = a_base[:, :128]
         b = torch.randn(128, 128, dtype=torch.float16).npu()
