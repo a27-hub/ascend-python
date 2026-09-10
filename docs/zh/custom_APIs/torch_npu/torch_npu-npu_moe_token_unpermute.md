@@ -74,8 +74,6 @@ torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=None, p
 - 该接口支持PTA图模式。
 - 该接口默认支持确定性计算。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>上，$K$不大于512。
-- <term>Ascend 950PR/Ascend 950DT</term>上，该接口由框架内部转调其他算子实现，报错信息中的参数名可能与本文档不一致。
-
 ## 调用示例
 
 - 单算子模式调用
