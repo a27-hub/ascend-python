@@ -14,7 +14,7 @@
 </thead>
 <tbody><tr id="row1149711715114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p13497217191119"><a name="p13497217191119"></a><a name="p13497217191119"></a><a href="（beta）torch_npu-_npu_dropout.md">（beta）torch_npu._npu_dropout</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p349751701118"><a name="p349751701118"></a><a name="p349751701118"></a>不使用种子（seed）进行dropout操作。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p349751701118"><a name="p349751701118"></a><a name="p349751701118"></a>不使用种子（seed）进行dropout结果计数。</p>
 </td>
 </tr>
 <tr id="row13497417121111"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p11170526121211"><a name="p11170526121211"></a><a name="p11170526121211"></a><a href="（beta）torch_npu-copy_memory_.md">（beta）torch_npu.copy_memory_</a></p>
@@ -219,7 +219,7 @@
 </tr>
 <tr id="row858014718113"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p25801047101117"><a name="p25801047101117"></a><a name="p25801047101117"></a><a href="（beta）torch_npu-npu_one_hot.md">（beta）torch_npu.npu_one_hot</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p5580547191120"><a name="p5580547191120"></a><a name="p5580547191120"></a>返回一个one-hot张量。input中index表示的位置采用on_value值，而其他所有位置采用off_value的值。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p5580547191120"><a name="p5580547191120"></a><a name="p5580547191120"></a>返回一个one-hot张量。input中每个元素的值v作为类别索引：输出在one_hot维（深度为depth）索引v处填充on_value，其余位置填充off_value。input应为整数索引张量，元素取值建议在[0, depth)范围内，越界的元素对应的输出全部填充off_value。</p>
 </td>
 </tr>
 <tr id="row2037715364114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p173771360112"><a name="p173771360112"></a><a name="p173771360112"></a><a href="（beta）torch_npu-npu_pad.md">（beta）torch_npu.npu_pad</a></p>
@@ -941,9 +941,9 @@
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"></a><a name="p_npu_fused_linear_cross_entropy_loss_with_max_sum_backward_desc"></a><span>词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点input和weight的梯度。需要获得npu_fused_linear_online_max_sum和npu_fused_cross_entropy_loss_with_max_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入logits_max和sum_exp_logits）。</span></p></td>
 </tr>
-<tr id="npu_apply_adam_w"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_apply_adam_w"><a name="p_npu_apply_adam_w"></a><a name="p_npu_apply_adam_w"></a><a href="torch_npu-npu_apply_adam_w.md">torch_npu.npu_apply_adam_w</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_dual_level_quant_matmul.md">torch_npu.npu_dual_level_quant_matmul</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_apply_adam_w_desc"><a name="p_npu_apply_adam_w_desc"></a><a name="p_npu_apply_adam_w_desc"></a><span>实现AdamW优化器功能，将权重衰减与基于梯度的参数更新解耦，原地更新权重参数以及一阶、二阶矩估计。</span></p></td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><span>QuantMatmul的二级量化功能，减少精度损失。</span></p></td>
 </tr>
 </tbody>
 </table>
