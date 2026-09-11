@@ -91,19 +91,17 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
 
 ## 参数说明
 
-> 以下参数的数据类型，各产品型号均支持：`torch.float16`、`torch.bfloat16`、`torch.float32`。
-
-- **input** (`Tensor`)：必选参数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`。
-- **r1** (`Tensor`)：必选参数，表示$cos$旋转系数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`。
-- **r2** (`Tensor`)：必选参数，表示$sin$旋转系数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`。
+- **input** (`Tensor`)：必选参数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型各产品型号均支持：`torch.float16`、`torch.bfloat16`、`torch.float32`。
+- **r1** (`Tensor`)：必选参数，表示$cos$旋转系数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型各产品型号均支持：`torch.float16`、`torch.bfloat16`、`torch.float32`。
+- **r2** (`Tensor`)：必选参数，表示$sin$旋转系数，输入维度支持3维、4维，数据格式支持$ND$，支持非连续的Tensor，数据类型各产品型号均支持：`torch.float16`、`torch.bfloat16`、`torch.float32`。
 - **rotary_mode** (`str`)：可选参数，用于选择计算模式，支持`half`、`interleave`两种模式；<term>Ascend 950PR/Ascend 950DT</term>还支持`quarter`、`interleave-half`模式。默认值为`half`。
-- **rotate** (`Tensor`)：可选参数，表示实现`input`位置变换的等价变化矩阵，输入维度支持2维，数据类型支持`torch.float16`，`torch.bfloat16`，`torch.float32`，构造方式参考调用示例，默认值为None。
+- **rotate** (`Tensor`)：可选参数，表示实现`input`位置变换的等价变化矩阵，输入维度支持2维，数据类型各产品型号均支持：`torch.float16`、`torch.bfloat16`、`torch.float32`，构造方式参考调用示例，默认值为None。
 
 ## 返回值说明
 
 `Tensor`
 
-输出计算结果，shape和dtype需与`input`一致。，不支持非连续的Tensor。
+输出计算结果，shape和dtype需与`input`一致。
 
 ## 约束说明
 
