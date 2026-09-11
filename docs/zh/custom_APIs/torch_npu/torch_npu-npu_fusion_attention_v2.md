@@ -111,7 +111,7 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 
 - **q\_start\_idx**（`List[int]`）：可选参数，代表外切场景，当前分块的query的sequence在全局中的起始索引，默认值为None。数据类型支持`torch.int64`。
 - **kv\_start\_idx**（`List[int]`）：可选参数，代表外切场景，当前分块的key和value的sequence在全局中的起始索引，默认值为None。数据类型支持`torch.int64`。
-- **softmax\_layout**（`str`）：可选参数，用于控制TND场景下softmax的输出（softmax\_max和softmax\_sum）的数据排布方式，默认值为""。仅支持传入""和"TND"，且仅当`input_layout`为TND时才可传入"TND"。默认情况下，softmax的输出排布为NTD排布；传入"TND"时，softmax的输出排布为TND排布。在TND场景下，传入"TND"时，输出的softmax\_max和softmax\_sum的格式为TN8，否则为BNS8。
+- **softmax\_layout**（`str`）：可选参数，用于控制TND场景下softmax的输出（softmax\_max和softmax\_sum）的数据排布方式，默认值为""。仅支持传入""和"TND"，且仅当`input_layout`为TND时才可传入"TND"。默认情况下，softmax的输出排布为NTD排布；传入"TND"时，softmax的输出排布为TND排布。（<term>Ascend 950PR/Ascend 950DT</term>）在TND场景下，传入"TND"时，输出的softmax\_max和softmax\_sum的格式为TN8，否则为BNS8。
 - **sink**（`Tensor`）：可选参数，每个注意力头的偏置，默认值为None。shape为\[head\_num\]，数据类型仅支持`torch.float32`。
 - **dropout\_mask**（`Tensor`）：可选参数，外部传入的dropout mask，默认值为None。不传入时，由接口内部根据`keep_prob`、`seed`、`offset`自动生成。
 - **seed**（`int`）：可选参数，DSA生成dropout mask中Philox算法的seed，默认值为0。返回值中的seed为实际使用的seed，可用于反向计算。
@@ -138,7 +138,7 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 - 输入`query`、`key`、`value`的维度必须为3维或4维，且`input_layout`必须一致。
 - 输入`query`、`key`、`value`的数据类型必须一致；传入query\_rope/key\_rope时仅支持`torch.bfloat16`。
 - 输入`pse`时数据类型必须与`query`、`key`、`value`的数据类型一致。
-- 输入`key`和`value`的shape必须一致（除Head-Dim外）。有一个例外场景，D不等长场景下，`key`的D跟`value`的D可以不同，但是`value`的D要求小于`key`的D。
+- 输入`key`和`value`的shape必须一致（除Head-Dim外）。有一个例外场景，D不等长场景下，`key`的D跟`value`的D可以不同，但是`value`的D要求小于`key`的D，该场景仅<term>Ascend 950PR/Ascend 950DT</term>支持；<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>上`key`和`value`的shape必须完全一致（含Head-Dim）。
 - D：Head-Dim必须满足(qD == kD && kD >= vD)，取值范围1\~768。
 - 关于数据shape的约束（B表示batchsize，N表示head个数，S表示sequence length，T表示B\*S）：
 
@@ -166,8 +166,8 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 - 传入`query_rope`、`key_rope`时：
   - 仅在varlen场景（input_layout为TND）下支持，且必须传入`atten_mask`。
   - qRoPED必须等于kRoPED，且D必须是8的整数倍、小于等于query、key和value的D。
-  - 输入`query_rope`与`query`的输入shape仅在D维度不同，其他shape参数需要相同。当前只支持：query的D=128，query_rope的D=64这1种场景。
-  - 输入`key_rope`与`key`的输入shape仅在D维度不同，其他shape参数需要相同。当前只支持：key的D=128，key_rope的D=64这1种场景。
+  - 输入`query_rope`与`query`的输入shape仅在D维度不同，其他shape参数需要相同。当前只支持：query的D=128，query_rope的D=64这1种场景，该场景仅<term>Ascend 950PR/Ascend 950DT</term>支持。
+  - 输入`key_rope`与`key`的输入shape仅在D维度不同，其他shape参数需要相同。当前只支持：key的D=128，key_rope的D=64这1种场景，该场景仅<term>Ascend 950PR/Ascend 950DT</term>支持。
   - 不支持传入`pse`和dropout mask。
 - 传入`sink`时，sink的shape必须为\[head\_num\]。
 - `input_layout`为TND时，`sparse_mode`取值范围为\[0, 5)或(5, 8\]；`input_layout`为其他取值时，`sparse_mode`取值范围为\[0, 6\]。
