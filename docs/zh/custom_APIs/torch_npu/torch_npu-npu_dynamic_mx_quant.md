@@ -12,7 +12,7 @@
 
 - 计算公式：
 
-  - 场景1：当`scale_alg`为0时：
+  - 场景1，当`scale_alg`为0时：
 
     - 将输入`input`在`axis`维度上按k = `block_size`个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale, \{P_i\}_{i=1}^{k}\}$, k = `block_size`
     $$
@@ -32,7 +32,7 @@
       | torch.float8_e4m3fn | 8 |
       | torch.float8_e5m2 | 15 |
 
-  - 场景2：当`scale_alg`为1时，仅适用于`torch.float8_e4m3fn`、`torch.float8_e5m2`类型：
+  - 场景2，当`scale_alg`为1时，仅适用于`torch.float8_e4m3fn`、`torch.float8_e5m2`类型：
 
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值：
