@@ -63,13 +63,13 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **pse**（`Tensor`）：可选参数，公式中的$pse$，位置编码，需与`pse_type`配套使用，默认值为None。数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`，数据格式支持$ND$。
   - 非varlen场景支持四维输入，包含BNSS格式、BN1Skv格式、1NSS格式。
-  - 若非varlen场景Sq大于1024且每个batch的Sq与Skv等长且是`sparse_mode`为0、2、3的下三角掩码场景，可开启alibi位置编码压缩，此时只需要输入原始PSE最后1024行进行内存优化，即alibi\_compress = ori\_pse[:, :, -1024:, :]，参数每个batch不相同时输入BNHSkv(H=1024)，每个batch相同时输入1NHSkv(H=1024)。
+  - 若非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是`sparse_mode`为0、2、3的下三角掩码场景，可开启alibi位置编码压缩，此时只需要输入原始PSE最后1024行进行内存优化，即alibi\_compress = ori\_pse[:, :, -1024:, :]，参数每个batch不相同时输入BNHSkv(H=1024)，每个batch相同时输入1NHSkv(H=1024)。其中，<term>Ascend 950PR/Ascend 950DT</term>上varlen场景亦支持压缩；<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>上仅非varlen场景支持压缩，且需同时满足Sq大于1024、每个batch的Sq与Skv等长、下三角掩码条件。
   - varlen场景支持BNHSkv(H=1024)、1NHSkv(H=1024)、pseTotalLen三种shape；pseTotalLen为所有batch段pse元素个数之和，第i个batch段的pse元素个数为N \* Sq\_i \* Skv\_i。
   - 当`pse_type`为2或3时，数据类型需为`torch.float32`，对应shape支持范围是\[B, N\]或\[N\]。
 - **padding\_mask**（`Tensor`）：可选参数，预留参数，暂未使用，传入None即可。
 - **atten\_mask**（`Tensor`）：可选参数，公式中的$atten\_mask$。取值为1（或True）代表该位不参与计算（被遮蔽），取值为0（或False）代表该位参与计算（被保留），数据类型支持`bool`、`torch.uint8`，数据格式支持$ND$，输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式。varlen场景只支持SS格式，SS分别是maxSq和maxSkv。
-- **query\_rope**（`Tensor`）：可选参数，公式中的$query\_rope$，为query的RoPE扩展输入，需与`key_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型支持`torch.bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRoPED == kRoPED)、D为8的整数倍且小于等于query、key、value的D。
-- **key\_rope**（`Tensor`）：可选参数，公式中的$key\_rope$，为key的RoPE扩展输入，需与`query_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型支持`torch.bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRoPED == kRoPED)、D为8的整数倍且小于等于query、key、value的D。
+- **query\_rope**（`Tensor`）：可选参数，公式中的$query\_rope$，为query的RoPE扩展输入，需与`key_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型在<term>Ascend 950PR/Ascend 950DT</term>上与`query`一致（`torch.float16`、`torch.bfloat16`、`torch.float32`），在<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>上仅支持`torch.bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRoPED == kRoPED)、D为8的整数倍且小于等于query、key、value的D。
+- **key\_rope**（`Tensor`）：可选参数，公式中的$key\_rope$，为key的RoPE扩展输入，需与`query_rope`同时传入，默认值为None。仅在varlen场景（input\_layout为TND）下支持，此时必须传入`atten_mask`。数据类型在<term>Ascend 950PR/Ascend 950DT</term>上与`query`一致（`torch.float16`、`torch.bfloat16`、`torch.float32`），在<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>上仅支持`torch.bfloat16`，数据格式支持$ND$，shape类型支持\[TND\]。Head-Dim必须满足(qRoPED == kRoPED)、D为8的整数倍且小于等于query、key、value的D。
 - **scale**（`float`）：可选参数，代表缩放系数，作为计算流中Muls的scalar值，默认值为1.。
 - **keep\_prob**（`float`）：可选参数，代表Dropout中1的比例，取值范围为(0, 1\]，默认值为1.，表示全部保留。传入query\_rope/key\_rope时keep\_prob必须为1。
 - **pre\_tokens**（`int`）：可选参数，用于稀疏计算，表示sliding window的左边界，默认值为2147483647。
@@ -145,7 +145,7 @@ torch_npu.npu_fusion_attention_v2(query, key, value, head_num, input_layout, *, 
   | 场景 | B | N | S | T |
   | --- | --- | --- | --- | --- |
   | 非varlen | 1\~2M（带prefix时最大2K） | 1\~256 | 1\~1M | - |
-  | varlen | 1\~20000（带prefix时最大1K） | 1\~256 | 1\~1M | 1\~1M |
+  | varlen | 1\~20000（带prefix时最大1K）；<term>Ascend 950PR/Ascend 950DT</term>为1\~2K | 1\~256 | 1\~1M | 1\~1M |
 
 - varlen场景（input\_layout为TND）：
   - 必须传入`actual_seq_qlen`和`actual_seq_kvlen`，且两者长度相等、不能为空。
