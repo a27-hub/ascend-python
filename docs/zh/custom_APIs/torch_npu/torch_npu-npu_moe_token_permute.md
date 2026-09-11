@@ -77,12 +77,9 @@ torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens=None, padded_mod
 ## 约束说明
 
 - 该接口支持推理、训练场景下使用。
-- 该接口支持图模式。
+- 该接口仅支持图模式。
 - 该接口为确定性计算。
-- `tokens`必须为2维Tensor，`indices`必须为1D或2D，不满足时接口直接返回参数错误。
 - `tokens`与`permuted_tokens`的数据类型必须一致；`int8`类型的`tokens`和`permuted_tokens`仅支持<term>Ascend 950PR/Ascend 950DT</term>。
-- 在<term>Ascend 950PR/Ascend 950DT</term>上调用本接口且`tokens`数据类型为`int8`时，`indices`表示expert ID，取值范围为[0, 10240)，最大值为10239，不支持10240。
-- `padded_mode`当前仅支持`False`。
 
 ## 调用示例
 

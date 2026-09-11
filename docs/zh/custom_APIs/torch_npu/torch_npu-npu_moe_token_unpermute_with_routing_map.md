@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- API功能：对经过permute计算处理的permuted_tokens，累加回原unpermuted_tokens。根据sorted_indices存储的下标，获取permuted_tokens中存储的输入数据；如果存在probs数据，permuted_tokens会与probs相乘，最后进行累加求和，并输出计算结果。
+- API功能：对经过permute计算处理的permuted_tokens，根据sorted_indices和routing_map累加回原unpermuted_tokens，支持drop_and_pad填充模式。
 
 - 计算公式：
 
@@ -116,12 +116,14 @@ torch_npu.npu_moe_token_unpermute_with_routing_map(permuted_tokens, sorted_indic
 
 ## 返回值说明
 
-- **unpermuted_tokens**（`Tensor`）：表示unpermute计算后的正向输出结果。要求是一个2D的Tensor，shape为restore_shape，即(tokens_num, hidden_size)。数据类型与permuted_tokens保持一致。数据格式支持$ND$。
+`Tensor`
+
+代表`unpermute`的计算结果。
 
 ## 约束说明
 
 - 该接口支持推理、训练场景下使用。
-- 该接口支持图模式。
+- 该接口仅支持图模式。
 - 该接口默认非确定性实现，支持通过alcrtCtxSetSysParamOpt开启确定性。
 - topK_num要求小于等于512。drop_and_pad为`False`时，每个token最多预留topK_num个专家槽位，routing_map中每行为1或true的个数小于等于topK_num；sorted_indices中允许使用`-1`表示无效槽位。
 - 以下场景后续版本会拦截，如果提示warning，建议整改：

@@ -62,16 +62,16 @@ torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=None, p
 
 ## 返回值说明
 
-- **unpermuted_tokens**（`Tensor`）：表示unpermute计算后的输出结果。要求是一个2D的Tensor，padded_mode为`False`时shape为(tokens_num, hidden_size)，padded_mode为`True`时shape与restore_shape保持一致（当前padded_mode仅支持`False`）。数据类型与permuted_tokens保持一致。数据格式支持$ND$，不支持非连续Tensor。
+`Tensor`
+
+代表`unpermute`的计算结果。
 
 ## 约束说明
 
 - 该接口支持推理、训练场景下使用。
-- 该接口支持图模式。
+- 该接口仅支持图模式。
 - 该接口为确定性计算。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：topK_num要求小于等于512。
-- padded_mode当前仅支持`False`，restore_shape当前仅支持`None`。
-- sorted_indices的取值要求在[0, tokens_num * topK_num - 1]范围内，且不能有重复索引。
 
 ## 调用示例
 

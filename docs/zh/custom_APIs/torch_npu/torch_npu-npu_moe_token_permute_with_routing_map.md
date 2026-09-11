@@ -124,9 +124,9 @@ torch_npu.npu_moe_token_permute_with_routing_map(tokens, routing_map, *, probs=N
 ## 约束说明
 
 - 该接口支持推理、训练场景下使用。
-- 该接口支持图模式。
+- 该接口仅支持图模式。
 - 该接口为确定性计算。
-- num_out_tokens取值要求大于等于0且小于等于tokens_num * experts_num，否则接口直接返回参数错误。
+
 - 由于float无损转int的限制，tokens_num和experts_num要求小于16777215。
 - drop_and_pad为`False`时，routing_map中每行为1或true的个数要求固定且小于512，topK（num_out_tokens // tokens_num）小于512，且topK * tokens_num小于16777215。
 
