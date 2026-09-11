@@ -17095,7 +17095,7 @@ _add_torch_npu_docstr(
     """
 接口原型:
 torch_npu.npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay, beta1, beta2, epsilon, grad, max_grad_norm, amsgrad, maximize, *, out=(var, m, v)) -> (Tensor, Tensor, Tensor)
- 
+
 功能描述:
 实现AdamW优化器功能。AdamW将权重衰减与基于梯度的参数更新解耦，在参数更新前先对权重施加衰减，适用于Transformer等大规模模型的训练场景。
 计算公式:
@@ -17108,7 +17108,7 @@ vt = max(maxGradNorm, vt)（amsgrad为True时），vt = vt（amsgrad为False时�
 mt_hat = mt / (1 - beta1t)
 vt_hat = vt / (1 - beta2t)
 theta_t+1 = theta_t - lr / (sqrt(vt_hat) + epsilon) * mt_hat - lr * weight_decay * theta_t
- 
+
 参数说明:
 beta1_power：Scalar类型, 必选参数, beta1^(t-1), 数据类型与grad保持一致。
 beta2_power：Scalar类型, 必选参数, beta2^(t-1), 数据类型与grad保持一致。
@@ -17125,12 +17125,12 @@ out：必选关键字参数, 包含var、m、v三个张量的元组。
     var：Tensor类型, 待计算的权重输入同时也是输出。数据格式支持ND, 维度支持1-8维, 支持非连续的Tensor, 数据类型支持float16、bfloat16、float32。
     m：Tensor类型, AdamW优化器中m参数。shape要求与输入var保持一致, 数据类型与var保持一致, 数据格式支持ND, 维度支持1-8维, 支持非连续的Tensor。
     v：Tensor类型, AdamW优化器中v参数。shape要求与输入var保持一致, 数据类型与var保持一致, 数据格式支持ND, 维度支持1-8维, 支持非连续的Tensor。
- 
+
 输出说明：
 varOut：Tensor类型, 更新后的权重参数, 复用out中传入的var张量地址, 数据类型和shape与输入var保持一致。
 mOut：Tensor类型, 更新后的一阶矩估计, 复用out中传入的m张量地址, 数据类型和shape与输入m保持一致。
 vOut：Tensor类型, 更新后的二阶矩估计, 复用out中传入的v张量地址, 数据类型和shape与输入v保持一致。
- 
+
 约束说明:
 该接口支持训练场景下使用。
 该接口支持图模式。
@@ -17139,18 +17139,18 @@ grad、var、m、v的数据类型需保持一致, shape需保持一致。
 当amsgrad为True时, 必须传入max_grad_norm, 且max_grad_norm与var的数据类型和shape需保持一致, 否则报错。
 var、m、v、grad、max_grad_norm支持1-8维。
 该接口为原地更新接口, 调用时必须通过out参数传入var、m、v三个张量, 也可以直接调用torch_npu.npu_apply_adam_w_out接口。
- 
+
 支持的PyTorch版本:
 PyTorch 2.1及更高版本
- 
+
 支持的型号:
 Atlas A2训练系列产品/Atlas A2推理系列产品
- 
+
 调用示例:
 单算子模式调用
 import torch
 import torch_npu
- 
+
 var = torch.tensor([[0., 1.], [2., 3.]], dtype=torch.float32, device='npu')
 m = torch.tensor([[0., 1.], [2., 3.]], dtype=torch.float32, device='npu')
 v = torch.tensor([[0., 1.], [2., 3.]], dtype=torch.float32, device='npu')
@@ -17171,7 +17171,6 @@ torch_npu.npu_dynamic_mx_quant(input, *, axis=-1, round_mode="rint", dst_type=29
 
 功能描述
 目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，每block_size个数为一组，计算出这组数对应的量化尺度mxscale，然后对组内每一个数除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y。
-
 
 参数说明:
 input(torch.Tensor)：必选输入，支持1-7维，数据类型支持float16、bfloat16、float32，支持非连续Tensor，支持ND。当dst_type为FP4类时，input的最后一维必须是偶数；当input的数据类型为float32时，block_size必须为32，且量化轴的维度不能小于32。
