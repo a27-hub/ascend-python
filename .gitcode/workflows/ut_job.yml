@@ -99,7 +99,8 @@ jobs:
           ref: refs/merge-requests/${{ inputs.pr_id }}/merge
           fetch-depth: 1
           path: ./CODE
-
+          allow-unsafe-pr-checkout: true
+      
       - name: UT op-plugin
         if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
         run: |
