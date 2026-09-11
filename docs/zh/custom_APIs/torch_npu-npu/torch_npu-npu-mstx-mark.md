@@ -4,6 +4,7 @@
 
 | 产品                                                      | 是否支持 |
 | --------------------------------------------------------- | :------: |
+| <term>Ascend 950DT</term>                   |    √     |
 | <term>Atlas A3 训练系列产品</term>                        |    √     |
 | <term>Atlas A3 推理系列产品</term>                        |    √     |
 | <term>Atlas A2 训练系列产品</term>                        |    √     |
@@ -18,12 +19,12 @@
 ## 函数原型
 
 ```python
-torch_npu.npu.mstx.mark(message: str='None', stream=None, domain: str='default') -> None
+torch_npu.npu.mstx.mark(message: str, stream=None, domain: str='default') -> None
 ```
 
 ## 参数说明
 
-- **message** (`str`)：可选参数，打点携带信息的字符串，默认为'None'。
+- **message** (`str`)：必选参数，打点携带信息的字符串。
 
   传入的message字符串长度要求：msPTI场景不能超过255字节。
 
