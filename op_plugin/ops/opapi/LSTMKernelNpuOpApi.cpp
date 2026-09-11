@@ -221,13 +221,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     bool train,
     bool bidirectional,
     bool batch_first) {
-  // If bf16 or mixed dtype, fallback to acl_op
-  if (ShouldFallbackToAclOp(input, hx, params)) {
-    return acl_op::lstm(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
-  }
+  // Preserve the existing fallback behavior on devices other than Ascend950.
+  if (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950) {
+    if (ShouldFallbackToAclOp(input, hx, params)) {
+      return acl_op::lstm(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
+    }
 
-  DO_COMPATIBILITY(
-      aclnnLSTM, acl_op::lstm(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first));
+    DO_COMPATIBILITY(
+        aclnnLSTM, acl_op::lstm(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first));
+  }
   auto output = at_npu::native::custom_ops::_lstm_npu(
       input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
   return std::make_tuple(
@@ -256,54 +258,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
   return std::make_tuple(
       std::get<0>(output), std::get<1>(output), std::get<2>(output)); // 0 for output_y, 1 for output_h, 2 for output_c
 }
-using LstmOutputs = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor,
-                               at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
-
-// The acl_op caller has already split layers/directions and converted to TBI.
-// Its weight is cat({weight_ih, weight_hh}, 1).t(), in i/f/g/o order.
-LstmOutputs npu_lstm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    const at::Tensor& seq_mask, const at::Tensor& h, const at::Tensor& c,
-    bool has_biases, int64_t num_layers, double dropout, bool train,
-    bool bidirectional, bool batch_first, bool flag_seq, bool direction) {
-  if (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950) {
-    return acl_op::npu_lstm(input, weight, bias, seq_mask, h, c, has_biases,
-        num_layers, dropout, train, bidirectional, batch_first, flag_seq, direction);
-  }
-  TORCH_CHECK(!flag_seq && !direction,
-      "Ascend950 npu_lstm supports dense input; reverse the input in the caller.",
-      OPS_ERROR(ErrCode::NOT_SUPPORT));
-  TORCH_CHECK(input.scalar_type() == at::kFloat || input.scalar_type() == at::kHalf,
-      "Ascend950 npu_lstm supports float32 and float16.", OPS_ERROR(ErrCode::NOT_SUPPORT));
-  TORCH_CHECK(input.dim() == 3 && input.size(0) > 0 && h.dim() == 3 &&
-      h.size(0) == 1 && h.size(1) == input.size(1) && h.size(2) > 0 && c.sizes() == h.sizes(),
-      "Invalid dense npu_lstm input or initial state shape.", OPS_ERROR(ErrCode::PARAM));
-  const auto hidden = h.size(2);
-  TORCH_CHECK(weight.dim() == 2 && weight.size(0) == input.size(2) + hidden &&
-      weight.size(1) == 4 * hidden && bias.dim() == 1 && bias.size(0) == 4 * hidden,
-      "Invalid packed npu_lstm weight or bias shape.", OPS_ERROR(ErrCode::PARAM));
-  for (const auto& tensor : {weight, bias, h, c}) {
-    TORCH_CHECK(tensor.device() == input.device() && tensor.scalar_type() == input.scalar_type(),
-        "npu_lstm tensors must share device and dtype.", OPS_ERROR(ErrCode::PARAM));
-  }
-  auto ht = h.squeeze(0);
-  auto ct = c.squeeze(0);
-  std::vector<at::Tensor> hs, cs, is, js, fs, os, ts;
-  for (int64_t step = 0; step < input.size(0); ++step) {
-    auto gates = (at::matmul(at::cat({input[step], ht}, 1), weight) + bias).chunk(4, 1);
-    auto it = gates[0].sigmoid();
-    auto ft = gates[1].sigmoid();
-    auto jt = gates[2].tanh();
-    auto ot = gates[3].sigmoid();
-    ct = ft * ct + it * jt;
-    auto tc = ct.tanh();
-    ht = ot * tc;
-    hs.push_back(ht); cs.push_back(ct); is.push_back(it); js.push_back(jt);
-    fs.push_back(ft); os.push_back(ot); ts.push_back(tc);
-  }
-  auto hout = at::stack(hs);
-  return std::make_tuple(hout, hout.clone(), at::stack(cs), at::stack(is),
-      at::stack(js), at::stack(fs), at::stack(os), at::stack(ts));
-}
-
 } // namespace op_api

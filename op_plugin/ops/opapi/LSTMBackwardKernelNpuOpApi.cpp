@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
@@ -131,47 +130,6 @@ std::tuple<at::Tensor, std::vector<at::Tensor>, std::vector<at::Tensor>> _lstm_n
   hx_prev_vec.push_back(out_c_prev);
   at::TensorList out_hx_prev = at::TensorList(hx_prev_vec);
   return std::make_tuple(out0, out_hx_prev.vec(), param_list_.vec());
-}
-
-// npu_lstm has a registered custom autograd formula, so its backward must also
-// avoid DynamicRNNGrad. Accumulate contributions from all three public outputs.
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_lstm_backward(
-    const c10::optional<at::Tensor>& grady, const c10::optional<at::Tensor>& gradh,
-    const c10::optional<at::Tensor>& gradc, const at::Tensor& input,
-    const at::Tensor& weight, const at::Tensor& bias, const at::Tensor& hx,
-    const at::Tensor& cx, const at::Tensor& y_output, const at::Tensor& h_output,
-    const at::Tensor& c_output, const at::Tensor& i, const at::Tensor& j,
-    const at::Tensor& f, const at::Tensor& o, const at::Tensor& tanhc) {
-  if (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950) {
-    return acl_op::npu_lstm_backward(grady, gradh, gradc, input, weight, bias,
-        hx, cx, y_output, h_output, c_output, i, j, f, o, tanhc);
-  }
-  auto dh = at::zeros_like(hx.squeeze(0));
-  auto dc = at::zeros_like(cx.squeeze(0));
-  auto dw = at::zeros_like(weight);
-  auto db = at::zeros_like(bias);
-  std::vector<at::Tensor> dx(input.size(0));
-  for (int64_t step = input.size(0); step-- > 0;) {
-    if (grady.has_value() && grady->defined()) { dh = dh + (*grady)[step]; }
-    if (gradh.has_value() && gradh->defined()) { dh = dh + (*gradh)[step]; }
-    if (gradc.has_value() && gradc->defined()) { dc = dc + (*gradc)[step]; }
-    auto hp = step == 0 ? hx.squeeze(0) : h_output[step - 1];
-    auto cp = step == 0 ? cx.squeeze(0) : c_output[step - 1];
-    dc = dc + dh * o[step] * (1 - tanhc[step] * tanhc[step]);
-    auto di = dc * j[step] * i[step] * (1 - i[step]);
-    auto df = dc * cp * f[step] * (1 - f[step]);
-    auto dj = dc * i[step] * (1 - j[step] * j[step]);
-    auto dout = dh * tanhc[step] * o[step] * (1 - o[step]);
-    auto dg = at::cat({di, df, dj, dout}, 1);
-    auto xh = at::cat({input[step], hp}, 1);
-    dw = dw + at::matmul(xh.t(), dg);
-    db = db + dg.sum(0);
-    auto dxh = at::matmul(dg, weight.t());
-    dx[step] = dxh.slice(1, 0, input.size(2));
-    dh = dxh.slice(1, input.size(2));
-    dc = dc * f[step];
-  }
-  return std::make_tuple(at::stack(dx), dw, db, dh.unsqueeze(0), dc.unsqueeze(0));
 }
 
 } // namespace op_api
