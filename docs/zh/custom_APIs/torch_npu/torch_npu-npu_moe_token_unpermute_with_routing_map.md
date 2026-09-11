@@ -116,9 +116,9 @@ torch_npu.npu_moe_token_unpermute_with_routing_map(permuted_tokens, sorted_indic
 
 ## 返回值说明
 
-`Tensor`
+ `Tensor`
 
-代表`unpermute`的计算结果。
+ 表示unpermute计算后的正向输出结果。要求是一个2D的Tensor，shape为restore_shape，即(tokens_num, hidden_size)。数据类型与permuted_tokens保持一致。数据格式支持$ND$。
 
 ## 约束说明
 

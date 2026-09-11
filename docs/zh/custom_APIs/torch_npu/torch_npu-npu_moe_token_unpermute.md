@@ -64,7 +64,7 @@ torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=None, p
 
 `Tensor`
 
-代表`unpermute`的计算结果。
+表示unpermute计算后的输出结果。要求是一个2D的Tensor，padded_mode为`False`时shape为(tokens_num, hidden_size)，padded_mode为`True`时shape与restore_shape保持一致（当前padded_mode仅支持`False`）。数据类型与permuted_tokens保持一致。数据格式支持$ND$，不支持非连续Tensor。
 
 ## 约束说明
 
