@@ -4,6 +4,7 @@
 
 | Product                                                        | Supported|
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term> |    √     |
 |<term>Atlas A3 training products</term>          |    √     |
 |<term>Atlas A2 training products</term>| √   |
 |<term>Atlas training products</term>| √   |
@@ -75,7 +76,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
 - **`r1`** (`Tensor`): Required. Cosine rotation coefficient. The shape must have 3 or 4 dimensions. The data type can be `float16`, `bfloat16`, or `float32`.
 - **`r2`** (`Tensor`): Required. Sine rotation coefficient. The shape must have 3 or 4 dimensions. The data type can be `float16`, `bfloat16`, or `float32`.
 - **`rotary_mode`** (`str`): Optional. Computation mode. Valid values are `half` and `interleave`. The default value is `half`.
-- **`rotate`** (`Tensor`): Optional. Equivalent transformation matrix used to apply positional transformations to `input`. The shape must have 2 dimensions. The data type can be `float16`, `bfloat16`, or `float32`. For construction details, see the examples.
+- **`rotate`** (`Tensor`): Optional. Equivalent transformation matrix used to apply positional transformations to `input`. The shape must have 2 dimensions. The data type can be `float16`, `bfloat16`, or `float32`. For construction details, see the examples. The <term>Ascend 950PR/Ascend 950DT</term> does not support this parameter. Keep the default value None. Passing a valid `rotate` causes an error.
 
 ## Return Values
 
@@ -84,6 +85,8 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
 Output tensor representing the computation result. Its shape and data type must be identical to those of `input`.
 
 ## Constraints
+
+- <term>Ascend 950PR/Ascend 950DT</term>: The `rotate` parameter is not supported. Pass None for `rotate` (or omit it). A passed valid `rotate` causes the error `the rotate parameter is only supported on Ascend910B/Ascend910_93, please set rotate to None`.
 
 - `jit_compile=False` scenarios (applicable to Atlas A2 training products or Atlas A3 training products):
     - When `rotary_mode` is `half`:
@@ -194,7 +197,19 @@ Output tensor representing the computation result. Its shape and data type must 
             device='npu:0')
     ```
 
-- Example of `rotate` matrix generation:
+- Available example on Ascend 950:
+
+    ```python
+    >>> import torch
+    >>> import torch_npu
+    >>>
+    >>> x = torch.rand(2, 5, 128).npu()
+    >>> r1 = torch.rand(2, 1, 128).npu()
+    >>> r2 = torch.rand(2, 1, 128).npu()
+    >>> out = torch_npu.npu_rotary_mul(x, r1, r2, "half")
+    ```
+
+- Example of `rotate` matrix generation (only for Atlas A2 training products or Atlas A3 training products):
 
     ```python
     import torch
