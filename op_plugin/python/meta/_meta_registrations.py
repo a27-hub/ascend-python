@@ -6566,7 +6566,23 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
 @impl(m, "npu_grouped_matmul_swiglu_quant_v2")
 def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None,
     weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1,
-    group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None):
+    group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None,
+    activate_dim=None, activate_left=None, swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None,
+    axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0):
+
+    if swiglu_mode is not None:
+        torch._check(
+            swiglu_mode >= 0 and swiglu_mode <= 3,
+            lambda: f"swiglu_mode only supports values in [0, 3], but got {swiglu_mode}.",
+        )
+        torch._check(
+            activate_dim is None or activate_dim == -1,
+            lambda: f"activate_dim currently only supports -1 for grouped_matmul_swiglu_quant_v3, but got {activate_dim}.",
+        )
+    torch._check(axis == -1, lambda: f"axis currently only supports -1, but got {axis}.")
+    torch._check(round_mode == "rint", lambda: f"round_mode currently only supports rint, but got {round_mode}.")
+    torch._check(scale_alg == 0, lambda: f"scale_alg currently only supports 0, but got {scale_alg}.")
+    torch._check(dst_type_max == 0.0, lambda: f"dst_type_max currently only supports 0, but got {dst_type_max}.")
 
     torch._check(
         len(weight) == 1,

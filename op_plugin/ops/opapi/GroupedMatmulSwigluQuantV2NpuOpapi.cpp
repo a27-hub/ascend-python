@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cmath>
+
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
@@ -30,6 +32,14 @@ constexpr int64_t DIM_5 = 5LL;
 constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
 constexpr int64_t HIFLOAT8 = 34LL;
+constexpr int64_t DEFAULT_SWIGLU_ACTIVATE_DIM = -1LL;
+constexpr bool DEFAULT_SWIGLU_ACTIVATE_LEFT = true;
+constexpr double DEFAULT_SWIGLU_CLAMP_LIMIT = 7.0;
+constexpr double DEFAULT_SWIGLU_ALPHA = 1.702;
+constexpr double DEFAULT_SWIGLU_BIAS = 1.0;
+constexpr int64_t DEFAULT_MX_AXIS = -1LL;
+constexpr int64_t DEFAULT_MX_SCALE_ALG = 0LL;
+constexpr double DEFAULT_DST_TYPE_MAX = 0.0;
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
@@ -139,7 +149,17 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     c10::optional<int64_t> x_dtype,
     c10::optional<int64_t> weight_dtype,
     c10::optional<int64_t> weight_scale_dtype,
-    c10::optional<int64_t> x_scale_dtype)
+    c10::optional<int64_t> x_scale_dtype,
+    c10::optional<int64_t> activate_dim,
+    c10::optional<bool> activate_left,
+    c10::optional<int64_t> swiglu_mode,
+    c10::optional<double> clamp_limit,
+    c10::optional<double> glu_alpha,
+    c10::optional<double> glu_bias,
+    int64_t axis,
+    c10::string_view round_mode,
+    int64_t scale_alg,
+    double dst_type_max)
 {
     TORCH_CHECK(weight.size() > NUM_ZERO, "The size of weight should be greater than 0, current size is ",
                 weight.size(), OPS_ERROR(ErrCode::PARAM));
@@ -153,6 +173,47 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ ||
                               at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
                               weight[DIM_0].dim() == DIM_5;
+    const bool use_swiglu_v3 = swiglu_mode.has_value();
+    TORCH_CHECK(use_swiglu_v3 ||
+                    (!activate_dim.has_value() && !activate_left.has_value() && !clamp_limit.has_value() &&
+                     !glu_alpha.has_value() && !glu_bias.has_value()),
+                "swiglu_mode must be specified when using the V3 SwiGLU parameters.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!use_swiglu_v3 || is_weight_nz,
+                "swiglu_mode is only supported when weight is in FRACTAL_NZ format. "
+                "Please pass an NZ weight or omit swiglu_mode.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!use_swiglu_v3 ||
+                    (swiglu_mode.value() >= 0 && swiglu_mode.value() <= 3),
+                "swiglu_mode only supports values in [0, 3], but got ", swiglu_mode.value(),
+                OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(axis == DEFAULT_MX_AXIS,
+                "axis is reserved for the V3 MX quantization path and currently only supports -1, but got ", axis,
+                OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(round_mode == "rint",
+                "round_mode is reserved for the V3 MX quantization path and currently only supports rint, but got ",
+                round_mode, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(scale_alg == DEFAULT_MX_SCALE_ALG,
+                "scale_alg is reserved for the V3 MX quantization path and currently only supports 0, but got ",
+                scale_alg, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(dst_type_max == DEFAULT_DST_TYPE_MAX,
+                "dst_type_max is reserved for the V3 MX quantization path and currently only supports 0, but got ",
+                dst_type_max, OPS_ERROR(ErrCode::VALUE));
+
+    const int64_t activate_dim_real = activate_dim.value_or(DEFAULT_SWIGLU_ACTIVATE_DIM);
+    const bool activate_left_real = activate_left.value_or(DEFAULT_SWIGLU_ACTIVATE_LEFT);
+    const int64_t swiglu_mode_real = swiglu_mode.value_or(0);
+    const double clamp_limit_real = clamp_limit.value_or(DEFAULT_SWIGLU_CLAMP_LIMIT);
+    const double glu_alpha_real = glu_alpha.value_or(DEFAULT_SWIGLU_ALPHA);
+    const double glu_bias_real = glu_bias.value_or(DEFAULT_SWIGLU_BIAS);
+    char *round_mode_real = const_cast<char *>(round_mode.data());
+    TORCH_CHECK(!use_swiglu_v3 || activate_dim_real == DEFAULT_SWIGLU_ACTIVATE_DIM,
+                "activate_dim currently only supports -1 for grouped_matmul_swiglu_quant_v3, but got ",
+                activate_dim_real, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(!use_swiglu_v3 || (std::isfinite(clamp_limit_real) && clamp_limit_real > 0.0),
+                "clamp_limit should be positive and finite", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(!use_swiglu_v3 || std::isfinite(glu_alpha_real),
+                "glu_alpha should be finite", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(!use_swiglu_v3 || std::isfinite(glu_bias_real),
+                "glu_bias should be finite", OPS_ERROR(ErrCode::VALUE));
     const bool is_mx_quant = weight_scale_dtype.has_value();
     const bool is_mx_weight_nz_multi = is_mx_weight_nz_multi_tensor(weight, weight_scale, is_weight_nz, is_mx_quant,
                                                                     mxfp8w4);
@@ -353,48 +414,117 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         weight_scale_dtype.has_value() ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
 
     if (is_weight_nz) {
-        static const bool is_weight_nz_available = check_aclnn_kernel_available("aclnnGroupedMatmulSwigluQuantWeightNzV2");
-        TORCH_CHECK(is_weight_nz_available,
-                    "Format of weight in npu_grouped_matmul is FRACTAL_NZ, current CANN version "
-                    "do not support with this format. Please try to update the version of CANN."
-                    + OPS_ERROR(ErrCode::PARAM));
+        if (use_swiglu_v3) {
+            static const bool is_weight_nz_v3_available =
+                check_aclnn_kernel_available("aclnnGroupedMatmulSwigluQuantWeightNzV3");
+            TORCH_CHECK(is_weight_nz_v3_available,
+                        "Current CANN version does not support aclnnGroupedMatmulSwigluQuantWeightNzV3. "
+                        "Please try to update the version of CANN." + OPS_ERROR(ErrCode::PARAM));
+        } else {
+            static const bool is_weight_nz_available =
+                check_aclnn_kernel_available("aclnnGroupedMatmulSwigluQuantWeightNzV2");
+            TORCH_CHECK(is_weight_nz_available,
+                        "Format of weight in npu_grouped_matmul is FRACTAL_NZ, current CANN version "
+                        "do not support with this format. Please try to update the version of CANN."
+                        + OPS_ERROR(ErrCode::PARAM));
+        }
 
         if (mxfp8w4_nz_input) {
-            EXEC_NPU_CMD(
-                aclnnGroupedMatmulSwigluQuantWeightNzV2,
-                x,
-                weight_wrapper,
-                weight_scale_wrapper,
-                weight_assist_matrix_real,
-                bias_real,
-                x_scale_wrapper,
-                smooth_scale_real,
-                group_list,
-                dequant_mode_real,
-                dequant_dtype_real,
-                quant_mode_real,
-                group_list_type_real,
-                tuning_config_real,
-                output,
-                output_scale_wrapper);
+            if (use_swiglu_v3) {
+                EXEC_NPU_CMD(
+                    aclnnGroupedMatmulSwigluQuantWeightNzV3,
+                    x,
+                    weight_wrapper,
+                    weight_scale_wrapper,
+                    weight_assist_matrix_real,
+                    bias_real,
+                    x_scale_wrapper,
+                    smooth_scale_real,
+                    group_list,
+                    dequant_mode_real,
+                    dequant_dtype_real,
+                    quant_mode_real,
+                    group_list_type_real,
+                    tuning_config_real,
+                    activate_dim_real,
+                    activate_left_real,
+                    swiglu_mode_real,
+                    clamp_limit_real,
+                    glu_alpha_real,
+                    glu_bias_real,
+                    axis,
+                    round_mode_real,
+                    scale_alg,
+                    dst_type_max,
+                    output,
+                    output_scale_wrapper);
+            } else {
+                EXEC_NPU_CMD(
+                    aclnnGroupedMatmulSwigluQuantWeightNzV2,
+                    x,
+                    weight_wrapper,
+                    weight_scale_wrapper,
+                    weight_assist_matrix_real,
+                    bias_real,
+                    x_scale_wrapper,
+                    smooth_scale_real,
+                    group_list,
+                    dequant_mode_real,
+                    dequant_dtype_real,
+                    quant_mode_real,
+                    group_list_type_real,
+                    tuning_config_real,
+                    output,
+                    output_scale_wrapper);
+            }
         } else if (is_mx_weight_nz_multi) {
-            EXEC_NPU_CMD(
-                aclnnGroupedMatmulSwigluQuantWeightNzV2,
-                x_wrapper,
-                weight_wrapper,
-                weight_scale_wrapper,
-                weight_assist_matrix_real,
-                bias_real,
-                x_scale_wrapper,
-                smooth_scale_real,
-                group_list,
-                dequant_mode_real,
-                dequant_dtype_real,
-                quant_mode_real,
-                group_list_type_real,
-                tuning_config_real,
-                output_wrapper,
-                output_scale_wrapper);
+            if (use_swiglu_v3) {
+                EXEC_NPU_CMD(
+                    aclnnGroupedMatmulSwigluQuantWeightNzV3,
+                    x_wrapper,
+                    weight_wrapper,
+                    weight_scale_wrapper,
+                    weight_assist_matrix_real,
+                    bias_real,
+                    x_scale_wrapper,
+                    smooth_scale_real,
+                    group_list,
+                    dequant_mode_real,
+                    dequant_dtype_real,
+                    quant_mode_real,
+                    group_list_type_real,
+                    tuning_config_real,
+                    activate_dim_real,
+                    activate_left_real,
+                    swiglu_mode_real,
+                    clamp_limit_real,
+                    glu_alpha_real,
+                    glu_bias_real,
+                    axis,
+                    round_mode_real,
+                    scale_alg,
+                    dst_type_max,
+                    output_wrapper,
+                    output_scale_wrapper);
+            } else {
+                EXEC_NPU_CMD(
+                    aclnnGroupedMatmulSwigluQuantWeightNzV2,
+                    x_wrapper,
+                    weight_wrapper,
+                    weight_scale_wrapper,
+                    weight_assist_matrix_real,
+                    bias_real,
+                    x_scale_wrapper,
+                    smooth_scale_real,
+                    group_list,
+                    dequant_mode_real,
+                    dequant_dtype_real,
+                    quant_mode_real,
+                    group_list_type_real,
+                    tuning_config_real,
+                    output_wrapper,
+                    output_scale_wrapper);
+            }
         } else {
             at::Tensor weight_for_nz = weight[DIM_0];
             if (at_npu::native::custom_ops::get_npu_format(weight_for_nz) != ACL_FORMAT_FRACTAL_NZ) {
@@ -408,23 +538,53 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
             TensorListWrapper weight_nz_wrapper = {weight_nz_list,
                 weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
                                  : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
-            EXEC_NPU_CMD(
-                aclnnGroupedMatmulSwigluQuantWeightNzV2,
-                x_wrapper,
-                weight_dtype.has_value() ? weight_wrapper : weight_nz_wrapper,
-                weight_scale_wrapper,
-                weight_assist_matrix_real,
-                bias_real,
-                x_scale_wrapper,
-                smooth_scale_real,
-                group_list,
-                dequant_mode_real,
-                dequant_dtype_real,
-                quant_mode_real,
-                group_list_type_real,
-                tuning_config_real,
-                output_wrapper,
-                output_scale_wrapper);
+            if (use_swiglu_v3) {
+                EXEC_NPU_CMD(
+                    aclnnGroupedMatmulSwigluQuantWeightNzV3,
+                    x_wrapper,
+                    weight_dtype.has_value() ? weight_wrapper : weight_nz_wrapper,
+                    weight_scale_wrapper,
+                    weight_assist_matrix_real,
+                    bias_real,
+                    x_scale_wrapper,
+                    smooth_scale_real,
+                    group_list,
+                    dequant_mode_real,
+                    dequant_dtype_real,
+                    quant_mode_real,
+                    group_list_type_real,
+                    tuning_config_real,
+                    activate_dim_real,
+                    activate_left_real,
+                    swiglu_mode_real,
+                    clamp_limit_real,
+                    glu_alpha_real,
+                    glu_bias_real,
+                    axis,
+                    round_mode_real,
+                    scale_alg,
+                    dst_type_max,
+                    output_wrapper,
+                    output_scale_wrapper);
+            } else {
+                EXEC_NPU_CMD(
+                    aclnnGroupedMatmulSwigluQuantWeightNzV2,
+                    x_wrapper,
+                    weight_dtype.has_value() ? weight_wrapper : weight_nz_wrapper,
+                    weight_scale_wrapper,
+                    weight_assist_matrix_real,
+                    bias_real,
+                    x_scale_wrapper,
+                    smooth_scale_real,
+                    group_list,
+                    dequant_mode_real,
+                    dequant_dtype_real,
+                    quant_mode_real,
+                    group_list_type_real,
+                    tuning_config_real,
+                    output_wrapper,
+                    output_scale_wrapper);
+            }
         }
     } else {
         EXEC_NPU_CMD(
