@@ -161,10 +161,13 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     TORCH_CHECK(weight_scale.size() > NUM_ZERO, "The size of weight_scale should be greater than 0, current size is ",
                 weight_scale.size(), OPS_ERROR(ErrCode::PARAM));
 
+    const bool is_mx_quant = weight_scale_dtype.has_value();
     const bool mxfp8w4 =
         x.scalar_type() == at::kFloat8_e4m3fn &&
         ((weight_dtype.has_value() && weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) ||
          aclDataType::ACL_FLOAT4_E2M1 == c10_npu::GetAclDataType(static_cast<int64_t>(weight[0].scalar_type())));
+    const bool is_mxfp8 = is_mx_quant && x.scalar_type() == at::kFloat8_e4m3fn &&
+                          weight[DIM_0].scalar_type() == at::kFloat8_e4m3fn;
     const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ ||
                               at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
                               weight[DIM_0].dim() == DIM_5;
@@ -173,9 +176,9 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     (!activate_dim.has_value() && !activate_left.has_value() && !clamp_limit.has_value() &&
                      !glu_alpha.has_value() && !glu_bias.has_value()),
                 "swiglu_mode must be specified when using the V3 SwiGLU parameters.", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(!use_swiglu_v3 || is_weight_nz,
-                "swiglu_mode is only supported when weight is in FRACTAL_NZ format. "
-                "Please pass an NZ weight or omit swiglu_mode.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!use_swiglu_v3 || (is_weight_nz && is_mxfp8),
+                "swiglu_mode is only supported in the MXFP8 quantization scenario with weight in FRACTAL_NZ format. "
+                "Please pass an MXFP8 NZ weight or omit swiglu_mode.", OPS_ERROR(ErrCode::PARAM));
 
     const int64_t activate_dim_real = activate_dim.value_or(DEFAULT_SWIGLU_ACTIVATE_DIM);
     const bool activate_left_real = activate_left.value_or(DEFAULT_SWIGLU_ACTIVATE_LEFT);
@@ -184,8 +187,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const double glu_alpha_real = glu_alpha.value_or(DEFAULT_SWIGLU_ALPHA);
     const double glu_bias_real = glu_bias.value_or(DEFAULT_SWIGLU_BIAS);
     char *round_mode_real = const_cast<char *>(round_mode.data());
-    // V3 parameter constraints are validated by aclnnGroupedMatmulSwigluQuantWeightNzV3.
-    const bool is_mx_quant = weight_scale_dtype.has_value();
+    // SwiGLU parameter constraints are validated by aclnnGroupedMatmulSwigluQuantWeightNzV3.
     const bool is_mx_weight_nz_multi = is_mx_weight_nz_multi_tensor(weight, weight_scale, is_weight_nz, is_mx_quant,
                                                                     mxfp8w4);
 
