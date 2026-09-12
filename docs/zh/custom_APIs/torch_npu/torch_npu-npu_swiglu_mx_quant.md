@@ -121,7 +121,7 @@ torch_npu.npu_swiglu_mx_quant(x, *, group_index=None, activate_dim=-1, activate_
 - **clamp_limit**(`float`)：可选参数，变种swiglu输入门限，用于对输入裁剪。需大于0且有限。默认值为`7.0`。
 - **glu_alpha**(`float`)：可选参数，GLU激活函数系数。默认值为`1.702`。
 - **glu_bias**(`float`)：可选参数，swiglu计算中的偏差。默认值为`1.0`。
-- **group_mode**(`int`)：可选参数，`group_index`对应的模式。取值范围为$[0,1]$：`0`表示count模式，`1`表示cumsum模式。默认值为`0`。
+- **group_mode**(`int`)：可选参数，`group_index`对应的模式。取值范围为$[0,1]$：`0`表示count模式，`1`表示cumsum模式。当前仅支持取值`0`。默认值为`0`。
 - **axis**(`int`)：可选参数，DynamicMxQuant量化发生的轴。取值范围为$[-1,-2,x.dim()-2,x.dim()-1]$。默认值为`-1`。
 - **dst_type**(`int`)：可选参数，输出`y`的数据类型。`296`表示`float4_e2m1fn_x2`，`297`表示`float4_e1m2fn_x2`，`292`表示`float8_e4m3fn`，`291`表示`float8_e5m2`。默认值为`296`。
 - **round_mode**(`str`)：可选参数，输出`y`的舍入模式。取值为`"rint"`、`"round"`、`"floor"`。当`dst_type`为`float8_e4m3fn`或`float8_e5m2`时仅支持`"rint"`。默认值为`"rint"`。
