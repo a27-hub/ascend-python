@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cmath>
-
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
@@ -37,9 +35,6 @@ constexpr bool DEFAULT_SWIGLU_ACTIVATE_LEFT = true;
 constexpr double DEFAULT_SWIGLU_CLAMP_LIMIT = 7.0;
 constexpr double DEFAULT_SWIGLU_ALPHA = 1.702;
 constexpr double DEFAULT_SWIGLU_BIAS = 1.0;
-constexpr int64_t DEFAULT_MX_AXIS = -1LL;
-constexpr int64_t DEFAULT_MX_SCALE_ALG = 0LL;
-constexpr double DEFAULT_DST_TYPE_MAX = 0.0;
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
@@ -181,22 +176,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     TORCH_CHECK(!use_swiglu_v3 || is_weight_nz,
                 "swiglu_mode is only supported when weight is in FRACTAL_NZ format. "
                 "Please pass an NZ weight or omit swiglu_mode.", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(!use_swiglu_v3 ||
-                    (swiglu_mode.value() >= 0 && swiglu_mode.value() <= 3),
-                "swiglu_mode only supports values in [0, 3], but got ", swiglu_mode.value(),
-                OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(axis == DEFAULT_MX_AXIS,
-                "axis is reserved for the V3 MX quantization path and currently only supports -1, but got ", axis,
-                OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(round_mode == "rint",
-                "round_mode is reserved for the V3 MX quantization path and currently only supports rint, but got ",
-                round_mode, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(scale_alg == DEFAULT_MX_SCALE_ALG,
-                "scale_alg is reserved for the V3 MX quantization path and currently only supports 0, but got ",
-                scale_alg, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(dst_type_max == DEFAULT_DST_TYPE_MAX,
-                "dst_type_max is reserved for the V3 MX quantization path and currently only supports 0, but got ",
-                dst_type_max, OPS_ERROR(ErrCode::VALUE));
 
     const int64_t activate_dim_real = activate_dim.value_or(DEFAULT_SWIGLU_ACTIVATE_DIM);
     const bool activate_left_real = activate_left.value_or(DEFAULT_SWIGLU_ACTIVATE_LEFT);
@@ -205,15 +184,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const double glu_alpha_real = glu_alpha.value_or(DEFAULT_SWIGLU_ALPHA);
     const double glu_bias_real = glu_bias.value_or(DEFAULT_SWIGLU_BIAS);
     char *round_mode_real = const_cast<char *>(round_mode.data());
-    TORCH_CHECK(!use_swiglu_v3 || activate_dim_real == DEFAULT_SWIGLU_ACTIVATE_DIM,
-                "activate_dim currently only supports -1 for grouped_matmul_swiglu_quant_v3, but got ",
-                activate_dim_real, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(!use_swiglu_v3 || (std::isfinite(clamp_limit_real) && clamp_limit_real > 0.0),
-                "clamp_limit should be positive and finite", OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(!use_swiglu_v3 || std::isfinite(glu_alpha_real),
-                "glu_alpha should be finite", OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(!use_swiglu_v3 || std::isfinite(glu_bias_real),
-                "glu_bias should be finite", OPS_ERROR(ErrCode::VALUE));
+    // V3 parameter constraints are validated by aclnnGroupedMatmulSwigluQuantWeightNzV3.
     const bool is_mx_quant = weight_scale_dtype.has_value();
     const bool is_mx_weight_nz_multi = is_mx_weight_nz_multi_tensor(weight, weight_scale, is_weight_nz, is_mx_quant,
                                                                     mxfp8w4);

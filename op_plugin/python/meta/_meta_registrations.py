@@ -6570,20 +6570,6 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     activate_dim=None, activate_left=None, swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None,
     axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0):
 
-    if swiglu_mode is not None:
-        torch._check(
-            swiglu_mode >= 0 and swiglu_mode <= 3,
-            lambda: f"swiglu_mode only supports values in [0, 3], but got {swiglu_mode}.",
-        )
-        torch._check(
-            activate_dim is None or activate_dim == -1,
-            lambda: f"activate_dim currently only supports -1 for grouped_matmul_swiglu_quant_v3, but got {activate_dim}.",
-        )
-    torch._check(axis == -1, lambda: f"axis currently only supports -1, but got {axis}.")
-    torch._check(round_mode == "rint", lambda: f"round_mode currently only supports rint, but got {round_mode}.")
-    torch._check(scale_alg == 0, lambda: f"scale_alg currently only supports 0, but got {scale_alg}.")
-    torch._check(dst_type_max == 0.0, lambda: f"dst_type_max currently only supports 0, but got {dst_type_max}.")
-
     torch._check(
         len(weight) == 1,
         lambda: f"The size of weight should be 1, current size is {len(weight)}.",
