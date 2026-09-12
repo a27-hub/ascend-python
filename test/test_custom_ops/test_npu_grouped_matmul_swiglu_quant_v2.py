@@ -334,6 +334,21 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         self._assert_gmm_swiglu_quant_shape(output, output_scale, (M, N // 2), (M,))
 
     @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_swiglu_mode_requires_mxfp8(self, device="npu"):
+        # swiglu_mode is only available for the MXFP8 FRACTAL_NZ path, so an A8W8 NZ input must fail in Torch.
+        E, M, K, N = 2, 2, 64, 128
+        x = torch.empty((M, K), dtype=torch.int8).npu()
+        weight_nd = torch.empty((E, K, N), dtype=torch.int8).npu()
+        weight = torch_npu.npu_format_cast(weight_nd, 29).view(E, N // 32, K // 16, 16, 32)
+        weight_scale = torch.empty((E, N), dtype=torch.float32).npu()
+        x_scale = torch.empty((M,), dtype=torch.float32).npu()
+        group_list = torch.tensor([1, M], dtype=torch.int64).npu()
+
+        with self.assertRaisesRegex(RuntimeError, "MXFP8"):
+            torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+                x, [weight], [weight_scale], x_scale, group_list, swiglu_mode=0)
+
+    @SupportedDevices(['Ascend910B'])
     def test_npu_grouped_matmul_swiglu_quant_v2_nz_per_group_shape(self, device="npu"):
         # A8W4 per-group packed NZ: weightScale has shape (E, K_group_num, N), and N is the tail axis.
         E, M, K, N, k_group_num = 2, 2, 64, 512, 2
@@ -394,6 +409,15 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             x_scale_dtype=torch_npu.float8_e8m0fnu)
         self._assert_gmm_swiglu_quant_shape(
             output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
+
+        with self.assertRaisesRegex(RuntimeError, "single MXFP8 FRACTAL_NZ weight tensor"):
+            torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+                x, weight, weight_scale, x_scale, group_list,
+                dequant_dtype=torch.float32, dequant_mode=2, quant_mode=2,
+                quant_dtype=torch.float8_e4m3fn,
+                weight_scale_dtype=torch_npu.float8_e8m0fnu,
+                x_scale_dtype=torch_npu.float8_e8m0fnu,
+                swiglu_mode=0)
 
     @unittest.skipIf(
         not hasattr(torch_npu, "float4_e2m1fn_x2"),

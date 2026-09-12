@@ -6566,7 +6566,9 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
 @impl(m, "npu_grouped_matmul_swiglu_quant_v2")
 def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None,
     weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1,
-    group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None):
+    group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None,
+    activate_dim=None, activate_left=None, swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None,
+    axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0):
 
     torch._check(
         len(weight) == 1,
