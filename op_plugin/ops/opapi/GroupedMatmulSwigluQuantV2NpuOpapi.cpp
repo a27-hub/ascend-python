@@ -384,81 +384,55 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
 
     if (use_swiglu_v3) {
         if (is_weight_nz && is_mxfp8) {
+            TORCH_CHECK(!is_mx_weight_nz_multi,
+                        "swiglu_mode currently only supports a single MXFP8 FRACTAL_NZ weight tensor. "
+                        "Multi-tensor MXFP8 weights are not supported yet.", OPS_ERROR(ErrCode::PARAM));
+
             static const bool is_weight_nz_v3_available =
                 check_aclnn_kernel_available("aclnnGroupedMatmulSwigluQuantWeightNzV3");
             TORCH_CHECK(is_weight_nz_v3_available,
                         "Current CANN version does not support aclnnGroupedMatmulSwigluQuantWeightNzV3. "
                         "Please try to update the version of CANN." + OPS_ERROR(ErrCode::PARAM));
 
-            if (is_mx_weight_nz_multi) {
-                EXEC_NPU_CMD(
-                    aclnnGroupedMatmulSwigluQuantWeightNzV3,
-                    x_wrapper,
-                    weight_wrapper,
-                    weight_scale_wrapper,
-                    weight_assist_matrix_real,
-                    bias_real,
-                    x_scale_wrapper,
-                    smooth_scale_real,
-                    group_list,
-                    dequant_mode_real,
-                    dequant_dtype_real,
-                    quant_mode_real,
-                    group_list_type_real,
-                    tuning_config_real,
-                    activate_dim_real,
-                    activate_left_real,
-                    swiglu_mode_real,
-                    clamp_limit_real,
-                    glu_alpha_real,
-                    glu_bias_real,
-                    axis,
-                    round_mode_real,
-                    scale_alg,
-                    dst_type_max,
-                    output_wrapper,
-                    output_scale_wrapper);
-            } else {
-                at::Tensor weight_for_nz = weight[DIM_0];
-                if (at_npu::native::custom_ops::get_npu_format(weight_for_nz) != ACL_FORMAT_FRACTAL_NZ) {
-                    weight_for_nz = weight_for_nz.clone();
-                    auto &desc = torch_npu::NPUBridge::GetNpuStorageImpl(weight_for_nz)->npu_desc_;
-                    desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
-                    desc.storage_sizes_ = op_infer::array_to_small_vector(weight_for_nz.sizes());
-                }
-                c10::SmallVector<at::Tensor, 1> weight_nz_vec = {weight_for_nz};
-                at::TensorList weight_nz_list(weight_nz_vec);
-                TensorListWrapper weight_nz_wrapper = {weight_nz_list,
-                    weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
-                                             : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
-                EXEC_NPU_CMD(
-                    aclnnGroupedMatmulSwigluQuantWeightNzV3,
-                    x_wrapper,
-                    weight_dtype.has_value() ? weight_wrapper : weight_nz_wrapper,
-                    weight_scale_wrapper,
-                    weight_assist_matrix_real,
-                    bias_real,
-                    x_scale_wrapper,
-                    smooth_scale_real,
-                    group_list,
-                    dequant_mode_real,
-                    dequant_dtype_real,
-                    quant_mode_real,
-                    group_list_type_real,
-                    tuning_config_real,
-                    activate_dim_real,
-                    activate_left_real,
-                    swiglu_mode_real,
-                    clamp_limit_real,
-                    glu_alpha_real,
-                    glu_bias_real,
-                    axis,
-                    round_mode_real,
-                    scale_alg,
-                    dst_type_max,
-                    output_wrapper,
-                    output_scale_wrapper);
+            at::Tensor weight_for_nz = weight[DIM_0];
+            if (at_npu::native::custom_ops::get_npu_format(weight_for_nz) != ACL_FORMAT_FRACTAL_NZ) {
+                weight_for_nz = weight_for_nz.clone();
+                auto &desc = torch_npu::NPUBridge::GetNpuStorageImpl(weight_for_nz)->npu_desc_;
+                desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
+                desc.storage_sizes_ = op_infer::array_to_small_vector(weight_for_nz.sizes());
             }
+            c10::SmallVector<at::Tensor, 1> weight_nz_vec = {weight_for_nz};
+            at::TensorList weight_nz_list(weight_nz_vec);
+            TensorListWrapper weight_nz_wrapper = {weight_nz_list,
+                weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
+                                         : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
+            EXEC_NPU_CMD(
+                aclnnGroupedMatmulSwigluQuantWeightNzV3,
+                x_wrapper,
+                weight_dtype.has_value() ? weight_wrapper : weight_nz_wrapper,
+                weight_scale_wrapper,
+                weight_assist_matrix_real,
+                bias_real,
+                x_scale_wrapper,
+                smooth_scale_real,
+                group_list,
+                dequant_mode_real,
+                dequant_dtype_real,
+                quant_mode_real,
+                group_list_type_real,
+                tuning_config_real,
+                activate_dim_real,
+                activate_left_real,
+                swiglu_mode_real,
+                clamp_limit_real,
+                glu_alpha_real,
+                glu_bias_real,
+                axis,
+                round_mode_real,
+                scale_alg,
+                dst_type_max,
+                output_wrapper,
+                output_scale_wrapper);
         } else {
             TORCH_CHECK(false,
                         "swiglu_mode is only supported in the MXFP8 quantization scenario with weight in "

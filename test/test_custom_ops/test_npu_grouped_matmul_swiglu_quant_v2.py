@@ -410,6 +410,15 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         self._assert_gmm_swiglu_quant_shape(
             output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
 
+        with self.assertRaisesRegex(RuntimeError, "single MXFP8 FRACTAL_NZ weight tensor"):
+            torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+                x, weight, weight_scale, x_scale, group_list,
+                dequant_dtype=torch.float32, dequant_mode=2, quant_mode=2,
+                quant_dtype=torch.float8_e4m3fn,
+                weight_scale_dtype=torch_npu.float8_e8m0fnu,
+                x_scale_dtype=torch_npu.float8_e8m0fnu,
+                swiglu_mode=0)
+
     @unittest.skipIf(
         not hasattr(torch_npu, "float4_e2m1fn_x2"),
         "torch_npu float4 dtype wrappers are required for Ascend950 MXFP4 shape cases.")
