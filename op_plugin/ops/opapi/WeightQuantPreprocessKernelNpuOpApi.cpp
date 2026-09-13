@@ -351,6 +351,21 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
   }
 }
 
+template <bool IsGmm>
+static void prepare_out_weight_scale_mx(QuantContext& ctx) {
+  constexpr int64_t expected_dim = IsGmm ? DIMS_4 : DIMS_3;
+  TORCH_CHECK(
+      ctx.weight_scale.dim() == expected_dim,
+      "Input weight scale tensor should be ",
+      expected_dim,
+      "D, but got ",
+      ctx.weight_scale.dim(),
+      OPS_ERROR(ErrCode::PARAM));
+
+  // MX scale 为直拷，out 直接别名输入（共享 storage 与 view，转置场景 strides 一并继承）
+  ctx.out_weight_scale = ctx.weight_scale;
+}
+
 static void prepare_out_weight_offset(QuantContext& ctx) {
   if (ctx.weight_offset.has_value() && ctx.weight_offset.value().defined()) {
     // offset 为直拷，out 直接别名输入（共享 storage 与 view，转置场景 strides 一并继承）
@@ -376,13 +391,13 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
      {{judge_mm_mx_a8w4,
        {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
         prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
-        prepare_out_weight_scale,
+        prepare_out_weight_scale_mx<false>,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_gmm_mx_a8w4,
        {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
         prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
-        prepare_out_weight_scale,
+        prepare_out_weight_scale_mx<true>,
         prepare_out_weight_offset,
         prepare_out_bias}},
       {judge_mm_a16s4_per_tensor,

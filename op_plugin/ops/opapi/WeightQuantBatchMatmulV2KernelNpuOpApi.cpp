@@ -51,40 +51,25 @@ at::Tensor npu_weight_quant_batchmatmul(
       OPS_ERROR(ErrCode::PARAM));
   auto x_k_dim = x.size(x_dim_num - 1);
 
-  // 计算 weight 的 K 维度
-  // 对于 INT32/FLOAT 类型的 4-bit 打包（INT4_NUMS_IN_INT32 = 8）
-  // uint8 载体 4-bit 紧凑排布（A16S4 链路）：NZ_C0_16 的 view 是逻辑 [K, N]，NZ_C0_8 的 view 是
-  // 物理打包形状 [K, N/2]；ND 的 view 是物理打包形状——非转置 [K, N/2]（沿 N 打包，行主序连续，
-  // stride(-1)==1 且 stride(-2)==size(-1)）、转置 [K/2, N]（沿 K 打包）。K=2 时转置视图退化为
-  // [1, N] strides [1, 1]，需靠 stride(-2)==size(-1) 排除误判，K/N 需按打包方向还原
+  // 打包维还原 = 载体位宽 × 打包方向：int32/float 载体打包 8 个 4-bit，方向随 trans_weight；
+  // uint8 载体（A16W4 链路）打包 2 个——ND 按 stride 判方向（K=2 转置视图退化为 [1,N]
+  // strides [1,1]，trans_weight 不可靠），NZ_C0_8 的 view 是物理打包形状 [K, N/2]，固定沿 N
   bool is_int32_float_packed = (weight.dtype() == at::kInt || weight.dtype() == at::kFloat);
-
-  int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
   aclDataType weight_acl_dtype =
       weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value()) : ACL_DT_UNDEFINED;
   bool is_4bit_acl_dtype =
       (weight_acl_dtype == ACL_INT4 || weight_acl_dtype == ACL_FLOAT4_E2M1 || weight_acl_dtype == ACL_FLOAT4_E1M2);
+  int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
   bool is_uint8_4bit_nd = (weight.dtype() == at::kByte) && is_4bit_acl_dtype && (weight_format == ACL_FORMAT_ND);
-  bool is_uint8_4bit_nz_c08 =
-      (weight.dtype() == at::kByte) && is_4bit_acl_dtype && (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8);
-  bool uint8_pack_along_n = is_uint8_4bit_nd &&
-      (weight.stride(weight_dim_num - 1) == 1 &&
-       weight.stride(weight_dim_num - MINIMUM_SHAPE_SIZE) == weight.size(weight_dim_num - 1));
+  bool is_uint8_4bit_nz_c08 = (weight.dtype() == at::kByte) && is_4bit_acl_dtype &&
+      (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_8);
 
-  // 打包维还原统一为「打包方向 × 打包比」：
-  // int32/float 打包 8 个 4-bit（转置沿 K、非转置沿 N）；uint8 载体打包 2 个 4-bit
-  // （ND 按 stride 判定方向；NZ_C0_8 的 view 为物理打包形状 [K, N/2]，固定沿 N）
-  int64_t pack_ratio = 1;
-  bool pack_along_k = false;
-  if (is_int32_float_packed) {
-    pack_ratio = INT4_NUMS_IN_INT32;
-    pack_along_k = trans_weight;
-  } else if (is_uint8_4bit_nd) {
-    pack_ratio = B4_IN_UINT8;
-    pack_along_k = !uint8_pack_along_n;
-  } else if (is_uint8_4bit_nz_c08) {
-    pack_ratio = B4_IN_UINT8;
-  }
+  int64_t pack_ratio = is_int32_float_packed ? INT4_NUMS_IN_INT32
+      : ((is_uint8_4bit_nd || is_uint8_4bit_nz_c08) ? B4_IN_UINT8 : 1);
+  bool pack_along_k = is_int32_float_packed ? trans_weight
+      : (is_uint8_4bit_nd &&
+         !(weight.stride(weight_dim_num - 1) == 1 &&
+           weight.stride(weight_dim_num - MINIMUM_SHAPE_SIZE) == weight.size(weight_dim_num - 1)));
 
   int64_t weight_k_dim = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE) * (pack_along_k ? pack_ratio : 1);
 
