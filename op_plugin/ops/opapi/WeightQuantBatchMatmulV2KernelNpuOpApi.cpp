@@ -70,14 +70,23 @@ at::Tensor npu_weight_quant_batchmatmul(
   bool uint8_pack_along_n = is_uint8_4bit_nd &&
       (weight.stride(weight_dim_num - 1) == 1 &&
        weight.stride(weight_dim_num - MINIMUM_SHAPE_SIZE) == weight.size(weight_dim_num - 1));
-  bool uint8_pack_along_k = is_uint8_4bit_nd && !uint8_pack_along_n;
 
-  int64_t weight_k_dim = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE);
-  if (is_int32_float_packed && trans_weight) {
-    weight_k_dim *= INT4_NUMS_IN_INT32; // 8
-  } else if (uint8_pack_along_k) {
-    weight_k_dim *= B4_IN_UINT8; // 沿 K 打包，K 按每字节 2 个 4-bit 还原
+  // 打包维还原统一为「打包方向 × 打包比」：
+  // int32/float 打包 8 个 4-bit（转置沿 K、非转置沿 N）；uint8 载体打包 2 个 4-bit
+  // （ND 按 stride 判定方向；NZ_C0_8 的 view 为物理打包形状 [K, N/2]，固定沿 N）
+  int64_t pack_ratio = 1;
+  bool pack_along_k = false;
+  if (is_int32_float_packed) {
+    pack_ratio = INT4_NUMS_IN_INT32;
+    pack_along_k = trans_weight;
+  } else if (is_uint8_4bit_nd) {
+    pack_ratio = B4_IN_UINT8;
+    pack_along_k = !uint8_pack_along_n;
+  } else if (is_uint8_4bit_nz_c08) {
+    pack_ratio = B4_IN_UINT8;
   }
+
+  int64_t weight_k_dim = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE) * (pack_along_k ? pack_ratio : 1);
 
   TORCH_CHECK(
       x_k_dim == weight_k_dim,
@@ -92,13 +101,7 @@ at::Tensor npu_weight_quant_batchmatmul(
   output_size.resize(out_dim_num, 1);
   output_size[out_dim_num - MINIMUM_SHAPE_SIZE] = x.size(x_dim_num - MINIMUM_SHAPE_SIZE);
   auto weight_size_base = weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE + 1);
-  if (is_int32_float_packed && !trans_weight) {
-    output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * INT4_NUMS_IN_INT32;
-  } else if (uint8_pack_along_n || is_uint8_4bit_nz_c08) {
-    output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * B4_IN_UINT8;
-  } else {
-    output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base;
-  }
+  output_size[out_dim_num - MINIMUM_SHAPE_SIZE + 1] = weight_size_base * (pack_along_k ? 1 : pack_ratio);
   if (x_dim_num == weight_dim_num) {
     for (auto i = 0; i < out_dim_num - MINIMUM_SHAPE_SIZE; i++) {
       TORCH_CHECK(x.size(i) == weight.size(i), "batch of x is diff from batch of weight", OPS_ERROR(ErrCode::PARAM));
