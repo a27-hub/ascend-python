@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
-def genrate_input(query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, g, num_accepted_tokens):
+def genrate_input(query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, g, num_accepted_tokens, state_dtype=torch.bfloat16):
     k = key.to(torch.float32)
     q = query.to(torch.float32)
     v = value.to(torch.float32)
@@ -48,10 +48,9 @@ def genrate_input(query, key, value, state, beta, scale, actual_seq_lengths, ssm
                 o[slot_id][head_id] = (S * q_i.unsqueeze(-2)).sum(dim=-1)
         seq_start += actual_seq_lengths[i]
 
-    return o.to(torch.bfloat16), initial_state.to(torch.bfloat16)
+    return o.to(torch.bfloat16), initial_state.to(state_dtype)
 
 class TestRecurrentGatedDeltaRule(TestCase):
-    @unittest.skip('Skip test temporarily: CANN version-related operators not supported yet')
     @SupportedDevices(["Ascend910B"])
     def test_recurrent_gated_delta_rule_1(self, device="npu"):
         (b, mtp, nk, nv, dk, dv) = (64, 2, 4, 8, 128, 128)
@@ -82,6 +81,43 @@ class TestRecurrentGatedDeltaRule(TestCase):
 
         state_copy = state.clone()
         out, state_out = torch_npu.npu_recurrent_gated_delta_rule_functional(query, key, value, state_copy, beta=beta, scale=scale, actual_seq_lengths=actual_seq_lengths, ssm_state_indices=ssm_state_indices, g=g, num_accepted_tokens=num_accepted_tokens)
+        out = out.to(torch.float32).cpu()
+        state_out = state_out.to(torch.float32).cpu()
+
+        self.assertRtolEqual(out_golden, out, 0.001)
+        self.assertRtolEqual(state_golden, state_out, 0.001)
+
+    @SupportedDevices(["Ascend910B"])
+    def test_recurrent_gated_delta_rule_fp32_state(self, device="npu"):
+        (b, mtp, nk, nv, dk, dv) = (64, 2, 4, 8, 128, 128)
+
+        actual_seq_lengths = (torch.ones(b) * mtp).npu().to(torch.int32)
+        T = int(torch.sum(actual_seq_lengths))
+        state = torch.rand((T, nv, dv, dk), dtype=torch.float32).npu()
+        query = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+        key = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+        value = torch.rand((T, nv, dv), dtype=torch.bfloat16).npu()
+        g = torch.rand((T, nv), dtype=torch.float32).npu()
+        beta = torch.rand((T, nv), dtype=torch.bfloat16).npu()
+        ssm_state_indices = (torch.arange(T).npu()).to(torch.int32)
+        query = torch.nn.functional.normalize(query, p=2, dim=-1)
+        key = torch.nn.functional.normalize(key, p=2, dim=-1)
+        scale = 0.5
+        num_accepted_tokens = torch.randint(1, mtp + 1, (b,)).npu().to(torch.int32)
+
+        out_golden, state_golden = genrate_input(query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, g, num_accepted_tokens, state_dtype=torch.float32)
+        out_golden = out_golden.to(torch.float32).cpu()
+        state_golden = state_golden.to(torch.float32).cpu()
+
+        state_copy = state.clone()
+        out = torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state_copy, beta=beta, scale=scale, actual_seq_lengths=actual_seq_lengths, ssm_state_indices=ssm_state_indices, g=g, num_accepted_tokens=num_accepted_tokens)
+        out = out.to(torch.float32).cpu()
+
+        self.assertRtolEqual(out_golden, out, 0.001)
+
+        state_copy = state.clone()
+        out, state_out = torch_npu.npu_recurrent_gated_delta_rule_functional(query, key, value, state_copy, beta=beta, scale=scale, actual_seq_lengths=actual_seq_lengths, ssm_state_indices=ssm_state_indices, g=g, num_accepted_tokens=num_accepted_tokens)
+        self.assertEqual(state_out.dtype, torch.float32, "Ascend910B should support float32 state")
         out = out.to(torch.float32).cpu()
         state_out = state_out.to(torch.float32).cpu()
 
