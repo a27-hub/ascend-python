@@ -71,26 +71,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
             OPS_ERROR(ErrCode::PARAM));
     }
 
-    const int64_t M =
-        std::accumulate(input_shape.cbegin(), input_shape.cbegin() + begin_axis, 1LL, std::multiplies<int64_t>());
     auto acc_type = input.scalar_type() == at::kDouble ? at::kDouble : at::kFloat;
 
-    if (M <= 0 && c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
-        mean_out = at_npu::native::OpPreparation::apply_tensor_without_format({M}, input.options().dtype(acc_type));
-        rstd_out = at_npu::native::OpPreparation::apply_tensor_without_format({M}, input.options().dtype(acc_type));
-    } else {
-        at::SmallVector<int64_t, 8> mean_shape;
-        for (size_t index = 0; index < begin_axis; index++) {
-            mean_shape.emplace_back(input.size(index));
-        }
-        for (size_t index = begin_axis; index < input_ndim; index++) {
-            mean_shape.emplace_back(1);
-        }
-        mean_out =
-            at_npu::native::OpPreparation::apply_tensor_without_format(mean_shape, input.options().dtype(acc_type));
-        rstd_out =
-            at_npu::native::OpPreparation::apply_tensor_without_format(mean_shape, input.options().dtype(acc_type));
+    at::SmallVector<int64_t, 8> mean_shape;
+    for (size_t index = 0; index < begin_axis; index++) {
+        mean_shape.emplace_back(input.size(index));
     }
+    for (size_t index = begin_axis; index < input_ndim; index++) {
+        mean_shape.emplace_back(1);
+    }
+    mean_out = at_npu::native::OpPreparation::apply_tensor_without_format(mean_shape, input.options().dtype(acc_type));
+    rstd_out = at_npu::native::OpPreparation::apply_tensor_without_format(mean_shape, input.options().dtype(acc_type));
     // call HostAPI function
     static auto layer_sc = at_npu::native::env::CheckCompatibleImpl();
     if (!layer_sc || c10_npu::IsAclnnOnly()) {
