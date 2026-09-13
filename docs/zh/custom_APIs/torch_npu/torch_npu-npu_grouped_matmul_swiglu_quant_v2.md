@@ -513,6 +513,67 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
         x_scale_dtype=torch_npu.float8_e8m0fnu)
     ```
 
+  - <term>Ascend 950PR/Ascend 950DT</term>：MXFP8 weightNZ 场景下 `swiglu_mode` 示例
+
+    下面的示例固定 `x` 为非转置输入，遍历 `swiglu_mode=0、1、2、3`，并分别覆盖非转置和转置的 `weight`。示例中的 `weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ，`weight_scale` 按对应的逻辑维度同步转置。`activate_dim`、`activate_left`、`clamp_limit`、`glu_alpha` 和 `glu_bias` 仅在显式传入 `swiglu_mode` 时生效；`axis`、`round_mode`、`scale_alg` 和 `dst_type_max` 仍只校验预留参数的默认值。
+
+    ```python
+    import math
+    import torch
+    import torch_npu
+
+    torch.manual_seed(0)
+
+    E, M, K, N = 1, 64, 128, 128
+    x = torch.randint(-4, 5, (M, K), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+    weight_nd = torch.randint(-4, 5, (E, K, N), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+    weight_nz = torch_npu.npu_format_cast(weight_nd, 29)
+    weight_scale = torch.full(
+        (E, math.ceil(K / 64), N, 2), 127, dtype=torch.int8).npu()
+    x_scale = torch.full(
+        (M, math.ceil(K / 64), 2), 127, dtype=torch.int8).npu()
+    group_list = torch.tensor([M], dtype=torch.int64).npu()
+
+    for swiglu_mode in (0, 1, 2, 3):
+        for transpose in (False, True):
+            weight = weight_nz.transpose(1, 2) if transpose else weight_nz
+            current_weight_scale = (
+                weight_scale.transpose(1, 2) if transpose else weight_scale
+            )
+
+            output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+                x,
+                [weight],
+                [current_weight_scale],
+                x_scale,
+                group_list,
+                dequant_mode=2,
+                dequant_dtype=torch.float32,
+                quant_mode=2,
+                quant_dtype=torch.float8_e4m3fn,
+                weight_scale_dtype=torch_npu.float8_e8m0fnu,
+                x_scale_dtype=torch_npu.float8_e8m0fnu,
+                activate_dim=-1,
+                activate_left=True,
+                swiglu_mode=swiglu_mode,
+                clamp_limit=7.0,
+                glu_alpha=1.702,
+                glu_bias=1.0,
+                axis=-1,
+                round_mode="rint",
+                scale_alg=0,
+                dst_type_max=0.0,
+            )
+            torch.npu.synchronize()
+            print(
+                f"mode={swiglu_mode}, transpose={transpose}, "
+                f"output.shape={tuple(output.shape)}, "
+                f"output_scale.shape={tuple(output_scale.shape)}"
+            )
+    ```
+
+    该示例的输出 shape 为 `output=(M, N / 2)`、`output_scale=(M, ceil((N / 2) / 64), 2)`。实际精度验证时，可将 NPU 输出与对应 MXFP8 CPU golden 结果比较：相对误差超过 `1e-3` 的数据点数量不超过总数据点数量的 `1e-3`，并校验 `output_scale` 的结果一致。
+
   - <term>Ascend 950PR/Ascend 950DT</term>：mx量化场景示例-mxfp4
 
     ```python
