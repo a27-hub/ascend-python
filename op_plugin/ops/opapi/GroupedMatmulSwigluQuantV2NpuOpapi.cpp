@@ -225,6 +225,15 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
             n = static_cast<int>(weight_scale[DIM_0].sizes().back());
         }
     }
+    // V3 keeps the MXFP8 weight-scale tensor in the same orientation as the
+    // logical weight view.  For an NZ-transposed weight the logical N is
+    // weight_scale[0].size(1), while the non-transposed layout stores it in
+    // dim 2.  Select it before allocating the V3 output tensors; otherwise a
+    // transposed weight would make the output shape use ceil(K / 64).
+    if (use_swiglu_v3 && is_mx_quant && is_weight_nz && weight_scale[DIM_0].dim() == DIM_4) {
+        n = static_cast<int>(weight_trans ? weight_scale[DIM_0].sizes()[DIM_1]
+                                          : weight_scale[DIM_0].sizes()[DIM_2]);
+    }
     int m = x_size[DIM_0];
     int k = x_size[DIM_1];
 

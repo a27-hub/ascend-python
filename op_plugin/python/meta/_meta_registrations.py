@@ -6623,7 +6623,13 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
             weight_scale[0].dim() == 4,
             lambda: f"The dim of weight_scale[0] should be equal to 4 in MX quant mode, but got {weight_scale[0].dim()}.",
         )
-        n = weight_scale[0].size(2)
+        # V3 weightNZ keeps the logical orientation of a transposed weight
+        # view.  Its MX weightScale is [E, N, ceil(K/64), 2], whereas the
+        # normal view uses [E, ceil(K/64), N, 2].
+        if swiglu_mode is not None and weight[0].dim() >= 3 and is_transpose_weight(weight[0]):
+            n = weight_scale[0].size(1)
+        else:
+            n = weight_scale[0].size(2)
     else:
         n = weight_scale[0].size(-1)
     is_a8w8_input = (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn) and \
