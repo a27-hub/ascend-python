@@ -36,7 +36,6 @@ constexpr int64_t IDX_0 = 0;
 constexpr int64_t IDX_1 = 1;
 constexpr int64_t IDX_2 = 2;
 constexpr int64_t IDX_3 = 3;
-constexpr int64_t MX_SCALE_LAST_DIM = 2;
 
 struct QuantContext {
   const at::Tensor& weight;
@@ -270,33 +269,14 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
   return false;
 }
 
-// 校验镜像 strides 的寻址包络不超出按 numel 最小分配的 buffer；
-// 连续/确定转置视图必过，padding/重叠/expand 视图直接拒绝而不是写出界
-static void check_strides_envelope(c10::IntArrayRef sizes, c10::IntArrayRef strides, int64_t numel) {
-  int64_t max_offset = 0;
-  for (size_t i = 0; i < sizes.size(); ++i) {
-    TORCH_CHECK(strides[i] > 0, "expanded/overlapped view is not supported here", OPS_ERROR(ErrCode::PARAM));
-    max_offset += (sizes[i] - 1) * strides[i];
-  }
-  TORCH_CHECK(max_offset < numel, "mirrored strides exceed output allocation: max offset ", max_offset,
-              " vs numel ", numel, OPS_ERROR(ErrCode::PARAM));
-}
-
+// 直拷输出别名：out 直接复用输入 tensor（共享 storage 与 view），aclnn 直拷路径同址时无拷贝
 static void prepare_out_weight_scale(QuantContext& ctx) {
-  auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
-  ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
-  check_strides_envelope(ctx.weight_scale.sizes(), ctx.weight_scale.strides(), ctx.out_weight_scale.numel());
-  // 保持与输入 scale 相同的 strides（ND per-group 转置场景需配转置 scale），连续输入时为空操作
-  ctx.out_weight_scale =
-      ctx.out_weight_scale.as_strided_(scale_view_shape, op_infer::array_to_small_vector(ctx.weight_scale.strides()));
+  ctx.out_weight_scale = ctx.weight_scale;
 }
 
 static void prepare_out_weight_nd(QuantContext& ctx) {
-  auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
-  ctx.out_weight = npu_preparation::apply_tensor_without_format(weight_view_shape, ctx.weight.options());
-  check_strides_envelope(ctx.weight.sizes(), ctx.weight.strides(), ctx.out_weight.numel());
-  // ND 直拷是物理透传，out_weight 必须与 weight 保持相同的 sizes/strides（转置场景尤为关键）
-  ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, op_infer::array_to_small_vector(ctx.weight.strides()));
+  // ND 直拷为物理透传，out_weight 直接别名 weight（共享 storage 与 view，转置场景尤为关键）
+  ctx.out_weight = ctx.weight;
 }
 
 template <bool IsGmm, int64_t NzC0, aclFormat OutWeightFormat>
@@ -398,45 +378,21 @@ static void prepare_out_weight_scale_mx(QuantContext& ctx) {
       ctx.weight_scale.dim(),
       OPS_ERROR(ErrCode::PARAM));
 
-  auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
-  ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
-
-  if (ctx.is_weight_trans) {
-    int64_t scale_dim = ctx.weight_scale.dim();
-    int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
-    int64_t n = scale_view_shape[scale_dim - IDX_2];
-    c10::SmallVector<int64_t, DIMS_MAX> trans_stride; // 对应内存转置存储
-    if constexpr (IsGmm) {
-      trans_stride = {
-          MX_SCALE_LAST_DIM * k_scale * n,
-          MX_SCALE_LAST_DIM,
-          MX_SCALE_LAST_DIM * k_scale,
-          1}; // 对应内存中的 [group_num, n, k_scale, 2]
-    } else {
-      trans_stride = {MX_SCALE_LAST_DIM, MX_SCALE_LAST_DIM * k_scale, 1}; // 对应内存中的 [n, k_scale, 2]
-    }
-    ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
-  }
+  // MX scale 为直拷，out 直接别名输入（共享 storage 与 view，转置场景 strides 一并继承）
+  ctx.out_weight_scale = ctx.weight_scale;
 }
 
 static void prepare_out_weight_offset(QuantContext& ctx) {
   if (ctx.weight_offset.has_value() && ctx.weight_offset.value().defined()) {
-    auto offset_sizes = op_infer::array_to_small_vector(ctx.weight_offset.value().sizes());
-    ctx.out_weight_offset =
-        npu_preparation::apply_tensor_without_format(offset_sizes, ctx.weight_offset.value().options());
-    check_strides_envelope(
-        ctx.weight_offset.value().sizes(), ctx.weight_offset.value().strides(), ctx.out_weight_offset.numel());
-    // 与 prepare_out_weight_scale 同理：保持与输入 offset 相同的 strides，
-    // 转置场景下游 wqbmmv2 要求 antiquantOffset 与 weight 连续/转置状态一致，连续输入时为空操作
-    ctx.out_weight_offset = ctx.out_weight_offset.as_strided_(
-        offset_sizes, op_infer::array_to_small_vector(ctx.weight_offset.value().strides()));
+    // offset 为直拷，out 直接别名输入（共享 storage 与 view，转置场景 strides 一并继承）
+    ctx.out_weight_offset = ctx.weight_offset.value();
   }
 }
 
 static void prepare_out_bias(QuantContext& ctx) {
   if (ctx.bias.has_value() && ctx.bias.value().defined()) {
-    auto bias_sizes = op_infer::array_to_small_vector(ctx.bias.value().sizes());
-    ctx.out_bias = npu_preparation::apply_tensor_without_format(bias_sizes, ctx.bias.value().options());
+    // bias 为直拷，out 直接别名输入
+    ctx.out_bias = ctx.bias.value();
   }
 }
 
