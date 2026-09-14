@@ -337,7 +337,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
   - <term>Ascend 950PR/Ascend 950DT</term>：当`x_scale`为`torch.float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch.float8_e8m0fnu`。
 
-- **SwiGLU计算参数说明**：`activate_dim`、`activate_left`、`swiglu_mode`、`clamp_limit`、`glu_alpha`和`glu_bias`均为可选参数，默认值为`None`。`swiglu_mode`是这些参数的使能开关：仅当其值不为`None`时，其余五个参数才生效；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为，且不可单独传入其余五个参数。
+- **SwiGLU计算参数说明**：`activate_dim`、`activate_left`、`swiglu_mode`、`clamp_limit`、`glu_alpha`和`glu_bias`均为可选参数，默认值为`None`。`swiglu_mode`是这些参数的使能开关：仅当其值不为`None`时，其余五个参数才生效；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为，且不可单独传入其余五个参数。仅在MXFP8 weight NZ量化场景下支持`swiglu_mode`非空。
 
 - **`activate_dim`**（`int`）：指定GroupedMatmul结果沿哪个维度切分为`x_glu`和`x_linear`。当`swiglu_mode`有值且本参数为`None`时，按`-1`处理；当前仅支持`-1`，即沿输出的最后一维切分。
 
@@ -357,7 +357,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **`glu_bias`**（`float`）：表示模式`1`、`2`中线性分支`x_linear`的偏置。当`swiglu_mode`有值且本参数为`None`时，按`1.0`处理。模式`0`和`3`不使用该参数。
 
-- **`axis`**（`int`）、**`round_mode`**（`str`）、**`scale_alg`**（`int`）、**`dst_type_max`**（`float`）：MX量化预留参数。当前V3 MXFP8 weightNZ场景中，`axis`仅支持`-1`，`round_mode`仅支持`"rint"`，`scale_alg`支持`0`（OCP）和`1`（cuBLAS），`dst_type_max`仅支持`0.0`；传入其他值会报错。`scale_alg=2`仅适用于`torch_npu.float4_e2m1fn_x2`输出，当前MXFP8场景不支持。
+- **`axis`**（`int`）、**`round_mode`**（`str`）、**`scale_alg`**（`int`）、**`dst_type_max`**（`float`）：MX量化参数，仅在MXFP8 weight NZ量化场景下支持。`axis`仅支持`-1`；`round_mode`默认值为`"rint"`，当前仅支持`"rint"`；`scale_alg`默认值为`0`，支持`0`（OCP实现）和`1`（cuBLAS实现，仅支持`torch.float8_e4m3fn`输出）；`dst_type_max`表示输出数据类型的最大值，默认值为`0.0`，当`scale_alg`为`0`或`1`时仅支持`0.0`。传入其他值会报错；`scale_alg=2`仅适用于`torch_npu.float4_e2m1fn_x2`输出，当前MXFP8场景不支持。
 
 ## 返回值说明
 
@@ -512,7 +512,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - <term>Ascend 950PR/Ascend 950DT</term>：MXFP8 weightNZ 场景下 `swiglu_mode` 示例
 
-    下面的示例固定 `x` 为非转置输入，遍历 `swiglu_mode=0、1、2、3`，并分别覆盖非转置和转置的 `weight`。`weight` 和 `weight_scale` 均为单Tensor；`weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ 格式。`K=128` 时，模式`0`、`2`、`3`走V3 Tensor API，模式`1`走CGMCT。`axis`、`round_mode`和`dst_type_max`使用预留参数的默认值，`scale_alg`可取`0`或`1`。
+    下面的示例固定 `x` 为非转置输入，遍历 `swiglu_mode=0、1、2、3`，并分别覆盖非转置和转置的 `weight`。`weight` 和 `weight_scale` 均为单Tensor；`weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ 格式。`K=128` 时，模式`0`、`2`、`3`走V3 Tensor API，模式`1`走CGMCT。`axis`、`round_mode`和`dst_type_max`使用默认值，`scale_alg`可取`0`或`1`。
 
     ```python
     import math
