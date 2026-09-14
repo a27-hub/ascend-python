@@ -122,6 +122,7 @@
         -   [torch_npu.npu_moe_init_routing](./torch_npu/torch_npu-npu_moe_init_routing.md)
         -   [torch_npu.npu_prefetch](./torch_npu/torch_npu-npu_prefetch.md)
         -   [torch_npu.npu_prompt_flash_attention](./torch_npu/torch_npu-npu_prompt_flash_attention.md)
+        -   [torch_npu.npu_quant_fusion_attention](./torch_npu/torch_npu-npu_quant_fusion_attention.md)
         -   [torch_npu.npu_quant_gmm_alltoallv](./torch_npu/torch_npu-npu_quant_gmm_alltoallv.md)
         -   [torch_npu.npu_quant_lightning_indexer](./torch_npu/torch_npu-npu_quant_lightning_indexer.md)
         -   [torch_npu.npu_quant_matmul](./torch_npu/torch_npu-npu_quant_matmul.md)
