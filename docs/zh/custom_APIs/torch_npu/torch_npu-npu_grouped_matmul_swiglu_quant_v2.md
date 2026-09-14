@@ -339,25 +339,31 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **SwiGLU计算参数说明**：`activate_dim`、`activate_left`、`swiglu_mode`、`clamp_limit`、`glu_alpha`和`glu_bias`均为可选参数，默认值为`None`。`swiglu_mode`是这些参数的使能开关：仅当其值不为`None`时，其余五个参数才生效；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为，且不可单独传入其余五个参数。仅在MXFP8 weight NZ量化场景下支持`swiglu_mode`非空。
 
-- **`activate_dim`**（`int`）：指定GroupedMatmul结果沿哪个维度切分为`x_glu`和`x_linear`。当`swiglu_mode`有值且本参数为`None`时，按`-1`处理；当前仅支持`-1`，即沿输出的最后一维切分。
+- **`activate_dim`**（`int`）：**可选参数**，指定GroupedMatmul结果沿哪个维度切分为`x_glu`和`x_linear`。默认值为`None`；当`swiglu_mode`有值且本参数为`None`时，按`-1`处理；当前仅支持`-1`，即沿输出的最后一维切分。
 
-- **`activate_left`**（`bool`）：指定激活分支`x_glu`的位置。当`swiglu_mode`有值且本参数为`None`时，按`True`处理。
+- **`activate_left`**（`bool`）：**可选参数**，指定激活分支`x_glu`的位置。默认值为`None`；当`swiglu_mode`有值且本参数为`None`时，按`True`处理。
   - `swiglu_mode=0`、`2`或`3`时，`True`表示前半部分为`x_glu`，`False`表示后半部分为`x_glu`。
   - `swiglu_mode=1`时，结果按奇偶位置交错拆分；该参数指定哪一组交错元素作为`x_glu`激活分支。
 
-- **`swiglu_mode`**（`int`）：指定SwiGLU的计算模式。取值为`None`时使用原有SwiGLU计算；显式传入时仅支持MXFP8量化且`weight`为`FRACTAL_NZ`格式的单Tensor场景，支持取值`0`、`1`、`2`、`3`。该路径中`x`和`weight`仅支持`torch.float8_e4m3fn`；如果显式传入`x_dtype`或`weight_dtype`，也仅支持`torch_npu.float8_e4m3fn`。
+- **`swiglu_mode`**（`int`）：**可选参数**，指定SwiGLU的计算模式，默认值为`None`。取值为`None`时使用原有SwiGLU计算；显式传入时仅支持MXFP8量化且`weight`为`FRACTAL_NZ`格式的单Tensor场景，支持取值`0`、`1`、`2`、`3`。该路径中`x`和`weight`仅支持`torch.float8_e4m3fn`；如果显式传入`x_dtype`或`weight_dtype`，也仅支持`torch_npu.float8_e4m3fn`。
   - `0`：标准SwiGLU。将结果沿`activate_dim`前后分半，`x_glu`经过`x_glu * sigmoid(x_glu)`后与`x_linear`相乘。
   - `1`：奇偶位置交错拆分。`x_glu`仅做上界为`clamp_limit`的裁剪，`x_linear`裁剪到`[-clamp_limit, clamp_limit]`，随后计算`x_glu * sigmoid(glu_alpha * x_glu) * (x_linear + glu_bias)`。
   - `2`：沿`activate_dim`前后分半。裁剪规则和计算公式与模式`1`相同，但不采用奇偶位置交错拆分。
   - `3`：沿`activate_dim`前后分半。先计算固定`alpha=1`的SiLU，即`x_glu * sigmoid(x_glu)`，再将其裁剪到上界`clamp_limit`；`x_linear`裁剪到`[-clamp_limit, clamp_limit]`后与之相乘。此模式忽略`glu_alpha`和`glu_bias`。
 
-- **`clamp_limit`**（`float`）：表示变体SwiGLU的裁剪上限。当`swiglu_mode`有值且本参数为`None`时，按`7.0`处理。传入时必须为有限正数。模式`1`、`2`中用于裁剪`x_glu`和`x_linear`；模式`3`中用于裁剪SiLU后的`x_glu`以及`x_linear`。
+- **`clamp_limit`**（`float`）：**可选参数**，表示变体SwiGLU的裁剪上限，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`7.0`处理。传入时必须为有限正数。模式`1`、`2`中用于裁剪`x_glu`和`x_linear`；模式`3`中用于裁剪SiLU后的`x_glu`以及`x_linear`。
 
-- **`glu_alpha`**（`float`）：表示模式`1`、`2`中Sigmoid输入的缩放系数。当`swiglu_mode`有值且本参数为`None`时，按`1.702`处理。模式`0`和`3`不使用该参数。
+- **`glu_alpha`**（`float`）：**可选参数**，表示模式`1`、`2`中Sigmoid输入的缩放系数，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.702`处理。模式`0`和`3`不使用该参数。
 
-- **`glu_bias`**（`float`）：表示模式`1`、`2`中线性分支`x_linear`的偏置。当`swiglu_mode`有值且本参数为`None`时，按`1.0`处理。模式`0`和`3`不使用该参数。
+- **`glu_bias`**（`float`）：**可选参数**，表示模式`1`、`2`中线性分支`x_linear`的偏置，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.0`处理。模式`0`和`3`不使用该参数。
 
-- **`axis`**（`int`）、**`round_mode`**（`str`）、**`scale_alg`**（`int`）、**`dst_type_max`**（`float`）：MX量化参数，仅在MXFP8 weight NZ量化场景下支持。`axis`仅支持`-1`；`round_mode`默认值为`"rint"`，当前仅支持`"rint"`；`scale_alg`默认值为`0`，支持`0`（OCP实现）和`1`（cuBLAS实现，仅支持`torch.float8_e4m3fn`输出）；`dst_type_max`表示输出数据类型的最大值，默认值为`0.0`，当`scale_alg`为`0`或`1`时仅支持`0.0`。传入其他值会报错；`scale_alg=2`仅适用于`torch_npu.float4_e2m1fn_x2`输出，当前MXFP8场景不支持。
+- **`axis`**（`int`）：**可选参数**，MX量化轴，默认值为`-1`，仅在MXFP8 weight NZ量化场景下支持，当前仅支持`-1`。
+
+- **`round_mode`**（`str`）：**可选参数**，MX量化舍入模式，默认值为`"rint"`，仅在MXFP8 weight NZ量化场景下支持，当前仅支持`"rint"`。
+
+- **`scale_alg`**（`int`）：**可选参数**，MX量化scale算法，默认值为`0`，仅在MXFP8 weight NZ量化场景下支持。支持`0`（OCP实现）和`1`（cuBLAS实现，仅支持`torch.float8_e4m3fn`输出）；`scale_alg=2`仅适用于`torch_npu.float4_e2m1fn_x2`输出，当前MXFP8场景不支持。
+
+- **`dst_type_max`**（`float`）：**可选参数**，表示输出数据类型的最大值，默认值为`0.0`，仅在MXFP8 weight NZ量化场景下支持。当`scale_alg`为`0`或`1`时仅支持`0.0`，传入其他值会报错。
 
 ## 返回值说明
 
