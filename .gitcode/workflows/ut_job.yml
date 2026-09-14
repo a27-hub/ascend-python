@@ -44,7 +44,7 @@ jobs:
   JOB_UT:
     name: JOB_UT
     select: selected_by_default
-    runs-on: [ self-hosted, npu=1 ]
+    runs-on: [ self-hosted, default, npu=1 ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
     env:
