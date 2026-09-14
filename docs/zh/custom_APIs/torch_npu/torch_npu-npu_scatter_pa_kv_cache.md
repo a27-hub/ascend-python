@@ -49,11 +49,11 @@ torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mappi
 
 ## 参数说明
 
-- **key**（`Tensor`）：必选参数。表示待更新的key值，当前step多个token的`key`，支持3维或4维。数据类型支持`float16`、`float`、`bfloat16`、`int8`、`uint8`、`int16`、`uint16`、`int32`、`uint32`、`hifloat8`、`float8_e5m2`、`float8_e4m3fn`，数据格式支持$ND$。
+- **key**（`Tensor`）：必选参数。表示待更新的key值，当前step多个token的`key`，支持3维或4维。数据类型支持`torch.float16`、`torch.float32`、`torch.bfloat16`、`torch.int8`、`torch.uint8`、`torch.int16`、`torch.uint16`、`torch.int32`、`torch.uint32`、`torch_npu.hifloat8`、`torch.float8_e5m2`、`torch.float8_e4m3fn`，数据格式支持$ND$。
 - **value**（`Tensor`）：必选参数，表示待更新的value值，当前step多个token的`value`，支持3维或4维，数据类型和数据格式与`key`保持一致。
 - **key_cache**（`Tensor`）：必选参数，表示需要更新的`key_cache`，当前layer的`key_cache`，只支持4维，数据类型和数据格式与`key`保持一致。
 - **value_cache**（`Tensor`）：必选参数，表示需要更新的`value_cache`，当前layer的`value_cache`。只支持4维，数据类型和数据格式与`key`保持一致。
-- **slot_mapping**（`Tensor`）：必选参数，表示每个token key或value在cache中的存储偏移，数据类型支持`int32`和`int64`，数据格式支持$ND$。取值范围[0, num_blocks * block_size-1]，且元素值保证不重复，重复时不保证正确性。
+- **slot_mapping**（`Tensor`）：必选参数，表示每个token key或value在cache中的存储偏移，数据类型支持`torch.int32`和`torch.int64`，数据格式支持$ND$。取值范围[0, num_blocks * block_size-1]，且元素值保证不重复，重复时不保证正确性。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **compress_lens**（`Tensor`）：可选参数，表示压缩量，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
 - **compress_seq_offsets**（`Tensor`）：可选参数，表示每个batch每个head的压缩起点，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
