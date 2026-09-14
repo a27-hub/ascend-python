@@ -647,12 +647,19 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     - 在`expert_tokens_num_type`为2的场景下，要求是2维张量，shape为(expert_num, 2)，表示`active_expert_range`范围内token总数为非0的expert，以及对应expert处理token的总数；
 
     expert_idx在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持`torch.int64`，数据格式要求为$ND$。
-- **expanded_scale** (`Tensor`)：数据格式要求为$ND$。默认数据类型为`torch.float32`，`quant_mode`为2/3/16/17时数据类型为`torch.float8_e8m0fnu`。默认输出shape为`expert_idx`的shape去掉最后一维之后所有维度的乘积；`quant_mode`为2/3/16/17时shape为[有效输出行数, CeilAlign(CeilDiv(H, 32), 2)]；`quant_mode`为4/5/14/15时数据类型为`torch.float32`，shape为[有效输出行数, CeilDiv(H, 128)]；`quant_mode`为9时shape为[有效输出行数, CeilDiv(H, 64), 2]；`quant_mode`为11/12时shape为[有效输出行数, CeilDiv(H, 256), 2]。令available_idx_num为`active_expert_range`范围的元素的个数。
-    - Atlas A2 训练系列产品/Atlas A2 推理系列产品/Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+- **expanded_scale** (`Tensor`)：数据格式要求为$ND$。令available_idx_num为`active_expert_range`范围的元素的个数。不同产品的输出说明如下：
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型为`torch.float32`，输出shape为`expert_idx`的shape去掉最后一维之后所有维度的乘积。
         - 非量化场景下，当`scale`输入时，前`available_idx_num`个元素为有效数据。
         - 动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据。
         - 静态量化场景下不输出。
-    - Atlas 推理系列产品：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
+    - <term>Ascend 950PR/Ascend 950DT</term>：默认数据类型为`torch.float32`，默认输出shape为`expert_idx`的shape去掉最后一维之后所有维度的乘积。各量化模式下的数据类型和shape如下：
+        - `quant_mode`为2/3/16/17时数据类型为`torch.float8_e8m0fnu`，shape为[有效输出行数, CeilAlign(CeilDiv(H, 32), 2)]；
+        - `quant_mode`为4/5/14/15时数据类型为`torch.float32`，shape为[有效输出行数, CeilDiv(H, 128)]；
+        - `quant_mode`为9时数据类型为`torch.float8_e8m0fnu`，shape为[有效输出行数, CeilDiv(H, 64), 2]；
+        - `quant_mode`为11/12时数据类型为`torch.float32`，shape为[有效输出行数, CeilDiv(H, 256), 2]；
+        - 非量化场景且`x`数据类型为`torch.float8_e5m2`、`torch.float8_e4m3fn`或`torch_npu.float4_e2m1fn_x2`（通过`x_dtype`指定）时，若输入`scale`，输出shape为[有效输出行数, CeilDiv(H, 64), 2]，数据类型为`torch.float8_e8m0fnu`；
+        - 非量化场景（其余数据类型）下，当`scale`输入时，前`available_idx_num`个元素为有效数据；动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据；静态量化场景下不输出。
+    - <term>Atlas 推理系列产品</term>：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
 
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
