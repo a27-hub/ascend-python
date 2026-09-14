@@ -98,7 +98,9 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 
 ## 返回值说明
 
-- **output**（`Tensor`）：输出张量。数据类型非量化场景以及伪量化场景与`x1`保持一致，全量化场景输出数据类型为`float16`或`bfloat16`。shape第0维度和`x1`的0维保持一致，若`x1`为2维，shape第1维度和`x2`的1维保持一致，若`x1`为3维，shape第1维度和`x1`的1维保持一致，shape第2维度和`x2`的1维保持一致。
+`Tensor`
+
+输出张量。数据类型非量化场景以及伪量化场景与`x1`保持一致，全量化场景输出数据类型为`float16`或`bfloat16`。shape第0维度和`x1`的0维保持一致，若`x1`为2维，shape第1维度和`x2`的1维保持一致，若`x1`为3维，shape第1维度和`x1`的1维保持一致，shape第2维度和`x2`的1维保持一致。
 
 ## 约束说明
 
