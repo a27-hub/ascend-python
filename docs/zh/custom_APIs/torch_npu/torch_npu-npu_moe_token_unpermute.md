@@ -4,40 +4,47 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Ascend 950PR/Ascend 950DT</term> | √ |
-|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>           |    √     |
-|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
+|<term>Ascend 950PR/Ascend 950DT</term>                        |    √     |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    √     |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>      |    √     |
 
 ## 功能说明
 
-- API功能：MoE计算中，[torch_npu.npu_moe_token_permute](torch_npu-npu_moe_token_permute.md)的逆操作，根据`sorted_indices`将扩展排序后的token特征映射回原始token位置并累加；传入`probs`时先按`probs`加权再累加。
+- API功能：MoE的unpermute计算，根据sorted_indices存储的下标，获取permuted_tokens中存储的输入数据；如果存在probs数据，permuted_tokens会与probs相乘；最后进行累加求和，并输出计算结果。
 
 - 计算公式：
-
-    记`permuted_tokens`的行数为$F = NUM\_TOKENS * K$（`probs`为None时$K=1$，否则$K$为`probs`的第二维）：
+  - 当probs非None时，计算公式如下，此时topK_num为probs的最后一维大小：
 
     $$
-    out[sorted\_indices[i] // K] \mathrel{+}= permuted\_tokens[i] * probs[sorted\_indices[i] // K, sorted\_indices[i] \% K]
+    T[k] = T[S[k]]
     $$
 
-    `probs`为None时权重视为1。
+    $$
+    T[k] = T[k] * P[i][j]
+    $$
 
-- 等价计算逻辑
+    $$
+    O[i] = \sum_{k=i*topK}^{(i+1)*topK - 1 } T[k]
+    $$
 
-    ```python
-    import numpy as np
+    其中$i \in {0,1,...,tokens-1}$；$j = k - i * topK$，$j \in {0,1,...,topK-1}$；$k \in {0,1,...,tokens*topK-1}$；T表示permuted_tokens；S表示sorted_indices；P表示probs；O表示out；topK表示topK_num；tokens表示tokens_num。
 
-    def moe_token_unpermute_np(permuted_tokens, sorted_indices, probs=None):
-        h = permuted_tokens.shape[1]
-        k = 1 if probs is None else probs.shape[1]
-        num_tokens = sorted_indices.shape[0] // k
-        out = np.zeros((num_tokens, h), dtype=permuted_tokens.dtype)
-        for i, s in enumerate(sorted_indices):
-            row = s // k
-            w = 1.0 if probs is None else probs[row, s % k]
-            out[row] += permuted_tokens[i] * w
-        return out
-    ```
+  - 当probs为None时，此时topK_num=1，计算公式如下：
+
+    $$
+    T[i] = T[S[i]]
+    $$
+
+    $$
+    O[i] = T[i]
+    $$
+
+    其中$i \in {0,1,...,tokens-1}$；T表示permuted_tokens；S表示sorted_indices；O表示out；tokens表示tokens_num。
+
+> [!NOTE]
+>
+> - 本接口为确定性计算。
+> - 在<term>Ascend 950PR/Ascend 950DT</term>上调用本接口时，框架内部会转调用aclnnMoeFinalizeRoutingV2接口，参数映射关系如下：permuted_tokens等同于aclnnMoeFinalizeRoutingV2接口的expandedX输入，sorted_indices等同于expandedRowIdx输入，probs等同于scalesOptional输入，padded_mode等同于dropPadMode输入，输出out等同于aclnnMoeFinalizeRoutingV2接口的out输出。如出现参数错误提示，请参考该映射关系。
 
 ## 函数原型
 
@@ -47,51 +54,84 @@ torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=None, p
 
 ## 参数说明
 
->
-> [!NOTE]
-> shape中的符号说明：
->
-> - $NUM\_TOKENS$：原始token个数。
-> - $K$：每个token对应的专家个数，`probs`为None时$K=1$。
-> - $H$：每个token的特征长度，为列数。
-> - $F$：扩展后的行数，$F = NUM\_TOKENS * K$。
-
-- **permuted_tokens** (`Tensor`)：必选参数，经过扩展排序后的token特征（通常为[torch_npu.npu_moe_token_permute](torch_npu-npu_moe_token_permute.md)的第一个输出经过专家计算后的结果），要求为一个2维张量，shape为(F, H)。数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`，数据格式要求为$ND$。
-- **sorted_indices** (`Tensor`)：必选参数，扩展排序后的行映射关系（通常为[torch_npu.npu_moe_token_permute](torch_npu-npu_moe_token_permute.md)的第二个输出），要求为一个1维张量，shape为(F, )。数据类型支持`torch.int32`，数据格式要求为$ND$。元素取值范围为[0, F-1]，且不存在重复索引。
-- **probs** (`Tensor`)：可选参数，默认值为None，表示各专家处理结果的权重，要求为一个2维张量，shape为(NUM_TOKENS, K)。数据类型要求与`permuted_tokens`一致，数据格式要求为$ND$。
-- **padded_mode** (`bool`)：可选参数，默认值为False，表示是否使用padded模式，当前仅支持`False`。
-- **restore_shape** (`List[int]`)：可选参数，默认值为None，`padded_mode`为True时用于指定输出shape，当前仅支持`None`。
+- **permuted_tokens**（`Tensor`）：必选参数，表示经过permute计算后的输入tokens。要求是一个2D的Tensor，shape为(tokens_num * topK_num, hidden_size)，其中tokens_num表示输入token的个数，topK_num表示处理每个token的专家个数，hidden_size表示每个token的向量表示的长度。数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$，支持非连续Tensor。
+- **sorted_indices**（`Tensor`）：必选参数，表示需要计算的数据在permuted_tokens中的位置。要求是一个1D的Tensor，shape为(tokens_num * topK_num)。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。取值范围是[0, tokens_num * topK_num - 1]，且没有重复索引。
+- **probs**（`Tensor`）：可选参数，表示与permuted_tokens相乘的概率值，默认值为`None`。要求是一个2D的Tensor，shape为(tokens_num, topK_num)。数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$，支持非连续Tensor。当probs传入时，topK_num等于probs的最后一维大小；当probs不传时，topK_num等于1。
+- **padded_mode**（`bool`）：可选参数，表示是否开启paddedMode，默认值为`False`。padded_mode为`True`时，restore_shape生效，输出结果的shape与restore_shape保持一致。当前仅支持`False`。
+- **restore_shape**（`int[]`）：可选参数，表示padded_mode为`True`时输出结果的shape，默认值为`None`。当前仅支持`None`。
 
 ## 返回值说明
 
 `Tensor`
 
-输出参数`out`，代表映射回原始token位置并累加后的结果。要求是一个2维张量，shape为(NUM_TOKENS, H)，数据类型与`permuted_tokens`一致，数据格式要求为$ND$。
+表示unpermute计算后的输出结果。要求是一个2D的Tensor，padded_mode为`False`时shape为(tokens_num, hidden_size)，padded_mode为`True`时shape与restore_shape保持一致（当前padded_mode仅支持`False`）。数据类型与permuted_tokens保持一致。数据格式支持$ND$，不支持非连续Tensor。
 
 ## 约束说明
 
-- 该接口支持训练和推理场景下使用，支持对`permuted_tokens`和`probs`的自动微分。
-- 该接口支持PTA图模式。
-- 该接口默认支持确定性计算。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>上，$K$不大于512。
+- 该接口支持推理、训练场景下使用。
+- 该接口仅支持图模式。
+- 该接口为确定性计算。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：topK_num要求小于等于512。
+
 ## 调用示例
 
 - 单算子模式调用
 
     ```python
+    >>> import torch
+    >>> import torch_npu
+    >>>
+    >>> permuted_tokens = torch.tensor([[1, 1], [2, 2], [3, 3], [4, 4], [1, 1], [2, 2], [3, 3], [4, 4]],
+    ...                                dtype=torch.float16, device='npu')
+    >>> sorted_indices = torch.tensor([0, 4, 5, 1, 2, 6, 7, 3], dtype=torch.int32, device='npu')
+    >>> probs = torch.ones((4, 2), dtype=torch.float16, device='npu') / 2
+    >>> unpermuted_tokens = torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
+    >>> unpermuted_tokens
+    tensor([[1., 1.],
+            [2., 2.],
+            [3., 3.],
+            [4., 4.]], device='npu:0', dtype=torch.float16)
+    ```
+
+    probs为None时的调用（此时topK_num为1）：
+
+    ```python
+    >>> unpermuted_tokens = torch_npu.npu_moe_token_unpermute(
+    ...     permuted_tokens[:4], torch.tensor([0, 1, 2, 3], dtype=torch.int32, device='npu'))
+    >>> unpermuted_tokens
+    tensor([[1., 1.],
+            [2., 2.],
+            [3., 3.],
+            [4., 4.]], device='npu:0', dtype=torch.float16)
+    ```
+
+- 图模式调用
+
+    ```python
     import torch
     import torch_npu
-    dtype = torch.bfloat16
-    permuted_tokens = torch.tensor([[1., 1., 1.],
-                                        [0., 0., 0.],
-                                        [0., 0., 0.],
-                                        [3., 3., 3.],
-                                        [2., 2., 2.],
-                                        [1., 1., 1.],
-                                        [2., 2., 2.],
-                                        [3., 3., 3.]]).npu().to(dtype)
-    sorted_indices = torch.tensor([0, 6, 7, 5, 3, 1, 2, 4], dtype=torch.int32).npu()
-    indices = torch.tensor([[0, 4], [4, 3], [4, 2], [1, 1]]).npu()
-    probs = (torch.ones_like(indices) / 2).to(dtype)
-    unpermuted_tokens = torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
+    import torchair
+    import numpy
+
+    class Model(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+        def forward(self, permuted_tokens, sorted_indices, probs=None):
+            return torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
+    # 实例化模型model
+    model = Model().npu()
+    # 从TorchAir获取NPU提供的默认backend
+    config = torchair.CompilerConfig()
+    npu_backend = torchair.get_npu_backend(compiler_config=config)
+    # 使用TorchAir的backend去调用compile接口编译模型
+    model = torch.compile(model, backend=npu_backend)
+
+    # 生成随机数据, 并发送到npu
+    permuted_tokens = torch.tensor([[1, 1], [2, 2], [3, 3], [4, 4], [1, 1], [2, 2], [3, 3], [4, 4]],
+                                   dtype=torch.float16).npu()
+    sorted_indices = torch.tensor([0, 4, 5, 1, 2, 6, 7, 3], dtype=torch.int32).npu()
+    probs = torch.ones((4, 2), dtype=torch.float16).npu() / 2
+
+    # 调用MoeTokenUnpermute算子
+    unpermuted_tokens = model(permuted_tokens, sorted_indices, probs=probs)
     ```
