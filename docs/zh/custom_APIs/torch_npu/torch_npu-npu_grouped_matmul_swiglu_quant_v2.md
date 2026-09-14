@@ -386,7 +386,6 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 - `activate_dim`、`activate_left`、`clamp_limit`、`glu_alpha`和`glu_bias`仅可与`swiglu_mode`一起传入；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为。
 - `swiglu_mode`非空时，仅支持MXFP8量化、单Tensor的`weight`和`weight_scale`，且`weight`必须为`FRACTAL_NZ`格式；显式传入`swiglu_mode`但不满足该条件时会报错。
 - `swiglu_mode`非空时，`x`和`weight`的数据类型必须为`torch.float8_e4m3fn`；显式传入的`x_dtype`和`weight_dtype`必须为`torch_npu.float8_e4m3fn`，其他数据类型会报错。
-- `swiglu_mode=0`、`2`或`3`且`K`为128对齐时使用V3 Tensor API；`swiglu_mode=1`无论`K`是否128对齐均使用CGMCT；模式`0`、`2`或`3`在`K`不满足128对齐时使用CGMCT兼容路径。
 - V3 MXFP8 weightNZ场景仅支持`x`非转置，`weight`支持非转置和转置输入；`axis`仅支持`-1`，`round_mode`仅支持`"rint"`，`scale_alg`支持`0`和`1`，`dst_type_max`仅支持`0.0`。
 
 - 参数说明里Shape使用的变量说明：
