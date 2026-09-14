@@ -630,8 +630,8 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     - <term>Ascend 950PR/Ascend 950DT</term>：额外支持取值4/5，表示FP8 PerGroup量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；14/15表示FP8 PerGroup量化并启用Amax下限，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`。
 - **active_expert_range** (`List[int]`)：可选参数，默认为空, 表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，左闭右开，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。drop_pad场景下，expert_start等于0, expert_end等于`expert_num`。传入默认值时，视为活跃的expert范围在0到`expert_num`之间。
 - **row_idx_type** (`int`)：可选参数，默认为0，表示输出`expanded_row_idx`使用的索引类型，支持取值0和1。0表示gather类型的索引；1表示scatter类型的索引。
-- **x_dtype** (`int`)：可选参数，默认值为None，用于指定`x`的非原生数据类型（PyTorch原生dtype无法表达的类型，取值为`torch_npu`的dtype枚举，如`torch_npu.hifloat8`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.int4`）。
-    - `quant_mode`为-1时，传入`x_dtype`表示`x`及输出`expanded_x`按该数据类型解释。
+- **x_dtype** (`int`)：可选参数，默认值为None，用于指定`x`的非原生数据类型（PyTorch原生dtype无法表达、以`torch.uint8`等原生dtype存储的类型），取值为`torch_npu`的dtype枚举。仅<term>Ascend 950PR/Ascend 950DT</term>支持该参数，支持的全部枚举值为：`torch_npu.hifloat8`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.int4`。
+    - `quant_mode`为-1（不量化透传）时，`x_dtype`支持`torch_npu.hifloat8`、`torch_npu.float4_e2m1fn_x2`。`torch.float8_e5m2`、`torch.float8_e4m3fn`为PyTorch原生dtype，直接作为`x`的数据类型传入即可，无需通过`x_dtype`指定。
     - `quant_mode`为13（INT4动态量化）时，`x_dtype`仅支持`torch_npu.int4`或None。
     - `quant_mode`为1时不支持传入`torch_npu.int4`，INT4动态量化请使用`quant_mode=13`。
 
