@@ -105,7 +105,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
 
 ## 约束说明
 
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持rotate参数，调用时rotate须传None（或缺省），传入有效rotate将报错`the rotate parameter is only supported on Ascend910B/Ascend910_93, please set rotate to None`。
+- <term>Ascend 950PR/Ascend 950DT</term>：不支持rotate参数，调用时rotate须传None（或缺省），传入有效rotate将报错`the rotate parameter is only supported on Ascend910B/Ascend910_93, please set rotate to None or omit it`。
 
 - **`jit_compile=False`场景**（适用<term>Atlas A2 训练系列产品</term>，<term>Atlas A3 训练系列产品</term>）：
     - half模式：

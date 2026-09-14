@@ -46,7 +46,7 @@ at::Tensor npu_rotary_mul(
   static bool isRotateUnsupported = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   TORCH_CHECK(
       (!isRotateUnsupported || !(rotate.has_value() && rotate->defined())),
-      "the rotate parameter is only supported on Ascend910B/Ascend910_93, please set rotate to None",
+      "the rotate parameter is only supported on Ascend910B/Ascend910_93, please set rotate to None or omit it",
       OPS_ERROR(ErrCode::PARAM));
   DO_COMPATIBILITY(aclnnRotaryPositionEmbedding, acl_op::npu_rotary_mul(self, r1, r2, rotary_mode));
 
