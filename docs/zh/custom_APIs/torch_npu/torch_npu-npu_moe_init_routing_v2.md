@@ -626,8 +626,10 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 - **drop_pad_mode** (`int`)：可选参数，默认值为0，表示是否为drop_pad场景。0表示dropless场景，该场景下不校验`expert_capacity`。1表示drop_pad场景。
 - **expert_tokens_num_type** (`int`)：可选参数，默认值为0，表示直方图的不同模式。取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量；2表示key_value模式，即输出的值为专家和对应专家处理token数量的键值对。
 - **expert_tokens_num_flag** (`bool`)：可选参数，默认值为False，取值为False和True，表示是否输出`expert_token_cumsum_or_count`。
-- **quant_mode** (`int`)：可选参数，默认值为-1，表示量化模式。支持取值：-1表示不量化；0表示静态量化；1表示INT8动态量化；2/3表示MXFP8 RoundScale动态量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；6表示HIF8直转；7表示HIF8 per-tensor量化；8表示HIF8 per-token量化；9表示MXFP4动态量化；11/12表示FP8 PerBlock量化；13表示INT4动态量化；16/17表示MXFP8 RoundScale + Amax钳位量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：额外支持取值4/5，表示FP8 PerGroup量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；14/15表示FP8 PerGroup量化并启用Amax下限，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`。
+- **quant_mode** (`int`)：可选参数，默认值为-1，表示量化模式。不同产品支持的取值如下：
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持取值-1、0、1。-1表示不量化；0表示静态量化；1表示INT8动态量化。
+    - <term>Atlas 推理系列产品</term>：仅支持取值-1，表示不量化。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值-1、0、1、2、3、4、5、6、7、8、9、11、12、13、14、15、16、17。-1表示不量化；0表示静态量化；1表示INT8动态量化；2/3表示MXFP8 RoundScale动态量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；4/5表示FP8 PerGroup量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；6表示HIF8直转；7表示HIF8 per-tensor量化；8表示HIF8 per-token量化；9表示MXFP4动态量化；11/12表示FP8 PerBlock量化；13表示INT4动态量化；14/15表示FP8 PerGroup量化并启用Amax下限，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；16/17表示MXFP8 RoundScale + Amax钳位量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`。
 - **active_expert_range** (`List[int]`)：可选参数，默认为空, 表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，左闭右开，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。drop_pad场景下，expert_start等于0, expert_end等于`expert_num`。传入默认值时，视为活跃的expert范围在0到`expert_num`之间。
 - **row_idx_type** (`int`)：可选参数，默认为0，表示输出`expanded_row_idx`使用的索引类型，支持取值0和1。0表示gather类型的索引；1表示scatter类型的索引。
 - **x_dtype** (`int`)：可选参数，默认值为None，用于指定`x`的非原生数据类型（PyTorch原生dtype无法表达、以`torch.uint8`等原生dtype存储的类型），取值为`torch_npu`的dtype枚举。仅<term>Ascend 950PR/Ascend 950DT</term>支持该参数，支持的全部枚举值为：`torch_npu.hifloat8`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.int4`。
