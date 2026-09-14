@@ -88,9 +88,12 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
 
 ## 返回值说明
 
-- **output**（`Tensor`）：输出张量，shape为\(m // world\_size, n\)。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：基础场景下，数据类型和`input`保持一致。量化场景下，当`x2_scale`为`int64`时，输出数据类型为`float16`；当`x1_scale`和`x2_scale`均为`float32`时，输出数据类型由`output_dtype`指定，默认为`bfloat16`。
-    - <term>Ascend 950PR/Ascend 950DT</term>：仅支持基础场景，数据类型和`input`保持一致。
+`Tensor`
+
+输出shape为\(m // world\_size, n\)。
+
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：基础场景下，数据类型和`input`保持一致。量化场景下，当`x2_scale`为`int64`时，输出数据类型为`float16`；当`x1_scale`和`x2_scale`均为`float32`时，输出数据类型由`output_dtype`指定，默认为`bfloat16`。
+- <term>Ascend 950PR/Ascend 950DT</term>：仅支持基础场景，数据类型和`input`保持一致。
 
 ## 约束说明
 

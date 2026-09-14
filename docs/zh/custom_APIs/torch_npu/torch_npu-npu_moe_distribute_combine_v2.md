@@ -175,7 +175,9 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 
 ## 返回值说明
 
-- **x**（`Tensor`）：表示处理后的token，要求为2维张量，shape为\(BS, H\)，数据类型支持`bfloat16`、`float16`，与输入`expand_x`保持一致，数据格式为$ND$，不支持非连续的Tensor。
+`Tensor`
+
+表示处理后的token，要求为2维张量，shape为\(BS, H\)，数据类型支持`bfloat16`、`float16`，与输入`expand_x`保持一致，数据格式为$ND$，不支持非连续的Tensor。
 
 ## 约束说明
 
