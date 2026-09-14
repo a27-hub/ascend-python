@@ -350,11 +350,11 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **glu\_bias**（`float`）：表示模式`1`、`2`中线性分支`x_linear`的偏置。当`swiglu_mode`有值且本参数为`None`时，按`1.0`处理。模式`0`和`3`不使用该参数。
 
-- **axis**（`int`）、**round\_mode**（`str`）、**scale\_alg**（`int`）、**dst\_type\_max**（`float`）：MX量化预留参数，当前仅校验其默认值，尚不参与量化计算，也不会改变量化轴、舍入方式、scale算法或目标类型最大值。
+- **axis**（`int`）、**round\_mode**（`str`）、**scale\_alg**（`int`）、**dst\_type\_max**（`float`）：MX量化参数。当前 V3 MXFP8 weightNZ 场景中，`axis`仅支持`-1`，`round_mode`仅支持`"rint"`，`scale_alg`支持`0`（OCP）和`1`（cuBLAS）；由于 V3 当前只支持 MXFP8 输出，传入`scale_alg=2`会报错。`dst_type_max`当前仅支持`0.0`。
   - `axis`当前仅支持默认值`-1`。
   - `round_mode`当前仅支持默认值`"rint"`。
-  - `scale_alg`当前仅支持默认值`0`。
-  - `dst_type_max`当前仅支持默认值`0.0`。
+  - `scale_alg`在 MXFP8 weightNZ 场景下支持`0`和`1`；`2`仅适用于 FLOAT4_E2M1 输出，因此当前场景会报错。
+  - `dst_type_max`在 MXFP8 weightNZ 场景下仅支持默认值`0.0`。
 
 ## 返回值说明
 
@@ -515,7 +515,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - <term>Ascend 950PR/Ascend 950DT</term>：MXFP8 weightNZ 场景下 `swiglu_mode` 示例
 
-    下面的示例固定 `x` 为非转置输入，遍历 `swiglu_mode=0、1、2、3`，并分别覆盖非转置和转置的 `weight`。示例中的 `weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ，`weight_scale` 按对应的逻辑维度同步转置。`activate_dim`、`activate_left`、`clamp_limit`、`glu_alpha` 和 `glu_bias` 仅在显式传入 `swiglu_mode` 时生效；`axis`、`round_mode`、`scale_alg` 和 `dst_type_max` 仍只校验预留参数的默认值。
+    下面的示例固定 `x` 为非转置输入，遍历 `swiglu_mode=0、1、2、3`，并分别覆盖非转置和转置的 `weight`。示例中的 `weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ，`weight_scale` 按对应的逻辑维度同步转置。`activate_dim`、`activate_left`、`clamp_limit`、`glu_alpha` 和 `glu_bias` 仅在显式传入 `swiglu_mode` 时生效；`axis`和`round_mode`分别固定为`-1`和`"rint"`，`scale_alg`可取`0`或`1`，`dst_type_max`固定为`0.0`。
 
     ```python
     import math
