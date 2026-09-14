@@ -173,7 +173,12 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     | TND\_NTD | (T, Q\_N, D) | (T, KV\_N, D) | (T, KV\_N, D) | (Q\_N, T, D) | 输入TND，输出NTD |
     | NTD\_TND | (Q\_N, T, D) | (KV\_N, T, D) | (KV\_N, T, D) | (T, Q\_N, D) | 输入NTD，输出TND |
 
-- **sparse_mode**（`int`）：可选参数，表示sparse的模式，默认值为0。数据类型支持`int64`。Q\_S为1且不带rope输入时该参数无效。`input_layout`为TND、TND\_NTD、NTD\_TND时，综合约束请见[MLA场景约束](#zh-cn_topic_0000001832267082_section_mla_constraint)；GQA伪量化场景下综合约束请见[GQA伪量化+KV NZ格式约束](#zh-cn_topic_0000001832267082_section_gqa_nz_constraint)。当前仅支持取值0、1、2、3、4、9，取值5、6、7、8（分别代表prefix、global、dilated、block\_local）暂未实现，请勿使用。
+- **sparse_mode**（`int`）：可选参数，表示sparse的模式，默认值为0。数据类型支持`int64`。Q\_S为1且不带rope输入时该参数无效。`input_layout`为TND、TND\_NTD、NTD\_TND时，综合约束请见[MLA场景约束](#zh-cn_topic_0000001832267082_section_mla_constraint)；GQA伪量化场景下综合约束请见[GQA伪量化+KV NZ格式约束](#zh-cn_topic_0000001832267082_section_gqa_nz_constraint)。取值5、6、7、8（分别代表prefix、global、dilated、block\_local）暂未实现，请勿使用。
+
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+        - 当前仅支持取值0、1、2、3、4、9。
+    - <term>Ascend 950PR/Ascend 950DT</term>：
+        - 当前仅支持取值0、1、2、3、4。
 
     | 取值 | 模式名称 | 说明 | `atten_mask`要求 |
     | ------ | ---------- | ------ | ----------------- |
@@ -542,8 +547,11 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             - <term>Ascend 950PR/Ascend 950DT</term>：`key`、`value`输入类型为`torch.float16`/`torch.bfloat16`时需要16对齐；`key`、`value`输入类型为`torch.int8`/`torch.float8_e4m3fn`/`torch.hifloat8`时需要32对齐；`key`、`value`输入类型为`torch.float4_e2m1fn_x2`/`torch.int4`（`torch.int32`）时需要64对齐。
         - 参数`key`、`value`各自对应tensor的shape所有维度相乘不能超过`torch.int32`的表示范围。
         - page attention场景下，`block_table`必须为二维，第一维长度需等于B，第二维长度不能小于maxBlockNumPerSeq（maxBlockNumPerSeq为不同batch中最大`actual_seq_kvlen`对应的block数量）。
-        - page attention场景下，当`query`的`input_layout`为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）和（blocknum, KV\_N, blocksize, D）两种格式，当`query`的`input_layout`为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）一种格式。blocknum不能小于根据`actual_seq_kvlen`和`block_size`计算的每个batch的block数量之和。且`key`和`value`的shape需保证一致。
-        - <term>Ascend 950PR/Ascend 950DT</term>：page attention伪量化场景下，当kv cache为五维时，kv cache排布为（blocknum, KV\_N, D/16, blocksize, 16）；同时，当`key`、`value` dtype为`torch.int32`时，kv cache排布为（blocknum, KV\_N, D/2, blocksize, 2）。
+        - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+            - page attention场景下，当`query`的`input_layout`为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）和（blocknum, KV\_N, blocksize, D）两种格式，当`query`的`input_layout`为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）一种格式。blocknum不能小于根据`actual_seq_kvlen`和`block_size`计算的每个batch的block数量之和。且`key`和`value`的shape需保证一致。
+        - <term>Ascend 950PR/Ascend 950DT</term>：
+            - page attention场景下，当`query`的`input_layout`为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）、（blocknum, KV_N, blocksize, D）和（blocknum, KV_N, D/16, blocksize, 16）三种格式，当`query`的`input_layout`为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）和（blocknum, KV_N, D/16, blocksize, 16）两种格式。blocknum不能小于根据`actual_seq_kvlen`和`block_size`计算的每个batch的block数量之和。且`key`和`value`的shape需保证一致。
+            - page attention伪量化场景下，当kv cache为五维时，kv cache排布为（blocknum, KV\_N, D/16, blocksize, 16）；同时，当`key`、`value` dtype为`torch.int32`时，kv cache排布为（blocknum, KV\_N, D/2, blocksize, 2）。
         - page attention场景下，kv cache排布为（blocknum, KV\_N, blocksize, D）时性能通常优于kv cache排布为（blocknum, blocksize, H）时的性能，建议优先选择（blocknum, KV\_N, blocksize, D）格式。
         - page attention开启场景下，当输入kv cache排布格式为（blocknum, blocksize, H），且numKvHeads \* headDim超过64k时，受硬件指令约束，会被拦截报错。可通过开启GQA（减小numKvHeads）或调整kv cache排布格式为（blocknum, numKvHeads, blocksize, D）解决。
         - page attention场景的参数`key`、`value`各自对应tensor的shape所有维度相乘不能超过`torch.int32`的表示范围。
