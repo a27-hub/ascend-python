@@ -6579,29 +6579,50 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
         lambda: f"The size of weight_scale should be 1, current size is {len(weight_scale)}.",
     )
 
-    if x_dtype is not None:
+    if swiglu_mode is not None:
         torch._check(
-            x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2 or x_dtype == torch_npu.hifloat8,
-            lambda: npu_non_native_tensor_dtype_kwarg_error_message("x", "x_dtype", x_dtype),
+            x.dtype == torch.float8_e4m3fn,
+            lambda: "When swiglu_mode is specified, x only supports torch.float8_e4m3fn, but the actual dtype is " + npu_dtype_to_str(x.dtype),
         )
+        torch._check(
+            weight[0].dtype == torch.float8_e4m3fn,
+            lambda: "When swiglu_mode is specified, weight only supports torch.float8_e4m3fn, but the actual dtype is " + npu_dtype_to_str(weight[0].dtype),
+        )
+        if x_dtype is not None:
+            torch._check(
+                x_dtype == torch_npu.float8_e4m3fn,
+                lambda: npu_non_native_tensor_dtype_kwarg_error_message("x", "x_dtype", x_dtype),
+            )
+        if weight_dtype is not None:
+            torch._check(
+                weight_dtype == torch_npu.float8_e4m3fn,
+                lambda: npu_non_native_tensor_dtype_kwarg_error_message("weight", "weight_dtype", weight_dtype),
+            )
+    else:
+        if x_dtype is not None:
+            torch._check(
+                x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2 or x_dtype == torch_npu.hifloat8,
+                lambda: npu_non_native_tensor_dtype_kwarg_error_message("x", "x_dtype", x_dtype),
+            )
 
-    if weight_dtype is not None:
-        torch._check(
-            weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2 or weight_dtype == torch_npu.hifloat8,
-            lambda: npu_non_native_tensor_dtype_kwarg_error_message("weight", "weight_dtype", weight_dtype),
-        )
+        if weight_dtype is not None:
+            torch._check(
+                weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2 or weight_dtype == torch_npu.hifloat8,
+                lambda: npu_non_native_tensor_dtype_kwarg_error_message("weight", "weight_dtype", weight_dtype),
+            )
     if weight_scale_dtype is not None:
         torch._check(
             weight_scale_dtype == torch_npu.float8_e8m0fnu,
             lambda: "The weight_scale_dtype only supports float8_e8m0fnu for now, but the actual value is " + npu_dtype_to_str(weight_scale_dtype),
         )
 
-        torch._check(x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == torch_npu.float4_e2m1fn_x2 or x_dtype == torch_npu.float4_e1m2fn_x2,
-            lambda: "The x only supports torch.float8_e5m2/torch.float8_e4m3fn/torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 for now, but the actual value is " + npu_dtype_to_str(x.dtype),
-        )
-        torch._check(weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn or weight_dtype == torch_npu.float4_e2m1fn_x2 or weight_dtype == torch_npu.float4_e1m2fn_x2,
-            lambda: "The weight only supports torch.float8_e5m2/torch.float8_e4m3fn/torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 for now, but the actual value is " + npu_dtype_to_str(weight[0].dtype),
-        )
+        if swiglu_mode is None:
+            torch._check(x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == torch_npu.float4_e2m1fn_x2 or x_dtype == torch_npu.float4_e1m2fn_x2,
+                lambda: "The x only supports torch.float8_e5m2/torch.float8_e4m3fn/torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 for now, but the actual value is " + npu_dtype_to_str(x.dtype),
+            )
+            torch._check(weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn or weight_dtype == torch_npu.float4_e2m1fn_x2 or weight_dtype == torch_npu.float4_e1m2fn_x2,
+                lambda: "The weight only supports torch.float8_e5m2/torch.float8_e4m3fn/torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 for now, but the actual value is " + npu_dtype_to_str(weight[0].dtype),
+            )
     if x_scale_dtype is not None:
         torch._check(
             x_scale_dtype == torch_npu.float8_e8m0fnu,

@@ -239,19 +239,38 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
 
     const bool mxfp8w4_nz_input = is_weight_nz && mxfp8w4;
 
-    if (x_dtype.has_value()) {
-        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
-                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
-                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                    "The optional parameter x_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
-                    c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    if (weight_dtype.has_value()) {
-        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
-                 || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
-                 || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                    "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
-                    c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    if (use_swiglu_v3) {
+        TORCH_CHECK(x.scalar_type() == at::kFloat8_e4m3fn,
+                    "When swiglu_mode is specified, x only supports torch.float8_e4m3fn, but the actual dtype is ",
+                    x.scalar_type(), "." + OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK(weight[DIM_0].scalar_type() == at::kFloat8_e4m3fn,
+                    "When swiglu_mode is specified, weight only supports torch.float8_e4m3fn, but the actual dtype is ",
+                    weight[DIM_0].scalar_type(), "." + OPS_ERROR(ErrCode::TYPE));
+        if (x_dtype.has_value()) {
+            TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN),
+                        "When swiglu_mode is specified, x_dtype only supports torch_npu.float8_e4m3fn, but the actual value is ",
+                        c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+        }
+        if (weight_dtype.has_value()) {
+            TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN),
+                        "When swiglu_mode is specified, weight_dtype only supports torch_npu.float8_e4m3fn, but the actual value is ",
+                        c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+        }
+    } else {
+        if (x_dtype.has_value()) {
+            TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                     || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
+                     || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
+                        "The optional parameter x_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
+                        c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+        }
+        if (weight_dtype.has_value()) {
+            TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                     || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
+                     || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
+                        "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
+                        c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+        }
     }
 
     if (!mxfp8w4_nz_input) {
