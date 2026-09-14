@@ -338,7 +338,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - `swiglu_mode=0`、`2`或`3`时，`True`表示前半部分为`x_glu`，`False`表示后半部分为`x_glu`。
   - `swiglu_mode=1`时，结果按奇偶位置交错拆分；该参数指定哪一组交错元素作为`x_glu`激活分支。
 
-- **swiglu\_mode**（`int`）：指定SwiGLU的计算模式。取值为`None`时使用原有SwiGLU计算；显式传入时仅支持MXFP8量化且`weight`为FRACTAL_NZ格式的场景，支持取值`0`、`1`、`2`、`3`。
+- **swiglu\_mode**（`int`）：指定SwiGLU的计算模式。取值为`None`时使用原有SwiGLU计算；显式传入时仅支持MXFP8量化且`weight`为FRACTAL_NZ格式的场景，支持取值`0`、`1`、`2`、`3`。该路径中`x`和`weight`仅支持`torch.float8_e4m3fn`；如果显式传入`x_dtype`或`weight_dtype`，也仅支持`torch_npu.float8_e4m3fn`。
   - `0`：标准SwiGLU。将结果沿`activate_dim`前后分半，`x_glu`经过`x_glu * sigmoid(x_glu)`后与`x_linear`相乘。
   - `1`：奇偶位置交错拆分。`x_glu`仅做上界为`clamp_limit`的裁剪，`x_linear`裁剪到`[-clamp_limit, clamp_limit]`，随后计算`x_glu * sigmoid(glu_alpha * x_glu) * (x_linear + glu_bias)`。
   - `2`：沿`activate_dim`前后分半。裁剪规则和计算公式与模式`1`相同，但不采用奇偶位置交错拆分。
@@ -376,6 +376,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 - group\_list第1维最大支持1024，即最多支持1024个group。
 - `activate_dim`、`activate_left`、`clamp_limit`、`glu_alpha`和`glu_bias`仅可与`swiglu_mode`一起传入；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为。
 - `swiglu_mode`非空时，仅支持MXFP8量化场景，且`weight`必须为`FRACTAL_NZ`格式；显式传入`swiglu_mode`但不满足该条件时会报错。
+- `swiglu_mode`非空时，`x`和`weight`的数据类型必须为`torch.float8_e4m3fn`；显式传入的`x_dtype`和`weight_dtype`必须为`torch_npu.float8_e4m3fn`，其他数据类型会报错。
 - 参数说明里Shape使用的变量说明：
   - e：表示分组数目，取值范围为1-1024。
   - m：输出矩阵output的倒数第二维大小，取值范围为1-2147483647。
