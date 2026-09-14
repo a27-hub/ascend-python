@@ -112,9 +112,9 @@ torch_npu.npu_swiglu_mx_quant(x, *, group_index=None, activate_dim=-1, activate_
 
 ## 参数说明
 
-- **x**(`Tensor`)：必选参数，输入待处理的数据。shape为$[X_1,X_2,\dots,X_n,2H]$，维数2-7维，对应`activate_dim`轴的维度需为2的倍数。数据类型支持`float16`、`bfloat16`，数据格式为$ND$。
+- **x**(`Tensor`)：必选参数，输入待处理的数据。shape为$[X_1,X_2,\dots,X_n,2H]$，维数2-7维，对应`activate_dim`轴的维度需为2的倍数；当`activate_dim`为`-2`或`axis`为`-2`且`group_index`存在时，`x`必须为2维。数据类型支持`float16`、`bfloat16`，数据格式为$ND$。
 - **\***：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量为可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **group_index**(`Tensor`)：可选参数，MoE分组所需的`group_index`。要求为1维张量，shape为$[groupNum]$（$groupNum$取值范围$[1,256]$），数据类型支持`int64`，数据格式为$ND$。默认值为`None`，表示不进行分组。
+- **group_index**(`Tensor`)：可选参数，MoE分组所需的`group_index`。要求为1维张量，shape为$[groupNum]$（$groupNum$取值范围$[1,256]$），数据类型支持`int64`，数据格式为$ND$；data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的`x`的总行数。默认值为`None`，表示不进行分组。
 - **activate_dim**(`int`)：可选参数，Swish计算时选择的切分轴。取值范围为$[-1,-2,x.dim()-2,x.dim()-1]$。默认值为`-1`。
 - **activate_left**(`bool`)：可选参数，是否对切分后的左半部分做Swish激活。取`True`时对左半部分做激活；取`False`时对右半部分做激活；当`swiglu_mode=1`时默认对偶数块做激活。默认值为`False`。
 - **swiglu_mode**(`int`)：可选参数，swiglu计算模式。取值范围为$[0,3]$：`0`表示传统swiglu；`1`表示变种swiglu（GPT-OSS变体），使用奇偶分块，并支持`clamp_limit`、`glu_alpha`、`glu_bias`；`2`计算方式同`1`但采用前后切分（同`0`）；`3`表示变种swiglu，切分方式同`2`，区别在于先激活（sigmoid系数固定为1）再截断，不支持`glu_alpha`、`glu_bias`。默认值为`0`。当`activate_dim`为非尾轴时，`swiglu_mode`必须为`0`。
@@ -142,7 +142,7 @@ torch_npu.npu_swiglu_mx_quant(x, *, group_index=None, activate_dim=-1, activate_
 - 当`swiglu_mode`为`2`或`3`时，`axis`必须为`-1`。
 - 当`dst_type`为`float4_e2m1`或`float4_e1m2`时，`y`的最后一维需为2的倍数，且`scale_alg`必须为`0`。
 - 当`dst_type`为`float8_e4m3fn`或`float8_e5m2`时，`round_mode`必须为`"rint"`。
-- `group_index`所有元素之和不能大于输入`x`除尾轴外剩余轴的乘积，每个元素需大于0。
+- `group_index`的每个元素必须为大于等于0的整数，且所有元素之和不能大于需要量化的`x`的总行数（即输入`x`除尾轴外剩余轴的乘积）。
 - 当`activate_dim`或`axis`为非尾轴且`group_index`存在时，`x`必须为2维。
 - 输出`y`和`mxscale`超出`group_index`所有元素之和的部分未进行清理，该部分内存为垃圾数据。
 
