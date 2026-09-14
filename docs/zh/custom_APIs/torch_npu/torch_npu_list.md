@@ -599,6 +599,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p20536122017115"><a name="p20536122017115"></a><a name="p20536122017115"></a>全量FA实现。</p>
 </td>
 </tr>
+<tr id="row950000000031"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p950000000032"><a name="p950000000032"></a><a name="p950000000032"></a><a href="torch_npu-npu_quant_fusion_attention.md">torch_npu.npu_quant_fusion_attention</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p950000000033"><a name="p950000000033"></a><a name="p950000000033"></a>实现FP8量化的Transformer Attention Score融合计算，支持float8_e4m3fn和hifloat8量化输入。</p>
+</td>
+</tr>
 <tr id="row950000000031"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p950000000032"><a name="p950000000032"></a><a name="p950000000032"></a><a href="torch_npu-npu_quant_gmm_alltoallv.md">torch_npu.npu_quant_gmm_alltoallv</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p950000000033"><a name="p950000000033"></a><a name="p950000000033"></a>实现路由专家GroupedMatmul和AlltoAllv的融合，先计算后通信，同时与共享专家MatMul计算并行融合。支持T-T量化模式和mx量化模式。</p>
