@@ -35,7 +35,6 @@ constexpr int64_t DIMS_MAX = 5;
 constexpr int64_t IDX_0 = 0;
 constexpr int64_t IDX_1 = 1;
 constexpr int64_t IDX_2 = 2;
-constexpr int64_t IDX_3 = 3;
 
 struct QuantContext {
   const at::Tensor& weight;
@@ -76,7 +75,7 @@ static bool is_transpose_certain_two_dims(const at::Tensor& tensor, int64_t firs
   return tensor.stride(first_dim + 1) == tensor.stride(first_dim) * tensor.size(first_dim);
 }
 
-// A16W4（INT4 / FP4 E2M1，非 MX）torch 侧统一用 uint8 载体物理打包（每字节 2 个 4-bit 元素），
+// A16W4（INT4 / FP4 E2M1，含 MX）torch 侧统一用 uint8 载体物理打包（每字节 2 个 4-bit 元素），
 // 与 aclnnWeightQuantBatchMatmulV2 的 uint8 packed 输入约定一致；其他载体直接拒绝
 static void check_a16w4_uint8_carrier(const QuantContext& ctx) {
   TORCH_CHECK(
@@ -242,7 +241,7 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
 
   bool x_dtype_match = (x_acl_dtype == ACL_FLOAT16 || x_acl_dtype == ACL_BF16);
 
-  // A16 MXFP4：FP4 weight + MX scale（E8M0，2D [K/32, N] 连续）；
+  // A16 MXFP4：FP4 weight + MX scale（E8M0，2D [K/32, N]，转置时为 strides [1, K/32] 视图）；
   // 转置状态内部分流：转置 → ND 直拷（wqbmmv2 MX kernel 支持 ND 转置），非转置 → NZ 转换
   if (x_dtype_match && weight_acl_dtype == ACL_FLOAT4_E2M1 && weight_scale_acl_dtype == ACL_FLOAT8_E8M0 &&
       x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2) {
@@ -342,7 +341,7 @@ static void prepare_out_weight_nz_a16w4(QuantContext& ctx) {
       ctx.out_weight, ctx.out_weight.sizes(), storage_shape, ctx.out_weight.strides(), ACL_FORMAT_FRACTAL_NZ_C0_8);
 }
 
-// A16W4（INT4/FP4）转置分流：转置 weight → ND 直拷（物理透传，与转置状态无关）；非转置 → NZ 转换
+// A16W4（INT4/FP4）转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → NZ 转换
 static void prepare_out_weight_a16w4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
     prepare_out_weight_nd(ctx);
