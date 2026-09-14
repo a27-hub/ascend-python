@@ -94,7 +94,6 @@ torch_npu.npu_all_gather_base_mm(input, x2, hcom, world_size, *, bias=None, x1_s
   - `comm_mode`为`ai_cpu`时：
       - 该接口支持训练场景下使用。
       - 该接口支持图模式。
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
   - `comm_mode`为`aiv`时，训练和推理场景均可使用。
 - <term>Ascend 950PR/Ascend 950DT</term>：allgather\(x1\)集合通信数据总量不能超过63\*256MB，集合通信数据总量计算方式为：m \* k \* sizeof\(x1\_dtype\) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 

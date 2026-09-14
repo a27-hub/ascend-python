@@ -98,7 +98,9 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 
 ## 返回值说明
 
-- **output**（`Tensor`）：输出张量。数据类型非量化场景以及伪量化场景与`x1`保持一致，全量化场景输出数据类型为`float16`或`bfloat16`。shape第0维度和`x1`的0维保持一致，若`x1`为2维，shape第1维度和`x2`的1维保持一致，若`x1`为3维，shape第1维度和`x1`的1维保持一致，shape第2维度和`x2`的1维保持一致。
+`Tensor`
+
+输出张量。数据类型非量化场景以及伪量化场景与`x1`保持一致，全量化场景输出数据类型为`float16`或`bfloat16`。shape第0维度和`x1`的0维保持一致，若`x1`为2维，shape第1维度和`x2`的1维保持一致，若`x1`为3维，shape第1维度和`x1`的1维保持一致，shape第2维度和`x2`的1维保持一致。
 
 ## 约束说明
 
@@ -126,8 +128,6 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 - 非量化场景：b\*s、m、k、n的值均不得超过2147483647\(INT32\_MAX\)。
 - 全量化场景：b\*s、m取值范围均为\[1, 2147483647\]，`x1`、`x2`的最后一维范围为\[1, 65535\]，即k的取值范围为\[1, 65535\]、仅当x2\(shape=\[n, k\]\)为转置时n可以大于65535。
 - 伪量化场景：b\*s、m取值范围均为\[1, 2147483647\]，k、n的取值范围为\[1, 65535\]。
-- 一个模型中的通算融合MC2算子，仅支持相同通信域。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
 - 在长序列场景，随着b/s或者m的增大，可能出现内存不足或者计算超时。
 - 不同量化场景下参数支持的数据类型组合：
 
