@@ -35,6 +35,8 @@ constexpr int64_t DIMS_MAX = 5;
 constexpr int64_t IDX_0 = 0;
 constexpr int64_t IDX_1 = 1;
 constexpr int64_t IDX_2 = 2;
+constexpr int64_t IDX_3 = 3;
+constexpr int64_t MX_SCALE_LAST_DIM = 2;
 
 struct QuantContext {
   const at::Tensor& weight;
@@ -253,7 +255,7 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
 }
 
 // 直拷输出别名：out 直接复用输入 tensor（共享 storage 与 view），aclnn 直拷路径同址时无拷贝
-static void prepare_out_weight_scale(QuantContext& ctx) {
+static void prepare_out_weight_scale_direct(QuantContext& ctx) {
   ctx.out_weight_scale = ctx.weight_scale;
 }
 
@@ -361,18 +363,35 @@ static void prepare_out_weight_scale_mx(QuantContext& ctx) {
       ctx.weight_scale.dim(),
       OPS_ERROR(ErrCode::PARAM));
 
-  // MX scale 为直拷，out 直接别名输入（共享 storage 与 view，转置场景 strides 一并继承）
-  ctx.out_weight_scale = ctx.weight_scale;
+  auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
+  ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
+
+  if (ctx.is_weight_trans) {
+    int64_t scale_dim = ctx.weight_scale.dim();
+    int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
+    int64_t n = scale_view_shape[scale_dim - IDX_2];
+    c10::SmallVector<int64_t, DIMS_MAX> trans_stride; // 对应内存转置存储
+    if constexpr (IsGmm) {
+      trans_stride = {
+          MX_SCALE_LAST_DIM * k_scale * n,
+          MX_SCALE_LAST_DIM,
+          MX_SCALE_LAST_DIM * k_scale,
+          1}; // 对应内存中的 [group_num, n, k_scale, 2]
+    } else {
+      trans_stride = {MX_SCALE_LAST_DIM, MX_SCALE_LAST_DIM * k_scale, 1}; // 对应内存中的 [n, k_scale, 2]
+    }
+    ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
+  }
 }
 
-static void prepare_out_weight_offset(QuantContext& ctx) {
+static void prepare_out_weight_offset_direct(QuantContext& ctx) {
   if (ctx.weight_offset.has_value() && ctx.weight_offset.value().defined()) {
     // offset 为直拷，out 直接别名输入（共享 storage 与 view，转置场景 strides 一并继承）
     ctx.out_weight_offset = ctx.weight_offset.value();
   }
 }
 
-static void prepare_out_bias(QuantContext& ctx) {
+static void prepare_out_bias_direct(QuantContext& ctx) {
   if (ctx.bias.has_value() && ctx.bias.value().defined()) {
     // bias 为直拷，out 直接别名输入
     ctx.out_bias = ctx.bias.value();
@@ -391,40 +410,40 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
        {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
         prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
         prepare_out_weight_scale_mx<false>,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}},
       {judge_gmm_mx_a8w4,
        {// FP4 逻辑 C0 为 32，torch 层用 1 个 int8/uint8 元素打包 2 个 FP4，因此物理存储的 C0 维长度为 16
         prepare_out_weight_nz<true, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>,
         prepare_out_weight_scale_mx<true>,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}},
       {judge_mm_a16s4_per_tensor,
        {prepare_out_weight_nd,
-        prepare_out_weight_scale,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
+        prepare_out_weight_scale_direct,
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}},
       {judge_mm_a16s4_per_channel,
        {prepare_out_weight_a16w4,
-        prepare_out_weight_scale,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
+        prepare_out_weight_scale_direct,
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}},
       {judge_mm_a16s4_per_group,
        {prepare_out_weight_a16w4,
-        prepare_out_weight_scale,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
+        prepare_out_weight_scale_direct,
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}},
       {judge_mm_a16f4_nz_pergroup,
        {prepare_out_weight_nz_a16w4,
-        prepare_out_weight_scale,
-        prepare_out_weight_offset,
-        prepare_out_bias}},
+        prepare_out_weight_scale_direct,
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}},
       {judge_mm_a16f4_mx,
        {// 转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16w4 内部分流）
         prepare_out_weight_a16w4,
-        prepare_out_weight_scale,
-        prepare_out_weight_offset,
-        prepare_out_bias}}}},
+        prepare_out_weight_scale_direct,
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}}}},
 };
 
 } // namespace
