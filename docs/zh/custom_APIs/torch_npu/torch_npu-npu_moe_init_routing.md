@@ -78,8 +78,8 @@ torch_npu.npu_moe_init_routing(x, row_idx, expert_idx, active_num) -> (Tensor, T
 
 ## 约束说明
 
-- 该接口支持推理场景下使用。
-- 该接口支持图模式。
+- 该接口仅支持推理场景下使用。
+- 该接口支持单算子模式和图模式调用。
 
 ## 调用示例
 

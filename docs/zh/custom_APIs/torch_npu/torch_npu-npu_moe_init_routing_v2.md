@@ -656,8 +656,8 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 
 Atlas A2训练系列产品/Atlas A2推理系列产品/Atlas A3训练系列产品/Atlas A3推理系列产品：
 
-- 该接口支持推理场景下使用。
-- 该接口支持图模式。
+- 该接口仅支持推理场景下使用。
+- 该接口支持单算子模式和图模式调用。
 - 进入低时延性能模板需要同时满足以下条件：
     - `x`、`expert_idx`、`scale`输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
     - `x`数据类型要求：`torch.bfloat16`
