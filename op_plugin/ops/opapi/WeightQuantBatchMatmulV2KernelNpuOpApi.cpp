@@ -60,6 +60,7 @@ at::Tensor npu_weight_quant_batchmatmul(
   bool is_4bit_acl_dtype =
       (weight_acl_dtype == ACL_INT4 || weight_acl_dtype == ACL_FLOAT4_E2M1 || weight_acl_dtype == ACL_FLOAT4_E1M2);
   int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
+  // at::kByte 即 uint8（ATen 无 kUInt8 别名，Byte 是 uint8 的唯一拼写）
   bool is_uint8_4bit = (weight.dtype() == at::kByte) && is_4bit_acl_dtype;
 
   int64_t pack_ratio = is_int32_float_packed ? INT4_NUMS_IN_INT32 : (is_uint8_4bit ? B4_IN_UINT8 : 1);
