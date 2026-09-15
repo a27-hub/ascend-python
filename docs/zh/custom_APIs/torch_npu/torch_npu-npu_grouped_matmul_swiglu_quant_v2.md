@@ -264,7 +264,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=0, group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None) -> (Tensor, Tensor)
+torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1, group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None, swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None, round_mode="rint", scale_alg=0, dst_type_max=0.0) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -337,6 +337,23 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
   - <term>Ascend 950PR/Ascend 950DT</term>：当`x_scale`为`torch.float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch.float8_e8m0fnu`。
 
+- **SwiGLU计算参数说明**：`swiglu_mode`、`clamp_limit`、`glu_alpha`和`glu_bias`均为可选参数，默认值为`None`。`swiglu_mode`是这些参数的使能开关：仅当其值不为`None`时，其余三个参数才生效；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为，且不可单独传入其余三个参数。仅在MXFP8 weight NZ量化场景下支持`swiglu_mode`非空。
+
+- **`swiglu_mode`**（`int`）：**可选参数**，指定SwiGLU的计算模式，默认值为`None`。取值为`None`时使用原有SwiGLU计算；显式传入时仅支持MXFP8量化且`weight`为`FRACTAL_NZ`格式的单Tensor场景，当前仅支持取值`2`。该路径中`x`和`weight`仅支持`torch.float8_e4m3fn`；如果显式传入`x_dtype`或`weight_dtype`，也仅支持`torch_npu.float8_e4m3fn`。
+  - `2`：沿输出最后一维前后分半，前半部分为激活分支，后半部分为线性分支；两分支按`clamp_limit`裁剪后，计算`x_glu * sigmoid(glu_alpha * x_glu) * (x_linear + glu_bias)`。
+
+- **`clamp_limit`**（`float`）：**可选参数**，表示模式`2`的SwiGLU裁剪上限，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`7.0`处理；激活分支裁剪到上界`clamp_limit`，线性分支裁剪到`[-clamp_limit, clamp_limit]`。传入时必须为有限正数。
+
+- **`glu_alpha`**（`float`）：**可选参数**，表示模式`2`中Sigmoid输入的缩放系数，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.702`处理；必须为有限且可由`float32`表示的值。
+
+- **`glu_bias`**（`float`）：**可选参数**，表示模式`2`中线性分支的偏置，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.0`处理；必须为有限且可由`float32`表示的值。
+
+- **`round_mode`**（`str`）：**可选参数**，MX量化舍入模式，默认值为`"rint"`，仅在MXFP8 weight NZ量化场景下支持，当前仅支持`"rint"`。
+
+- **`scale_alg`**（`int`）：**可选参数**，MX量化scale算法，默认值为`0`，仅在MXFP8 weight NZ量化场景下支持。支持`0`（OCP实现）和`1`（cuBLAS实现，仅支持`torch.float8_e4m3fn`输出）；`scale_alg=2`仅适用于`torch_npu.float4_e2m1fn_x2`输出，当前MXFP8场景不支持。
+
+- **`dst_type_max`**（`float`）：**可选参数**，表示输出数据类型的最大值，默认值为`0.0`，仅在MXFP8 weight NZ量化场景下支持。当`scale_alg`为`0`或`1`时仅支持`0.0`，传入其他值会报错。
+
 ## 返回值说明
 
 - **`output`**（`Tensor`）：输出的量化结果。数据格式支持$ND$，支持非连续的`Tensor`。
@@ -360,6 +377,11 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - MX量化、`weight`为ND格式场景下，当输入为`torch.float8_e4m3fn`或`torch.float8_e5m2`数据类型时，需满足N为2对齐；当输入为`torch.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`数据类型时，需满足N为4对齐。
   - MX量化、`weight`为NZ格式场景下，当输入为`torch.float8_e4m3fn`或`torch.float8_e5m2`数据类型时，需满足N为64对齐；当输入为`torch.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`数据类型时，需满足N为128对齐。
   - MXFP4场景不支持k=2，MXFP4场景需满足K为偶数。
+
+- `clamp_limit`、`glu_alpha`和`glu_bias`仅可与`swiglu_mode`一起传入；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为。
+- `swiglu_mode`非空时，仅支持取值`2`，且仅支持MXFP8量化、单Tensor的`weight`和`weight_scale`，以及`FRACTAL_NZ`格式的`weight`；显式传入`swiglu_mode`但不满足该条件时会报错。
+- `swiglu_mode`非空时，`x`和`weight`的数据类型必须为`torch.float8_e4m3fn`；显式传入的`x_dtype`和`weight_dtype`必须为`torch_npu.float8_e4m3fn`，其他数据类型会报错。
+- V3 MXFP8 weightNZ场景仅支持`x`非转置，`weight`支持非转置和转置输入；`round_mode`仅支持`"rint"`，`scale_alg`支持`0`和`1`，`dst_type_max`仅支持`0.0`。
 
 - 参数说明里Shape使用的变量说明：
   - e：表示分组数目，取值范围为1-1024。
@@ -481,6 +503,61 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     weight_scale_dtype=torch_npu.float8_e8m0fnu,
     x_scale_dtype=torch_npu.float8_e8m0fnu)
     ```
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：MXFP8 weightNZ 场景下 `swiglu_mode` 示例
+
+    下面的示例固定 `x` 为非转置输入，使用 `swiglu_mode=2`，并分别覆盖非转置和转置的 `weight`。`weight` 和 `weight_scale` 均为单Tensor；`weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ 格式。`round_mode`和`dst_type_max`使用默认值，`scale_alg`可取`0`或`1`。
+
+    ```python
+    import math
+    import torch
+    import torch_npu
+
+    torch.manual_seed(0)
+
+    E, M, K, N = 1, 64, 128, 128
+    x = torch.randint(-4, 5, (M, K), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+    weight_nd = torch.randint(-4, 5, (E, K, N), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+    weight_nz = torch_npu.npu_format_cast(weight_nd, 29)
+    weight_scale = torch.full(
+        (E, math.ceil(K / 64), N, 2), 127, dtype=torch.int8).npu()
+    x_scale = torch.full(
+        (M, math.ceil(K / 64), 2), 127, dtype=torch.int8).npu()
+    group_list = torch.tensor([M], dtype=torch.int64).npu()
+
+    swiglu_mode = 2
+    for transpose in (False, True):
+        weight = weight_nz.transpose(1, 2) if transpose else weight_nz
+        current_weight_scale = weight_scale.transpose(1, 2) if transpose else weight_scale
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x,
+            [weight],
+            [current_weight_scale],
+            x_scale,
+            group_list,
+            dequant_mode=2,
+            dequant_dtype=torch.float32,
+            quant_mode=2,
+            quant_dtype=torch.float8_e4m3fn,
+            weight_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_scale_dtype=torch_npu.float8_e8m0fnu,
+            swiglu_mode=swiglu_mode,
+            clamp_limit=7.0,
+            glu_alpha=1.702,
+            glu_bias=1.0,
+            round_mode="rint",
+            scale_alg=0,
+            dst_type_max=0.0,
+        )
+        torch.npu.synchronize()
+        print(
+            f"mode={swiglu_mode}, transpose={transpose}, "
+            f"output.shape={tuple(output.shape)}, "
+            f"output_scale.shape={tuple(output_scale.shape)}"
+        )
+    ```
+
+    输出 `output` 的 shape 为 `(M, N / 2)`，`output_scale` 的 shape 为 `(M, ceil((N / 2) / 64), 2)`。
 
   - Ascend 950PR/Ascend 950DT：mx量化场景示例-mxfp4
 
