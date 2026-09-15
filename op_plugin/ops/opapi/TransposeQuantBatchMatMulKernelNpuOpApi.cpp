@@ -56,6 +56,11 @@ at::Tensor npu_transpose_quant_batchmatmul(
     c10::optional<int64_t> batch_split_factor,
     c10::optional<int64_t> x1_dtype,
     c10::optional<int64_t> x2_dtype) {
+  bool isMXFP4 = (x1_dtype == torch_npu.float4_e2m1fn_x2) || (x2_dtype == torch_npu.float4_e2m1fn_x2);
+  TORCH_CHECK(
+          !isMXFP4,
+          "aclnnTransposeQuantBatchMatMul does not support x1 or x2 as MXFP4 input.",
+          OPS_ERROR(ErrCode::PARAM));
   const at::Tensor& bias_real = bias.value_or(at::Tensor());
   const at::Tensor& x1_scale_real = x1_scale.value_or(at::Tensor());
   const at::Tensor& x2_scale_real = x2_scale.value_or(at::Tensor());
