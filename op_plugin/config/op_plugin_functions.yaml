@@ -6645,7 +6645,7 @@ custom:
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=0, int? quant_mode=0, int? quant_dtype=1, int? group_list_type=0, int[]? tuning_config=None, int? x_dtype=None, int? weight_dtype=None, int? weight_scale_dtype=None, int? x_scale_dtype=None, int? activate_dim=None, bool? activate_left=None, int? swiglu_mode=None, float? clamp_limit=None, float? glu_alpha=None, float? glu_bias=None, int axis=-1, str round_mode="rint", int scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor)
+  - func: npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=0, int? quant_mode=0, int? quant_dtype=1, int? group_list_type=0, int[]? tuning_config=None, int? x_dtype=None, int? weight_dtype=None, int? weight_scale_dtype=None, int? x_scale_dtype=None, int? swiglu_mode=None, float? clamp_limit=None, float? glu_alpha=None, float? glu_bias=None, str round_mode="rint", int scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor)
     op_api: all_version
     internal_format_opapi: all_version
 

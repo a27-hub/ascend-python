@@ -264,7 +264,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1, group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None, activate_dim=None, activate_left=None, swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None, axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0) -> (Tensor, Tensor)
+torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1, group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None, swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None, round_mode="rint", scale_alg=0, dst_type_max=0.0) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -337,27 +337,16 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值。
   - <term>Ascend 950PR/Ascend 950DT</term>：当`x_scale`为`torch.float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch.float8_e8m0fnu`。
 
-- **SwiGLU计算参数说明**：`activate_dim`、`activate_left`、`swiglu_mode`、`clamp_limit`、`glu_alpha`和`glu_bias`均为可选参数，默认值为`None`。`swiglu_mode`是这些参数的使能开关：仅当其值不为`None`时，其余五个参数才生效；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为，且不可单独传入其余五个参数。仅在MXFP8 weight NZ量化场景下支持`swiglu_mode`非空。
+- **SwiGLU计算参数说明**：`swiglu_mode`、`clamp_limit`、`glu_alpha`和`glu_bias`均为可选参数，默认值为`None`。`swiglu_mode`是这些参数的使能开关：仅当其值不为`None`时，其余三个参数才生效；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为，且不可单独传入其余三个参数。仅在MXFP8 weight NZ量化场景下支持`swiglu_mode`非空。
 
-- **`activate_dim`**（`int`）：**可选参数**，指定GroupedMatmul结果沿哪个维度切分为`x_glu`和`x_linear`。默认值为`None`；当`swiglu_mode`有值且本参数为`None`时，按`-1`处理；当前仅支持`-1`，即沿输出的最后一维切分。
+- **`swiglu_mode`**（`int`）：**可选参数**，指定SwiGLU的计算模式，默认值为`None`。取值为`None`时使用原有SwiGLU计算；显式传入时仅支持MXFP8量化且`weight`为`FRACTAL_NZ`格式的单Tensor场景，当前仅支持取值`2`。该路径中`x`和`weight`仅支持`torch.float8_e4m3fn`；如果显式传入`x_dtype`或`weight_dtype`，也仅支持`torch_npu.float8_e4m3fn`。
+  - `2`：沿输出最后一维前后分半，前半部分为激活分支，后半部分为线性分支；两分支按`clamp_limit`裁剪后，计算`x_glu * sigmoid(glu_alpha * x_glu) * (x_linear + glu_bias)`。
 
-- **`activate_left`**（`bool`）：**可选参数**，指定激活分支`x_glu`的位置。默认值为`None`；当`swiglu_mode`有值且本参数为`None`时，按`True`处理。
-  - `swiglu_mode=0`、`2`或`3`时，`True`表示前半部分为`x_glu`，`False`表示后半部分为`x_glu`。
-  - `swiglu_mode=1`时，结果按奇偶位置交错拆分；该参数指定哪一组交错元素作为`x_glu`激活分支。
+- **`clamp_limit`**（`float`）：**可选参数**，表示模式`2`的SwiGLU裁剪上限，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`7.0`处理；激活分支裁剪到上界`clamp_limit`，线性分支裁剪到`[-clamp_limit, clamp_limit]`。传入时必须为有限正数。
 
-- **`swiglu_mode`**（`int`）：**可选参数**，指定SwiGLU的计算模式，默认值为`None`。取值为`None`时使用原有SwiGLU计算；显式传入时仅支持MXFP8量化且`weight`为`FRACTAL_NZ`格式的单Tensor场景，支持取值`0`、`1`、`2`、`3`。该路径中`x`和`weight`仅支持`torch.float8_e4m3fn`；如果显式传入`x_dtype`或`weight_dtype`，也仅支持`torch_npu.float8_e4m3fn`。
-  - `0`：标准SwiGLU。将结果沿`activate_dim`前后分半，`x_glu`经过`x_glu * sigmoid(x_glu)`后与`x_linear`相乘。
-  - `1`：奇偶位置交错拆分。`x_glu`仅做上界为`clamp_limit`的裁剪，`x_linear`裁剪到`[-clamp_limit, clamp_limit]`，随后计算`x_glu * sigmoid(glu_alpha * x_glu) * (x_linear + glu_bias)`。
-  - `2`：沿`activate_dim`前后分半。裁剪规则和计算公式与模式`1`相同，但不采用奇偶位置交错拆分。
-  - `3`：沿`activate_dim`前后分半。先计算固定`alpha=1`的SiLU，即`x_glu * sigmoid(x_glu)`，再将其裁剪到上界`clamp_limit`；`x_linear`裁剪到`[-clamp_limit, clamp_limit]`后与之相乘。此模式忽略`glu_alpha`和`glu_bias`。
+- **`glu_alpha`**（`float`）：**可选参数**，表示模式`2`中Sigmoid输入的缩放系数，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.702`处理；必须为有限且可由`float32`表示的值。
 
-- **`clamp_limit`**（`float`）：**可选参数**，表示变体SwiGLU的裁剪上限，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`7.0`处理。传入时必须为有限正数。模式`1`、`2`中用于裁剪`x_glu`和`x_linear`；模式`3`中用于裁剪SiLU后的`x_glu`以及`x_linear`。
-
-- **`glu_alpha`**（`float`）：**可选参数**，表示模式`1`、`2`中Sigmoid输入的缩放系数，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.702`处理。模式`0`和`3`不使用该参数。
-
-- **`glu_bias`**（`float`）：**可选参数**，表示模式`1`、`2`中线性分支`x_linear`的偏置，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.0`处理。模式`0`和`3`不使用该参数。
-
-- **`axis`**（`int`）：**可选参数**，MX量化轴，默认值为`-1`，仅在MXFP8 weight NZ量化场景下支持，当前仅支持`-1`。
+- **`glu_bias`**（`float`）：**可选参数**，表示模式`2`中线性分支的偏置，默认值为`None`。当`swiglu_mode`有值且本参数为`None`时，按`1.0`处理；必须为有限且可由`float32`表示的值。
 
 - **`round_mode`**（`str`）：**可选参数**，MX量化舍入模式，默认值为`"rint"`，仅在MXFP8 weight NZ量化场景下支持，当前仅支持`"rint"`。
 
@@ -389,10 +378,10 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - MX量化、`weight`为NZ格式场景下，当输入为`torch.float8_e4m3fn`或`torch.float8_e5m2`数据类型时，需满足N为64对齐；当输入为`torch.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`数据类型时，需满足N为128对齐。
   - MXFP4场景不支持k=2，MXFP4场景需满足K为偶数。
 
-- `activate_dim`、`activate_left`、`clamp_limit`、`glu_alpha`和`glu_bias`仅可与`swiglu_mode`一起传入；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为。
-- `swiglu_mode`非空时，仅支持MXFP8量化、单Tensor的`weight`和`weight_scale`，且`weight`必须为`FRACTAL_NZ`格式；显式传入`swiglu_mode`但不满足该条件时会报错。
+- `clamp_limit`、`glu_alpha`和`glu_bias`仅可与`swiglu_mode`一起传入；未传入`swiglu_mode`时，接口保持原有SwiGLU计算行为。
+- `swiglu_mode`非空时，仅支持取值`2`，且仅支持MXFP8量化、单Tensor的`weight`和`weight_scale`，以及`FRACTAL_NZ`格式的`weight`；显式传入`swiglu_mode`但不满足该条件时会报错。
 - `swiglu_mode`非空时，`x`和`weight`的数据类型必须为`torch.float8_e4m3fn`；显式传入的`x_dtype`和`weight_dtype`必须为`torch_npu.float8_e4m3fn`，其他数据类型会报错。
-- V3 MXFP8 weightNZ场景仅支持`x`非转置，`weight`支持非转置和转置输入；`axis`仅支持`-1`，`round_mode`仅支持`"rint"`，`scale_alg`支持`0`和`1`，`dst_type_max`仅支持`0.0`。
+- V3 MXFP8 weightNZ场景仅支持`x`非转置，`weight`支持非转置和转置输入；`round_mode`仅支持`"rint"`，`scale_alg`支持`0`和`1`，`dst_type_max`仅支持`0.0`。
 
 - 参数说明里Shape使用的变量说明：
   - e：表示分组数目，取值范围为1-1024。
@@ -517,7 +506,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - <term>Ascend 950PR/Ascend 950DT</term>：MXFP8 weightNZ 场景下 `swiglu_mode` 示例
 
-    下面的示例固定 `x` 为非转置输入，遍历 `swiglu_mode=0、1、2、3`，并分别覆盖非转置和转置的 `weight`。`weight` 和 `weight_scale` 均为单Tensor；`weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ 格式。`K=128` 时，模式`0`、`2`、`3`走V3 Tensor API，模式`1`走CGMCT。`axis`、`round_mode`和`dst_type_max`使用默认值，`scale_alg`可取`0`或`1`。
+    下面的示例固定 `x` 为非转置输入，使用 `swiglu_mode=2`，并分别覆盖非转置和转置的 `weight`。`weight` 和 `weight_scale` 均为单Tensor；`weight` 通过 `npu_format_cast` 转换为 FRACTAL_NZ 格式。`round_mode`和`dst_type_max`使用默认值，`scale_alg`可取`0`或`1`。
 
     ```python
     import math
@@ -536,41 +525,36 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
         (M, math.ceil(K / 64), 2), 127, dtype=torch.int8).npu()
     group_list = torch.tensor([M], dtype=torch.int64).npu()
 
-    for swiglu_mode in (0, 1, 2, 3):
-        for transpose in (False, True):
-            weight = weight_nz.transpose(1, 2) if transpose else weight_nz
-            current_weight_scale = (
-                weight_scale.transpose(1, 2) if transpose else weight_scale
-            )
-            output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
-                x,
-                [weight],
-                [current_weight_scale],
-                x_scale,
-                group_list,
-                dequant_mode=2,
-                dequant_dtype=torch.float32,
-                quant_mode=2,
-                quant_dtype=torch.float8_e4m3fn,
-                weight_scale_dtype=torch_npu.float8_e8m0fnu,
-                x_scale_dtype=torch_npu.float8_e8m0fnu,
-                activate_dim=-1,
-                activate_left=True,
-                swiglu_mode=swiglu_mode,
-                clamp_limit=7.0,
-                glu_alpha=1.702,
-                glu_bias=1.0,
-                axis=-1,
-                round_mode="rint",
-                scale_alg=0,
-                dst_type_max=0.0,
-            )
-            torch.npu.synchronize()
-            print(
-                f"mode={swiglu_mode}, transpose={transpose}, "
-                f"output.shape={tuple(output.shape)}, "
-                f"output_scale.shape={tuple(output_scale.shape)}"
-            )
+    swiglu_mode = 2
+    for transpose in (False, True):
+        weight = weight_nz.transpose(1, 2) if transpose else weight_nz
+        current_weight_scale = weight_scale.transpose(1, 2) if transpose else weight_scale
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x,
+            [weight],
+            [current_weight_scale],
+            x_scale,
+            group_list,
+            dequant_mode=2,
+            dequant_dtype=torch.float32,
+            quant_mode=2,
+            quant_dtype=torch.float8_e4m3fn,
+            weight_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_scale_dtype=torch_npu.float8_e8m0fnu,
+            swiglu_mode=swiglu_mode,
+            clamp_limit=7.0,
+            glu_alpha=1.702,
+            glu_bias=1.0,
+            round_mode="rint",
+            scale_alg=0,
+            dst_type_max=0.0,
+        )
+        torch.npu.synchronize()
+        print(
+            f"mode={swiglu_mode}, transpose={transpose}, "
+            f"output.shape={tuple(output.shape)}, "
+            f"output_scale.shape={tuple(output_scale.shape)}"
+        )
     ```
 
     输出 `output` 的 shape 为 `(M, N / 2)`，`output_scale` 的 shape 为 `(M, ceil((N / 2) / 64), 2)`。

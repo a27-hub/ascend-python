@@ -30,8 +30,6 @@ constexpr int64_t DIM_5 = 5LL;
 constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
 constexpr int64_t HIFLOAT8 = 34LL;
-constexpr int64_t DEFAULT_SWIGLU_ACTIVATE_DIM = -1LL;
-constexpr bool DEFAULT_SWIGLU_ACTIVATE_LEFT = true;
 constexpr double DEFAULT_SWIGLU_CLAMP_LIMIT = 7.0;
 constexpr double DEFAULT_SWIGLU_ALPHA = 1.702;
 constexpr double DEFAULT_SWIGLU_BIAS = 1.0;
@@ -145,13 +143,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     c10::optional<int64_t> weight_dtype,
     c10::optional<int64_t> weight_scale_dtype,
     c10::optional<int64_t> x_scale_dtype,
-    c10::optional<int64_t> activate_dim,
-    c10::optional<bool> activate_left,
     c10::optional<int64_t> swiglu_mode,
     c10::optional<double> clamp_limit,
     c10::optional<double> glu_alpha,
     c10::optional<double> glu_bias,
-    int64_t axis,
     c10::string_view round_mode,
     int64_t scale_alg,
     double dst_type_max)
@@ -172,12 +167,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                               at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
                               weight[DIM_0].dim() == DIM_5;
     const bool use_swiglu_v3 = swiglu_mode.has_value();
-    TORCH_CHECK(use_swiglu_v3 ||
-                    (!activate_dim.has_value() && !activate_left.has_value() && !clamp_limit.has_value() &&
-                     !glu_alpha.has_value() && !glu_bias.has_value()),
+    TORCH_CHECK(use_swiglu_v3 || (!clamp_limit.has_value() && !glu_alpha.has_value() && !glu_bias.has_value()),
                 "swiglu_mode must be specified when using the V3 SwiGLU parameters.", OPS_ERROR(ErrCode::PARAM));
-    const int64_t activate_dim_real = activate_dim.value_or(DEFAULT_SWIGLU_ACTIVATE_DIM);
-    const bool activate_left_real = activate_left.value_or(DEFAULT_SWIGLU_ACTIVATE_LEFT);
     const int64_t swiglu_mode_real = swiglu_mode.value_or(0);
     const double clamp_limit_real = clamp_limit.value_or(DEFAULT_SWIGLU_CLAMP_LIMIT);
     const double glu_alpha_real = glu_alpha.value_or(DEFAULT_SWIGLU_ALPHA);
@@ -240,6 +231,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const bool mxfp8w4_nz_input = is_weight_nz && mxfp8w4;
 
     if (use_swiglu_v3) {
+        TORCH_CHECK(swiglu_mode_real == 2,
+                    "When swiglu_mode is specified, only swiglu_mode=2 is supported.", OPS_ERROR(ErrCode::VALUE));
         TORCH_CHECK(x.scalar_type() == at::kFloat8_e4m3fn,
                     "When swiglu_mode is specified, x only supports torch.float8_e4m3fn, but the actual dtype is ",
                     x.scalar_type(), "." + OPS_ERROR(ErrCode::TYPE));
@@ -449,13 +442,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                 quant_mode_real,
                 group_list_type_real,
                 tuning_config_real,
-                activate_dim_real,
-                activate_left_real,
                 swiglu_mode_real,
                 clamp_limit_real,
                 glu_alpha_real,
                 glu_bias_real,
-                axis,
                 round_mode_real,
                 scale_alg,
                 dst_type_max,

@@ -6567,19 +6567,22 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
 def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None,
     weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1,
     group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None,
-    activate_dim=None, activate_left=None, swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None,
-    axis=-1, round_mode="rint", scale_alg=0, dst_type_max=0.0):
-
-    torch._check(
-        len(weight) == 1,
-        lambda: f"The size of weight should be 1, current size is {len(weight)}.",
-    )
-    torch._check(
-        len(weight_scale) == 1,
-        lambda: f"The size of weight_scale should be 1, current size is {len(weight_scale)}.",
-    )
+    swiglu_mode=None, clamp_limit=None, glu_alpha=None, glu_bias=None, round_mode="rint", scale_alg=0,
+    dst_type_max=0.0):
 
     if swiglu_mode is not None:
+        torch._check(
+            len(weight) == 1,
+            lambda: f"The size of weight should be 1, current size is {len(weight)}.",
+        )
+        torch._check(
+            len(weight_scale) == 1,
+            lambda: f"The size of weight_scale should be 1, current size is {len(weight_scale)}.",
+        )
+        torch._check(
+            swiglu_mode == 2,
+            lambda: f"When swiglu_mode is specified, only swiglu_mode=2 is supported, but got {swiglu_mode}.",
+        )
         torch._check(
             x.dtype == torch.float8_e4m3fn,
             lambda: "When swiglu_mode is specified, x only supports torch.float8_e4m3fn, but the actual dtype is " + npu_dtype_to_str(x.dtype),
