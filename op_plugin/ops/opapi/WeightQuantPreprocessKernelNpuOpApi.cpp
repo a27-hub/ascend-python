@@ -106,11 +106,19 @@ bool judge_mm_mx_a8w4(QuantContext& ctx) {
   bool dtype_match = (x_acl_dtype == ACL_FLOAT8_E4M3FN) && (weight_acl_dtype == ACL_FLOAT4_E2M1) &&
       (x_scale_acl_dtype == ACL_FLOAT8_E8M0) && (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
   if (dtype_match && ctx.weight.dim() == DIMS_2) {
-    // judge 内不抛出：条件不满足返回 false，由外层统一报 "Unsupported data flow combination."
-    if (ctx.weight_scale.dim() != DIMS_3 || !is_transpose_certain_two_dims(ctx.weight, 0) ||
-        !is_transpose_certain_two_dims(ctx.weight_scale, 0)) {
-      return false;
-    }
+    TORCH_CHECK(
+        ctx.weight_scale.dim() == DIMS_3,
+        "Input weight scale tensor should be 3D, but got ",
+        ctx.weight_scale.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        is_transpose_certain_two_dims(ctx.weight, 0),
+        "Input weight tensor should be transposed, please check input.",
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        is_transpose_certain_two_dims(ctx.weight_scale, 0),
+        "Input weight scale tensor should be transposed, please check input.",
+        OPS_ERROR(ErrCode::PARAM));
     ctx.is_weight_trans = true;
     return true;
   }
@@ -136,11 +144,19 @@ bool judge_gmm_mx_a8w4(QuantContext& ctx) {
   bool dtype_match = (x_acl_dtype == ACL_FLOAT8_E4M3FN) && (weight_acl_dtype == ACL_FLOAT4_E2M1) &&
       (x_scale_acl_dtype == ACL_FLOAT8_E8M0) && (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
   if (dtype_match && ctx.weight.dim() == DIMS_3) {
-    // judge 内不抛出：条件不满足返回 false，由外层统一报 "Unsupported data flow combination."
-    if (ctx.weight_scale.dim() != DIMS_4 || !is_transpose_certain_two_dims(ctx.weight, 1) ||
-        !is_transpose_certain_two_dims(ctx.weight_scale, 1)) {
-      return false;
-    }
+    TORCH_CHECK(
+        ctx.weight_scale.dim() == DIMS_4,
+        "Input weight scale tensor should be 4D, but got ",
+        ctx.weight_scale.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        is_transpose_certain_two_dims(ctx.weight, 1),
+        "Input weight tensor should be transposed, please check input.",
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        is_transpose_certain_two_dims(ctx.weight_scale, 1),
+        "Input weight scale tensor should be transposed, please check input.",
+        OPS_ERROR(ErrCode::PARAM));
     ctx.is_weight_trans = true;
     return true;
   }
