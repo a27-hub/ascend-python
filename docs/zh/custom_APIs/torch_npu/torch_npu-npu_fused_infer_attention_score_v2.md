@@ -197,15 +197,17 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当Q\_S>=2时，仅支持传入值为0、1；当Q\_S=1时，支持取值0、1、2、3、4、5。
     - <term>Ascend 950PR/Ascend 950DT</term>：支持取值0、1、2、3、4、5、6、7。
 
-    - `key_quant_mode`为0时，代表perchannel模式（perchannel包含pertensor）。
-    - `key_quant_mode`为1时，代表pertoken模式。
-    - `key_quant_mode`为2时，代表pertensor叠加perhead模式。
-    - `key_quant_mode`为3时，代表pertoken叠加perhead模式。
-    - `key_quant_mode`为4时，代表pertoken叠加使用page attention模式管理scale/offset模式。
-    - `key_quant_mode`为5时，代表pertoken叠加perhead并使用page attention模式管理scale/offset模式。
-    - `key_quant_mode`为6时，代表per-token-group模式。
-    - `key_quant_mode`为7时，代表FP8 per-block全量化模式。
-    - `key_quant_mode`为8时，代表per-channel-group全量化模式。
+    | 取值 | 说明 |
+    | ------ | ------ |
+    | 0 | perchannel模式（perchannel包含pertensor） |
+    | 1 | pertoken模式 |
+    | 2 | pertensor叠加perhead模式 |
+    | 3 | pertoken叠加perhead模式 |
+    | 4 | pertoken叠加使用page attention模式管理scale/offset模式 |
+    | 5 | pertoken叠加perhead并使用page attention模式管理scale/offset模式 |
+    | 6 | per-token-group模式 |
+    | 7 | FP8 per-block全量化模式 |
+    | 8 | per-channel-group全量化模式 |
 
 - **value_quant_mode**（`int`）：可选参数，表示`value`的伪量化方式，模式编号与`key_quant_mode`一致，默认值为0。取值除了`key_quant_mode`为0且`value_quant_mode`为1、`key_quant_mode`为6且`value_quant_mode`为8的场景外，其他场景取值需要与`key_quant_mode`一致。综合约束请见[Q_S>1约束](#zh-cn_topic_0000001832267082_section_qs_gt1_constraint)、[Q_S=1约束](#zh-cn_topic_0000001832267082_section_qs_eq1_constraint)和[GQA伪量化+KV NZ格式约束](#zh-cn_topic_0000001832267082_section_gqa_nz_constraint)。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当Q\_S>=2时，仅支持传入值为0、1；当Q\_S=1时，支持取值0、1、2、3、4、5。
@@ -269,8 +271,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 - 参数`key`、`value`中对应tensor的shape需要完全一致；非连续场景下`key`、`value`的tensorlist中的batch只能为1，个数等于`query`的B，N和D需要相等。
 - int8量化相关入参数量与输出数据格式的综合限制：
     - 输出为`torch.int8`的场景：入参`quant_scale_out`需要存在，`quant_offset_out`可选，不传时默认为0。
-        - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：输入为`int8`。
-        - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输入为`int8`。
+        - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输入为`int8`。
 
     - 输出为`torch.float16`的场景：若存在入参`quant_offset_out`或`quant_scale_out`（即不为None），则报错并返回。
     - 入参`quant_offset_out`和`quant_scale_out`支持pertensor或perchannel格式，数据类型支持`torch.float32`、`torch.bfloat16`。

@@ -44,7 +44,8 @@ torch_npu.npu_fused_infer_attention_score(
 ) -> (Tensor, Tensor)
 ```
 
-> **说明**：`*`之前的`query, key, value`为位置参数（必须按顺序传入）；`*`之后的为关键字参数（键值对赋值，可选，不传使用默认值）。
+  > [!NOTE]
+  > `*`之前的`query, key, value`为位置参数（必须按顺序传入）；`*`之后的为关键字参数（键值对赋值，可选，不传使用默认值）。
 
 ## 参数说明
 
@@ -487,7 +488,7 @@ torch_npu.npu_fused_infer_attention_score(
     - `key_antiquant_offset`和`value_antiquant_offset`都不为空时，除`key_antiquant_mode=0`且`value_antiquant_mode=1`的场景外，其shape需要保持一致。
     - 管理scale/offset的量化模式如下：
 
-      > **说明**：
+      > [!NOTE]：
       > 注意scale、offset具体指`key_antiquant_scale`、`value_antiquant_scale`、`key_antiquant_offset`、`value_antiquant_offset`参数。
 
       | 量化模式 | 该场景下scale和offset条件 | 该场景下`key`和`value`条件 |
@@ -531,7 +532,7 @@ torch_npu.npu_fused_infer_attention_score(
     - int4（int32）伪量化场景不支持后量化。
     - 管理scale/offset的量化模式如下：
 
-      > **说明**：
+      > [!NOTE]：
       > 注意scale、offset两个参数指`key_antiquant_scale`、`value_antiquant_scale`、`key_antiquant_offset`、`value_antiquant_offset`。
       > 当Q_S等于1时，支持下表所示的量化模式。
 
