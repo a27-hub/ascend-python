@@ -164,6 +164,13 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     TensorWrapper pertoken_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
 
     at::ScalarType dst_type = c10::value_or_else(dtype, [] {return at::ScalarType::Float;});
+    // The public API uses 0/2 for float32/bfloat16. Normalize these values before
+    // creating the output tensor because PyTorch ScalarType enum values differ.
+    if (static_cast<int64_t>(dst_type) == OUTPUT_DTYPE_BFLOAT16) {
+        dst_type = at::ScalarType::BFloat16;
+    } else if (static_cast<int64_t>(dst_type) == OUTPUT_DTYPE_FLOAT32) {
+        dst_type = at::ScalarType::Float;
+    }
     bool is_bfloat16_output = dst_type == at::ScalarType::BFloat16;
     TORCH_CHECK(dst_type == at::ScalarType::Float || is_bfloat16_output,
         "The dtype should be float32 or bfloat16", OPS_ERROR(ErrCode::PARAM));
