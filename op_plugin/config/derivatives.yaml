@@ -330,12 +330,12 @@ backward:
   version: [v2.1, newest]
 
 - name: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False) -> (Tensor, Tensor)
-  tokens: "npu_moe_token_permute_grad_v2(grad, result1, tokens.sym_size(0).expect_int(), tokens.scalar_type(), (indices.dim() == 1) ? 1 : indices.sym_size(-1).expect_int(), padded_mode)"
+  tokens: "npu_moe_token_permute_grad_v2(grad, result1, tokens.sym_size(0), tokens.scalar_type(), (indices.dim() == 1) ? c10::SymInt(1) : indices.sym_size(-1), padded_mode)"
   version: [v2.1, newest]
 
 - name: _npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> (Tensor unpermuted_tokens, Tensor permuted_tokens_for_backward)
   output_differentiability: [true, false]
-  permuted_tokens, probs: npu_moe_token_unpermute_grad_v2(grad, sorted_indices, permuted_tokens.sym_size(0).expect_int(), permuted_tokens.scalar_type(), probs, padded_mode, restore_shape, permuted_tokens_for_backward)
+  permuted_tokens, probs: npu_moe_token_unpermute_grad_v2(grad, sorted_indices, permuted_tokens.sym_size(0), permuted_tokens.scalar_type(), probs, padded_mode, restore_shape, permuted_tokens_for_backward)
   version: [v2.1, newest]
 
 - name: npu_sparse_flash_attention(Tensor query, Tensor key, Tensor? value, Tensor sparse_indices, float scale_value, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, bool return_softmax_lse=False, Tensor? sinks=None) -> (Tensor, Tensor, Tensor)
@@ -358,7 +358,7 @@ backward:
 
 - name: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0, int inner_precise=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
   output_differentiability: [true, true, true, false, false, false]
-  x, phi, alpha, bias, gamma: 'npu_mhc_pre_backward(x, phi, alpha, grads[0], grads[1], grads[2], result3, result4, result5, result1, gamma, hc_eps, c10::nullopt)'
+  x, phi, alpha, bias, gamma: 'npu_mhc_pre_backward(x, phi, alpha, grads[0], grads[1], grads[2], result3, result4, result5, result1, gamma, hc_eps, c10::nullopt, inner_precise)'
   version: all_version
 
 - name: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
