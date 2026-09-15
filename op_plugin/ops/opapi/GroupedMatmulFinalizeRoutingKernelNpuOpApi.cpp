@@ -162,7 +162,9 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     TensorWrapper pertoken_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
 
     at::ScalarType dst_type = c10::value_or_else(dtype, [] {return at::ScalarType::Float;});
-    TORCH_CHECK(dst_type == at::ScalarType::Float,
+    if(static_cast<int64_t>(dst_type) == 2) dst_type = at::ScalarType::BFloat16;
+    else if(static_cast<int64_t>(dst_type) == 0) dst_type = at::ScalarType::Float;
+    TORCH_CHECK(dst_type == at::ScalarType::Float || dst_type == at::ScalarType::BFloat16,
         "The dtype should be float", OPS_ERROR(ErrCode::PARAM));
 
     if (shared_input.has_value()) {
@@ -175,7 +177,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     bool transposeX = false;
     bool transposeW = false;
-    int64_t dtype_real = 0;
+    int64_t dtype_real = dst_type == at::ScalarType::BFloat16 ? 2 : 0;
     if (is_weight_nz) {
         static const bool is_v2_available = check_aclnn_kernel_available("aclnnGroupedMatmulFinalizeRoutingWeightNzV2");
         if (is_v2_available) {
