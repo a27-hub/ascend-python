@@ -248,7 +248,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=0, group_list_type=0, tuning_config=None) -> (Tensor, Tensor)
+torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=6, quant_mode=0, quant_dtype=0, group_list_type=0, tuning_config=None) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -282,8 +282,8 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Ascend 950PR/Ascend 950DT</term>：当前仅支持传入0以及2。
 
 - **dequant\_dtype**（`int`）：可选输入，表示反量化类型，数据类型为`int32`。
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前仅支持传入默认值0（表示`float32`）。
-  - <term>Ascend 950PR/Ascend 950DT</term>：默认值为torch.int8，当前仅支持传入torch.float32、torch.bfloat16、torch.float16。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前仅支持传入默认值6（表示`float32`）。
+  - <term>Ascend 950PR/Ascend 950DT</term>：默认值为torch.float32，当前仅支持传入torch.float32、torch.bfloat16、torch.float16。
 
 - **quant\_mode**（`int`）：可选输入，参数表示SwiGLU后的量化模式。数据类型为`int32`。支持取值：0（默认）表示pertoken量化；1表示pergroup量化；2表示mx量化。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前仅支持传入默认值0（表示pertoken）。
