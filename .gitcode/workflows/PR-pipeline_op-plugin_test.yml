@@ -89,10 +89,10 @@ stages:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
           - name: test
             run: |
-              cd ${ATOMGIT_WORKSPACE}
-              echo "------------------------"
-              ls
-              echo "------------------------"
+              echo "-------- ATOMGIT_WORKSPACE --------"
+              ls ${ATOMGIT_WORKSPACE}
+              echo "-------- ATOMGIT_WORKSPACE/op-plugin --------"
+              ls ${ATOMGIT_WORKSPACE}/op-plugin
 
   #     # Antipoison:
   #     #   name: Antipoison
