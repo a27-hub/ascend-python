@@ -72,43 +72,42 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 ## 参数说明
 
-**query**(`Tensor`)：必选参数，表示Attention中的query，对应公式中的$q_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, D)$、$(T1, N1, D)$。
+- **query**(`Tensor`)：必选参数，表示Attention中的query，对应公式中的$q_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, D)$、$(T1, N1, D)$。
 
-**key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
+- **key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
 
-**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
+- **query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$\tilde{q}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
 
-**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
+- **key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$\tilde{K}_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
 
-**weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
+- **weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
-**sparse_indices**(`Tensor`)：必选参数，表示排序后`key`和`key_index`的token序号。数据格式支持$ND$，数据类型支持`int32`。shape支持$(B, S1, N2index, topK)$、$(T1, N2index, topK)$。
+- **sparse_indices**(`Tensor`)：必选参数，表示排序后`key`和`key_index`的token序号。数据格式支持$ND$，数据类型支持`int32`。shape支持$(B, S1, N2index, topK)$、$(T1, N2index, topK)$。
 
-**softmax_max**(`Tensor`)：必选参数，表示Attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
+- **softmax_max**(`Tensor`)：必选参数，表示Attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
 
-**softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
+- **softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
 
-**scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float`。
+- **scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float`。
 
-**query_rope**(`Tensor`)：可选参数，表示MLA结构中的query的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, Dr)$、$(T1, N1, Dr)$。
+- **query_rope**(`Tensor`)：可选参数，表示MLA结构中的query的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, Dr)$、$(T1, N1, Dr)$。
 
-**key_rope**(`Tensor`)：可选参数，表示MLA结构中的key的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, Dr)$、$(T2, N2, Dr)$。
+- **key_rope**(`Tensor`)：可选参数，表示MLA结构中的key的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, Dr)$、$(T2, N2, Dr)$。
 
-**actual_seq_qlen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
+- **actual_seq_qlen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
 
-**actual_seq_klen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为为`None`。
+- **actual_seq_klen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为为`None`。
 
-**layout**(`str`)：可选参数，用于标识输入`query`的数据排布格式。当前支持$BSND$、$TND$，默认值为"BSND"。
+- **layout**(`str`)：可选参数，用于标识输入`query`的数据排布格式。当前支持$BSND$、$TND$，默认值为"BSND"。
 
-**sparse_mode**(`int`)：可选参数，表示sparse的模式，数据类型支持`int32`，默认值为`3`。
+- **sparse_mode**(`int`)：可选参数，表示sparse的模式，数据类型支持`int32`，默认值为`3`。
 
-**pre_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和前几个token计算关联。数据类型支持`int64`，默认值为2^63-1。
+- **pre_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和前几个token计算关联。数据类型支持`int64`，默认值为2^63-1。
 
-**next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值2^63-1。
+- **next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值2^63-1。
 
- **sinks**(`float`)：可选参数，表示attention结构中的sinks信息，不支持非连续，数据格式支持$ND$，数据类型支持`float32`，shape为$(N1)$。
-
-<term>Atlas A2 训练系列产品/Atlas A3 训练系列产品</term>：暂不支持可选输入sinks，传默认值即可
+- **sinks**(`float`)：可选参数，表示attention结构中的sinks信息，不支持非连续，数据格式支持$ND$，数据类型支持`float32`，shape为$(N1)$。
+  - <term>Atlas A2 训练系列产品/Atlas A3 训练系列产品</term>：暂不支持可选输入sinks，传默认值即可
 
 ## 返回值说明
 
@@ -121,22 +120,23 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 - 参数query、key、query_index、key_index的数据类型应保持一致。
 - 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
+- 该接口暂不支持图模式调用
 - 规格约束：
 
-| 规格项     | 规格                                    | 规格说明                  |
-|---------|---------------------------------------|-----------------------|
-| B       | 1~256                                 | -                     |
-| S1、S2   | S1支持1~8K，S2支持1~128K                   | S1、S2支持不等长            |
-| N1      | 32、64、128                             | -                     |
-| N1index | 8、16、32、64                            | -                     |
-| N2      | 1                                       | -                     |
-| N2index | 1                                     | -                     |
-| D       | 512（query/key）/ 128（query_index/key_index） | query与query_index的D可取不同值 |
-| Dr      | 64                                    | -                     |
-| K       | 1024、2048、3081、4096、5120、6144、7168、8192 | -                     |
-| layout  | BSND/TND                              | -                     |
+  | 规格项     | 规格                                    | 规格说明                  |
+  |---------|---------------------------------------|-----------------------|
+  | B       | 1~256                                 | -                     |
+  | S1、S2   | S1支持1~8K，S2支持1~128K                   | S1、S2支持不等长            |
+  | N1      | 32、64、128                             | -                     |
+  | N1index | 8、16、32、64                            | -                     |
+  | N2      | 1                                       | -                     |
+  | N2index | 1                                     | -                     |
+  | D       | 512（query/key）/ 128（query_index/key_index） | query与query_index的D可取不同值 |
+  | Dr      | 64                                    | -                     |
+  | K       | 1024、2048、3081、4096、5120、6144、7168、8192 | -                     |
+  | layout  | BSND/TND                              | -                     |
 
-<term>Ascend 950PR/Ascend 950DT</term>：N1额外支持48，N1index额外支持24，二者仅允许(48，24)组合，禁止其余数值配对；B,S1,S2均支持泛化。
+  - <term>Ascend 950PR/Ascend 950DT</term>：N1额外支持48，N1index额外支持24，二者仅允许(48，24)组合，禁止其余数值配对；B,S1,S2均支持泛化。
 
 ## 调用示例
 
