@@ -87,6 +87,7 @@ stages:
             uses: checkout
             with:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
+              path: code_o
           - name: test
             run: |
               echo "-------- pwd --------"
