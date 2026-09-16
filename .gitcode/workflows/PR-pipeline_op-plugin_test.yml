@@ -153,8 +153,6 @@ stages:
               cd -
           - name: pre-commit
             uses: openlibing/pre-commit-action@v1.0.1
-            with:
-              extra_args: --all-files
 
       # Only_doc_commit:
       #   name: Only_doc_commit
@@ -186,20 +184,20 @@ stages:
       #         echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
-  # stage_2:
-  #   name: stage_2
-  #   select: selected_by_default
-  #   jobs:
+  stage_2:
+    name: stage_2
+    select: selected_by_default
+    jobs:
 
-  #     Build_master_x86:
-  #       name: Build_master_x86
-  #       # if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-  #       uses: .gitcode/workflows/build_job_test.yml
-  #       with:
-  #         pytorch_branch: "master"
-  #         CP_DOCKER_IMG: ${{ env.img_master_x86 }}
-  #         runs_on_arch: "x86"
-  #         runs_on_spec: "cpu=32"
+      Build_master_x86:
+        name: Build_master_x86
+        # if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+        uses: .gitcode/workflows/build_job_test.yml
+        with:
+          pytorch_branch: "master"
+          CP_DOCKER_IMG: ${{ env.img_master_x86 }}
+          runs_on_arch: "x86"
+          runs_on_spec: "cpu=32"
 
   # #     Build_v2_7_1_x86:
   # #       name: Build_v2_7_1_x86

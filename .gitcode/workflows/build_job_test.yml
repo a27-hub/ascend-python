@@ -44,8 +44,8 @@ jobs:
     select: selected_by_default
     # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
     # runs-on:  [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_os }}" ]
-    # runs-on: [ self-hosted, "${{ inputs.runs_on_os }}", "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
-    runs-on: [ self-hosted, pvc, arm, cpu=30 ]
+    runs-on: [ self-hosted, "${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
+    # runs-on: [ self-hosted, pvc, arm, cpu=30 ]
     # runs-on: [ dedicate-hosted,"${{ inputs.runs_on_arch }}", "${{ inputs.runs_on_spec }}" ]
     container:
       image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
