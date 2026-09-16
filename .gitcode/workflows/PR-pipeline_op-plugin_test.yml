@@ -148,6 +148,8 @@ stages:
               cd -
           - name: pre-commit
             uses: openlibing/pre-commit-action@v1.0.1
+            with:
+              extra_args: --all-files
 
       # Only_doc_commit:
       #   name: Only_doc_commit
