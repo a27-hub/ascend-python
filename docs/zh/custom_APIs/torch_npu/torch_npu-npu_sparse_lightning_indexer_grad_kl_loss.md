@@ -120,7 +120,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 - 参数query、key、query_index、key_index的数据类型应保持一致。
 - 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
-- 该接口暂不支持图模式调用
+- 该接口暂不支持图模式调用。
 - 规格约束：
 
   | 规格项     | 规格                                    | 规格说明                  |
