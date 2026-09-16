@@ -35,7 +35,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
 - **x\_dtype**（`int`）：**必选参数**，Matmul的激活矩阵的数据类型。
   - A16S4/A16F4数据流支持`torch.float16`、`torch.bfloat16`；A8W4数据流支持`torch.float8_e4m3fn`。
 - **weight\_dtype**（`int`）：**必选参数**，用于指定`weight`中实际承载的数据类型。
-  - A16S4数据流取值为`torch_npu.int4`；其余数据流取值为`torch.float4_e2m1fn_x2`。
+  - A16S4数据流取值为`torch_npu.int4`；其余数据流取值为`torch_npu.float4_e2m1fn_x2`。
 - **weight\_scale\_dtype**（`int`）：**必选参数**，用于指定`weight_scale`中实际承载的数据类型，取值需与`weight_scale`的实际数据类型一致。
   - 支持`torch.float8_e8m0fnu`、`torch.float16`、`torch.bfloat16`。
 - **weight\_offset**（`Tensor`）：**可选参数**，权重的反量化offset参数，默认值为`None`。
@@ -141,7 +141,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
       weight,
       weight_scale,
       x_dtype=torch.float8_e4m3fn,
-      weight_dtype=torch.float4_e2m1fn_x2,
+      weight_dtype=torch_npu.float4_e2m1fn_x2,
       weight_scale_dtype=torch.float8_e8m0fnu,
       weight_offset=None,
       bias=None,
@@ -177,7 +177,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
       weight,
       weight_scale,
       x_dtype=torch.float8_e4m3fn,
-      weight_dtype=torch.float4_e2m1fn_x2,
+      weight_dtype=torch_npu.float4_e2m1fn_x2,
       weight_scale_dtype=torch.float8_e8m0fnu,
       weight_offset=None,
       bias=None,
