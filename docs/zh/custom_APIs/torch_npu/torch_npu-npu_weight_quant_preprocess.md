@@ -258,7 +258,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
       weight,
       weight_scale,
       x_dtype=torch.float16,
-      weight_dtype=torch.float4_e2m1fn_x2,
+      weight_dtype=torch_npu.float4_e2m1fn_x2,
       weight_scale_dtype=torch.float16,
       k_group_size=k_group_size
   )
@@ -295,7 +295,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
       weight,
       weight_scale,
       x_dtype=torch.float16,
-      weight_dtype=torch.float4_e2m1fn_x2,
+      weight_dtype=torch_npu.float4_e2m1fn_x2,
       weight_scale_dtype=torch.float8_e8m0fnu,
       k_group_size=32
   )
