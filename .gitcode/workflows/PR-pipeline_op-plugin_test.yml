@@ -89,6 +89,8 @@ stages:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
           - name: test
             run: |
+              echo "-------- pwd --------"
+              pwd
               echo "-------- ATOMGIT_WORKSPACE --------"
               ls ${ATOMGIT_WORKSPACE}
               echo "-------- ATOMGIT_WORKSPACE/op_plugin --------"
