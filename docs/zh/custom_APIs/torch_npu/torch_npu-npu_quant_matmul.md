@@ -486,7 +486,27 @@ torch_npu.npu_quant_matmul(x1, x2, scale, *, offset=None, pertoken_scale=None, b
   - 如果在PyTorch图模式中使用本接口，且环境变量`ENABLE_ACLNN=false`，则在调用接口前需要对shape为\(n, k//8\)的`x2`数据进行转置，转置过程应写在图中。
 
     > [!NOTE]  
-    > 数据排布连续是指数组中所有相邻的数，包括换行时内存地址连续。使用`Tensor.is_contiguous`返回值为`True`，则表明Tensor数据排布连续。
+    > 数据排布连续是指数组中所有相邻的数，包括换行时内存地址连续，使用`Tensor.is_contiguous`返回值为`True`则表明Tensor数据排布连续。
+
+- 输入参数间支持的数据类型组合情况如下：
+
+    **表 1** <term>Atlas 推理系列加速卡产品</term>
+
+    |x1|x2|scale|offset|bias|pertoken_scale|output_dtype|
+    |---------|--------|--------|--------|--------|--------|--------|
+    |int8|int8|int64/float32|None|int32/None|None|float16|
+    |int8|int8|int64/float32|float32/None|int32/None|None|int8|
+
+    **表 2**  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
+
+    |x1|x2|scale|offset|bias|pertoken_scale|output_dtype|
+    |---------|--------|--------|--------|--------|--------|--------|
+    |int8|int8|int64/float32|None|int32/None|None|float16|
+    |int8|int8|int64/float32|float32/None|int32/None|None|int8|
+    |int8|int8|float32/bfloat16|None|int32/bfloat16/float32/None|float32/None|bfloat16|
+    |int8|int8|float32|None|int32/bfloat16/float32/None|float32|float16|
+    |int32|int32|int64/float32|None|int32/None|None|float16|
+    |int8|int8|float32/bfloat16|None|int32/None|None|int32|
 
 ## 调用示例
 
