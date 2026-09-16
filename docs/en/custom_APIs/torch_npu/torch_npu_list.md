@@ -372,6 +372,10 @@ This section describes common custom APIs, including tensor creation and computa
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="en-us_topic_0000001694916914_p444492882116"><a name="en-us_topic_0000001694916914_p444492882116"></a><a name="en-us_topic_0000001694916914_p444492882116"></a>Fuses allgather and matrix multiplication (MatMul) operations in tensor parallelism (TP) scenarios. The fused kernel implements pipelined parallelism between computation and communication.</p>
 </td>
 </tr>
+<tr id="npu_anti_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_anti_mx_quant"><a name="p_npu_anti_mx_quant"></a><a name="p_npu_anti_mx_quant"></a><a href="torch_npu-npu_anti_mx_quant.md">torch_npu.npu_anti_mx_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_anti_mx_quant_desc"><a name="p_npu_anti_mx_quant_desc"></a><a name="p_npu_anti_mx_quant_desc"></a><span>Dequantizes a <code>float4/float8</code> tensor, which is quantized by <code>npu_dynamic_mx_quant</code>, to the <code>float16/bfloat16/float32</code> format. This API is the inverse process of <code>npu_dynamic_mx_quant</code>.</span></p></td>
+</tr>
 <tr id="row952719519471"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p18248651143510"><a name="p18248651143510"></a><a name="p18248651143510"></a><a href="torch_npu-npu_anti_quant.md">torch_npu.npu_anti_quant</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="en-us_topic_0000001850161621_p0996174814315"><a name="en-us_topic_0000001850161621_p0996174814315"></a><a name="en-us_topic_0000001850161621_p0996174814315"></a>Dequantizes <code>int4</code> or <code>int8</code> data into <code>float16</code> or <code>bfloat16</code> data. When the input data type is <code>int4</code>, every eight elements are treated as one <code>int32</code> element.</p>

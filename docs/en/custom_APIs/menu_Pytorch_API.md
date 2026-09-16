@@ -77,6 +77,7 @@
         -   [torch_npu.npu_advance_step_flashattn](./torch_npu/torch_npu-npu_advance_step_flashattn.md)
         -   [torch_npu.npu_all_gather_base_mm](./torch_npu/torch_npu-npu_all_gather_base_mm.md)
         -   [torch_npu.npu_anti_quant](./torch_npu/torch_npu-npu_anti_quant.md)
+        -   [torch_npu.npu_anti_mx_quant](./torch_npu/torch_npu-npu_anti_mx_quant.md)
         -   [torch_npu.npu_attention_to_ffn](./torch_npu/torch_npu-npu_attention_to_ffn.md)
         -   [torch_npu.npu_attention_update](./torch_npu/torch_npu-npu_attention_update.md)
         -   [torch_npu.npu_block_sparse_attention](./torch_npu/torch_npu-npu_block_sparse_attention.md)
