@@ -306,7 +306,7 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
             collapsed_sizes[2] = tmp_pingpong[ping].size(2);
             tmp_pingpong[pong].resize_(collapsed_sizes);
 
-            uint8_t cube_math_type = 0;
+            uint8_t cube_math_type = 4;
             EXEC_NPU_CMD(aclnnMatmul, coefficient_matrix, tmp_pingpong[ping], tmp_pingpong[pong], cube_math_type);
             ping = 1 - ping;
             pong = 1 - pong;
