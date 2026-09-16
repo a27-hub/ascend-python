@@ -86,6 +86,10 @@ jobs:
           cp -f "${test_file}" "${ATOMGIT_WORKSPACE}/sfs_output/"
           test "$(sha256sum "${test_file}" | awk '{print $1}')" = "$(sha256sum "${ATOMGIT_WORKSPACE}/sfs_output/${test_file}" | awk '{print $1}')"
           (cd "${ATOMGIT_WORKSPACE}/sfs_output" && sha256sum "${test_file}" > "${test_file}.sha256")
+          # 在 workspace 下创建指定路径并放入测试文件，验证 artifact-path 能否指定路径
+          mkdir -p "${ATOMGIT_WORKSPACE}/upload_path_test/sub"
+          cp -f "${test_file}" "${ATOMGIT_WORKSPACE}/upload_path_test/sub/path-test.bin"
+          ls -lR "${ATOMGIT_WORKSPACE}/upload_path_test"
       - name: oidc-auth
         uses: huaweicloud-oidc-auth
         with:
@@ -102,6 +106,7 @@ jobs:
           artifact-path: |
             *.tar.gz*
             oidc-upload-test.bin
+            upload_path_test/sub/*.bin
           object-prefix: "op-plugin/PR/${{ inputs.pr_id }}/"
       - name: Print OBS download links to summary
         env:
