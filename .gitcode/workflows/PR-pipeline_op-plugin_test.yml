@@ -91,8 +91,8 @@ stages:
             run: |
               echo "-------- ATOMGIT_WORKSPACE --------"
               ls ${ATOMGIT_WORKSPACE}
-              echo "-------- ATOMGIT_WORKSPACE/op-plugin --------"
-              ls ${ATOMGIT_WORKSPACE}/op-plugin
+              echo "-------- ATOMGIT_WORKSPACE/op_plugin --------"
+              ls ${ATOMGIT_WORKSPACE}/op_plugin
 
   #     # Antipoison:
   #     #   name: Antipoison
