@@ -106,7 +106,7 @@
 </tr>
 <tr id="row14332534124118"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p9332173420417"><a name="p9332173420417"></a><a name="p9332173420417"></a><a href="./torch_npu-contrib/（beta）torch_npu-contrib-DCNv2.md">torch_npu.contrib.DCNv2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p16651085550"><a name="p16651085550"></a><a name="p16651085550"></a>该接口计划废弃，可以使用torch.nn.SiLU或torch.nn.functional.silu接口进行替换。</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p16651085550"><a name="p16651085550"></a><a name="p16651085550"></a>该接口计划废弃，可以使用torch_npu.contrib.ModulationDeformConv接口进行替换。</p>
 </td>
 </tr>
 <tr id="row2333123474117"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p733363404114"><a name="p733363404114"></a><a name="p733363404114"></a><a href="./torch_npu-contrib/（beta）torch_npu-contrib-BiLSTM.md">torch_npu.contrib.BiLSTM</a></p>
