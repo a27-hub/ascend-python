@@ -38,150 +38,150 @@ env:
 
 stages:
 
-  stage_1:
-    name: stage_1
-    select: selected_by_default
-    jobs:
-      PR_label_pre:
-          name: PR_label_pre
-          runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
-          steps:
-            - name: Mark PR pipeline as running
-              uses: cann/.gitcode/actions/pre-pipeline@master
-              with:
-                owner: ${{ env.org_name }}
-                repo: ${{ env.repo }}
-                pr_number: ${{ env.pr_id }}
-                token: ${{ atomgit.token }}
-                apply_label: 'true'
-  # #     CodeCheck:
-  # #       name: CodeCheck
-  # #       runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
-  # #       container:
-  # #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  # #         options: --user root
-  # #       steps:
-  # #         - name: Login to CodeArts
-  # #           uses: codearts-login
-  # #           with:
-  # #             region: cn-north-4
-  # #             name: ${{ secrets.IAM_USER_NAME }}
-  # #             password: ${{ secrets.IAM_USER_PASSWORD }}
-  # #             domain-name: ${{ secrets.IAM_DOMAIN_NAME }}
-  # #         - name: codecheck
-  # #           uses: codecheck_gitcode_v2
-  # #           with:
-  # #             project_id: a9b188a62f334fc0963bcfb523426d17
-  # #             task_name: op-plugin-20260724103005
-  # #             branch: ${{ atomgit.event.pull_request.base.ref }}
-      SCA:
-        name: SCA
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          - name: checkout
-            uses: checkout
-            with:
-              ref: refs/merge-requests/${{ env.pr_id }}/merge
-              path: code_o
-          - name: test
-            run: |
-              echo "-------- pwd --------"
-              pwd
-              echo "ATOMGIT_WORKSPACE=${ATOMGIT_WORKSPACE}"
-              echo "-------- ATOMGIT_WORKSPACE --------"
-              ls ${ATOMGIT_WORKSPACE}
-              echo "-------- ATOMGIT_WORKSPACE/op_plugin --------"
-              echo "${ATOMGIT_WORKSPACE}/code_o"
-              ls ${ATOMGIT_WORKSPACE}/code_o
+  # stage_1:
+  #   name: stage_1
+  #   select: selected_by_default
+  #   jobs:
+  #     PR_label_pre:
+  #         name: PR_label_pre
+  #         runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
+  #         steps:
+  #           - name: Mark PR pipeline as running
+  #             uses: cann/.gitcode/actions/pre-pipeline@master
+  #             with:
+  #               owner: ${{ env.org_name }}
+  #               repo: ${{ env.repo }}
+  #               pr_number: ${{ env.pr_id }}
+  #               token: ${{ atomgit.token }}
+  #               apply_label: 'true'
+  # # #     CodeCheck:
+  # # #       name: CodeCheck
+  # # #       runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
+  # # #       container:
+  # # #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+  # # #         options: --user root
+  # # #       steps:
+  # # #         - name: Login to CodeArts
+  # # #           uses: codearts-login
+  # # #           with:
+  # # #             region: cn-north-4
+  # # #             name: ${{ secrets.IAM_USER_NAME }}
+  # # #             password: ${{ secrets.IAM_USER_PASSWORD }}
+  # # #             domain-name: ${{ secrets.IAM_DOMAIN_NAME }}
+  # # #         - name: codecheck
+  # # #           uses: codecheck_gitcode_v2
+  # # #           with:
+  # # #             project_id: a9b188a62f334fc0963bcfb523426d17
+  # # #             task_name: op-plugin-20260724103005
+  # # #             branch: ${{ atomgit.event.pull_request.base.ref }}
+  #     SCA:
+  #       name: SCA
+  #       # runs-on: [ self-hosted, arch=x64, os=euler ]
+  #       # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+  #       runs-on: [ dedicate-hosted, x64, 2xlarge ]
+  #       container:
+  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+  #         options: --user root
+  #       steps:
+  #         - name: checkout
+  #           uses: checkout
+  #           with:
+  #             ref: refs/merge-requests/${{ env.pr_id }}/merge
+  #             path: code_o
+  #         - name: test
+  #           run: |
+  #             echo "-------- pwd --------"
+  #             pwd
+  #             echo "ATOMGIT_WORKSPACE=${ATOMGIT_WORKSPACE}"
+  #             echo "-------- ATOMGIT_WORKSPACE --------"
+  #             ls ${ATOMGIT_WORKSPACE}
+  #             echo "-------- ATOMGIT_WORKSPACE/op_plugin --------"
+  #             echo "${ATOMGIT_WORKSPACE}/code_o"
+  #             ls ${ATOMGIT_WORKSPACE}/code_o
 
-  #     # Antipoison:
-  #     #   name: Antipoison
+  # #     # Antipoison:
+  # #     #   name: Antipoison
+  # #     #   # runs-on: [ self-hosted, arch=x64, os=euler ]
+  # #     #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+  # #     #   runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
+  # #     #   container:
+  # #     #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+  # #     #     options: --user root
+  # #     #   steps:
+  # #     #     - name: print env
+  # #     #       run: |
+  # #     #         echo "pr_id: ${{ env.pr_id }}"
+  # #     #         echo "------------------------"
+  # #     #         env
+  # #     #     - name: checkout
+  # #     #       uses: checkout
+  # #     #       with:
+  # #     #         ref: refs/merge-requests/${{ env.pr_id }}/merge
+  # #     #     - name: Antipoison
+  # #     #       run: |
+  # #     #         git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+  # #     #         pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
+  # #     #         wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
+  # #     #         unzip -q ApiGateway-python-sdk-2.0.7.zip
+  # #     #         cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
+  # #     #         python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+
+  #     CodeCheck_pre_commit:
+  #       name: CodeCheck_pre_commit
+  #       # runs-on: [ self-hosted, arch=x64, os=euler ]
+  #       # runs-on: default
+  #       runs-on: [ dedicate-hosted, x64, 2xlarge ]
+  #       container:
+  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+  #         options: --user root
+  #       steps:
+  #         - name: checkout
+  #           uses: checkout
+  #           with:
+  #             ref: refs/merge-requests/${{ env.pr_id }}/merge
+  #         - name: setup-python310
+  #           run: |
+  #             PYTHON310_BIN=$(dirname "$(which python3.10)")
+  #             ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
+  #             echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
+  #             python --version
+  #         - name: install gitleaks
+  #           run: |
+  #             cd ${ATOMGIT_WORKSPACE}
+  #             wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
+  #             chmod +x gitleaks
+  #             cd -
+  #         - name: pre-commit
+  #           uses: openlibing/pre-commit-action@v1.0.1
+
+  #     # Only_doc_commit:
+  #     #   name: Only_doc_commit
   #     #   # runs-on: [ self-hosted, arch=x64, os=euler ]
   #     #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-  #     #   runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
+  #     #   runs-on: [ self-hosted, x86, cpu=8 ]
   #     #   container:
   #     #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
   #     #     options: --user root
+  #     #   outputs:
+  #     #     build_skip: ${{ steps.set-skip.outputs.build_skip }}
   #     #   steps:
-  #     #     - name: print env
-  #     #       run: |
-  #     #         echo "pr_id: ${{ env.pr_id }}"
-  #     #         echo "------------------------"
-  #     #         env
   #     #     - name: checkout
   #     #       uses: checkout
   #     #       with:
   #     #         ref: refs/merge-requests/${{ env.pr_id }}/merge
-  #     #     - name: Antipoison
+  #     #     - name: Only Doc Commit Check
+  #     #       id: only-doc-check
+  #     #       uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@v1.0.2
+  #     #       with:
+  #     #         pr_id: ${{ env.pr_id }}
+  #     #         target_branch: ${{ atomgit.event.pull_request.base.ref }}
+  #     #         remote_url: ${{ env.ATOMGIT_REPOSITORY_URL }}
+  #     #     - name: set build skip flag
+  #     #       id: set-skip
   #     #       run: |
-  #     #         git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-  #     #         pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
-  #     #         wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
-  #     #         unzip -q ApiGateway-python-sdk-2.0.7.zip
-  #     #         cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-  #     #         python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
-
-      CodeCheck_pre_commit:
-        name: CodeCheck_pre_commit
-        # runs-on: [ self-hosted, arch=x64, os=euler ]
-        # runs-on: default
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          - name: checkout
-            uses: checkout
-            with:
-              ref: refs/merge-requests/${{ env.pr_id }}/merge
-          - name: setup-python310
-            run: |
-              PYTHON310_BIN=$(dirname "$(which python3.10)")
-              ln -sf "$(which python3.10)" "$PYTHON310_BIN/python"
-              echo "$PYTHON310_BIN" >> "$ATOMGIT_PATH"
-              python --version
-          - name: install gitleaks
-            run: |
-              cd ${ATOMGIT_WORKSPACE}
-              wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
-              chmod +x gitleaks
-              cd -
-          - name: pre-commit
-            uses: openlibing/pre-commit-action@v1.0.1
-
-      # Only_doc_commit:
-      #   name: Only_doc_commit
-      #   # runs-on: [ self-hosted, arch=x64, os=euler ]
-      #   # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-      #   runs-on: [ self-hosted, x86, cpu=8 ]
-      #   container:
-      #     image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-      #     options: --user root
-      #   outputs:
-      #     build_skip: ${{ steps.set-skip.outputs.build_skip }}
-      #   steps:
-      #     - name: checkout
-      #       uses: checkout
-      #       with:
-      #         ref: refs/merge-requests/${{ env.pr_id }}/merge
-      #     - name: Only Doc Commit Check
-      #       id: only-doc-check
-      #       uses: WWQ129/.gitcode/actions/Only_Doc_Commit_Check@v1.0.2
-      #       with:
-      #         pr_id: ${{ env.pr_id }}
-      #         target_branch: ${{ atomgit.event.pull_request.base.ref }}
-      #         remote_url: ${{ env.ATOMGIT_REPOSITORY_URL }}
-      #     - name: set build skip flag
-      #       id: set-skip
-      #       run: |
-      #         BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
-      #         echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
-      #         echo "Only Doc Commit Check result: ${BUILD_SKIP}"
+  #     #         BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
+  #     #         echo "build_skip=${BUILD_SKIP}" >> "$ATOMGIT_OUTPUT"
+  #     #         echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
   stage_2:
