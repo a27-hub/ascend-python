@@ -393,7 +393,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         - `query`、`key`、`value`输入类型包含`torch.int8`时，D轴需要32对齐；输入类型全为`torch.float16`、`torch.bfloat16`时，D轴需16对齐。
         - D轴限制：
             - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`query`、`key`、`value`输入类型包含`int8`时，D轴需要32对齐；`query`、`key`、`value`或attentionOut类型包含`int4`时，D轴需要64对齐；输入类型全为`float16`、`bfloat16`时，D轴需16对齐。
-            - <term>Ascend 950PR/Ascend 950DT</term>：非量化场景：`query`，`key`，`value`的类型全部为`torch.float16`、`torch.bfloat16`，D轴1-512全部支持。伪量化场景：`query`类型为`torch.float16`、`torch.bfloat16`，`key`、`value`类型为`torch.int8`/`torch.hifloat8`/`torch.float8_e4m3fn`/`torch.float4_e2m1`/`torch.int4`（`torch.int32`），其中当`key`、`value`类型为`torch.int4`（`torch.int32`）D轴仅支持64对齐（`torch.int32`仅支持D 8对齐）。全量化场景：per-block全量化D轴支持1-128，MxFP8全量化D轴仅支持64或128。
+            - <term>Ascend 950PR/Ascend 950DT</term>：非量化场景：`query`，`key`，`value`的类型全部为`torch.float16`、`torch.bfloat16`，D轴1-512全部支持。伪量化场景：`query`类型为`torch.float16`、`torch.bfloat16`，`key`、`value`类型为`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`、`torch.float4_e2m1fn_x2`。当`key_antiquant_mode`为0或1时，`query`类型必须为`torch.bfloat16`。全量化场景：per-block全量化D轴支持1-128，MxFP8全量化D轴仅支持64或128。
 
     - `actual_seq_qlen`：
 
