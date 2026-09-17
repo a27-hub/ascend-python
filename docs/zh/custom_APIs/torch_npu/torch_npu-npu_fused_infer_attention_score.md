@@ -94,7 +94,7 @@ torch_npu.npu_fused_infer_attention_score(
   - <term>Ascend 950PR/Ascend 950DT</term>：数据类型：数据类型：`torch.float16`、`torch.bfloat16`、`torch.int8`、`torch.int4`（`torch.int32`容器，即8个`torch.int4`拼接为一个`torch.int32`）、`torch.hifloat8`、`torch.float8_e4m3fn`、`torch.float4_e2m1fn_x2`。
 
 - **value** (`Tensor`)：attention的Value输入。数据格式：$ND$，不支持非连续Tensor。
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型：`torch.float16`、`torch.bfloat16`、`torch.int8`、`torch.int4`（`torch.int32`容器，即8个`torch.int4`拼接为一个`torch.int32`）。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型：`torch.float16`、`torch.bfloat16`、`torch.int8`、`torch.int4`（`torch.int32`容器）。
   - <term>Ascend 950PR/Ascend 950DT</term>：数据类型：数据类型：`torch.float16`、`torch.bfloat16`、`torch.int8`、`torch.int4`（`torch.int32`容器，即8个`torch.int4`拼接为一个`torch.int32`）、`torch.hifloat8`、`torch.float8_e4m3fn`、`torch.float4_e2m1fn_x2`。
 
 #### 位置编码参数
@@ -189,8 +189,9 @@ torch_npu.npu_fused_infer_attention_score(
 
 > **特殊约束**：
 >
+> - 除`key_antiquant_mode=0`且`value_antiquant_mode=1`的场景外，`key_antiquant_mode`与`value_antiquant_mode`必须一致。
 > - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：Q_S ≥ 2时仅支持0、1；Q_S = 1时支持0~5。
-> - <term>Ascend 950PR/Ascend 950DT</term>：`key_antiquant_mode`支持取值0、1、2、3、4、5。`value_antiquant_mode`：Q_S ≥ 2时支持0、1、2、3、4、5；Q_S = 1时支持0、1、2、3、4、5。除`key_antiquant_mode=0`且`value_antiquant_mode=1`的场景外，`key_antiquant_mode`与`value_antiquant_mode`必须一致。
+> - <term>Ascend 950PR/Ascend 950DT</term>：`key_antiquant_mode`支持取值0、1、2、3、4、5、6。`value_antiquant_mode`：Q_S ≥ 2时支持0、1、2、3、4、5、6；Q_S = 1时支持0、1、2、3、4、5、6。
 
 #### Prefix（共享前缀）参数
 
@@ -504,7 +505,7 @@ torch_npu.npu_fused_infer_attention_score(
       | 量化模式 | 该场景下scale和offset条件 | 该场景下`key`和`value`条件 |
       | --- | --- | --- |
       | per-channel模式 | 两个参数shape支持(N, 1, D)，(N, D)，(H)，(1, N, 1, D)，(1, N, D)，(1, H)数据类型和`query`数据类型相同。 | 当`key、value`数据类型为`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`时支持。 |
-      | per-token模式 | 两个参数的shape均为(B, S)，数据类型固定为`torch.float32`。 | 当`key、value`数据类型为`torch.int8`、`torch.hifloat8`时支持。 |
+      | per-token模式 | 两个参数的shape均为(B, S)，数据类型固定为`torch.float32`。 | 当`key、value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。 |
       | per-tensor模式 | 两个参数的shape均为(1)，数据类型和`query`数据类型相同。 | 当`key、value`数据类型为`torch.int8`时支持。 |
       | per-tensor叠加per-head模式 | 不支持。 | 不支持。 |
       | per-token叠加per-head模式 | 不支持。 | 不支持。 |
@@ -557,6 +558,7 @@ torch_npu.npu_fused_infer_attention_score(
       | per-token叠加使用page attention模式 | 两个参数的shape均为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`时支持。 |
       | per-token叠加per head并使用page attention模式 | 两个参数的shape均为(blocknum, N, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`时支持。 |
       | `key`支持per-channel叠加`value`支持per-token模式 | 对`key`支持per-channel，两个参数的shape可支持(1, N, 1, D)、(1, N, D)、(1, H)，且数据类型和`query`数据类型相同。对`value`支持per-token，两个参数的shape均为(1, B, S)并且数据类型固定为`torch.float32`。 | 当`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。 |
+      | per-token-group模式 | antiquant_scale的shape为(1, B, N, S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带antiquant_offset。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
 
 ## 调用示例
 
