@@ -464,29 +464,25 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             - 仅支持pertoken和perchannel模式，pertoken模式下要求两个参数的shape均为\(B, KV\_S\)，数据类型固定为`float32`；perchannel模式下要求两个参数的shape为（KV\_N, D），\(KV\_N, D\)，\(H\)，数据类型固定为`bfloat16`,H为KV\_N*D。
             - `dequant_scale_key`与`dequant_scale_value`非空场景，要求`query`的s小于等于16；要求`query`的dtype为`bfloat16`，`key`、`value`的dtype为`int8`，输出的dtype为`bfloat16`；不支持tensorlist、page attention特性。
         - <term>Ascend 950PR/Ascend 950DT</term>：
-            - 支持per-channel、per-tensor、per-token、per-tensor叠加per-head、per-token叠加per-head、per-token使用page attention模式管理scale/offset、per-token叠加per-head并使用page attention模式管理scale/offset、`key`支持per-channel叠加`value`支持per-token和per-token-group九种模式。
+            - 支持per-channel、per-tensor、per-token、per-token使用page attention模式管理scale/offset和per-token-group五种模式。
             - `dequant_scale_key`和`dequant_scale_value`都不为空时，除了`key_quant_mode`为0并且`value_quant_mode`为1的场景外，其shape需要保持一致；`dequant_offset_key`和`dequant_offset_value`都不为空时，除了`key_quant_mode`为0并且`value_quant_mode`为1的场景外，其shape需要保持一致。
 
         - 管理scale/offset的量化模式如下：
 
             > [!NOTE]
             > 注意scale、offset具体指`dequant_scale_key`、`dequant_scale_value`、`dequant_offset_key`、`dequant_offset_value`参数。
-            > 当Q\_S大于1时，不同产品支持不同量化模式：
-            > - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持per-channel模式、per-token模式。
-            > - <term>Ascend 950PR/Ascend 950DT</term>：支持下方所有量化模式。
 
             | 量化模式 | 该场景下scale和offset条件 | 该场景下`key`和`value`条件 |
             | --- | --- | --- |
             | per-channel模式 | 两个参数shape支持(N, 1, D)，(N, D)，(H)，(1, N, 1, D)，(1, N, D)，(1, H)数据类型和`query`数据类型相同。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持`key`、`value`数据类型为`int8`。</li><li><term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`时支持。其中，当为`torch.hifloat8`、`torch.float8_e4m3fn`时，不支持带`dequant_offset`。</li> |
             | per-token模式 | 两个参数的shape均为(B, S)，数据类型固定为`torch.float32`。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持`key`、`value`数据类型为`int8`。</li><li><term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。</li> |
-            | per-tensor模式 | 两个参数的shape均为(1,)，数据类型和`query`数据类型相同。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。</li><li><term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.int8`时支持。 |
-            | per-tensor叠加per-head模式 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：两个参数的shape均为(N,)，数据类型和`query`数据类型相同。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
-            | per-token叠加per-head模式 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：两个参数的shape均为(B, N, S)，数据类型固定为`torch.float32`。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。  | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
-            | per-token叠加使用page attention模式 | 两个参数的shape均为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`key`、`value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。</li><li><term>Ascend 950PR/Ascend 950DT</term>：`key`、`value`数据类型为`torch.float8_e4m3fn`时支持。 |
-            | per-token叠加per head并使用page attention模式 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：两个参数的shape均为(blocknum, N, blocksize)，数据类型固定为`torch.float32`。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`key`、`value`数据类型为`torch.int8`时支持。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
-            | `key`支持per-channel叠加`value`支持per-token模式 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：对`key`支持per-channel，两个参数的shape可支持(N, 1, D)、(N, D)、(H)，(1, N, 1, D)、(1, N, D)、(1, H)且数据类型和`query`数据类型相同。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。</li><li><term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
-            | 对于`value`支持per-token，两个参数的shape均为(B, S)并且数据类型固定为`torch.float32`。 | | |
-            | per-token-group模式 | `dequant_scale`的shape为(1, B, N, S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带`dequant_offset`。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
+            | per-tensor模式 | <term>Ascend 950PR/Ascend 950DT</term>：两个参数的shape均为(1,)，数据类型和`query`数据类型相同。 | <term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.int8`时支持。 |
+            | per-tensor叠加per-head模式 | <term>Ascend 950PR/Ascend 950DT</term>：不支持。 | <term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
+            | per-token叠加per-head模式 | <term>Ascend 950PR/Ascend 950DT</term>：不支持。  | <term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
+            | per-token叠加使用page attention模式 | <term>Ascend 950PR/Ascend 950DT</term>：两个参数的shape均为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | <term>Ascend 950PR/Ascend 950DT</term>：`key`、`value`数据类型为`torch.float8_e4m3fn`时支持。 |
+            | per-token叠加per head并使用page attention模式 | <term>Ascend 950PR/Ascend 950DT</term>：不支持。 | <term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
+            | `key`支持per-channel叠加`value`支持per-token模式 | <term>Ascend 950PR/Ascend 950DT</term>：不支持。 | <term>Ascend 950PR/Ascend 950DT</term>：不支持。 |
+            | per-token-group模式 | <term>Ascend 950PR/Ascend 950DT</term>：`dequant_scale`的shape为(1, B, N, S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带`dequant_offset`。 | <term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
 
     - MXFP8全量化：
         - <term>Ascend 950PR/Ascend 950DT</term> ：
@@ -572,13 +568,13 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             | --- | --- | --- |
             | per-channel模式 | 两个参数shape支持(1, KV_N, 1, D)，(1, KV_N, D)，(1, H)，数据类型和`query`数据类型相同。 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当`key`、`value`数据类型为int4（int32）或int8时支持。</li><li><term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.int4`（`torch.int32`）、`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`时支持。其中，当为`torch.hifloat8`、`torch.float8_e4m3fn`时，不支持带`dequant_offset`。</li> |
             | per-tensor模式 | 两个参数的shape为(1,)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int8`时支持。 |
-            | per-token模式 | 两个参数的shape均为(1, B, KV_S)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。 |
+            | per-token模式 | 两个参数的shape均为(1, B, KV_S)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int4`（`torch.int32`）、`torch.int8`、`torch.float8_e4m3fn`时支持。 |
             | per-tensor叠加per-head模式 | 两个参数的shape为(KV_N,)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int8`时支持。 |
             | per-token叠加per-head模式 | 两个参数的shape均为(B, KV_N, KV_S)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。 |
-            | per-token叠加使用page attention模式 | 两个参数的shape为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`时支持。 |
+            | per-token叠加使用page attention模式 | 两个参数的shape为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。 |
             | per-token叠加per head并使用page attention模式 | 两个参数的shape为(blocknum, KV_N, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`时支持。 |
             | `key`支持per-channel叠加`value`支持per-token模式 | <li>对于`key`支持per-channel，两个参数的shape可支持(1, KV_N, 1, D)、(1, KV_N, D)、(1, H)，且数据类型和`query`数据类型相同。</li><li>对于`value`支持per-token，两个参数的shape均为(1, B, KV_S)并且数据类型固定为`torch.float32`。</li> | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当`key`、`value`数据类型为int4（int32）或int8时支持；当`key`和`value`的数据类型为int8时，仅支持query和输出的dtype为float16。</li><li><term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。</li> |
-            | per-token-group模式 | `dequant_scale`的shape为(1, B, KV\_N, KV\_S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带`dequant_offset`。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
+            | per-token-group模式 | <term>Ascend 950PR/Ascend 950DT</term>：`dequant_scale`的shape为(1, B, KV\_N, KV\_S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带`dequant_offset`。 | <term>Ascend 950PR/Ascend 950DT</term>：当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
 
     - `pse_shift`功能使用限制如下：
         - `pse_shift`数据类型需与`query`数据类型保持一致。
