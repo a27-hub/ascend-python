@@ -459,7 +459,7 @@ torch_npu.npu_fused_infer_attention_score(
 - **S轴**：≤ 20971520 (20M)。
 - **D对齐**：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`int8` 须32字节对齐，`int4` 须64字节对齐，`float16`/`bfloat16` 须16字节对齐。
-  - <term>Ascend 950PR/Ascend 950DT</term>：非量化场景：`query`，`key`，`value`的类型全部为`torch.float16`、`torch.bfloat16`，D轴1-512全部支持。全量化场景：`query`，`key`，`value`的类型全部为`torch.int8`时，D轴1-512全部支持。伪量化场景：`query`类型为`torch.float16`、`torch.bfloat16`，`key`、`value`类型为`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`、`torch.float4_e2m1fn_x2`。当`key_antiquant_mode`为0或1时，`query`类型必须为`torch.bfloat16`。
+  - <term>Ascend 950PR/Ascend 950DT</term>：非量化场景：`query`，`key`，`value`的类型全部为`torch.float16`、`torch.bfloat16`，D轴1-512全部支持。全量化场景：`query`，`key`，`value`的类型全部为`torch.int8`时，D轴1-512全部支持。伪量化场景：`query`类型为`torch.float16`、`torch.bfloat16`，`key`、`value`类型为`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`、`torch.float4_e2m1fn_x2`。当`key`、`value`类型为`torch.int8`且`key_antiquant_mode`为0或1时，`query`类型必须为`torch.bfloat16`。
 - **actual_seq_lengths**：
   - <term>Ascend 950PR/Ascend 950DT</term>：该参数应为非负数，在`input_layout`不同时，其含义与拦截条件不同：一般情况下，该入参为可选入参，其长度为1或大于等于`query`的Batch值，该入参中的值代表每个Batch的实际长度，其值应该不大于Q_S。当`input_layout`为TND时，该入参必须传入，且以该入参元素的数量作为Batch值。该入参中每个元素的值表示当前Batch与之前所有Batch的seqlen和，因此后一个元素的值必须大于等于前一个元素的值，且不能出现负值。
 - **actual_seq_lengths_kv**：
