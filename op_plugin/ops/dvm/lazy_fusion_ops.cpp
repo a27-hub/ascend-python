@@ -12,6 +12,7 @@
 // limitations under the License.
 
 #include <ATen/record_function.h>
+#include <unordered_set>
 #include "op_plugin/DvmOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
@@ -110,6 +111,27 @@ dvm::NDObject *BuildClampedTanhFp32(dvm::Kernel *k, dvm::NDObject *input_f32) {
   auto numer = k->Binary<dvm::BinaryType::kSub>(exp_two_x, 1.0f);
   auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_two_x, 1.0f);
   return k->Binary<dvm::BinaryType::kDiv>(numer, denom);
+}
+
+bool AddStorageAliases(
+    at::TensorList tensors,
+    std::unordered_set<const c10::StorageImpl*>* storages) {
+  for (const auto& tensor : tensors) {
+    if (!tensor.defined()) {
+      continue;
+    }
+    auto* storage = tensor.storage().unsafeGetStorageImpl();
+    if (storage != nullptr && !storages->insert(storage).second) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template <typename... TensorLists>
+bool HasStorageAlias(const TensorLists&... tensors) {
+  std::unordered_set<const c10::StorageImpl*> storages;
+  return (AddStorageAliases(tensors, &storages) || ...);
 }
 
 // Call this for every tensor that the current fused op reads through k->Input(...),
@@ -401,6 +423,15 @@ bool ForeachBinaryScalar(at::TensorList self, const at::Scalar& scalar, dvm::Bin
   if (!GetScalarValue(scalar, &scalar_value)) {
     return false;
   }
+  // lazy_fusion_data_ is indexed by storage, so two different views of one
+  // storage cannot safely be written in the same pending graph. The first
+  // Output() would install a non-reloadable cache entry and the next Input()
+  // would otherwise hit the alias assertion. Fall back before mutating DVM.
+  if (HasStorageAlias(self)) {
+    ASCEND_LOGD("DVM lazy fusion: foreach writable list aliases; flush and fall back to op_api");
+    LazyFusionFlush();
+    return false;
+  }
   PrepareWritableOutput(self);
   auto k = g_lazy_fusion_manager.Get();
   for (size_t i = 0; i < self.size(); ++i) {
@@ -422,6 +453,11 @@ bool ForeachBinaryScalar(at::TensorList self, at::ArrayRef<at::Scalar> scalars, 
     if (!InputCheck(self[i]) || !GetScalarValue(scalars[i], &scalar_values[i])) {
       return false;
     }
+  }
+  if (HasStorageAlias(self)) {
+    ASCEND_LOGD("DVM lazy fusion: foreach writable list aliases; flush and fall back to op_api");
+    LazyFusionFlush();
+    return false;
   }
   PrepareWritableOutput(self);
   auto k = g_lazy_fusion_manager.Get();
@@ -446,6 +482,11 @@ bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
         tensors1[i].scalar_type() != input[i].scalar_type() || tensors2[i].scalar_type() != input[i].scalar_type()) {
       return false;
     }
+  }
+  if (HasStorageAlias(input, tensors1, tensors2)) {
+    ASCEND_LOGD("DVM lazy fusion: foreach addc lists alias; flush and fall back to op_api");
+    LazyFusionFlush();
+    return false;
   }
   PrepareWritableOutput(input);
   PrepareFusionInputs(tensors1, tensors2);
@@ -477,6 +518,11 @@ bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
         !GetScalarValue(scalars[i], &scalar_values[i])) {
       return false;
     }
+  }
+  if (HasStorageAlias(input, tensors1, tensors2)) {
+    ASCEND_LOGD("DVM lazy fusion: foreach addc lists alias; flush and fall back to op_api");
+    LazyFusionFlush();
+    return false;
   }
   PrepareWritableOutput(input);
   PrepareFusionInputs(tensors1, tensors2);
@@ -2064,6 +2110,12 @@ void _foreach_sqrt_(at::TensorList tensors) {
       op_api::_foreach_sqrt_(tensors);
       return;
     }
+  }
+  if (HasStorageAlias(tensors)) {
+    ASCEND_LOGD("DVM lazy fusion: foreach sqrt writable list aliases; flush and fall back to op_api");
+    LazyFusionFlush();
+    op_api::_foreach_sqrt_(tensors);
+    return;
   }
   PrepareWritableOutput(tensors);
   auto k = g_lazy_fusion_manager.Get();
