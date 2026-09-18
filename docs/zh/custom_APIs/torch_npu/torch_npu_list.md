@@ -247,6 +247,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p16917252327389"><a name="p16917252327389"></a><a name="p16917252327389"></a>融合RmsNorm算子和Quantize算子，减少搬入搬出的操作。</p>
 </td>
 </tr>
+<tr id="row3892520439"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p2991782322389"><a name="p2991782322389"></a><a name="p2991782322389"></a><a href="torch_npu-npu_rms_norm_quant_v2.md">torch_npu.npu_rms_norm_quant_v2</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p16917252327389"><a name="p16917252327389"></a><a name="p16917252327389"></a>融合RmsNorm算子和Quantize算子，减少搬入搬出的操作，v2版本新增了rstd的输出。</p>
+</td>
+</tr>
 <tr id="row3892520439"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p2991782322389"><a name="p2991782322389"></a><a name="p2991782322389"></a><a href="torch_npu-npu_rms_norm_dynamic_mx_quant.md">torch_npu.npu_rms_norm_dynamic_mx_quant</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p16917252327389"><a name="p16917252327389"></a><a name="p16917252327389"></a>实现RmsNorm算子与DynamicMxQuant算子融合，先对输入进行RmsNorm归一化，将RmsNorm结果与beta相加后再进行动态MX量化，减少搬入搬出操作。其中RmsNorm是大模型常用的归一化操作，相比LayerNorm其去掉了减去均值的部分。</p>
@@ -302,6 +307,10 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p950000000023"><a name="p950000000023"></a><a name="p950000000023"></a>完成量化的Matmul计算、Permute（保证通信后地址连续）和AlltoAll通信的融合，先通信后计算。支持K-C动态量化模式和mx量化模式。</p>
 </td>
 </tr>
+<tr id="npu_anti_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_anti_mx_quant"><a name="p_npu_anti_mx_quant"></a><a name="p_npu_anti_mx_quant"></a><a href="torch_npu-npu_anti_mx_quant.md">torch_npu.npu_anti_mx_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_anti_mx_quant_desc"><a name="p_npu_anti_mx_quant_desc"></a><a name="p_npu_anti_mx_quant_desc"></a><span>将调用npu_dynamic_mx_quant量化得到的float4/float8的Tensor反量化为float16/bfloat16/float32格式，是npu_dynamic_mx_quant的逆过程。</span></p></td>
+</tr>
 <tr id="row952719519471"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p18248651143510"><a name="p18248651143510"></a><a name="p18248651143510"></a><a href="torch_npu-npu_anti_quant.md">torch_npu.npu_anti_quant</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001850161621_p0996174814315"><a name="zh-cn_topic_0000001850161621_p0996174814315"></a><a name="zh-cn_topic_0000001850161621_p0996174814315"></a>对张量x进行反量化操作，即将量化后的低精度数据恢复为浮点数。反量化是量化的逆过程，用于将低精度数据（如torch.int8、torch_npu.int4、torch_npu.hifloat8、torch.float8_e4m3fn、torch.float8_e5m2）转换回高精度浮点数。</p>
@@ -348,7 +357,7 @@
 </tr>
 <tr id="npu_dynamic_block_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_dynamic_block_mx_quant"><a name="p_npu_dynamic_block_mx_quant"></a><a name="p_npu_dynamic_block_mx_quant"></a><a href="torch_npu-npu_dynamic_block_mx_quant.md">torch_npu.npu_dynamic_block_mx_quant</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_dynamic_block_mx_quant_desc"><a name="p_npu_dynamic_block_mx_quant_desc"></a><a name="p_npu_dynamic_block_mx_quant_desc"></a><span>对输入变量，以数据块（32*32）为基本块进行MX量化并转换为目的数据类型。</span></p></td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_dynamic_block_mx_quant_desc"><a name="p_npu_dynamic_block_mx_quant_desc"></a><a name="p_npu_dynamic_block_mx_quant_desc"></a><span>对输入变量，以数据块（32*32）为基本块进行MX量化并转换为目标数据类型。</span></p></td>
 </tr>
 <tr id="npu_gelu_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_gelu_quant"><a name="p_npu_gelu_quant"></a><a name="p_npu_gelu_quant"></a><a href="torch_npu-npu_gelu_quant.md">torch_npu.npu_gelu_quant</a></p>
 </td>
@@ -826,7 +835,7 @@
 </tr>
 <tr id="batch_norm_reduce"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_batch_norm_reduce"><a name="p_batch_norm_reduce"></a><a name="p_batch_norm_reduce"></a><a href="torch_npu-batch_norm_reduce.md">torch_npu.batch_norm_reduce</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_batch_norm_reduce_desc"><a name="p_batch_norm_reduce_desc"></a><a name="p_batch_norm_reduce_desc"></a><span>对输入Tensor按BatchNorm通道维进行规约，返回元素和与平方和。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_batch_norm_reduce_desc"><a name="p_batch_norm_reduce_desc"></a><a name="p_batch_norm_reduce_desc"></a><span>该接口用于按BatchNorm通道维对输入Tensor进行归约，计算通道维以外维度上的元素和 `sum` 与平方和 `square_sum` 。</span></p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_apply_adam_w.md">torch_npu.npu_apply_adam_w</a></p>
@@ -902,7 +911,7 @@
 </tr>
 <tr id="npu_add_quant_matmul_"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_add_quant_matmul_"><a name="p_npu_add_quant_matmul_"></a><a name="p_npu_add_quant_matmul_"></a><a href="torch_npu-npu_add_quant_matmul_.md">torch_npu.npu_add_quant_matmul_</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_add_quant_matmul__desc"><a name="p_npu_add_quant_matmul__desc"></a><a name="p_npu_add_quant_matmul__desc"></a><span>训练场景下micro-batch的梯度累计会存在大量QuantBatchMatmul操作接InplaceAdd操作，本接口将操作融合起来，以提高网络性能。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_add_quant_matmul__desc"><a name="p_npu_add_quant_matmul__desc"></a><a name="p_npu_add_quant_matmul__desc"></a><span>训练场景下micro-batch的梯度累积会存在大量QuantBatchMatmul操作接InplaceAdd操作，本接口将操作融合起来，以提高网络性能。</span></p>
 </td>
 </tr>
 <tr id="npu_dynamic_dual_level_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_dynamic_dual_level_mx_quant"><a name="p_npu_dynamic_dual_level_mx_quant"></a><a name="p_npu_dynamic_dual_level_mx_quant"></a><a href="torch_npu-npu_dynamic_dual_level_mx_quant.md">torch_npu.npu_dynamic_dual_level_mx_quant</a></p>
@@ -912,7 +921,7 @@
 </tr>
 <tr id="npu_dynamic_mx_quant_with_dual_axis"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_dynamic_mx_quant_with_dual_axis"><a name="p_npu_dynamic_mx_quant_with_dual_axis"></a><a name="p_npu_dynamic_mx_quant_with_dual_axis"></a><a href="torch_npu-npu_dynamic_mx_quant_with_dual_axis.md">torch_npu.npu_dynamic_mx_quant_with_dual_axis</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_dynamic_mx_quant_with_dual_axis_desc"><a name="p_npu_dynamic_mx_quant_with_dual_axis_desc"></a><a name="p_npu_dynamic_mx_quant_with_dual_axis_desc"></a><span>在输入张量的-1轴和-2轴上同时进行目的数据类型为float4类、float8类的MX量化，输出两轴各自的量化结果y1、y2与量化尺度mxscale1、mxscale2。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_dynamic_mx_quant_with_dual_axis_desc"><a name="p_npu_dynamic_mx_quant_with_dual_axis_desc"></a><a name="p_npu_dynamic_mx_quant_with_dual_axis_desc"></a><span>在输入张量的-1轴和-2轴上同时进行目标数据类型为float4类、float8类的MX量化，输出两轴各自的量化结果y1、y2与量化尺度mxscale1、mxscale2。</span></p>
 </td>
 </tr>
 <tr id="npu_fused_causal_conv1d"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_fused_causal_conv1d"><a name="p_npu_fused_causal_conv1d"></a><a name="p_npu_fused_causal_conv1d"></a><a href="torch_npu-npu_fused_causal_conv1d.md">torch_npu.npu_fused_causal_conv1d</a></p>
@@ -934,7 +943,7 @@
 </tr>
 <tr id="npu_transpose_quant_batchmatmul"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_transpose_quant_batchmatmul"><a name="p_npu_transpose_quant_batchmatmul"></a><a name="p_npu_transpose_quant_batchmatmul"></a><a href="torch_npu-npu_transpose_quant_batchmatmul.md">torch_npu.npu_transpose_quant_batchmatmul</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_transpose_quant_batchmatmul_desc"><a name="p_npu_transpose_quant_batchmatmul_desc"></a><a name="p_npu_transpose_quant_batchmatmul_desc"></a><span>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。perm_x1代表张量x1的转置序列，perm_x2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</span></p></td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_transpose_quant_batchmatmul_desc"><a name="p_npu_transpose_quant_batchmatmul_desc"></a><a name="p_npu_transpose_quant_batchmatmul_desc"></a><span>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的tensor传入。tensor支持转置，转置序列根据传入的序列进行变更。perm_x1代表张量x1的转置序列，perm_x2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</span></p></td>
 </tr>
 <tr id="npu_fused_linear_online_max_sum"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_fused_linear_online_max_sum"><a name="p_npu_fused_linear_online_max_sum"></a><a name="p_npu_fused_linear_online_max_sum"></a><a href="torch_npu-npu_fused_linear_online_max_sum.md">torch_npu.npu_fused_linear_online_max_sum</a></p>
 </td>
