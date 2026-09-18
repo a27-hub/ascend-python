@@ -335,8 +335,8 @@ torch_npu.npu_fused_infer_attention_score(
 
 | 约束项 | Q_S > 1 | Q_S = 1 |
 | ------ | ------- | ------- |
-| `block_size` | 最小128，最大512，须128倍数 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：非0，最大512，推荐128。</li><li><term>Ascend 950PR/Ascend 950DT</term>：`key`、`value`输入类型为`torch.float16`、`torch.bfloat16`时需要16对齐，`key`、`value`输入类型为`torch.int8`时需要32对齐，推荐使用128，`key`、`value`输入类型是`torch.int4（torch.int32）`时需要64对齐。</li> |
-| kv dtype | `torch.float16`、`torch.bfloat16` | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`torch.float16`、`torch.bfloat16`、`torch.int8`。</li><li><term>Ascend 950PR/Ascend 950DT</term>：`torch.float16`、`torch.bfloat16`、`torch.int8`、`torch.int4`（`torch.int32`） |
+| `block_size` | 最小128，最大512，须128倍数 | `key`、`value`输入类型为`torch.float16`、`torch.bfloat16`时需要16对齐，`key`、`value`输入类型为`torch.int8`时需要32对齐，推荐使用128，`key`、`value`输入类型是`torch.int4（torch.int32）`时需要64对齐。 |
+| kv dtype | `torch.float16`、`torch.bfloat16` | `torch.float16`、`torch.bfloat16`、`torch.int8`、`torch.int4`（`torch.int32`） |
 | `query` `torch.int8` | 不支持 | 不支持 |
 | kv cache排布 | BSH/BSND仅BnBsH；BNSD/TND支持BnBsH和BnNBsD | 同左 |
 | 必须传入`actual_seq_lengths_kv` | ✓ | ✓ |
@@ -344,9 +344,12 @@ torch_npu.npu_fused_infer_attention_score(
 | blocknum下限 | ≥ 各batch block数之和 | 同左 |
 | 支持tensorlist | ✗ | ✗ |
 | 支持左padding | ✗ | ✗ |
-| 支持伪量化 | <li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：✗ </li><li><term>Ascend 950PR/Ascend 950DT</term>：✓（`torch.int8` kv） | ✓（`torch.int8` kv） |
+| 支持伪量化 | ✓（`torch.int8` kv） | ✓（`torch.int8` kv） |
 | 性能提示 | BnNBsD优于BnBsH | BnNBsD优于BnBsH |
 | H超65535时 | 开GQA或用BnNBsD | 开GQA或用BnNBsD |
+
+> [!NOTE]
+> - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`block_size`在Q_S = 1时支持非0，最大512，推荐128；kv dtype在Q_S = 1时不支持`torch.int4`（`torch.int32`）；在Q_S = 1时不支持`torch.int8` kv伪量化。
 
 - PageAttention开启时，以下场景需KV_S ≥ maxBlockNumPerSeq × `block_size`：
   - 传入`atten_mask`（如shape (B, 1, Q_S, KV_S)）
