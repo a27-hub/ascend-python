@@ -185,7 +185,7 @@ torch_npu.npu_fused_infer_attention_score(
   | 3 | pertoken + perhead | pertoken叠加perhead模式。 |
   | 4 | pertoken + page attention | pertoken叠加page attention管理scale/offset。 |
   | 5 | pertoken + perhead + page attention | pertoken叠加perhead并使用page attention管理scale/offset。 |
-  | 6 | per-token-group | per-token-group模式 |
+  | 6 | pertoken-pergroup | pertoken-pergroup模式 |
 
 > **特殊约束**：
 >
@@ -359,7 +359,7 @@ torch_npu.npu_fused_infer_attention_score(
     - Q_S = 1时开启`pse_shift`：`pse_shift`最后一维 ≥ `block_table`第二维 × `block_size`。
     - Q_S = 1伪量化pertoken模式：`antiquant_scale`/`antiquant_offset` shape的S ≥ 该值。
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 开启per-token叠加per-head模式：两个参数的shape均为(B, N, S)，数据类型固定为float32，当key、value数据类型为int8、int4(int32)时支持。
+    - 开启pertoken叠加perhead模式：两个参数的shape均为(B, N, S)，数据类型固定为float32，当key、value数据类型为int8、int4(int32)时支持。
 
 ### <a id="mla_constraints"></a>MLA约束
 
@@ -507,15 +507,15 @@ torch_npu.npu_fused_infer_attention_score(
 
       | 量化模式 | 该场景下scale和offset条件 | 该场景下`key`和`value`条件 |
       | --- | --- | --- |
-      | per-channel模式 | 两个参数shape支持(N, 1, D)，(N, D)，(H)，(1, N, 1, D)，(1, N, D)，(1, H)数据类型和`query`数据类型相同。 | 当`key、value`数据类型为`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`时支持。 |
-      | per-token模式 | 两个参数的shape均为(B, S)，数据类型固定为`torch.float32`。 | 当`key、value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。 |
-      | per-tensor模式 | 两个参数的shape均为(1)，数据类型和`query`数据类型相同。 | 当`key、value`数据类型为`torch.int8`时支持。 |
-      | per-tensor叠加per-head模式 | 不支持。 | 不支持。 |
-      | per-token叠加per-head模式 | 不支持。 | 不支持。 |
-      | per-token叠加使用page attention模式 | 两个参数的shape均为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | `key、value`数据类型为`torch.float8_e4m3fn`时支持。 |
-      | per-token叠加per head并使用page attention模式 | 不支持。 | 不支持。 |
-      | `key`支持per-channel叠加`value`支持per-token模式 | 不支持。 | 不支持。 |
-      | per-token-group模式 | antiquant_scale的shape为(1, B, N, S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带antiquant_offset。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
+      | perchannel模式 | 两个参数shape支持(N, 1, D)，(N, D)，(H)，(1, N, 1, D)，(1, N, D)，(1, H)数据类型和`query`数据类型相同。 | 当`key、value`数据类型为`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`时支持。 |
+      | pertoken模式 | 两个参数的shape均为(B, S)，数据类型固定为`torch.float32`。 | 当`key、value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。 |
+      | pertensor模式 | 两个参数的shape均为(1)，数据类型和`query`数据类型相同。 | 当`key、value`数据类型为`torch.int8`时支持。 |
+      | pertensor叠加perhead模式 | 不支持。 | 不支持。 |
+      | pertoken叠加perhead模式 | 不支持。 | 不支持。 |
+      | pertoken叠加使用page attention模式 | 两个参数的shape均为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | `key、value`数据类型为`torch.float8_e4m3fn`时支持。 |
+      | pertoken叠加per head并使用page attention模式 | 不支持。 | 不支持。 |
+      | `key`支持perchannel叠加`value`支持pertoken模式 | 不支持。 | 不支持。 |
+      | pertoken-pergroup模式 | antiquant_scale的shape为(1, B, N, S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带antiquant_offset。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
 
 ### <a id="qs_eq_1"></a>Q_S = 1（Decode）专属约束
 
@@ -553,15 +553,15 @@ torch_npu.npu_fused_infer_attention_score(
 
       | 量化模式 | 该场景下scale和offset条件 | 该场景下`key`和`value`条件 |
       | --- | --- | --- |
-      | per-channel模式 | 两个参数shape支持(1, N, 1, D)，(1, N, D)，(1, H)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int4`（`torch.int32`）、`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`时支持。 |
-      | per-tensor模式 | 两个参数的shape均为(1)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int8`时支持。 |
-      | per-token模式 | 两个参数的shape均为(1, B, S)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int4`（`torch.int32`）、`torch.int8`、`torch.float8_e4m3fn`时支持。 |
-      | per-tensor叠加per-head模式 | 两个参数的shape均为(N)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int8`时支持。 |
-      | per-token叠加per-head模式 | 两个参数的shape均为(B, N, S)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。 |
-      | per-token叠加使用page attention模式 | 两个参数的shape均为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。 |
-      | per-token叠加per head并使用page attention模式 | 两个参数的shape均为(blocknum, N, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`时支持。 |
-      | `key`支持per-channel叠加`value`支持per-token模式 | 对`key`支持per-channel，两个参数的shape可支持(1, N, 1, D)、(1, N, D)、(1, H)，且数据类型和`query`数据类型相同。对`value`支持per-token，两个参数的shape均为(1, B, S)并且数据类型固定为`torch.float32`。 | 当`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。 |
-      | per-token-group模式 | antiquant_scale的shape为(1, B, N, S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带antiquant_offset。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
+      | perchannel模式 | 两个参数shape支持(1, N, 1, D)，(1, N, D)，(1, H)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int4`（`torch.int32`）、`torch.int8`、`torch.hifloat8`、`torch.float8_e4m3fn`时支持。 |
+      | pertensor模式 | 两个参数的shape均为(1)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int8`时支持。 |
+      | pertoken模式 | 两个参数的shape均为(1, B, S)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int4`（`torch.int32`）、`torch.int8`、`torch.float8_e4m3fn`时支持。 |
+      | pertensor叠加perhead模式 | 两个参数的shape均为(N)，数据类型和`query`数据类型相同。 | 当`key`、`value`数据类型为`torch.int8`时支持。 |
+      | pertoken叠加perhead模式 | 两个参数的shape均为(B, N, S)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。 |
+      | pertoken叠加使用page attention模式 | 两个参数的shape均为(blocknum, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`、`torch.float8_e4m3fn`时支持。 |
+      | pertoken叠加per head并使用page attention模式 | 两个参数的shape均为(blocknum, N, blocksize)，数据类型固定为`torch.float32`。 | `key`、`value`数据类型为`torch.int8`时支持。 |
+      | `key`支持perchannel叠加`value`支持pertoken模式 | 对`key`支持perchannel，两个参数的shape可支持(1, N, 1, D)、(1, N, D)、(1, H)，且数据类型和`query`数据类型相同。对`value`支持pertoken，两个参数的shape均为(1, B, S)并且数据类型固定为`torch.float32`。 | 当`key`、`value`数据类型为`torch.int4`（`torch.int32`）或`torch.int8`时支持。 |
+      | pertoken-pergroup模式 | antiquant_scale的shape为(1, B, N, S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带antiquant_offset。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
 
 ## 调用示例
 
