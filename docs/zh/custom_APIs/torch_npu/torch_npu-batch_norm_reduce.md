@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：该接口用于按BatchNorm通道维对输入Tensor进行规约，计算通道维以外维度上的元素和 `sum` 与平方和 `square_sum` 。
+- API功能：该接口用于按BatchNorm通道维对输入Tensor进行归约，计算通道维以外维度上的元素和 `sum` 与平方和 `square_sum` 。
 
 - 计算公式：对于4D Tensor输入 `(N, C, H, W)`，计算C轴以外的N、H、W轴求和与平方和。
 

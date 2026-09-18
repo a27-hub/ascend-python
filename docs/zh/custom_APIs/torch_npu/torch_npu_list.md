@@ -1028,7 +1028,7 @@
 </tr>
 <tr id="npu_transpose_quant_batchmatmul"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_transpose_quant_batchmatmul"><a name="p_npu_transpose_quant_batchmatmul"></a><a name="p_npu_transpose_quant_batchmatmul"></a><a href="torch_npu-npu_transpose_quant_batchmatmul.md">torch_npu.npu_transpose_quant_batchmatmul</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_transpose_quant_batchmatmul_desc"><a name="p_npu_transpose_quant_batchmatmul_desc"></a><a name="p_npu_transpose_quant_batchmatmul_desc"></a><span>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。perm_x1代表张量x1的转置序列，perm_x2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</span></p></td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_transpose_quant_batchmatmul_desc"><a name="p_npu_transpose_quant_batchmatmul_desc"></a><a name="p_npu_transpose_quant_batchmatmul_desc"></a><span>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的Tensor传入。tensor支持转置，转置序列根据传入的序列进行变更。perm_x1代表张量x1的转置序列，perm_x2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</span></p></td>
 </tr>
 <tr id="npu_fused_linear_online_max_sum"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_fused_linear_online_max_sum"><a name="p_npu_fused_linear_online_max_sum"></a><a name="p_npu_fused_linear_online_max_sum"></a><a href="torch_npu-npu_fused_linear_online_max_sum.md">torch_npu.npu_fused_linear_online_max_sum</a></p>
 </td>
