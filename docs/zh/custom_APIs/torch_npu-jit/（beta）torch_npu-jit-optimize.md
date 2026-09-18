@@ -17,7 +17,7 @@
 ## 函数原型
 
 ```python
-torch_npu.jit.optimize(jit_mode)
+torch_npu.jit.optimize(jit_mod)
 ```
 
 ## 参数说明
