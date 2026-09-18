@@ -349,7 +349,7 @@ torch_npu.npu_fused_infer_attention_score(
 | H超65535时 | 开GQA或用BnNBsD | 开GQA或用BnNBsD |
 
 > [!NOTE]
-> - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`block_size`在Q_S = 1时支持非0，最大512，推荐128；kv dtype在Q_S = 1时不支持`torch.int4`（`torch.int32`）；在Q_S = 1时不支持`torch.int8` kv伪量化。
+> - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`block_size`在Q_S = 1时支持非0，最大512，推荐128；kv dtype在Q_S = 1时不支持`torch.int4`（`torch.int32`）；在Q_S > 1时不支持`torch.int8` kv伪量化。
 
 - PageAttention开启时，以下场景需KV_S ≥ maxBlockNumPerSeq × `block_size`：
   - 传入`atten_mask`（如shape (B, 1, Q_S, KV_S)）
