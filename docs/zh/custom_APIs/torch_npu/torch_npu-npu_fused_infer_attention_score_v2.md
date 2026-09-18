@@ -578,7 +578,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             | `key`支持per-channel叠加`value`支持per-token模式 | <li>对于`key`支持per-channel，两个参数的shape可支持(1, KV_N, 1, D)、(1, KV_N, D)、(1, H)，且数据类型和`query`数据类型相同。</li><li>对于`value`支持per-token，两个参数的shape均为(1, B, KV_S)并且数据类型固定为`torch.float32`。</li> | 当`key`、`value`数据类型为int4（int32）或int8时支持；当`key`和`value`的数据类型为int8时，仅支持query和输出的dtype为float16。 |
             | per-token-group模式 | `dequant_scale`的shape为(1, B, KV\_N, KV\_S, D/32)，数据类型固定为`torch.float8_e8m0fnu`，不支持带`dequant_offset`。 | 当`key`、`value`数据类型为`torch.float4_e2m1fn_x2`时支持。 |
             > [!NOTE]
-            > - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：per-channel模式不支持`torch.hifloat8`、`torch.float8_e4m3fn`；per-token模式不支持`torch.float8_e4m3fn`，per-token叠加使用page attention模式不支持`torch.float8_e4m3fn`，。
+            > - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：per-channel模式不支持`torch.hifloat8`、`torch.float8_e4m3fn`；per-token模式不支持`torch.float8_e4m3fn`，per-token叠加使用page attention模式不支持`torch.float8_e4m3fn`。
 
     - `pse_shift`功能使用限制如下：
         - `pse_shift`数据类型需与`query`数据类型保持一致。
