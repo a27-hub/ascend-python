@@ -186,7 +186,6 @@ bool hit_cache(
   CanUsePTACache canUsePTACacheFunc = reinterpret_cast<CanUsePTACache>(canUsePTACacheAddr);
   bool has_func = ptaGetExecCacheFunc && initPTACacheThreadLocalFunc && setPTAHashKeyFunc;
   bool can_use = canUsePTACacheFunc && canUsePTACacheFunc(aclnn_api);
-  at_npu::native::ApplyDeterministicSnapshot(snapshot, true);
   if (!has_func || !can_use) {
     return false;
   }
@@ -250,7 +249,6 @@ bool hit_cache_v2(
   CanUsePTACache canUsePTACacheFunc = reinterpret_cast<CanUsePTACache>(canUsePTACacheAddr);
   bool has_func = ptaFindExecCacheFunc && initPTACacheThreadLocalFunc && setPTACacheHashKeyFunc;
   bool can_use = canUsePTACacheFunc && canUsePTACacheFunc(aclnn_api);
-  at_npu::native::ApplyDeterministicSnapshot(snapshot, true);
   if (!has_func || !can_use) {
     return false;
   }
@@ -373,6 +371,7 @@ auto DecodeDevice(Ts&... args) -> at::Device {
     if (hit_cache(acl_stream, #aclnn_api, opApiFuncAddr, snapshot, __VA_ARGS__)) {                      \
       break;                                                                                            \
     }                                                                                                   \
+    at_npu::native::ApplyDeterministicSnapshot(snapshot, true);                                         \
     if (initMemFunc) {                                                                                  \
       initMemFunc(nullptr, false);                                                                      \
     }                                                                                                   \
@@ -452,6 +451,7 @@ auto DecodeDevice(Ts&... args) -> at::Device {
       if (hit_cache_v2(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, aic_num, aiv_num, snapshot)) { \
         return api_ret;                                                                                               \
       }                                                                                                               \
+      at_npu::native::ApplyDeterministicSnapshot(snapshot, true);                                                     \
       if (initMemFunc) {                                                                                              \
         initMemFunc(nullptr, false);                                                                                  \
       }                                                                                                               \
