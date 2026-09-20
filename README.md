@@ -40,25 +40,7 @@ TorchNPU integrates this repository through the `third_party/op-plugin` submodul
 
 ## Compatibility
 
-This README describes the `master` branch. OpPlugin and TorchNPU must be used together with compatible source versions. Use the [submodule configuration](https://gitcode.com/Ascend/pytorch/blob/master/.gitmodules) and the recorded OpPlugin commit of your target TorchNPU branch when selecting source code.
-
-| OpPlugin Branch | Example TorchNPU Branches |
-| --- | --- |
-| `master` | Mainline development branches, such as `master` and `v2.7.1` |
-| `26.1.0` | `v2.7.1-26.1.0` |
-| `26.0.0` | `v2.7.1-26.0.0` |
-| `7.3.0` | `v2.7.1-7.3.0` |
-| `7.2.0` | `v2.7.1-7.2.0` |
-| `7.1.0` | `v2.1.0-7.1.0` |
-| `7.0.0` | `v2.1.0-7.0.0` |
-| `6.0.0` | `v2.1.0-6.0.0` |
-| `6.0.rc3` | `v2.1.0-6.0.rc3` |
-| `6.0.rc2` | `v2.1.0-6.0.rc2` |
-| `6.0.rc1` | `v2.1.0-6.0.rc1` |
-| `5.0.0` | `v2.1.0-5.0.0` |
-| `5.0.rc3` | `v2.1.0-5.0.rc3` |
-
-This table describes source branch mappings; it does not imply that all historical versions are still maintained. Refer to TorchNPU for shared environment requirements and support policies:
+OpPlugin is integrated and released with the corresponding TorchNPU version. Refer to TorchNPU for shared environment requirements and support policies:
 
 - [Compatibility](https://gitcode.com/Ascend/pytorch/blob/master/COMPATIBILITY.en.md): Version mappings for PyTorch, TorchNPU, CANN, and Python.
 - [Support](https://gitcode.com/Ascend/pytorch/blob/master/SUPPORT.en.md): Version support status and lifecycle.

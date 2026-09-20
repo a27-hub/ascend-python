@@ -40,25 +40,7 @@ TorchNPU 通过 `third_party/op-plugin` 子模块集成本仓，将算子适配�
 
 ## 版本配套
 
-本 README 面向 `master` 分支。OpPlugin 与 TorchNPU 需要配套使用，选择源码时应以目标 TorchNPU 分支的 [子模块配置](https://gitcode.com/Ascend/pytorch/blob/master/.gitmodules)及其记录的 OpPlugin 提交为准。
-
-| OpPlugin 分支 | 对应 TorchNPU 分支示例 |
-| --- | --- |
-| `master` | 主线开发分支，如 `master`、`v2.7.1` |
-| `26.1.0` | `v2.7.1-26.1.0` |
-| `26.0.0` | `v2.7.1-26.0.0` |
-| `7.3.0` | `v2.7.1-7.3.0` |
-| `7.2.0` | `v2.7.1-7.2.0` |
-| `7.1.0` | `v2.1.0-7.1.0` |
-| `7.0.0` | `v2.1.0-7.0.0` |
-| `6.0.0` | `v2.1.0-6.0.0` |
-| `6.0.rc3` | `v2.1.0-6.0.rc3` |
-| `6.0.rc2` | `v2.1.0-6.0.rc2` |
-| `6.0.rc1` | `v2.1.0-6.0.rc1` |
-| `5.0.0` | `v2.1.0-5.0.0` |
-| `5.0.rc3` | `v2.1.0-5.0.rc3` |
-
-上表用于说明源码分支的对应关系，不代表各历史版本仍在维护。环境配套和支持策略统一参考 TorchNPU：
+OpPlugin 随对应版本的 TorchNPU 集成和发布，环境配套和支持策略统一参考 TorchNPU：
 
 - [版本配套](https://gitcode.com/Ascend/pytorch/blob/master/COMPATIBILITY.md)：PyTorch、TorchNPU、CANN 和 Python 的配套关系。
 - [支持说明](https://gitcode.com/Ascend/pytorch/blob/master/SUPPORT.md)：版本支持状态与生命周期。
