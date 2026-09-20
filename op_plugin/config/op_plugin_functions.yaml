@@ -612,6 +612,12 @@ official:
   - func: _foreach_zero_(Tensor(a!)[] self) -> ()
     op_api: all_version
 
+  - func: _fused_adam_(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] exp_avgs, Tensor(d!)[] exp_avg_sqs, Tensor(e!)[] max_exp_avg_sqs, Tensor[] state_steps, *, float lr, float beta1, float beta2, float weight_decay, float eps, bool amsgrad, bool maximize, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()
+    op_api: all_version
+
+  - func: _fused_adam_.tensor_lr(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] exp_avgs, Tensor(d!)[] exp_avg_sqs, Tensor(e!)[] max_exp_avg_sqs, Tensor[] state_steps, *, Tensor lr, float beta1, float beta2, float weight_decay, float eps, bool amsgrad, bool maximize, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()
+    op_api: all_version
+
   - func: _fused_adamw_(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] exp_avgs, Tensor(d!)[] exp_avg_sqs, Tensor(e!)[] max_exp_avg_sqs, Tensor[] state_steps, *, float lr, float beta1, float beta2, float weight_decay, float eps, bool amsgrad, bool maximize, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()
     op_api: all_version
 
@@ -5126,6 +5132,9 @@ official:
         dtype: self
       exec: aclnnThresholdBackward
 
+  - func: to_padded_tensor(Tensor self, float padding, SymInt[]? output_size=None) -> Tensor
+    op_api: [v2.1, newest]
+
   - func: topk(Tensor self, SymInt k, int dim=-1, bool largest=True, bool sorted=True) -> (Tensor values, Tensor indices)
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
@@ -5604,6 +5613,39 @@ official:
     gen_opapi:
       exec: aclnnRightShift
 
+  - func: bitwise_left_shift.Tensor_Scalar(Tensor self, Scalar other) -> Tensor
+    op_api: [v2.7, newest]
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnLeftShifts
+
+  - func: bitwise_left_shift.Tensor_Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: [v2.7, newest]
+    gen_opapi:
+      exec: aclnnLeftShifts
+
+  - func: bitwise_left_shift_.Tensor_Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
+    op_api: [v2.7, newest]
+    gen_opapi:
+      structured_inherit: bitwise_left_shift.Tensor_Scalar_out
+
+  - func: bitwise_right_shift.Tensor_Scalar(Tensor self, Scalar other) -> Tensor
+    op_api: [v2.7, newest]
+
+  - func: bitwise_right_shift.Tensor_Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: [v2.7, newest]
+
+  - func: bitwise_right_shift_.Tensor_Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
+    op_api: [v2.7, newest]
+
+  - func: bitwise_right_shift.Scalar_Tensor(Scalar self, Tensor other) -> Tensor
+    op_api: [v2.7, newest]
+
+  - func: bitwise_left_shift.Scalar_Tensor(Scalar self, Tensor other) -> Tensor
+    op_api: [v2.7, newest]
+
 autograd:
   - func: _thnn_fused_gru_cell(Tensor input_gates, Tensor hidden_gates, Tensor hx, Tensor? input_bias=None, Tensor? hidden_bias=None) -> (Tensor, Tensor)
     op_api: [v2.5, newest]
@@ -5632,7 +5674,7 @@ custom:
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: npu_mhc_pre_backward(Tensor x, Tensor phi, Tensor alpha, Tensor grad_h_in, Tensor grad_h_post, Tensor grad_h_res, Tensor inv_rms, Tensor h_mix, Tensor h_pre, Tensor h_post, Tensor? gamma=None, float hc_eps=1e-6, Tensor? grad_x_post=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_mhc_pre_backward(Tensor x, Tensor phi, Tensor alpha, Tensor grad_h_in, Tensor grad_h_post, Tensor grad_h_res, Tensor inv_rms, Tensor h_mix, Tensor h_pre, Tensor h_post, Tensor? gamma=None, float hc_eps=1e-6, Tensor? grad_x_post=None, int inner_precise=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
     internal_format_opapi: all_version
 
@@ -6402,7 +6444,7 @@ custom:
     op_api: all_version
     exposed: all_version
 
-  - func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None, Tensor? sinks=None) -> Tensor
+  - func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None) -> Tensor
     op_api: all_version
     exposed: all_version
 
@@ -7443,13 +7485,8 @@ custom:
         actual_num_out_tokens: '(num_out_tokens_value > 0) ? std::min(num_out_tokens_value, flatten_size) : num_out_tokens_value + flatten_size'
       exec: aclnnMoeTokenPermute, tokens, indices, actual_num_out_tokens, padded_mode, permuted_tokens, sorted_indices
 
-  - func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, int tokens_size_0, ScalarType tokens_dtype, int num_topK, bool padded_mode=False) -> Tensor
+  - func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, SymInt tokens_size_0, ScalarType tokens_dtype, SymInt num_topK, bool padded_mode=False) -> Tensor
     op_api: [v2.1, newest]
-    gen_opapi:
-      grad_tokens:
-        size: 'npu_moe_token_permute_grad_v2_out_size(tokens_size_0, grad_permuted_tokens, sorted_indices)'
-        dtype: tokens_dtype
-      exec: aclnnMoeTokenPermuteGrad, grad_permuted_tokens, sorted_indices, num_topK, padded_mode, grad_tokens
 
   - func: npu_moe_token_permute_grad(Tensor tokens, Tensor grad_permuted_tokens, Tensor indices, Tensor sorted_indices, bool padded_mode=False) -> Tensor
     op_api: [v2.1, newest]
@@ -7514,18 +7551,8 @@ custom:
         restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
       exec: aclnnMoeTokenUnpermuteGrad, permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, grad_permuted_tokens, grad_probs
 
-  - func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, int permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)
+  - func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, SymInt permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
-    gen_opapi:
-      grad_permuted_tokens:
-        size: 'npu_moe_token_unpermute_grad_v2_permuted_tokens_out_size(permuted_tokens_size_0, grad_unpermuted_tokens, sorted_indices, probs)'
-        dtype: permuted_tokens_dtype
-      grad_probs:
-        size: 'npu_moe_token_unpermute_grad_v2_probs_out_size(grad_unpermuted_tokens, sorted_indices, probs)'
-        dtype: 'probs.has_value() && probs->defined() ? probs->scalar_type() : grad_unpermuted_tokens.scalar_type()'
-      new_params:
-        restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
-      exec: aclnnMoeTokenUnpermuteGrad, permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, grad_permuted_tokens, grad_probs
 
   - func: npu_moe_token_unpermute_with_routing_map(Tensor permuted_tokens, Tensor sorted_indices, int[] restore_shape, *, Tensor? probs=None, Tensor? routing_map=None, bool drop_and_pad=False) -> Tensor
     op_api: [v2.1, newest]
@@ -7640,6 +7667,9 @@ custom:
   - func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291, Tensor? group_list=None) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: _npu_matmul_abft_verify(Tensor a, Tensor b, Tensor c, Tensor checksum_weight, *, float e_max=0.001) -> Tensor
+    op_api: all_version
+
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
     op_api: all_version
@@ -7721,6 +7751,12 @@ symint:
 
   - func: npu_moe_token_permute_with_routing_map_grad(Tensor permuted_token_out_grad, Tensor? probs_grad, Tensor sorted_indices, Tensor routing_map, SymInt experts_num, SymInt tokens_num, bool drop_and_pad) -> (Tensor, Tensor)
     op_api: all_version
+
+  - func: npu_moe_token_unpermute_grad_v2(Tensor grad_unpermuted_tokens, Tensor sorted_indices, SymInt permuted_tokens_size_0, ScalarType permuted_tokens_dtype, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None, Tensor? permuted_tokens=None) -> (Tensor, Tensor)
+    op_api: [v2.1, newest]
+
+  - func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, SymInt tokens_size_0, ScalarType tokens_dtype, SymInt num_topK, bool padded_mode=False) -> Tensor
+    op_api: [v2.1, newest]
 
   - func: repeat_interleave.self_int(Tensor self, SymInt repeats, int? dim=None, *, int? output_size=None) -> Tensor
     acl_op: v2.1

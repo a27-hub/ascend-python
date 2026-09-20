@@ -2201,7 +2201,7 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
                                                 value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
                                                 actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND",
                                                 layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
-                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None, sinks=None):
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None):
     require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
 
     for item_name, item in require_param.items():
@@ -2564,7 +2564,7 @@ def npu_fusion_attention_backward_v2(query, key, value, dy, head_num, input_layo
 
 @impl(m, "npu_rotary_mul")
 def npu_rotary_mul_meta(embedding, cosine, sine, mode='half', rotate=None):
-    return torch.empty_like(embedding)
+    return torch.empty(embedding.shape, dtype=embedding.dtype, device='meta')
 
 
 @impl(m, "npu_rotary_mul_backward")
@@ -4153,9 +4153,11 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
     is_a4w4_input = False
     if x_dtype is not None and w_dtype is not None:
         is_a4w4_input = x_dtype == torch_npu.float4_e2m1fn_x2 and w_dtype == torch_npu.float4_e2m1fn_x2
+    has_native_fp4 = hasattr(torch, 'float4_e2m1fn_x2')
+    is_native_mxfp4 = has_native_fp4 and x.dtype == torch.float4_e2m1fn_x2 and has_native_fp4 and w.dtype == torch.float4_e2m1fn_x2
     if w.dtype == torch.int32:
         dim_n = dimn * INT4_IN_INT32
-    elif is_a4w4_input and not w_trans:
+    elif (is_a4w4_input or is_native_mxfp4) and not w_trans:
         dim_n = dimn * FP4_IN_INT8
     else:
         dim_n = dimn
@@ -4166,7 +4168,6 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
         return x.new_empty(tuple(dim_list), dtype=torch.float32)
     else:
         raise RuntimeError("Not supportted output dtype is " + str(dtype))
-
 
 @impl(m, "npu_group_norm_silu")
 def group_norm_silu_meta(self, gemma, beta, group, eps=0.00001):
@@ -7436,3 +7437,40 @@ def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype
     else:
         out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
     return (out_weight, out_weight_scale, out_weight_offset, out_bias)
+
+@impl(m, "_npu_matmul_abft_verify")
+def _npu_matmul_abft_verify_meta(a, b, c, checksum_weight, *, e_max=0.001):
+    torch._check(
+        a.dim() == 2 and b.dim() == 2 and c.dim() == 2,
+        lambda: "a, b and c must be 2D tensors, but got "
+                f"{a.dim()}D, {b.dim()}D and {c.dim()}D" + ops_error(ErrCode.PARAM))
+    torch._check(
+        checksum_weight.dim() == 1,
+        lambda: f"checksum_weight must be a 1D tensor, but got {checksum_weight.dim()}D"
+                + ops_error(ErrCode.PARAM))
+    torch._check(
+        a.size(1) == b.size(0),
+        lambda: f"The K dim of a ({a.size(1)}) must be equal to the K dim of b ({b.size(0)})"
+                + ops_error(ErrCode.PARAM))
+    torch._check(
+        c.size(0) == a.size(0) and c.size(1) == b.size(1),
+        lambda: "c must have shape [M, N] derived from a and b" + ops_error(ErrCode.PARAM))
+    torch._check(
+        checksum_weight.size(0) == b.size(1),
+        lambda: f"checksum_weight must have shape [N] = [{b.size(1)}], "
+                f"but got [{checksum_weight.size(0)}]" + ops_error(ErrCode.PARAM))
+    torch._check(
+        c.dtype == torch.float32,
+        lambda: f"c only supports float32, but got {c.dtype}" + ops_error(ErrCode.TYPE))
+    torch._check(
+        a.dtype == b.dtype == checksum_weight.dtype
+        and a.dtype in (torch.float16, torch.bfloat16, torch.float32),
+        lambda: "a, b and checksum_weight must share one dtype in "
+                "float16/bfloat16/float32" + ops_error(ErrCode.TYPE))
+    torch._check(
+        e_max >= 0,
+        lambda: f"e_max must be non-negative, but got {e_max}" + ops_error(ErrCode.PARAM))
+    # compRow shape: [ceil(M / 8) * splitN], where splitN = ceil(N / 256).
+    row_bytes = (a.size(0) + 7) // 8
+    split_n = (b.size(1) + 255) // 256
+    return torch.empty([row_bytes * split_n], dtype=torch.uint8, device='meta')

@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950DT</term>              | √ |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √   |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √   |
 | <term>Atlas 推理系列加速卡产品</term> | √   |
@@ -113,7 +114,7 @@ import torch
 import torch_npu
 from torch_npu.npu import (
     NpuGraphOpHandler,
-    register_npu_graph_handle
+    register_npu_graph_handler
 )
 
 @register_npu_graph_handler(["my_custom_op.default"])

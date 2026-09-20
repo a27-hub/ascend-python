@@ -106,7 +106,7 @@
 </tr>
 <tr id="row1848933022417"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p124901730162414"><a name="p124901730162414"></a><a name="p124901730162414"></a><a href="（beta）c10_npu-GetDevice.md">（beta）c10_npu::GetDevice</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p2490183092411"><a name="p2490183092411"></a><a name="p2490183092411"></a>NPU设备id获取，返回值类型aclError，与cudaError_t c10::cuda::GetDevice(int *<em id="i5414123319436"><a name="i5414123319436"></a><a name="i5414123319436"></a>device</em>)相同。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p2490183092411"><a name="p2490183092411"></a><a name="p2490183092411"></a>NPU设备ID获取，返回值类型为aclError，与PyTorch 1.11.0版本中c10::cuda::GetDevice函数的返回值类型cudaError_t相同。</p>
 </td>
 </tr>
 <tr id="row017092012245"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p101705205249"><a name="p101705205249"></a><a name="p101705205249"></a><a href="（beta）c10_npu-SetDevice.md">（beta）c10_npu::SetDevice</a></p>
@@ -141,7 +141,7 @@
 </tr>
 <tr id="row395820517240"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p1495814522412"><a name="p1495814522412"></a><a name="p1495814522412"></a><a href="（beta）at_npu-native-get_npu_storage_sizes.md">（beta）at_npu::native::get_npu_storage_sizes</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p17958115172419"><a name="p17958115172419"></a><a name="p17958115172419"></a>获取NPU tensor的内存大小，返回值类型vector&lt;int64_t&gt;，表示获取的NPU tensor内存大小。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p17958115172419"><a name="p17958115172419"></a><a name="p17958115172419"></a>获取NPU tensor存储的各维度大小，返回值类型vector&lt;int64_t&gt;，表示NPU tensor底层存储每一维的大小。</p>
 </td>
 </tr>
 <tr id="row978610882412"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p678619815247"><a name="p678619815247"></a><a name="p678619815247"></a><a href="（beta）at_npu-native-npu_format_cast.md">（beta）at_npu::native::npu_format_cast</a></p>
@@ -200,7 +200,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-reset_stream.md">c10_npu::NPUStreamGuard::reset_stream</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>给guard重新设置新的流。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>给guard重新设置NPU流。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-stream_synchronize.md">c10_npu::stream_synchronize</a></p>

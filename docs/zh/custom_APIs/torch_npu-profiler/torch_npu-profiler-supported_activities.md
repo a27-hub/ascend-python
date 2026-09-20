@@ -4,6 +4,7 @@
 
 | 产品                               | 是否支持 |
 | ---------------------------------- | :------: |
+| <term>Ascend 950DT</term> |  √  |
 | <term>Atlas A3 训练系列产品</term> |    √     |
 | <term>Atlas A2 训练系列产品</term> |    √     |
 | <term>Atlas 训练系列产品</term>    |    √     |
@@ -20,7 +21,7 @@ torch_npu.profiler.supported_activities()
 
 ## 返回值说明
 
-返回{<ProfilerActivity.CPU: 1>, <ProfilerActivity.NPU: 2>}则表示成功；无返回则表示失败。
+返回一个`set`集合，包含当前支持采集的activities类型。成功时返回`{<ProfilerActivity.CPU: 1>, <ProfilerActivity.NPU: 2>}`，表示当前支持采集CPU事件和NPU事件；失败时返回空集合`set()`。
 
 ## 调用示例
 

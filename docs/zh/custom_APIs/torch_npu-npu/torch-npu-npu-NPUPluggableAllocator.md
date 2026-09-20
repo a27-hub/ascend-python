@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950DT</term>              | √ |
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
@@ -20,7 +21,7 @@ torch_npu/npu/memory.py
 ## 函数原型
 
 ```python
-torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name)
+torch_npu.npu.memory.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name)
 ```
 
 ## 参数说明
