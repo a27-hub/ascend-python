@@ -11,8 +11,8 @@
 
 ## 功能说明<a name="zh-cn_topic_0000002271534921_section1650913464367"></a>
 
-- API功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化、动态量化、静态量化、MXFP8、HIF8、MXFP4、FP8 PerBlock和INT4动态量化模式。
-- 计算公式：  
+- API功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化、动态量化、静态量化、MXFP8、FP8 pergroup、HIF8、MXFP4、FP8 perblock和INT4动态量化模式。
+- 计算公式：
 
     1. 对输入expertIdx做排序，得出排序后的结果sortedExpertIdx和对应的序号sortedRowIdx：
 
@@ -29,7 +29,7 @@
             $$
             expandedRowIdxOut[sortedRowIdx[i]]=i
             $$
-        
+
     3. 对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
 
         $$
@@ -41,7 +41,7 @@
             $$
             quantResult=round((x∗scaleOptional)+offsetOptional)
             $$
-        
+
         - 动态量化：
             - 若不输入scale：
                 $$
@@ -59,7 +59,7 @@
                 $$
                 quantResult = round(x / dynamicQuantScaleOutOptional)
                 $$
-  
+
     5. 若活跃的expert范围为全专家范围时，按照Scatter索引搬运token；反之按照Gather索引搬运token。在dropPadMode为1时将每个专家需要处理的Token个数对齐为expertCapacity个，超过expertCapacity个的Token会被Drop，不足的会用0填充。得出expandedXOut：
         - 非量化场景
             - 按照Scatter索引搬运
@@ -238,13 +238,13 @@
                         sorted_row_idx[i] = -1
 
         @staticmethod
-        def cpu_op_exec(x, expert_idx, scale=None, offset=None, expert_range=None, 
-                        quant_mode=-1, row_idx_type=0, expert_tokens_num_flag=False, 
-                        expert_tokens_num_type=0, drop_pad_mode=0, active_num=-1, 
+        def cpu_op_exec(x, expert_idx, scale=None, offset=None, expert_range=None,
+                        quant_mode=-1, row_idx_type=0, expert_tokens_num_flag=False,
+                        expert_tokens_num_type=0, drop_pad_mode=0, active_num=-1,
                         expert_capacity=-1):
             """
             CPU上MoeInitRoutingV2的等价计算逻辑
-            
+
             参数:
                 x: 输入tensor, shape (bs, h)
                 expert_idx: 专家索引, shape (bs, k)
@@ -258,13 +258,13 @@
                 drop_pad_mode: drop_pad模式 (0或1)
                 active_num: 激活数量
                 expert_capacity: 专家容量
-                
+
             返回:
                 expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale
             """
             if expert_range is None:
                 expert_range = [0, 16]
-                
+
             expert_start = expert_range[0]
             expert_end = expert_range[1]
             expert_num = 32
@@ -280,7 +280,7 @@
             sorted_expert_indices = np.argsort(
                 expert_idx_in, axis=-1, kind="stable")
             sorted_expert_idx = expert_idx_in[sorted_expert_indices]
-            
+
             if row_idx_type == 1:
                 expanded_row_idx = sorted_expert_indices.astype(np.int32)
             else:
@@ -434,7 +434,7 @@
                 x = np.random.uniform(-127, 128, size=(bs, h)).astype(np.int8)
             else:
                 x = np.random.uniform(-1, 1, size=(bs, h)).astype(np.float32)
-                
+
             expert_idx = np.random.randint(0, 32, size=(bs, k)).astype(np.int32)
             scale = None if none_scale else np.random.uniform(
                 -1, 1, size=scale_shape).astype(np.float32)
@@ -453,14 +453,14 @@
         print("=" * 50)
         print("Demo: 无量化模式 (quant_mode=-1)")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 5
         expert_range = [0, 16]
-        
+
         # 生成输入
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float16, (bs,), False, True, 0)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -474,7 +474,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input expert_idx shape: {expert_idx.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -489,14 +489,14 @@
         print("=" * 50)
         print("Demo: 静态量化模式 (quant_mode=0)")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 5
         expert_range = [0, 16]
-        
+
         # 生成输入 (需要scale和offset)
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float32, (1,), False, False, 0)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -510,7 +510,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input scale shape: {scale.shape}, offset shape: {offset.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -524,15 +524,15 @@
         print("=" * 50)
         print("Demo: 动态量化模式 (quant_mode=1)")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 8
         expert_range = [0, 16]
         expert_range_length = expert_range[1] - expert_range[0]
-        
+
         # 生成输入 (可选scale)
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float32, (expert_range_length, h), False, True, 0)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -546,7 +546,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input scale shape: {scale.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -559,14 +559,14 @@
         print("=" * 50)
         print("Demo: drop_pad_mode=1")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 5
         expert_range = [0, 32]  # drop_pad_mode=1时通常使用全范围
-        
+
         # 生成输入
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float16, (bs,), False, True, 1)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -580,7 +580,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input expert_idx shape: {expert_idx.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -608,17 +608,20 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`、`torch.int8`。
     - <term>Atlas 推理系列产品</term>：数据类型支持`torch.float16`、`torch.float32`。
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`、`torch.int8`、`torch_npu.hifloat8`、`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.float4_e2m1fn_x2`（PyTorch原生dtype无法表达的类型通过`x_dtype`参数指定）。
+    - `quant_mode`为9或13的MXFP4/INT4动态量化场景，以及`quant_mode`为-1且`x`数据类型为`torch_npu.float4_e2m1fn_x2`的非量化透传场景，H要求为偶数。
 - **expert_idx** (`Tensor`)：必选参数，表示[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)输出每一行特征对应的K个处理专家，要求是2维张量，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持`torch.int32`，数据格式要求为$ND$。
 - <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **scale** (`Tensor`)：可选参数，默认为None，用于计算量化结果的参数。数据类型支持`torch.float32`，数据格式要求为$ND$。如果不输入表示计算时不使用`scale`，且输出`expanded_scale`中的值无意义。
-    - 非量化场景下，如果输入则要求为1维张量，shape为(NUM_ROWS,)。
-    - 静态量化场景必须输入，输入要求为1D的Tensor，shape为(1,)。
-    - 动态量化场景下，如果输入则要求为2维张量，shape为(expert_end-expert_start, H)或(1, H)。
+- **scale** (`Tensor`)：可选参数，默认为None，用于计算量化结果的参数。数据类型支持`torch.float32`、`torch.float8_e8m0fnu`（仅非量化场景且`x`为FP8/FP4类型时），数据格式要求为$ND$。如果不输入表示计算时不使用`scale`，且输出`expanded_scale`中的值无意义。
+    - 非量化场景下，如果输入则要求为1维张量，shape为(NUM_ROWS,)；当`x`数据类型为`torch.float8_e5m2`、`torch.float8_e4m3fn`或`torch_npu.float4_e2m1fn_x2`时，如果输入则要求为3维张量，shape为(NUM_ROWS, CeilDiv(H, 64), 2)，数据类型为`torch.float8_e8m0fnu`。
+    - 静态量化场景必须输入，输入要求为1维张量，shape为(1,)。
+    - INT8动态量化场景（`quant_mode`为1）下，如果输入则要求为2维张量，shape为(expert_end-expert_start, H)。
+    - INT4动态量化场景（`quant_mode`为13）下，如果输入则要求shape为(1, H)，表示按H维广播的smooth scale。
+    - HIF8 pertensor量化场景（`quant_mode`为7）必须输入，输入要求为1维张量，shape为(1,)。
+    - MXFP8量化场景（`quant_mode`为2/3）、HIF8直转和pertoken量化场景（`quant_mode`为6/8）、MXFP4量化场景（`quant_mode`为9）、FP8 pergroup量化场景（`quant_mode`为4/5/14/15）、FP8 perblock量化场景（`quant_mode`为11/12）、MXFP8 RoundScale+Amax量化场景（`quant_mode`为16/17）下不输入。
 
 - **offset** (`Tensor`)：可选参数，默认为None，用于计算量化结果的偏移值。数据类型支持`torch.float32`，数据格式要求为$ND$。
-    - 在非量化场景下不输入。
     - 静态量化场景必须输入，输入要求为1维张量，shape为(1,)。
-    - 动态量化场景下不输入。
+    - 非量化场景、INT8动态量化（`quant_mode`为1）、MXFP8量化（`quant_mode`为2/3）、HIF8量化（`quant_mode`为6/7/8）、MXFP4量化（`quant_mode`为9）、FP8 pergroup量化（`quant_mode`为4/5/14/15）、FP8 perblock量化（`quant_mode`为11/12）、INT4动态量化（`quant_mode`为13）、MXFP8 RoundScale+Amax量化场景（`quant_mode`为16/17）下不输入。
 
 - **active_num** (`int`)：可选参数，默认值为-1，表示总的最大处理row数，输出`expanded_x`只有这么多行是有效的。在dropless场景下，取值需大于等于-1；-1和0均表示按全部tokens处理，大于0时表示Active场景，约束所有专家共同处理tokens总量。
 - **expert_capacity** (`int`)：可选参数，默认值为-1，表示每个专家能够处理的tokens数，入参校验大于0小于NUM_ROWS。
@@ -629,7 +632,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 - **quant_mode** (`int`)：可选参数，默认值为-1，表示量化模式。不同产品支持的取值如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持取值-1、0、1。-1表示不量化；0表示静态量化；1表示INT8动态量化。
     - <term>Atlas 推理系列产品</term>：仅支持取值-1，表示不量化。
-    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值-1、0、1、2、3、4、5、6、7、8、9、11、12、13、14、15、16、17。-1表示不量化；0表示静态量化；1表示INT8动态量化；2/3表示MXFP8 RoundScale动态量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；4/5表示FP8 PerGroup量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；6表示HIF8直转；7表示HIF8 per-tensor量化；8表示HIF8 per-token量化；9表示MXFP4动态量化；11/12表示FP8 PerBlock量化；13表示INT4动态量化；14/15表示FP8 PerGroup量化并启用Amax下限，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；16/17表示MXFP8 RoundScale + Amax钳位量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`。
+    - <term>Ascend 950PR/Ascend 950DT</term>：支持取值-1、0、1、2、3、4、5、6、7、8、9、11、12、13、14、15、16、17。-1表示不量化；0表示静态量化；1表示INT8动态量化；2/3表示MXFP8 RoundScale动态量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；4/5表示FP8 pergroup量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；6表示HIF8直转；7表示HIF8 pertensor量化；8表示HIF8 pertoken量化；9表示MXFP4动态量化；11/12表示FP8 perblock量化；13表示INT4动态量化；14/15表示FP8 pergroup量化并启用Amax下限，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；16/17表示MXFP8 RoundScale + Amax钳位量化，输出类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`。
 - **active_expert_range** (`List[int]`)：可选参数，默认为空, 表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，左闭右开，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。drop_pad场景下，expert_start等于0, expert_end等于`expert_num`。传入默认值时，视为活跃的expert范围在0到`expert_num`之间。
 - **row_idx_type** (`int`)：可选参数，默认为0，表示输出`expanded_row_idx`使用的索引类型，支持取值0和1。0表示gather类型的索引；1表示scatter类型的索引。
 - **x_dtype** (`int`)：可选参数，默认值为None，用于指定`x`的非原生数据类型（PyTorch原生dtype无法表达、以`torch.uint8`等原生dtype存储的类型），取值为`torch_npu`的dtype枚举。仅<term>Ascend 950PR/Ascend 950DT</term>支持该参数，支持的全部枚举值为：`torch_npu.hifloat8`、`torch_npu.float4_e2m1fn_x2`、`torch_npu.int4`。
@@ -639,15 +642,18 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 
 ## 返回值说明<a name="zh-cn_topic_0000002271534921_section18510124618368"></a>
 
-- **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征，Dropless场景shape为[NUM_ROWS \* K, H]。Active场景shape为[min(activeNum, NUM_ROWS * K), H]。Drop/Pad场景下要求是一个3D的Tensor，shape为[expertNum, expertCapacity, H]。非量化场景下数据类型同`x`；`quant_mode`为0/1时数据类型为`torch.int8`；为2/4/14/16时数据类型为`torch.float8_e5m2`；为3/5/15/17时数据类型为`torch.float8_e4m3fn`；为6/7/8时数据类型为`torch_npu.hifloat8`；为9时数据类型为`torch_npu.float4_e2m1fn_x2`；为11/12时数据类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；为13时数据类型为`torch_npu.int4`。数据格式要求为$ND$。量化场景下，当`x`的数据类型为`torch.int8`时，输出值无意义。
-- **expanded_row_idx** (`Tensor`)：`expanded_x`和`x`的映射关系，要求是1维张量，shape为(NUM_ROWS \* K, )，数据类型支持`torch.int32`，数据格式要求为$ND$。当`row_idx_type`为1时， 前available_idx_num个元素为有效数据，无效数据未初始化；当`row_idx_type`为0时，无效数据由-1填充。
+- **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征，Dropless场景shape为[NUM_ROWS \* K, H]。Active场景shape为[min(activeNum, NUM_ROWS * K), H]。Drop/Pad场景下要求是一个3D的Tensor，shape为[expertNum, expertCapacity, H]，有效槽位填充路由到的token数据，其余padding槽位由0填充。非量化场景下数据类型同`x`；`quant_mode`为0/1时数据类型为`torch.int8`；为2/4/14/16时数据类型为`torch.float8_e5m2`；为3/5/15/17时数据类型为`torch.float8_e4m3fn`；为6/7/8时数据类型为`torch_npu.hifloat8`；为9时数据类型为`torch_npu.float4_e2m1fn_x2`；为11/12时数据类型分别为`torch.float8_e5m2`/`torch.float8_e4m3fn`；为13时数据类型为`torch_npu.int4`。数据格式要求为$ND$。量化场景下，当`x`的数据类型为`torch.int8`时，输出值无意义。
+- **expanded_row_idx** (`Tensor`)：`expanded_x`和`x`的映射关系，要求是1维张量，shape为(NUM_ROWS \* K, )，数据类型支持`torch.int32`，数据格式要求为$ND$。
+    - dropless场景：当`row_idx_type`为1时， 前available_idx_num个元素为有效数据，无效数据未初始化；当`row_idx_type`为0时，无效数据由-1填充。
+    - drop_pad场景：`row_idx_type`仅支持0（gather索引），对被保留的token，`expanded_row_idx`[sortedRowIdx[i]]的值为该token在`expanded_x`按[expertNum\*expertCapacity, H]展平后的行索引（即expertId\*expertCapacity+槽内偏移）；无效专家以及超出`expert_capacity`被Drop的token对应位置由-1填充。
 - **expert_token_cumsum_or_count** (`Tensor`)：表示输出每个专家处理的token数量的统计结果或累加值。
     - 在`expert_tokens_num_type`为0时，表示`active_expert_range`范围内expert在排序后处理token总数的前缀和。
     - 在`expert_tokens_num_type`为1的场景下，要求是1维张量，表示`active_expert_range`范围内expert对应的处理token的总数，shape为(expert_end-expert_start, )；
     - 在`expert_tokens_num_type`为2的场景下，要求是2维张量，shape为(expert_num, 2)，表示`active_expert_range`范围内token总数为非0的expert，以及对应expert处理token的总数；
+    - drop_pad场景：`expert_tokens_num_type`仅支持1（count模式），输出shape为(expert_num,)，表示每个专家被路由到的有效token总数，该计数不按`expert_capacity`截断（包含超出`expert_capacity`被Drop的token）；
 
     expert_idx在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持`torch.int64`，数据格式要求为$ND$。
-- **expanded_scale** (`Tensor`)：数据格式要求为$ND$。令available_idx_num为`active_expert_range`范围的元素的个数。不同产品的输出说明如下：
+- **expanded_scale** (`Tensor`)：数据格式要求为$ND$。令available_idx_num为`active_expert_range`范围的元素的个数。drop_pad场景下，当`scale`输入时，输出为1维张量，shape为(expert_num \* expert_capacity,)，数据类型为`torch.float32`，有效槽位填充对应输入`scale`的值，padding槽位由0填充。不同产品的输出说明如下：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型为`torch.float32`，输出shape为`expert_idx`的shape去掉最后一维之后所有维度的乘积。
         - 非量化场景下，当`scale`输入时，前`available_idx_num`个元素为有效数据。
         - 动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据。
@@ -657,6 +663,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
         - `quant_mode`为4/5/14/15时数据类型为`torch.float32`，shape为[有效输出行数, CeilDiv(H, 128)]；
         - `quant_mode`为9时数据类型为`torch.float8_e8m0fnu`，shape为[有效输出行数, CeilDiv(H, 64), 2]；
         - `quant_mode`为11/12时数据类型为`torch.float32`，shape为[有效输出行数, CeilDiv(H, 256), 2]；
+        - `quant_mode`为8时数据类型为`torch.float32`，shape为[有效输出行数, ]；`quant_mode`为6/7时不输出；
         - 非量化场景且`x`数据类型为`torch.float8_e5m2`、`torch.float8_e4m3fn`或`torch_npu.float4_e2m1fn_x2`（通过`x_dtype`指定）时，若输入`scale`，输出shape为[有效输出行数, CeilDiv(H, 64), 2]，数据类型为`torch.float8_e8m0fnu`；
         - 非量化场景（其余数据类型）下，当`scale`输入时，前`available_idx_num`个元素为有效数据；动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据；静态量化场景下不输出。
     - <term>Atlas 推理系列产品</term>：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
@@ -688,7 +695,8 @@ Ascend 950PR/Ascend 950DT在该接口上有以下特殊约束：
     - `active_expert_range`必须为[0, expert_num]。
     - `expert_tokens_num_type`仅支持取值为1（count模式）。
     - `quant_mode`仅支持-1（非量化），且`x`数据类型仅支持`torch.float16`、`torch.bfloat16`、`torch.float32`、`torch.int8`、`torch_npu.hifloat8`。
-- **MXFP4/INT4动态量化**（`quant_mode`为9或13时）：`x`的最后一维H要求为偶数。
+    - `expanded_x`必须是3D张量，shape为[expert_num, expert_capacity, H]。
+- **H为偶数约束**：`quant_mode`为9或13的MXFP4/INT4动态量化场景，以及`quant_mode`为-1且`x`数据类型为`torch_npu.float4_e2m1fn_x2`的非量化透传场景，`x`的最后一维H要求为偶数。
 
 Atlas推理系列产品在该接口上有以下特殊约束：
 
@@ -706,7 +714,7 @@ Atlas推理系列产品在该接口上有以下特殊约束：
     ```python
     import torch
     import torch_npu
-    
+
     bs = 1
     h = 613
     k = 475
@@ -719,15 +727,15 @@ Atlas推理系列产品在该接口上有以下特殊约束：
     quant_mode = -1
     active_expert_range = [23, 35]
     row_idx_type = 0
-    
+
     x = torch.randn((bs, h), dtype=torch.float32).npu()
     expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu()
     scale = torch.randn((bs,), dtype=torch.float32).npu()
     offset = None
-    
+
     expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = torch_npu.npu_moe_init_routing_v2(
                     x, expert_idx, scale=scale, offset=offset,
-                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode, 
+                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,
                     expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
                     active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type)
     ```
@@ -740,27 +748,27 @@ Atlas推理系列产品在该接口上有以下特殊约束：
     import torch_npu
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
-    
+
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    
+
     class MoeInitRoutingV2Model(nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(self, x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1,
                     expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False,
                     quant_mode=-1, active_expert_range=[], row_idx_type=0):
             return torch.ops.npu.npu_moe_init_routing_v2(x, expert_idx, scale=scale, offset=offset,
-                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode, 
+                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,
                     expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
                     active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type)
-    
+
     def main():
         bs = 1
         h = 613
         k = 475
-    
+
         active_num = 475
         expert_capacity = -1
         expert_num = 226
@@ -770,20 +778,20 @@ Atlas推理系列产品在该接口上有以下特殊约束：
         quant_mode = -1
         active_expert_range = [23, 35]
         row_idx_type = 0
-    
+
         x = torch.randn((bs, h), dtype=torch.float32).npu()
         expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu()
         scale = torch.randn((bs,), dtype=torch.float32).npu()
         offset = None
-    
+
         moe_init_routing_v2_model = MoeInitRoutingV2Model().npu()
         moe_init_routing_v2_model = torch.compile(moe_init_routing_v2_model, backend=npu_backend, dynamic=False)
         expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = moe_init_routing_v2_model(x,
                                         expert_idx, scale=scale, offset=offset, active_num=active_num,
-                                        expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode, 
+                                        expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,
                                         expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
                                         active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type)
-    
+
     if __name__ == '__main__':
         main()
     ```
