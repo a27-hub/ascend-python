@@ -323,10 +323,10 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     <!-- npu="310p" id42 -->
     - <term>Atlas 推理系列产品</term>：不支持取2。
     <!-- end id42 -->
-     <!-- npu="950" id43 -->
-     - <term>Ascend 950PR/Ascend 950DT</term>：仅当全量化场景下，并且`group_type`取0（m轴分组）时，支持取2。
-     - <term>Ascend 950PR/Ascend 950DT</term>：K-CG伪量化场景下，`group_list_type`仅支持取1。
-     <!-- end id43 -->
+    <!-- npu="950" id43 -->
+    - <term>Ascend 950PR/Ascend 950DT</term>：仅当全量化场景下，并且`group_type`取0（m轴分组）时，支持取2。
+    - <term>Ascend 950PR/Ascend 950DT</term>：K-CG伪量化场景下，`group_list_type`仅支持取1。
+    <!-- end id43 -->
 
 - **`act_type`**（`int`）：**可选参数**，代表激活函数类型。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
