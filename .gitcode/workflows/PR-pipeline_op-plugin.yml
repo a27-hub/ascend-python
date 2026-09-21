@@ -52,7 +52,7 @@ stages:
         name: Detect_file_changes
         runs-on: [ self-hosted, x86, cpu=32 ]
         container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
         outputs:
           need_build_ut: ${{ steps.set-skip.outputs.need_build_ut }}
         steps:
@@ -70,7 +70,7 @@ stages:
               base: ${{ atomgit.event.pull_request.base.ref }}
               repo: ${{ atomgit.repository }}
               number: ${{ env.pr_id }}
-              token: ${{ atomgit.token }}
+              token: ${{ secrets.GIT_TOKEN }}
               list-files: json
               predicate-quantifier: every
               filters: |
@@ -109,6 +109,8 @@ stages:
         name: associate_pr_comment
         select: selected_by_default
         runs-on: [ self-hosted, x86, cpu=32 ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
         steps:
           - name: associate-pr-comment
             uses: associate-pr-comment
@@ -119,7 +121,7 @@ stages:
               owner: ${{ env.org_name }}
               repo: ${{ atomgit.event.repository.name }}
               pr_number: ${{ atomgit.event.pull_request.number }}
-              token: ${{ atomgit.token }}
+              token: ${{ secrets.GIT_TOKEN }}
               apply_label: 'true'
               run_url: https://gitcode.com/${{ env.org_name }}/${{ atomgit.event.repository.name }}/actions/runs/${{ atomgit.workflow_run_id }}
 
@@ -132,7 +134,7 @@ stages:
         if : ${{ jobs.Detect_file_changes.outputs.need_build_ut == 'yes' }}
         runs-on: [ self-hosted, x86, cpu=32 ]
         container:
-          image: swr.cn-north-4.myhuaweicloud.com/mindspore/mindspore_python3.11:v0.1
+          image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
         steps:
           - name: checkout
             uses: checkout
@@ -270,6 +272,9 @@ stages:
 post:
   jobs:
     query_pipeline:
+      runs-on: [ self-hosted, x86, cpu=32 ]
+      container:
+        image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
       steps:
         - name: query_pipeline
           id: query_pipeline
@@ -278,6 +283,6 @@ post:
             owner: ${{ env.org_name }}
             repo: ${{ atomgit.event.repository.name }}
             run_id: ${{ atomgit.workflow_run_id }}
-            token: ${{ atomgit.token }}
+            token: ${{ secrets.GIT_TOKEN }}
             pr_number: ${{ atomgit.event.pull_request.number }}
             apply_label: 'true'
