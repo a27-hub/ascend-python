@@ -42,7 +42,7 @@ class LazyFusionFlags {
   bool enabled{false};
   Level level{Level::kO2};
 
-  // Internal debug knobs (not advertised in user-facing docs).
+  // Debug knobs configured through TORCH_NPU_LAZY_FUSION.
   bool dump_as_text{false};
   std::string dump_dir{"./lazy_fusion_dump"};
   bool synchronize{false};

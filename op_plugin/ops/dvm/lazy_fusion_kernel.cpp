@@ -27,11 +27,6 @@
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 
 namespace lazy_fusion {
-static inline bool DumpEnabled() {
-  static const bool v = g_lazy_fusion_manager.flags_.dump_as_text;
-  return v;
-}
-
 // Whether bf16 inputs must be cast to fp32 before entering DVM. Required on
 // Ascend910B-class chips; on Ascend950 (A5) DVM handles bf16 natively, so the
 // cast (which costs an extra round-trip in the fused kernel) is skipped.
@@ -39,6 +34,7 @@ static inline bool NeedBf16ToFp32Cast() {
   static const bool need = (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950);
   return need;
 }
+
 namespace {
 class LazyFusionDump {
  public:
@@ -163,12 +159,43 @@ class LazyFusionDump {
 
 Manager g_lazy_fusion_manager;
 
+namespace {
+std::atomic<bool> g_lazy_fusion_disabled{false};
+}  // namespace
+
+bool IsLazyFusionDisabled() {
+  return g_lazy_fusion_disabled.load(std::memory_order_relaxed);
+}
+
+bool SetLazyFusionDisabled(bool disabled) {
+  const bool previous = g_lazy_fusion_disabled.exchange(disabled, std::memory_order_relaxed);
+  if (previous != disabled) {
+    // Split the graph at the control boundary. This also makes entering the
+    // disabled region safe when the previous operation left a graph pending.
+    LazyFusionFlush();
+  }
+  return previous;
+}
+
+bool SetLazyFusionDumpEnabled(bool enabled) {
+  return g_lazy_fusion_manager.SetDumpEnabled(enabled);
+}
+
 Manager::~Manager() {
   while (!pool_.empty()) {
     auto top = pool_.front();
     delete top;
     pool_.pop();
   }
+}
+
+bool Manager::SetDumpEnabled(bool enabled) {
+  const bool previous = dump_enabled_.load(std::memory_order_relaxed);
+  if (previous != enabled) {
+    Flush();
+    dump_enabled_.store(enabled, std::memory_order_relaxed);
+  }
+  return previous;
 }
 
 LazyFusionKernel *Manager::NewKernel() {
@@ -199,6 +226,15 @@ LazyFusionKernel::~LazyFusionKernel() {
   for (auto op : dvm_ops_) {
     delete op;
   }
+}
+
+void LazyFusionKernel::CheckOutputAllocationState(size_t expected_id) const {
+  TORCH_CHECK(id_ == expected_id && !flushed_ && g_lazy_fusion_manager.IsCurrent(this),
+              "DVM graph changed during output allocation; refusing to use a potentially stale NDObject");
+}
+
+bool LazyFusionKernel::ShouldDump() const {
+  return dump_enabled_;
 }
 
 void LazyFusionKernel::CacheTensorMeta(TensorMeta *meta, const at::Tensor &tensor) {
@@ -364,7 +400,7 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
                 input_used_ - 1, x.unsafeGetTensorImpl(), x.data_ptr(),
                 ToString(x).c_str(), c10::toString(x.scalar_type()));
   }
-  if (DumpEnabled()) {
+  if (ShouldDump()) {
     dump_buf_ << "p" << (input_used_ - 1) << ": " << ToString(x) << "\n";
   }
   CacheDvmOp(storage, x, nullptr, load_op, &(load->shape), true);
@@ -389,7 +425,7 @@ dvm::NDObject *LazyFusionKernel::ViewInput(const at::Tensor &base, void *data_pt
   ASCEND_LOGD("dvm ViewInput: new StridedLoad p%zu, base=%p, addr=%p, dtype=%s",
               input_used_ - 1, base.unsafeGetTensorImpl(), data_ptr,
               c10::toString(base.scalar_type()));
-  if (DumpEnabled()) {
+  if (ShouldDump()) {
     dump_buf_ << "p" << (input_used_ - 1) << ": ViewInput(base=" << ToString(base) << ")\n";
   }
 
@@ -448,7 +484,7 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
   ASCEND_LOGD("dvm Output: %%%zu, tensor %p, addr=%p, shape=%s, dtype=%s, inplace=%d",
               outputs_.size() - 1, tensor.unsafeGetTensorImpl(), tensor.data_ptr(),
               ToString(tensor).c_str(), c10::toString(tensor.scalar_type()), inplace);
-  if (DumpEnabled()) {
+  if (ShouldDump()) {
     dump_buf_ << "%" << (outputs_.size() - 1) << ": " << ToString(tensor) << "\n";
   }
   CacheDvmOp(storage, tensor, &(store.tensor_meta), obj, nullptr, false);
@@ -462,7 +498,7 @@ void *LazyFusionKernel::Alloc(size_t size) {
       : at_npu::native::OpPreparation::unsafe_empty_workspace(size);
   void *addr = const_cast<void *>(ws_tensor.storage().data());
   workspace_.emplace_back(std::move(ws_tensor));
-  if (DumpEnabled()) {
+  if (ShouldDump()) {
     dump_buf_ << "workspace: " << addr << " " << size << "\n";
   }
   return addr;
@@ -495,7 +531,7 @@ void LazyFusionKernel::Flush() {
       dvm::Kernel::SetStoreInplace(store);
     }
   }
-  if (DumpEnabled()) {
+  if (ShouldDump()) {
     DumpGraph();
   }
 
@@ -530,14 +566,14 @@ void LazyFusionKernel::Flush() {
 }
 
 void LazyFusionKernel::CodeGenAndDump() {
-  if (DumpEnabled()) {
+  if (ShouldDump()) {
     LazyFusionDump::Instance().DumpGraphInfo(dump_buf_);
     dump_buf_ << "[lazy_fusion before split](" << id() << ", " << this << ") {\n";
     dump_buf_ << Dump() << "}\n";
     LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
   dvm::Kernel::CodeGen(nullptr, 0, this);
-  if (DumpEnabled()) {
+  if (ShouldDump()) {
     dump_buf_ << "[lazy_fusion after split](" << id() << ", " << this << ") {\n";
     dump_buf_ << Dump() << "}\n";
     dump_buf_ << Das() << "\n";

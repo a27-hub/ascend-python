@@ -214,6 +214,7 @@ LazyFusionFlags::LazyFusionFlags() {
   //   export TORCH_NPU_LAZY_FUSION="level=O1"        # enable, only the L1 op set
   //   export TORCH_NPU_LAZY_FUSION="level=O2"        # enable, explicit L2 (same as True)
   //   export TORCH_NPU_LAZY_FUSION="True dump_as_text dump_dir=/tmp/dvm"
+  //   # Narrow dump regions with torch.npu.set_lazy_fusion_dump(bool) in Python.
   //   export TORCH_NPU_LAZY_FUSION="True disable_ops=where,sum"
   //
   // Flag tokens use bare "key" (boolean true) or "key=value". No "--" prefix.
