@@ -18,6 +18,7 @@ permissions:
   repository: read
   pr: write
   id-token: write
+  action: read
 
 env:
   repo: ${{ atomgit.event.repository.name }}
@@ -38,22 +39,22 @@ env:
 
 stages:
 
-  # stage_1:
-  #   name: stage_1
-  #   select: selected_by_default
-  #   jobs:
-  #     PR_label_pre:
-  #         name: PR_label_pre
-  #         runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
-  #         steps:
-  #           - name: Mark PR pipeline as running
-  #             uses: cann/.gitcode/actions/pre-pipeline@master
-  #             with:
-  #               owner: ${{ env.org_name }}
-  #               repo: ${{ env.repo }}
-  #               pr_number: ${{ env.pr_id }}
-  #               token: ${{ atomgit.token }}
-  #               apply_label: 'true'
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
+      PR_label_pre:
+          name: PR_label_pre
+          runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
+          steps:
+            - name: Mark PR pipeline as running
+              uses: cann/.gitcode/actions/pre-pipeline@master
+              with:
+                owner: ${{ env.org_name }}
+                repo: ${{ env.repo }}
+                pr_number: ${{ env.pr_id }}
+                token: ${{ atomgit.token }}
+                apply_label: 'true'
   # # #     CodeCheck:
   # # #       name: CodeCheck
   # # #       runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
@@ -184,20 +185,20 @@ stages:
   #     #         echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
-  stage_2:
-    name: stage_2
-    select: selected_by_default
-    jobs:
+  # stage_2:
+  #   name: stage_2
+  #   select: selected_by_default
+  #   jobs:
 
-      Build_master_x86:
-        name: Build_master_x86
-        # if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        uses: .gitcode/workflows/build_job_test.yml
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: ${{ env.img_master_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_master_x86:
+  #       name: Build_master_x86
+  #       # if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job_test.yml
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: ${{ env.img_master_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
   # #     Build_v2_7_1_x86:
   # #       name: Build_v2_7_1_x86
