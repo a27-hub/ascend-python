@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Python-3776AB?style=flat&amp;logo=python&amp;logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Ascend%20NPU-C31D20" alt="Platform: Ascend NPU">
   <a href="https://gitcode.com/Ascend/pytorch"><img src="https://img.shields.io/badge/TorchNPU-Submodule-blue" alt="TorchNPU submodule"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-BSD--3--Clause-8A2BE2" alt="License: BSD-3-Clause"></a>
+  <a href="https://gitcode.com/Ascend/op-plugin/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-BSD--3--Clause-8A2BE2" alt="License: BSD-3-Clause"></a>
   <a href="https://gitcode.com/Ascend/op-plugin"><img src="https://img.shields.io/badge/Repo-GitCode-D71D3A" alt="GitCode repository"></a>
 </p>
 
@@ -117,7 +117,7 @@ OpPlugin 由 Ascend for PyTorch 社区的 [Core SIG](https://gitcode.com/Ascend/
 
 ## License
 
-OpPlugin 的使用许可证，请参见 [LICENSE](LICENSE)。
+OpPlugin 的使用许可证，请参见 [LICENSE](https://gitcode.com/Ascend/op-plugin/blob/master/LICENSE)。
 
 ## 致谢
 
