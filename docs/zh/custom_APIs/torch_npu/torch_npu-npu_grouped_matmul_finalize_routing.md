@@ -71,7 +71,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     - mx量化场景下，必选参数，输出为`float32`时数据类型支持`int64`；输出为`bfloat16`时数据类型支持`int32`。
     - pertoken量化场景下，**必选参数**。当输入的`x`数据类型为`int8`时，`row_index`数据类型支持`int64`和`int32`；当输入的`x`数据类型为`float8_e4m3fn`或`hifloat8`时，`row_index`数据类型支持`int64`；
 
-- **`dtype`**（`ScalarType`）：**可选参数**，指定GroupedMatMul计算的输出类型。0表示`float32`，1表示`float16`，2表示`bfloat16`。默认值为0。当前接口支持输出`float32`；在<term>Ascend 950PR/Ascend 950DT</term>的mx量化、权重为FRACTAL\_NZ格式且`bias`为None场景下支持输出`bfloat16`。
+- **`dtype`**（`ScalarType`）：**可选参数**，指定GroupedMatMul计算的输出类型。0表示`float32`，1表示`float16`，2表示`bfloat16`。默认值为0。当前接口仅支持`dtype`为0或2，不支持1；在<term>Ascend 950PR/Ascend 950DT</term>的mx量化、权重为FRACTAL\_NZ格式且`bias`为None场景下支持输出`bfloat16`。
 - **`shared_input_weight`**（`float`）：**可选参数**，共享专家与MoE专家进行combine的系数，`shared_input`先与该参数乘，然后再和MoE专家结果累加。默认为1.0。
 - **`shared_input_offset`**（`int`）：**可选参数**，共享专家输出的在总输出中的偏移。默认值为0，`shared_input_offset`+`shared_input`的第一维度总和不允许超过`batch`。
 - **`output_bs`**（`int`）：**可选参数**，输出的最高维大小。默认值为0。
