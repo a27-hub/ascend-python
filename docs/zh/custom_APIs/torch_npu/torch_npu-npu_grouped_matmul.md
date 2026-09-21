@@ -68,6 +68,12 @@
     y_i = x_i \text{@} \left((\mathit{weight}_i + \mathit{antiquant\_offset}_i) \times \mathit{antiquant\_scale}_i\right) + \mathit{bias}_i
     $$
 
+  - A8W4伪量化场景：仅适用于<term>Ascend 950PR/Ascend 950DT</term>，其中`x`为`int8`，`weight`为`int4`，`bias`为INT4权重离线转换的校正量。
+
+    $$
+    y_i = ((x_i - 8) \text{@} \mathit{weight}_i \times \mathit{scale}_i + \mathit{bias}_i) \times \mathit{pertokenscale}_i
+    $$
+
   - 动态量化（G-B、mx）场景（公式5）：仅适用于<term>Ascend 950PR/Ascend 950DT</term>
 
     $$
@@ -233,9 +239,11 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   - None：默认值，表示输出数据类型与输入`x`的数据类型相同。
   - 与输出y数据类型一致的类型，具体参考[约束说明](#约束说明)。
 
-- **`tuning_config`**（`List[int]`）：**可选参数**，数组中的第一个元素表示各个专家处理的token数的预期值，算子tiling时会按照数组中的第一个元素进行最优tiling，性能更优（使用场景参见[约束说明](#约束说明)）；从第二个元素开始预留，用户无须填写，未来会进行扩展。如不使用该参数不传即可。
+- **`tuning_config`**（`List[int]`）：**可选参数**，调优参数。如不使用该参数不传即可。
   - <term>Atlas 推理系列产品</term>：当前暂不支持该参数。
-  - <term>Ascend 950PR/Ascend 950DT</term>：当前暂不支持该参数。
+  - <term>Ascend 950PR/Ascend 950DT</term>：当前仅A8W4伪量化场景支持。
+    - 第一个元素表示各个专家处理的token数的预期值。支持0和正整数，取值范围为\[0, min(M, UINT32_MAX)\]，其中M为输入`x`的行数。0表示不指定预期值；正整数表示各个专家处理的token数的预期值，且不能大于M。当前仅校验并保存该值，暂不参与实际调优计算。
+    - 第二个元素仅支持0或1。设置为0或不传入该元素时，不开启`weight`特殊格式，`weight`按照常规\[E, K, N\]逻辑布局解析；设置为1时，开启`weight`特殊格式，仅支持`offset`不为空的perchannel场景，此时`weight`需按照\[E, N, K\]排布后转换为`FRACTAL_NZ`格式，且`weight`列表长度为1。例如，传入`[0, 1]`表示不指定预期token数，并开启`weight`特殊格式。
 
 - **`x_dtype`**（`int`）：**可选参数**，输入`x`的真实数据类型。默认值None，表示输入`x`真实的数据类型与输入`x`的`dtype`相同。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas 推理系列产品</term>：当前暂不支持该参数。
@@ -289,9 +297,10 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
 
 - `x`和`weight`中每一组tensor的最后一维大小都应小于InnerLimit。x<sub>i</sub>的最后一维指当x不转置时x<sub>i</sub>的K轴或当x转置时x<sub>i</sub>的M轴。weight<sub>i</sub>的最后一维指当weight不转置时weight<sub>i</sub>的N轴或当weight转置时weight<sub>i</sub>的K轴。
 
-- tuning\_config使用场景限制（<term>Ascend 950PR/Ascend 950DT</term>不支持）：
+- tuning\_config使用场景限制：
 
-    仅在量化场景（输入int8，输出为int32/bfloat16/float16/int8，数据类型如下表），且为单tensor单专家的场景下使用。
+    - <term>Ascend 950PR/Ascend 950DT</term>：仅在A8W4伪量化场景下支持。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅在量化场景（输入int8，输出为int32/bfloat16/float16/int8，数据类型如下表），且为单tensor单专家的场景下使用。
 
     | x | weight | output_dtype | y |
     | --- | --- | --- | --- |
@@ -378,7 +387,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     | 非量化 | float16 | float16 | float16/float32 | None | None | None | None | float16 | float16 |
     | 非量化 | bfloat16 | bfloat16 | float16/float32 | None | None | None | None | bfloat16 | bfloat16 |
     | 非量化 | float32 | float32 | float32 | None | None | None | None | float32 | float32 |
-    | S8S4(伪量化) | int8 | int4 | float32 | uint64 | None | None | float32 | float16/bfloat16 | float16/bfloat16 |
+    | A8W4（伪量化） | int8 | int4 | float32 | uint64 | None | None | float32 | float16/bfloat16 | float16/bfloat16 |
 
 - 根据输入x、输入weight与输出y的Tensor数量不同，支持以下几种场景。场景中的“单”表示单个张量，“多”表示多个张量。场景顺序为x、weight、y，例如“单多单”表示x为单张量，weight为多张量，y为单张量。
 
@@ -464,6 +473,12 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
         | 0 | pergroup | <li>group_size支持32/64/128/256，pergroup数G=k/gs，要求K可以被gs整除。</li><li>antiquant_scale/antiquant_offset为单tensor，每个tensor为3维，shape为 (g, G, N)，固定为非转置。</li> |
          | 0 | mx | pergroup数G=K/32，要求K可以被32整除。<br><ul><li>`x`为`float16`、`bfloat16`输入，`weight`为`float32`（`float4_e2m1fn_x2`）输入场景：`antiquant_scale`为单tensor，每个tensor为3维，shape为（g, K/32, N）。</li><li>`x`为`float8_e4m3fn`输入，`weight`为uint8/int8（`float4_e2m1fn_x2`/`float4_e1m2fn_x2`）输入场景：<ul><li>G需要为偶数。</li><li>单单单：`antiquant_scale`为单tensor，每个tensor为4维，shape为（g, N, K/64, 2）。</li><li>单单单：`per_token_scale`为单tensor，每个tensor为3维，shape为（M, K/64, 2）。</li><li>单多单：`antiquant_scale`为单tensor，每个tensor为3维，shape为（N, K/64, 2）。</li><li>单多单：`per_token_scale`为单tensor，每个tensor为3维，shape为（M, K/64, 2）。</li></ul></li></ul> |
         | 0 | K-CG | <li>antiquant_scale为单tensor，每个tensor为3维，shape为（g, G, N），其中pergroup数G=K/gs，gs支持取值为128、192、256、512，要求K可以被gs整除。</li><li>per_token_scale为单tensor，每个tensor为1维，shape为（M）。</li><li>scale为单tensor，每个tensor为2维，shape为，shape为（g, N）。</li> |
+        > **A8W4场景说明：**
+        > - 仅支持group_type为0的单单单场景，split_item为2或3、group_list_type为1、act_type为0。x为2维，shape为（M, K），不支持转置；weight为3维，默认逻辑shape为（g, K, N），不支持转置；bias为必选输入，shape为（g, N）；per_token_scale为1维，shape为（M）。
+        > - bias为INT4权重离线转换的校正量，按照$8 \times weight \times scale$沿K轴规约得到。
+        > - 当weight使用int32承载时，每个int32表示8个int4。
+        > - offset为None时，scale shape为（g, K/256, N），K不能大于18432且必须为256的整数倍，输出支持float16或bfloat16。
+        > - offset非空时为K-C量化，scale和offset shape均为（g, 1, N），offset数据类型为float32，输出仅支持float16。可将`tuning_config`的第二个元素设置为1以开启weight特殊格式，此时weight需按照（g, N, K）排布后转换为`FRACTAL_NZ`格式。
 
 ## 调用示例
 
@@ -737,7 +752,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
         print([o.shape for o in out])
     ```
 
-  - <term>Ascend 950PR/Ascend 950DT</term>：伪量化S8S4（int8-int4），perchannel量化示例
+  - <term>Ascend 950PR/Ascend 950DT</term>：A8W4伪量化（int8-int4），perchannel量化示例
 
     ```python
     import os
@@ -791,7 +806,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
             group_list_type=1,
             act_type=0,
             tuning_config=[0],
-            # Asymmetric S8S4 (offset is non-empty) requires FP16 output.
+            # Asymmetric A8W4 (offset is non-empty) requires FP16 output.
             output_dtype=torch.float16,
         )[0]
 
