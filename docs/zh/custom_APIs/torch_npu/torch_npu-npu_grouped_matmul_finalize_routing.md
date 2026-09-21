@@ -123,9 +123,6 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     | float8_e4m3fn | float8_e5m2 | int64 | float8_e8m0 | bfloat16 | float32 | float8_e8m0 | bfloat16 | float32 | int64 | float32 |
     | float8_e4m3fn | float8_e4m3fn | int64 | float8_e8m0 | bfloat16 | float32 | float8_e8m0 | bfloat16 | float32 | int64 | float32 |
     | float4_e2m1fn_x2 | float4_e2m1fn_x2 | int64 | float8_e8m0 | bfloat16 | float32 | float8_e8m0 | bfloat16 | float32 | int64 | float32 |
-    | float8_e5m2 | float8_e5m2 | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
-    | float8_e5m2 | float8_e4m3fn | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
-    | float8_e4m3fn | float8_e5m2 | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
     | float8_e4m3fn | float8_e4m3fn | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
     | float4_e2m1fn_x2 | float4_e2m1fn_x2 | int64 | float8_e8m0 | None | float32 | float8_e8m0 | bfloat16/None | float32/bfloat16 | int32 | bfloat16 |
     | int8 | int8 | int64 | float32 | bfloat16/None | None | float32/None | bfloat16 | float32 | int64 | float32 |
