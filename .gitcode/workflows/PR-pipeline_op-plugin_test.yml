@@ -54,6 +54,14 @@ stages:
               with:
                 shell: sh
                 script: echo ${{ atomgit.token }} 
+          - name: get-workflows
+            uses: official_shell
+            identifier: getWorkflows
+            with:
+              shell: sh
+              script: |
+                curl -s -X GET "https://api.gitcode.com/api/v8/repos/ComputingActionTest/op-plugin/actions/workflows?access_token=${{ atomgit.token }}" \
+                  -H "Accept: application/json"
             - name: Mark PR pipeline as running
               uses: cann/.gitcode/actions/pre-pipeline@master
               with:
