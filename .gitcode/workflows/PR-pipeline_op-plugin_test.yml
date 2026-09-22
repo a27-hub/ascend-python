@@ -77,7 +77,7 @@ stages:
         name: SCA
         # runs-on: [ self-hosted, arch=x64, os=euler ]
         # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        runs-on: [ self-hosted, x86, cpu=32 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
