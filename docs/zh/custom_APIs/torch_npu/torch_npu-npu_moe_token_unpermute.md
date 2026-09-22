@@ -2,11 +2,15 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| ------------------------------------------------------------ | :------: |
-|<term>Ascend 950PR/Ascend 950DT</term>                        |    √     |
-|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    √     |
-|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>      |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
 
 ## 功能说明
 
@@ -44,7 +48,9 @@
 > [!NOTE]
 >
 > - 本接口为确定性计算。
+<!-- npu="950" id5 -->
 > - 在<term>Ascend 950PR/Ascend 950DT</term>上调用本接口时，框架内部会转调用aclnnMoeFinalizeRoutingV2接口，参数映射关系如下：permuted_tokens等同于aclnnMoeFinalizeRoutingV2接口的expandedX输入，sorted_indices等同于expandedRowIdx输入，probs等同于scalesOptional输入，padded_mode等同于dropPadMode输入，输出out等同于aclnnMoeFinalizeRoutingV2接口的out输出。如出现参数错误提示，请参考该映射关系。
+<!-- end id5 -->
 
 ## 函数原型
 
@@ -55,7 +61,7 @@ torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=None, p
 ## 参数说明
 
 - **permuted_tokens**（`Tensor`）：必选参数，表示经过permute计算后的输入tokens。要求是一个2D的Tensor，shape为(tokens_num * topK_num, hidden_size)，其中tokens_num表示输入token的个数，topK_num表示处理每个token的专家个数，hidden_size表示每个token的向量表示的长度。数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$，支持非连续Tensor。
-- **sorted_indices**（`Tensor`）：必选参数，表示需要计算的数据在permuted_tokens中的位置。要求是一个1D的Tensor，shape为(tokens_num * topK_num)。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。取值范围是[0, tokens_num * topK_num - 1]，且没有重复索引。
+- **sorted_indices**（`Tensor`）：必选参数，表示需要计算的数据在permuted_tokens中的位置。要求是一个1D的Tensor，shape为(tokens_num \* topK_num)。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。取值范围是[0, tokens_num \* topK_num - 1]，且没有重复索引。
 - **probs**（`Tensor`）：可选参数，表示与permuted_tokens相乘的概率值，默认值为`None`。要求是一个2D的Tensor，shape为(tokens_num, topK_num)。数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$，支持非连续Tensor。当probs传入时，topK_num等于probs的最后一维大小；当probs不传时，topK_num等于1。
 - **padded_mode**（`bool`）：可选参数，表示是否开启paddedMode，默认值为`False`。padded_mode为`True`时，restore_shape生效，输出结果的shape与restore_shape保持一致。当前仅支持`False`。
 - **restore_shape**（`int[]`）：可选参数，表示padded_mode为`True`时输出结果的shape，默认值为`None`。当前仅支持`None`。
@@ -71,7 +77,10 @@ torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=None, p
 - 该接口支持推理、训练场景下使用。
 - 该接口仅支持图模式。
 - 该接口为确定性计算。
+
+<!-- npu="A3,910b" id4 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：topK_num要求小于等于512。
+<!-- end id4 -->
 
 ## 调用示例
 

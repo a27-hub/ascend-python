@@ -2,15 +2,15 @@
 
 ## 产品支持情况
 
-| 产品 | 是否支持 |
-| --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
 
 ## 功能说明
 
 - API功能：
 
-    在micro-batch训练场景，需要做micro-batch的梯度累计，会存在大量QuantBatchMatmul操作接InplaceAdd操作的场景。本算子（QuantBatchMatmulInplaceAdd）将上述操作融合起来，以提高网络性能。
+    在micro-batch训练场景，需要做micro-batch的梯度累积，会存在大量QuantBatchMatmul操作接InplaceAdd操作的场景。本算子（QuantBatchMatmulInplaceAdd）将上述操作融合起来，以提高网络性能。
 
 - 计算公式：
 

@@ -2,11 +2,15 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| ------------------------------------------------------------ | :------: |
-| <term>Ascend 950DT</term>              | √ |
-| <term>Atlas A2 训练系列产品</term>   | √   |
-| <term>Atlas 训练系列产品</term>                                        |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="910b" id2 -->
+- <term>Atlas A2 训练系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910" id3 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id3 -->
 
 ## 功能说明
 
@@ -28,7 +32,7 @@ torch_npu.matmul_checksum(a, b, c) -> Tensor
 
 `Tensor`
 
-返回NPU上的bool标量。结果为True时，标识存在aicore错误的硬件故障。
+返回NPU上的bool标量。结果为True时，表示存在aicore错误的硬件故障。
 
 ## 约束说明
 

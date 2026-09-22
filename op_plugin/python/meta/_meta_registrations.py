@@ -2564,7 +2564,7 @@ def npu_fusion_attention_backward_v2(query, key, value, dy, head_num, input_layo
 
 @impl(m, "npu_rotary_mul")
 def npu_rotary_mul_meta(embedding, cosine, sine, mode='half', rotate=None):
-    return torch.empty_like(embedding)
+    return torch.empty(embedding.shape, dtype=embedding.dtype, device='meta')
 
 
 @impl(m, "npu_rotary_mul_backward")
@@ -6565,7 +6565,7 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
 
 @impl(m, "npu_grouped_matmul_swiglu_quant_v2")
 def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None,
-    weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1,
+    weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=6, quant_mode=0, quant_dtype=1,
     group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None):
 
     torch._check(
