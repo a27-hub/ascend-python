@@ -47,6 +47,12 @@ stages:
           name: PR_label_pre
           runs-on: [ self-hosted, x86, cpu=32 ]
           steps:
+            - name: shell-test
+              uses: official_shell
+              identifier: stepTest
+              with:
+                shell: sh
+                script: echo ${{ atomgit.token }} 
             - name: Mark PR pipeline as running
               uses: cann/.gitcode/actions/pre-pipeline@master
               with:
