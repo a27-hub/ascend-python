@@ -16,6 +16,7 @@ on:
 
 permissions:
   pr: write
+  action: read
 
 env:
   repo: ${{ atomgit.event.repository.name }}
