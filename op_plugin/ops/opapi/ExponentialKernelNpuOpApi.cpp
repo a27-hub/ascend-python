@@ -51,7 +51,8 @@ at::Tensor& exponential_(at::Tensor& self, double lambd, c10::optional<at::Gener
       auto gen_state_ = gen->philox_npu_state(counter_offset);
       const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
       const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
-      EXEC_NPU_CMD(aclnnStatelessExponentialTensor, self, *seed_ptr, *offset_ptr, lambd);
+      const int64_t offset_intragraph = static_cast<int64_t>(gen_state_.offset_intragraph_);
+      EXEC_NPU_CMD(aclnnStatelessExponentialTensor, self, *seed_ptr, *offset_ptr, offset_intragraph, lambd);
 #endif
     }
     return self;

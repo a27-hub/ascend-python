@@ -64,7 +64,8 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
       auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(counterOffset);
       const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
       const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
-      EXEC_NPU_CMD(aclnnDropoutV3Tensor, self, optionalNoiseShape, p, *seed_ptr, *offset_ptr, result, mask);
+      const int64_t offset_intragraph = static_cast<int64_t>(gen_state_.offset_intragraph_);
+      EXEC_NPU_CMD(aclnnDropoutV3Tensor, self, optionalNoiseShape, p, *seed_ptr, *offset_ptr, offset_intragraph, result, mask);
 #endif
     }
     return std::tie(result, mask);
