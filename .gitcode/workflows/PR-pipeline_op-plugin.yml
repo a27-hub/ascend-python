@@ -118,7 +118,7 @@ stages:
             id: pre_pipeline
             uses: cann/.gitcode/actions/pre-pipeline@689551d6b29a77d8c2a005b8f1b3883db24820ef
             with:
-              owner: ${{ env.org_name }}
+              owner: ${{ vars.EMM }}
               repo: ${{ atomgit.event.repository.name }}
               pr_number: ${{ atomgit.event.pull_request.number }}
               token: ${{ secrets.GIT_TOKEN }}
