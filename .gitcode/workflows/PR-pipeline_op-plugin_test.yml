@@ -12,12 +12,11 @@ on:
       - merge
       - reopen
     branches: [ '*' ]
+  workflow_dispatch:
 
 permissions:
-  project: read
-  repository: read
   pr: write
-  id-token: write
+  action: read
 
 env:
   repo: ${{ atomgit.event.repository.name }}
