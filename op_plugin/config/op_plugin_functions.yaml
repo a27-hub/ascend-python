@@ -1,4 +1,4 @@
-all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13, v2.14, v2.15]
+all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13, v2.14, v2.15, v2.16]
 official:
   - func: __ilshift__.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
@@ -6648,7 +6648,7 @@ custom:
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=0, int? quant_mode=0, int? quant_dtype=1, int? group_list_type=0, int[]? tuning_config=None, int? x_dtype=None, int? weight_dtype=None, int? weight_scale_dtype=None, int? x_scale_dtype=None) -> (Tensor, Tensor)
+  - func: npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=6, int? quant_mode=0, int? quant_dtype=1, int? group_list_type=0, int[]? tuning_config=None, int? x_dtype=None, int? weight_dtype=None, int? weight_scale_dtype=None, int? x_scale_dtype=None) -> (Tensor, Tensor)
     op_api: all_version
     internal_format_opapi: all_version
 
