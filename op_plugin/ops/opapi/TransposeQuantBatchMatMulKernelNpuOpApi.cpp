@@ -56,6 +56,11 @@ at::Tensor npu_transpose_quant_batchmatmul(
     c10::optional<int64_t> batch_split_factor,
     c10::optional<int64_t> x1_dtype,
     c10::optional<int64_t> x2_dtype) {
+  if (x1_dtype.has_value() || x2_dtype.has_value()) {
+    const int64_t fp8_e4m3fn = static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN);
+    const int64_t fp8_e5m2 = static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2);
+    const int64_t hifloat8 = static_cast<int64_t>(c10_npu::DType::HIFLOAT8);
+  }
   const at::Tensor& bias_real = bias.value_or(at::Tensor());
   const at::Tensor& x1_scale_real = x1_scale.value_or(at::Tensor());
   const at::Tensor& x2_scale_real = x2_scale.value_or(at::Tensor());
