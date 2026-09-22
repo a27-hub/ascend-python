@@ -22,7 +22,7 @@ permissions:
 env:
   repo: ${{ atomgit.event.repository.name }}
   pr_id: ${{ atomgit.event.pull_request.number }}
-  org_name: "ComputingActionTest"
+  org_name: ComputingActionTest
   img_master_arm: "pytorch_2.13.0_a2_aarch64_builder:20260709"
   img_2_7_1_arm: "pytorch_2.7.1_a2_aarch64_builder:20260518"
   img_2_9_0_arm: "pytorch_2.9.0_a2_aarch64_builder:20260518"
@@ -38,10 +38,10 @@ env:
 
 stages:
 
-  # stage_1:
-  #   name: stage_1
-  #   select: selected_by_default
-  #   jobs:
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
   #     PR_label_pre:
   #         name: PR_label_pre
   #         runs-on: [ self-hosted, openeuler, x86, cpu=32 ]
@@ -74,30 +74,31 @@ stages:
   # # #             project_id: a9b188a62f334fc0963bcfb523426d17
   # # #             task_name: op-plugin-20260724103005
   # # #             branch: ${{ atomgit.event.pull_request.base.ref }}
-  #     SCA:
-  #       name: SCA
-  #       # runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-  #       runs-on: [ dedicate-hosted, x64, 2xlarge ]
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: checkout
-  #           uses: checkout
-  #           with:
-  #             ref: refs/merge-requests/${{ env.pr_id }}/merge
-  #             path: code_o
-  #         - name: test
-  #           run: |
-  #             echo "-------- pwd --------"
-  #             pwd
-  #             echo "ATOMGIT_WORKSPACE=${ATOMGIT_WORKSPACE}"
-  #             echo "-------- ATOMGIT_WORKSPACE --------"
-  #             ls ${ATOMGIT_WORKSPACE}
-  #             echo "-------- ATOMGIT_WORKSPACE/op_plugin --------"
-  #             echo "${ATOMGIT_WORKSPACE}/code_o"
-  #             ls ${ATOMGIT_WORKSPACE}/code_o
+      SCA:
+        name: SCA
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+        runs-on: [ dedicate-hosted, x64, 2xlarge ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+              path: code_o
+          - name: test
+            run: |
+              echo "org_name: ${{ env.org_name }}"
+              echo "-------- pwd --------"
+              pwd
+              echo "ATOMGIT_WORKSPACE=${ATOMGIT_WORKSPACE}"
+              echo "-------- ATOMGIT_WORKSPACE --------"
+              ls ${ATOMGIT_WORKSPACE}
+              echo "-------- ATOMGIT_WORKSPACE/op_plugin --------"
+              echo "${ATOMGIT_WORKSPACE}/code_o"
+              ls ${ATOMGIT_WORKSPACE}/code_o
 
   # #     # Antipoison:
   # #     #   name: Antipoison
@@ -184,20 +185,20 @@ stages:
   #     #         echo "Only Doc Commit Check result: ${BUILD_SKIP}"
 
 
-  stage_2:
-    name: stage_2
-    select: selected_by_default
-    jobs:
+  # stage_2:
+  #   name: stage_2
+  #   select: selected_by_default
+  #   jobs:
 
-      Build_master_x86:
-        name: Build_master_x86
-        # if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
-        uses: .gitcode/workflows/build_job_test.yml
-        with:
-          pytorch_branch: "master"
-          CP_DOCKER_IMG: ${{ env.img_master_x86 }}
-          runs_on_arch: "x86"
-          runs_on_spec: "cpu=32"
+  #     Build_master_x86:
+  #       name: Build_master_x86
+  #       # if : ${{ jobs.Only_doc_commit.outputs.build_skip != 'yes' }}
+  #       uses: .gitcode/workflows/build_job_test.yml
+  #       with:
+  #         pytorch_branch: "master"
+  #         CP_DOCKER_IMG: ${{ env.img_master_x86 }}
+  #         runs_on_arch: "x86"
+  #         runs_on_spec: "cpu=32"
 
   # #     Build_v2_7_1_x86:
   # #       name: Build_v2_7_1_x86
