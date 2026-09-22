@@ -12,6 +12,7 @@ on:
       - merge
       - reopen
     branches: [ '*' ]
+  workflow_dispatch:
 
 permissions:
   project: read
