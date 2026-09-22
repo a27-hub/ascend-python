@@ -27,5 +27,20 @@ class TestFastGelu(TestCase):
         custom_output = self.custom_op_exec(npu_input)
         self.assertRtolEqual(supported_output, custom_output)
 
+    def test_nested_to_padded_tensor(self, device="npu"):
+        nested = torch.nested.nested_tensor(
+            [
+                torch.tensor([1.0, 2.0]),
+                torch.tensor([3.0]),
+            ],
+            dtype=torch.float32,
+            device=device,
+        )
+        output = torch.nested.to_padded_tensor(nested, -1.0)
+        expected = torch.tensor([[1.0, 2.0], [3.0, -1.0]])
+
+        self.assertRtolEqual(output.cpu(), expected)
+
+
 if __name__ == "__main__":
     run_tests()
