@@ -37,6 +37,11 @@ bool thnn_fused_gru_cell_aclnn_supported(
     const at::Tensor& input_gates,
     const at::Tensor& hidden_gates,
     const at::Tensor& hx) {
+  static const bool is_ascend950_or_later =
+      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+  if (!is_ascend950_or_later) {
+    return false;
+  }
   const auto dtype = input_gates.scalar_type();
   const bool dtype_ok =
       (dtype == at::kFloat) || (dtype == at::kHalf) || (dtype == at::kBFloat16);
