@@ -41,34 +41,54 @@
 
 ## Installation Dependency
 
-You are advised to use the development image provided by TorchNPU for compilation. The image can be obtained in either of the following ways: directly pull the pre-built image from the Ascend image repository: [torch-npu-devel](https://www.hiascend.com/developer/ascendhub/detail/3b0ca76864884546acd07845f6153ee6), or build the image by yourself using the Dockerfile in the TorchNPU source repository (pytorch/docker/devel).
+You are advised to use the development image provided by TorchNPU for compilation. The image can be obtained in either of the following ways: directly pull the pre-built image from the Ascend image repository, or build the image by yourself using the Dockerfile.
 
-Taking the Atlas A2 training products as an example, run the following command to pull the image:
+- Pull the image directly
 
-```bash
-docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28
-```
+    A ready-to-use development image is provided for compiling OpPlugin. You can pull it directly from the Ascend image repository: [torch-npu-devel](https://www.hiascend.com/developer/ascendhub/detail/3b0ca76864884546acd07845f6153ee6)
 
-After the image is obtained, use the following command to start and access the Docker container and mount the OpPlugin source code to the container.
+    Taking the Atlas A2 training products as an example, run the following command to pull the image:
 
-If the image is pulled directly:
+    ```bash
+    docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28
+    ```
 
-```bash
-docker run -it -v /{code_path}/op-plugin:/home/op-plugin swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28 bash
-```
+    After the image is pulled, use the following command to start and access the Docker container and mount the OpPlugin source code to the container:
 
-If the image is built by yourself:
+    ```bash
+    docker run -it -v /{code_path}/op-plugin:/home/op-plugin swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28 bash
+    ```
 
-```bash
-docker run -it -v /{code_path}/op-plugin:/home/op-plugin manylinux-builder:v1 bash
-```
+- Build the image by yourself
+
+    This repository (op-plugin/docker/devel) provides a ready-to-use Dockerfile that can automatically detect the architecture to pull the base image. You can read the README file in that directory for more information and build your own development environment as instructed.
+
+    ```bash
+    cd op-plugin/docker/devel
+    export DOCKER_BUILDKIT=1
+    docker build -t op-plugin-builder:v1 .
+    ```
+
+    Alternatively, use the one-click container creation script builder.sh:
+
+    ```bash
+    cd op-plugin/docker/devel
+    export DOCKER_BUILDKIT=1
+    bash builder.sh --cann
+    ```
+
+    After the image is built, use the following command to start and access the Docker container and mount the OpPlugin source code to the container:
+
+    ```bash
+    docker run -it -v /{code_path}/op-plugin:/home/op-plugin op-plugin-builder:v1 bash
+    ```
 
 _{code_path}_ indicates the path of the OpPlugin source code. Replace it based on the actual situation.
 
 > [!NOTE]
 >
 > - The container started directly can only be used for compiling the OpPlugin plug-in.
-> - To run OpPlugin in the NPU environment inside the container, ensure that the driver exists on the host (which can be confirmed by the `npu-smi` command) and mount the driver when starting the container. For details, see the README in the directory (pytorch/docker/devel).
+> - To run OpPlugin in the NPU environment inside the container, ensure that the driver exists on the host (which can be confirmed by the `npu-smi` command) and mount the driver when starting the container. For details, see the README in the directory (op-plugin/docker/devel).
 > - In the container scenario, the image and source code need to be obtained from the external network. For network issues such as proxy configuration, see the [Docker official documentation](https://docs.docker.com/engine/cli/proxy/).
 
 In the physical machine and virtual machine scenarios, you need to install the system dependencies and the official PyTorch framework by yourself. For details about the dependency installation, see the [TorchNPU](https://gitcode.com/Ascend/pytorch/blob/master/README.md#from-source).

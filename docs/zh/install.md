@@ -41,34 +41,54 @@
 
 ## 安装依赖
 
-建议使用TorchNPU提供的开发镜像进行编译。镜像有两种获取方式：直接从昇腾镜像仓库拉取已构建好的镜像：[torch-npu-devel](https://www.hiascend.com/developer/ascendhub/detail/3b0ca76864884546acd07845f6153ee6)，或使用TorchNPU源码仓库（pytorch/docker/devel）中的Dockerfile自行构建。
+建议使用TorchNPU提供的开发镜像进行编译。镜像有两种获取方式：直接从昇腾镜像仓库拉取已构建好的镜像，或使用Dockerfile自行构建。
 
-以Atlas A2 训练系列产品为例，直接拉取镜像的命令为：
+- 直接拉取镜像
 
-```bash
-docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28
-```
+    我们已提供了可用的开发镜像，以供您编译构建OpPlugin。您可以从昇腾镜像仓库直接拉取：[torch-npu-devel](https://www.hiascend.com/developer/ascendhub/detail/3b0ca76864884546acd07845f6153ee6)
 
-获取镜像后，使用以下命令启动并进入Docker容器，并将OpPlugin源代码挂载至容器内。
+    以Atlas A2 训练系列产品为例，拉取镜像的命令为：
 
-若采用直接拉取镜像的方式：
+    ```bash
+    docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28
+    ```
 
-```bash
-docker run -it -v /{code_path}/op-plugin:/home/op-plugin swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28 bash
-```
+    拉取完成后，使用以下命令启动并进入Docker容器，并将OpPlugin源代码挂载至容器内：
 
-若采用自构建镜像的方式：
+    ```bash
+    docker run -it -v /{code_path}/op-plugin:/home/op-plugin swr.cn-south-1.myhuaweicloud.com/ascendhub/torch-npu-devel:2.13.0-cann9.1.0-910b-manylinux_2_28 bash
+    ```
 
-```bash
-docker run -it -v /{code_path}/op-plugin:/home/op-plugin manylinux-builder:v1 bash
-```
+- 自构建镜像
+
+    本仓库（op-plugin/docker/devel）提供了可用的Dockerfile，可以自动检测架构来拉取镜像。你可以阅览该目录下的README文件，获取更多信息，并根据其指导构建自己的开发环境。
+
+    ```bash
+    cd op-plugin/docker/devel
+    export DOCKER_BUILDKIT=1
+    docker build -t op-plugin-builder:v1 .
+    ```
+
+    或直接使用一键式创建容器脚本builder.sh。
+
+    ```bash
+    cd op-plugin/docker/devel
+    export DOCKER_BUILDKIT=1
+    bash builder.sh --cann
+    ```
+
+    构建完成后，使用以下命令启动并进入Docker容器，并将OpPlugin源代码挂载至容器内：
+
+    ```bash
+    docker run -it -v /{code_path}/op-plugin:/home/op-plugin op-plugin-builder:v1 bash
+    ```
 
 _{code_path}_ 表示OpPlugin源代码路径，请根据实际情况进行替换。
 
 > [!NOTE]
 >
 > - 直接启动的容器仅可用于编译OpPlugin插件。
-> - 如需在容器内的NPU环境上运行OpPlugin，请确保宿主机已存在驱动（driver）（可通过 `npu-smi` 命令确认），并在启动容器时挂载驱动。具体操作可参考该目录（pytorch/docker/devel）下README。
+> - 如需在容器内的NPU环境上运行OpPlugin，请确保宿主机已存在驱动（driver）（可通过 `npu-smi` 命令确认），并在启动容器时挂载驱动。具体操作可参考该目录（op-plugin/docker/devel）下README。
 > - 容器场景下涉及从外部网络获取镜像及源码，代理配置等相关网络问题请参考[Docker官方文档](https://docs.docker.com/engine/cli/proxy/)。
 
 物理机及虚拟机场景下，需自行安装系统依赖及官方PyTorch框架，依赖安装指导可参考[TorchNPU](https://gitcode.com/Ascend/pytorch/tree/master#%E4%BD%BF%E7%94%A8%E6%BA%90%E4%BB%A3%E7%A0%81%E8%BF%9B%E8%A1%8C%E5%AE%89%E8%A3%85)。
