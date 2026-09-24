@@ -39,12 +39,6 @@ at::Tensor _cdist_backward(
                 + std::to_string(std::numeric_limits<float>::max()) + ")" + OPS_ERROR(ErrCode::PARAM));
         p_cast = static_cast<float>(p);
     }
-    // The current operator has precision issues when handling integers and infinity.
-    bool p_in_range = (p_cast >= 0.0 && p_cast <= 2.0) || (p_cast == -1);
-    if (p_in_range && (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950)) {
-        return acl_op::_cdist_backward(grad, x1, x2, p, cdist);
-    }
-
     int64_t c1 = x1.size(-1);
     int64_t c2 = x2.size(-1);
     int64_t r1 = x1.size(-2);
