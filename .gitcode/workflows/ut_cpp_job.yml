@@ -1,0 +1,122 @@
+name: UT Job
+
+on:
+  workflow_call:
+    inputs:
+      py_version:
+        required: false
+        type: string
+        default: "3.10"
+      REMOTE_URL:
+        required: false
+        type: string
+        default: ${{ env.ATOMGIT_REPOSITORY_URL }}
+      pr_id:
+        required: false
+        type: string
+        default: ${{ atomgit.event.pull_request.number }}
+      CP_DOCKER_IMG:
+        required: true
+        type: string
+      pytorch_branch:
+        required: true
+        type: string
+      runs_on_arch:
+        required: false
+        type: string
+        default: "x64"
+      runs_on_os:
+        required: false
+        type: string
+        default: "euler"
+      runs_on_spec:
+        required: false
+        type: string
+        default: "large"
+      TEST_RANK:
+        required: false
+        type: string
+      TEST_WORLD_SIZE:
+        required: false
+        type: string
+      TARGET_BRANCH:
+        required: false
+        type: string
+        default: ${{ atomgit.event.pull_request.base.ref }}
+
+jobs:
+  JOB_UT:
+    name: JOB_UT
+    select: selected_by_default
+    runs-on: [ self-hosted, default, npu=1 ]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+    env:
+      TEST_RANK: '1'
+      TEST_WORLD_SIZE: '1'
+    steps:
+      - name: check branch support
+        id: check_support
+        run: |
+          PYTORCH_BRANCH="${{ inputs.pytorch_branch }}"
+          echo "TARGET_BRANCH=${TARGET_BRANCH}"
+          echo "PYTORCH_BRANCH=${PYTORCH_BRANCH}"
+          if [ "${TARGET_BRANCH}" = "master" ]; then
+            echo "master branch, build all versions"
+            echo "need_ut=yes" >> "$ATOMGIT_OUTPUT"
+            echo "pytorch_build_branch=${PYTORCH_BRANCH}" >> "$ATOMGIT_OUTPUT"
+            exit 0
+          fi
+          support_730="v2.6.0 v2.7.1 v2.8.0 v2.9.0"
+          support_2600="v2.7.1 v2.8.0 v2.9.0 v2.10.0"
+          support_2610="v2.7.1 v2.9.0 v2.10.0 v2.11.0 v2.12.0"
+          support_2620="v2.7.1 v2.9.0 v2.10.0 v2.11.0 v2.12.0 v2.13.0 v2.14.0"
+          suffix="${TARGET_BRANCH//./}"
+          list="support_${suffix}"
+          if [[ ! " ${!list} " =~ " ${PYTORCH_BRANCH} " ]]; then
+            echo "${TARGET_BRANCH} no need execute ${PYTORCH_BRANCH} build"
+            echo "need_ut=no" >> "$ATOMGIT_OUTPUT"
+          else
+            echo "${TARGET_BRANCH} need execute ${PYTORCH_BRANCH} build"
+            echo "need_ut=yes" >> "$ATOMGIT_OUTPUT"
+            echo "pytorch_build_branch=${PYTORCH_BRANCH}-${TARGET_BRANCH}" >> "$ATOMGIT_OUTPUT"
+          fi
+
+      - name: Download build artifact
+        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
+        uses: download-artifact
+        with:
+          name: op-plugin-${{ inputs.pytorch_branch }}-arm
+          path: ../output/${{ inputs.pr_id }}
+
+      - name: download modify_files.txt artifact
+        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
+        uses: download-artifact
+        with:
+          name: modify_files.txt
+          path: ./
+
+      - name: checkout op-plugin
+        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
+        uses: checkout
+        with:
+          ref: refs/merge-requests/${{ inputs.pr_id }}/merge
+          fetch-depth: 1
+          path: ./CODE
+          allow-unsafe-pr-checkout: true
+
+      - name: UT op-plugin
+        if: ${{ steps.check_support.outputs.need_ut == 'yes' }}
+        run: |
+          python_path=$(dirname $(dirname $(readlink -f $(which python${{ inputs.py_version }}))))
+          echo "python_path=${python_path}"
+          export PATH=${python_path}/bin:$PATH
+          cp -rf ../output/${{ inputs.pr_id }}/* ./CODE
+          pip"${{ inputs.py_version }}" install CODE/torch_npu*.whl
+          pip"${{ inputs.py_version }}" list
+          echo "------------------------------------- ENV PATH -------------------------------------"
+          echo ${PATH}
+          echo "------------------------------------------------------------------------------------"
+          source /usr/local/Ascend/cann/set_env.sh
+          source /usr/local/Ascend/nnal/atb/set_env.sh
+          bash CODE/examples/parallel_build_test.sh
