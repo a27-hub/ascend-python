@@ -22,6 +22,39 @@ namespace op_api {
 
 constexpr int MAX_DIM = 1;
 
+// aclnnInplaceIndexFill / aclnnIndexFill only support a limited dtype list. For dtypes
+// outside that list (e.g. int8/int16/uint8/float64), rewrite index_fill as the equivalent
+// index_put_ with a single advanced index at `dim` (all other dims sliced with `:`).
+// index_put_ is dispatched to aclnnIndexPutImpl which has a wider dtype coverage and is
+// available on all platforms (incl. Ascend 950) without depending on aclop.
+static bool is_supported_by_aclnn_index_fill(at::ScalarType dtype)
+{
+    return dtype == at::kInt || dtype == at::kHalf || dtype == at::kFloat ||
+           dtype == at::kLong || dtype == at::kBool || dtype == at::kBFloat16;
+}
+
+static c10::List<c10::optional<at::Tensor>> make_index_put_indices(int64_t self_dim, int64_t dim,
+                                                                   const at::Tensor& index)
+{
+    c10::List<c10::optional<at::Tensor>> indices;
+    for (int64_t d = 0; d < self_dim; ++d) {
+        if (d == dim) {
+            indices.push_back(index);
+        } else {
+            indices.push_back(c10::optional<at::Tensor>());
+        }
+    }
+    return indices;
+}
+
+static at::Tensor& index_fill_fallback_impl_(at::Tensor& self, int64_t dim,
+                                             const at::Tensor& index, const at::Scalar& value,
+                                             at::ScalarType dtype)
+{
+    at::Tensor value_tensor = at::scalar_tensor(value, self.options().dtype(dtype));
+    return self.index_put_(make_index_put_indices(self.dim(), dim, index), value_tensor, false);
+}
+
 static std::vector<int64_t> get_index_vector(const at::Tensor& index)
 {
     std::vector<int64_t> idx_vec;
@@ -44,6 +77,10 @@ at::Tensor& index_fill_(at::Tensor& self, int64_t dim, const at::Tensor& index,
     TORCH_CHECK(self.is_complex() || !value.is_complex(),
                 "index_fill_(): Converting complex Scalar to non-complex type is not supported",
                 PTA_ERROR(ErrCode::NOT_SUPPORT));
+    if (!is_supported_by_aclnn_index_fill(self.scalar_type())) {
+        index_fill_fallback_impl_(self, dim, index, value.item(), self.scalar_type());
+        return self;
+    }
     static const bool is_inplace_index_fill_available = check_aclnn_kernel_available("aclnnInplaceIndexFill");
     if (!is_inplace_index_fill_available ||
         (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && !op_plugin::utils::is_gte_cann_version_910())) {
@@ -69,6 +106,12 @@ at::Tensor index_fill(const at::Tensor& self, int64_t dim, const at::Tensor& ind
     TORCH_CHECK(self.is_complex() || !value.is_complex(),
                 "index_fill(): Converting complex Scalar to non-complex type is not supported",
                 PTA_ERROR(ErrCode::NOT_SUPPORT));
+    if (!is_supported_by_aclnn_index_fill(self.scalar_type())) {
+        at::Tensor result = self.clone(at::MemoryFormat::Contiguous);
+        index_fill_fallback_impl_(result, dim, index, value.item(), self.scalar_type());
+        at::namedinference::propagate_names(result, self);
+        return result;
+    }
     static const bool is_index_fill_available = check_aclnn_kernel_available("aclnnIndexFill");
     if (!is_index_fill_available || c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         DO_COMPATIBILITY(aclnnIndexFillTensor, acl_op::index_fill(self, dim, index, value));
@@ -96,6 +139,10 @@ at::Tensor& index_fill_(at::Tensor& self, int64_t dim, const at::Tensor& index,
     TORCH_CHECK(self.is_complex() || !value.isComplex(),
                 "index_fill_(): Converting complex Scalar to non-complex type is not supported",
                 PTA_ERROR(ErrCode::NOT_SUPPORT));
+    if (!is_supported_by_aclnn_index_fill(self.scalar_type())) {
+        index_fill_fallback_impl_(self, dim, index, value, self.scalar_type());
+        return self;
+    }
     static const bool is_inplace_index_fill_available = check_aclnn_kernel_available("aclnnInplaceIndexFill");
     if (!is_inplace_index_fill_available ||
         (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && !op_plugin::utils::is_gte_cann_version_910())) {
@@ -117,6 +164,12 @@ at::Tensor index_fill(const at::Tensor& self, int64_t dim, const at::Tensor& ind
     TORCH_CHECK(self.is_complex() || !value.isComplex(),
                 "index_fill(): Converting complex Scalar to non-complex type is not supported",
                 PTA_ERROR(ErrCode::NOT_SUPPORT));
+    if (!is_supported_by_aclnn_index_fill(self.scalar_type())) {
+        at::Tensor result = self.clone(at::MemoryFormat::Contiguous);
+        index_fill_fallback_impl_(result, dim, index, value, self.scalar_type());
+        at::namedinference::propagate_names(result, self);
+        return result;
+    }
     static const bool is_index_fill_available = check_aclnn_kernel_available("aclnnIndexFill");
     if (!is_index_fill_available || c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         DO_COMPATIBILITY(aclnnIndexFillTensor, acl_op::index_fill(self, dim, index, value));
