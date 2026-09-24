@@ -1,4 +1,4 @@
-name: Nightly-pipeline_op-plugin
+name: Op-plugin Test Nightly
 
 concurrency:
   max: 5
