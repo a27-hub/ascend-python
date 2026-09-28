@@ -168,8 +168,7 @@ at::Tensor native_dropout_backward(const at::Tensor& grad_output, const at::Tens
   // to aclnnDropoutV3Grad directly. The kernel computes gradX = gradY * mask * scale with
   // a pure multiplication chain, avoiding the extra float computation of restoring the
   // scale factor (p = 1 - 1 / scale) inside the operator.
-  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&
-      check_aclnn_kernel_available("aclnnDropoutV3Grad")) {
+  if (true) {
     TORCH_CHECK(
         scale == NUMBER_ZERO || scale >= NUMBER_ONE,
         "native_dropout_backward scale has to be 0 or greater than or equal to 1, but got ",
