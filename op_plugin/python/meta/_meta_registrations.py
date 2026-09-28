@@ -6326,7 +6326,7 @@ def npu_attention_worker_combine(schedule_context, expert_scales, layer_id, hidd
     y_size.append(hidden_size)
     next_layer_id_size.append(layer_id.size(0))
     y_dtype = torch.half
-    if token_dtype == 1:
+    if token_dtype in (1, 2, 3, 4):
         y_dtype = torch.bfloat16
     return (torch.empty(y_size, dtype=y_dtype, device=schedule_context.device),
             torch.empty(next_layer_id_size, dtype=torch.int32, device=schedule_context.device))
