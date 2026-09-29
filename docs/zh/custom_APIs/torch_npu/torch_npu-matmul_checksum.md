@@ -36,8 +36,7 @@ torch_npu.matmul_checksum(a, b, c) -> Tensor
 
 ## 约束说明
 
-- 该接口仅支持device为NPU的场景。
-- CANN版本为9.2.0及以上，且输入参数`a`、`b`、`c`为2维Tensor时，支持`torch.bfloat16`和`torch.float32`数据类型；其余场景仅支持`torch.bfloat16`数据类型。
+该接口仅支持bfloat16格式，且device为NPU的场景。
 
 ## 调用示例
 
