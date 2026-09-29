@@ -130,33 +130,44 @@ void _split_and_exec_npu_cmd_fused_adam(
 
 	for (size_t offset = 0; offset < self.size(); offset += max_tensor_count) {
 		size_t current_count = std::min(max_tensor_count, self.size() - offset);
-		at::TensorList self_batch(self.data() + offset, current_count);
-		at::TensorList grads_batch(grads.data() + offset, current_count);
-		at::TensorList exp_avgs_batch(exp_avgs.data() + offset, current_count);
-		at::TensorList exp_avg_sqs_batch(exp_avg_sqs.data() + offset, current_count);
-		at::TensorList max_exp_avg_sqs_batch = max_exp_avg_sqs;
-		if (amsgrad || max_exp_avg_sqs.size() != 1) {
-			max_exp_avg_sqs_batch = at::TensorList(max_exp_avg_sqs.data() + offset, current_count);
-		}
-		at::TensorList state_steps_batch(state_steps.data() + offset, current_count);
 
-		EXEC_NPU_CMD(
-			aclnnFusedAdam,
-			self_batch,
-			grads_batch,
-			exp_avgs_batch,
-			exp_avg_sqs_batch,
-			max_exp_avg_sqs_batch,
-			state_steps_batch,
-			grad_scale_tensor,
-			found_inf_tensor,
-			lr,
-			beta1,
-			beta2,
-			weight_decay,
-			eps,
-			amsgrad,
-			maximize);
+		if (amsgrad) {
+			EXEC_NPU_CMD(
+				aclnnFusedAdam,
+				at::TensorList(self.data() + offset, current_count),
+				at::TensorList(grads.data() + offset, current_count),
+				at::TensorList(exp_avgs.data() + offset, current_count),
+				at::TensorList(exp_avg_sqs.data() + offset, current_count),
+				at::TensorList(max_exp_avg_sqs.data() + offset, current_count),
+				at::TensorList(state_steps.data() + offset, current_count),
+				grad_scale_tensor,
+				found_inf_tensor,
+				lr,
+				beta1,
+				beta2,
+				weight_decay,
+				eps,
+				amsgrad,
+				maximize);
+		} else {
+			EXEC_NPU_CMD(
+				aclnnFusedAdam,
+				at::TensorList(self.data() + offset, current_count),
+				at::TensorList(grads.data() + offset, current_count),
+				at::TensorList(exp_avgs.data() + offset, current_count),
+				at::TensorList(exp_avg_sqs.data() + offset, current_count),
+				at::TensorList(),
+				at::TensorList(state_steps.data() + offset, current_count),
+				grad_scale_tensor,
+				found_inf_tensor,
+				lr,
+				beta1,
+				beta2,
+				weight_decay,
+				eps,
+				amsgrad,
+				maximize);
+		}
 	}
 }
 } // namespace
@@ -212,21 +223,15 @@ void _fused_adam_(
 		return;
 	}
 
-	std::vector<at::Tensor> max_exp_avg_sqs_placeholder;
 	const at::Tensor grad_scale_tensor = grad_scale.value_or(at::Tensor());
 	const at::Tensor found_inf_tensor = found_inf.value_or(at::Tensor());
-	at::TensorList max_exp_avg_sqs_list(max_exp_avg_sqs);
-	if (!amsgrad && max_exp_avg_sqs.empty() && !self.empty()) {
-		max_exp_avg_sqs_placeholder.emplace_back(at::zeros({1}, self[0].options().requires_grad(false)));
-		max_exp_avg_sqs_list = at::TensorList(max_exp_avg_sqs_placeholder);
-	}
 
 	_split_and_exec_npu_cmd_fused_adam(
 		self,
 		grads,
 		exp_avgs,
 		exp_avg_sqs,
-		max_exp_avg_sqs_list,
+		max_exp_avg_sqs,
 		state_steps,
 		grad_scale_tensor,
 		found_inf_tensor,
