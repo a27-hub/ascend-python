@@ -27,6 +27,8 @@ namespace {
 constexpr int64_t NZ_16 = 16;
 constexpr int64_t NZ_C0_8 = 8;
 constexpr int64_t NZ_C0_16 = 16;
+constexpr int64_t F8F4_NZ_BLOCK_N = 64; // F8F4 FRACTAL_NZ：n 按 64 元素（32B）分块
+constexpr int64_t TCG_GROUP_SIZE = 32;
 constexpr int64_t DIMS_1 = 1;
 constexpr int64_t DIMS_2 = 2;
 constexpr int64_t DIMS_3 = 3;
@@ -270,6 +272,28 @@ bool judge_mm_a16f4_mx(QuantContext& ctx) {
   return false;
 }
 
+bool judge_mm_a8f4_tcg(QuantContext& ctx) {
+  aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
+  aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+  aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+  aclDataType x_scale_acl_dtype =
+      ctx.x_scale_dtype.has_value() ? c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
+
+  bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
+
+  // F8F4 T-CG per-group：FP4 weight + FP16/BF16 per-group scale [G, N]（G > 1，gs 固定 32）；
+  // 与 MX（scale=E8M0）、A16 系（x=F16/BF16）由 x dtype / scale dtype / x_scale 互斥；
+  // 转置状态内部分流：转置 → ND 直拷，非转置 → FRACTAL_NZ 转换（prepare_out_weight_f8f4）
+  if (x_acl_dtype == ACL_FLOAT8_E4M3FN && weight_acl_dtype == ACL_FLOAT4_E2M1 && scale_dtype_match &&
+      x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 &&
+      ctx.weight_scale.size(0) > 1 && ctx.k_group_size == TCG_GROUP_SIZE) {
+    check_a16w4_uint8_carrier(ctx);
+    ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
+    return true;
+  }
+  return false;
+}
+
 // 直拷输出别名：out 直接复用输入 tensor（共享 storage 与 view），aclnn 直拷路径同址时无拷贝
 static void prepare_out_weight_scale_direct(QuantContext& ctx) {
   ctx.out_weight_scale = ctx.weight_scale;
@@ -368,6 +392,46 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
   }
 }
 
+// F8F4 T-CG NZ（非转置）专用 prepare：torch 侧 uint8 [K, N/2] 非转置输入
+// out_weight: torch 侧保持 uint8 物理打包视图 [K, N/2] + FRACTAL_NZ 标签，
+// storage 为物理分形 {2*ceildiv(N,64), ceildiv(K,16), 16, 16}（n 按 64 元素=32B 补齐，uint8 字节数精确；
+// 若按 ceildiv(N,32) 分配，N%64∈[1,32] 时 buffer 半量，实测出现行截断 + device 堆越界写，见 SRS §2.5）；
+// 经 ConvertType 统一 ×2 还原为 ACL 4-bit view [K, N]、storage {2*ceildiv(N,64), ceildiv(K,16), 16, 32}、
+// format FRACTAL_NZ，与 ops-math 校验一致。
+static void prepare_out_weight_nz_f8f4(QuantContext& ctx) {
+  auto weight_sizes = ctx.weight.sizes();
+  int64_t weight_dim = ctx.weight.dim();
+  int64_t k = weight_sizes[weight_dim - IDX_2];
+  int64_t n_packed = weight_sizes[weight_dim - IDX_1]; // uint8 物理打包字节数（N/2）
+  int64_t n_logical = n_packed * 2; // 每字节 2 个 FP4
+
+  c10::SmallVector<int64_t, DIMS_MAX> storage_shape = {
+      2 * ceil_div(n_logical, F8F4_NZ_BLOCK_N), ceil_div(k, NZ_16), NZ_16, NZ_16};
+
+  int64_t storage_size = 1;
+  for (auto dim : storage_shape) {
+    storage_size *= dim;
+  }
+
+  ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
+
+  // 物理打包视图 [K, N/2]：4-bit 的 dtype/format 语义由 ConvertType 与 fake format 标签承担
+  c10::SmallVector<int64_t, DIMS_MAX> out_view_shape = {k, n_packed};
+  ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(out_view_shape);
+
+  at_npu::native::StorageDescHelper::SetDesc(
+      ctx.out_weight, ctx.out_weight.sizes(), storage_shape, ctx.out_weight.strides(), ACL_FORMAT_FRACTAL_NZ);
+}
+
+// F8F4 T-CG 转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → FRACTAL_NZ 转换
+static void prepare_out_weight_f8f4(QuantContext& ctx) {
+  if (ctx.is_weight_trans) {
+    prepare_out_weight_nd(ctx);
+  } else {
+    prepare_out_weight_nz_f8f4(ctx);
+  }
+}
+
 template <bool IsGmm>
 static void prepare_out_weight_scale_mx(QuantContext& ctx) {
   constexpr int64_t expected_dim = IsGmm ? DIMS_4 : DIMS_3;
@@ -457,6 +521,12 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
       {judge_mm_a16f4_mx,
        {// 转置 → ND 直拷，非转置 → NZ 转换（prepare_out_weight_a16w4 内部分流）
         prepare_out_weight_a16w4,
+        prepare_out_weight_scale_direct,
+        prepare_out_weight_offset_direct,
+        prepare_out_bias_direct}},
+      {judge_mm_a8f4_tcg,
+       {// 转置 → ND 直拷，非转置 → FRACTAL_NZ 转换（prepare_out_weight_f8f4 内部分流）
+        prepare_out_weight_f8f4,
         prepare_out_weight_scale_direct,
         prepare_out_weight_offset_direct,
         prepare_out_bias_direct}}}},
