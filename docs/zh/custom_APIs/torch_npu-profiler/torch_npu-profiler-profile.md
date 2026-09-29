@@ -22,7 +22,7 @@
 ## 函数原型
 
 ```python
-torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, record_shapes=False, profile_memory=False, with_stack=False, with_modules=False, with_flops=False, experimental_config=None, custom_trace_id_callback=None, custom_trace_id_callback=None)
+torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, record_shapes=False, profile_memory=False, with_stack=False, with_modules=False, with_flops=False, experimental_config=None, execution_trace_observer=None, custom_trace_id_callback=None)
 ```
 
 ## 参数说明
@@ -81,7 +81,7 @@ torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, 
 
 - **experimental_config**：可选参数，扩展参数，通过扩展配置性能分析工具常用的采集项。支持采集项和详细介绍请参见[torch_npu.profiler._ExperimentalConfig](./torch_npu-profiler-_ExperimentalConfig.md)。
 
-- **custom_trace_id_callback** (`Callable`)：可选参数，PyTorch执行轨迹观测器对象。PyTorch执行轨迹以图的形式表示AI/ML工作负载，支持回放基准测试、模拟器和仿真器。当包含此参数时，观测器的start()和stop()方法将在与PyTorch剖析器相同的时间窗口内被调用，调用方式见下文示例。
+- **execution_trace_observer** (`Callable`)：可选参数，PyTorch执行轨迹观测器对象。PyTorch执行轨迹以图的形式表示AI/ML工作负载，支持回放基准测试、模拟器和仿真器。当包含此参数时，观测器的start()和stop()方法将在与PyTorch剖析器相同的时间窗口内被调用，调用方式见下文示例。
 
 - **custom_trace_id_callback** (`Callable`)：可选参数，为每一份Profiler数据生成一个trace_id进行标识。trace_id输出在profiler_metadata.json文件中，调用方式见下文示例。
 
@@ -174,7 +174,7 @@ torch_npu.profiler.profile采集的性能数据会自动解析到torch_npu.profi
           prof.step()
   ```
   
-- 设置执行轨迹观测器custom_trace_id_callback
+- 设置执行轨迹观测器execution_trace_observer
 
   ```python
   import torch
