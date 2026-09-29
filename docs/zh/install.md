@@ -91,7 +91,7 @@ _{code_path}_ 表示OpPlugin源代码路径，请根据实际情况进行替换�
 > - 如需在容器内的NPU环境上运行OpPlugin，请确保宿主机已存在驱动（driver）（可通过 `npu-smi` 命令确认），并在启动容器时挂载驱动。具体操作可参考该目录（op-plugin/docker/devel）下README。
 > - 容器场景下涉及从外部网络获取镜像及源码，代理配置等相关网络问题请参考[Docker官方文档](https://docs.docker.com/engine/cli/proxy/)。
 
-物理机及虚拟机场景下，需自行安装系统依赖及官方PyTorch框架，依赖安装指导可参考[TorchNPU](https://gitcode.com/Ascend/pytorch/tree/master#%E4%BD%BF%E7%94%A8%E6%BA%90%E4%BB%A3%E7%A0%81%E8%BF%9B%E8%A1%8C%E5%AE%89%E8%A3%85)。
+物理机及虚拟机场景下，需自行安装系统依赖及官方PyTorch框架，依赖安装指导可参考[TorchNPU](https://gitcode.com/Ascend/pytorch/tree/master#%E6%BA%90%E7%A0%81%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85)。
  
 ## 操作步骤
  
@@ -115,7 +115,7 @@ _{code_path}_ 表示OpPlugin源代码路径，请根据实际情况进行替换�
    执行编译构建，以下命令以PyTorch版本2.13.0、Python 3.10为例。
 
    ```bash
-   bash ci/build.sh --python=3.10 --pytorch=v2.13.0
+   bash ci/build.sh --python=3.10 --pytorch=v2.13.0-26.2.0
    ```
 
     > [!NOTICE] 

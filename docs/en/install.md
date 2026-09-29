@@ -114,7 +114,7 @@ In the physical machine and virtual machine scenarios, you need to install the s
     Run the following commands to compile and build the plug-in. The following uses PyTorch 2.13.0 and Python 3.10 as an example.
     
     ```bash
-    bash ci/build.sh --python=3.10 --pytorch=v2.13.0
+    bash ci/build.sh --python=3.10 --pytorch=v2.13.0-26.2.0
     ```
     
     > [!NOTICE]
