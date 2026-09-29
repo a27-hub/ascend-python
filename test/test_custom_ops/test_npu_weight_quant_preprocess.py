@@ -4,6 +4,7 @@ import torch_npu
 from torch_npu.testing.common_utils import SupportedDevices
 from torch_npu.testing.testcase import TestCase, run_tests
 
+FRACTAL_NZ = 29
 FRACTAL_NZ_C0_16 = 50
 
 
@@ -62,6 +63,58 @@ class TestNpuWeightQuantPreprocess(TestCase):
         # e8m0 转置视图直接 .cpu() 会走 AICPU Transpose（不支持该 dtype），按 uint8 回读比对
         self.assertEqual(out_weight_scale.view(torch.uint8).cpu(), weight_scale.view(torch.uint8).cpu())
         # ND 直拷透传：out_weight format 与输入一致（ND；返回值类型随 ALLOW_INTERNAL_FORMAT 开关变化）
+        self.assertEqual(torch_npu.get_npu_format(out_weight), torch_npu.get_npu_format(weight))
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_weight_quant_preprocess_f8f4_tcg_nz(self):
+        # F8F4 T-CG 非转置：weight uint8 {K, N/2} 沿 N 打包；scale FP16 {G, N}（G=K/32>1）。
+        # 非转置走 ND->FRACTAL_NZ 转换，输出 uint8 视图 [K, N/2] + FRACTAL_NZ 标签，
+        # 物理 storage {2*ceildiv(N,64), ceildiv(K,16), 16, 16}（n 按 64 元素补齐）
+        k, n = 256, 128
+        g = k // 32
+        weight = torch.zeros((k, n // 2), dtype=torch.uint8).npu()
+        weight_scale = torch.zeros((g, n), dtype=torch.float16).npu()
+
+        out_weight, out_weight_scale, _, _ = torch_npu.npu_weight_quant_preprocess(
+            weight,
+            weight_scale,
+            x_dtype=torch.float8_e4m3fn,
+            weight_dtype=torch_npu.float4_e2m1fn_x2,
+            weight_scale_dtype=torch.float16,
+            k_group_size=32)
+
+        self.assertEqual(out_weight.shape, weight.shape)
+        self.assertEqual(out_weight.dtype, weight.dtype)
+        self.assertEqual(out_weight_scale.shape, weight_scale.shape)
+        self.assertEqual(out_weight_scale.cpu(), weight_scale.cpu())
+        # 注：FRACTAL_NZ fake format 的 uint8 out_weight 不支持 format-aware .cpu() 回读
+        # （copy_ 不支持 internal format），物理布局 bit-wise 校验由 aclnn STC 覆盖
+        if torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT") == b"enable":
+            self.assertEqual(torch_npu.get_npu_format(out_weight), FRACTAL_NZ)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_weight_quant_preprocess_f8f4_tcg_trans_nd(self):
+        # F8F4 T-CG 转置：weight 物理 {N, K/2} 沿 K 打包、视图 {K/2, N} strides [1, K/2]；
+        # scale FP16 转置视图 {G, N} strides [1, G]。转置走 ND 直拷物理透传，format 保持 ND
+        k, n = 256, 128
+        g = k // 32
+        weight = torch.zeros((n, k // 2), dtype=torch.uint8).npu().transpose(0, 1)
+        weight_scale = torch.zeros((n, g), dtype=torch.float16).npu().transpose(0, 1)
+
+        out_weight, out_weight_scale, _, _ = torch_npu.npu_weight_quant_preprocess(
+            weight,
+            weight_scale,
+            x_dtype=torch.float8_e4m3fn,
+            weight_dtype=torch_npu.float4_e2m1fn_x2,
+            weight_scale_dtype=torch.float16,
+            k_group_size=32)
+
+        self.assertEqual(out_weight.shape, weight.shape)
+        self.assertEqual(out_weight.stride(), weight.stride())
+        self.assertEqual(out_weight_scale.shape, (g, n))
+        self.assertEqual(out_weight_scale.stride(), weight_scale.stride())
+        self.assertEqual(out_weight.cpu(), weight.cpu())
+        self.assertEqual(out_weight_scale.cpu(), weight_scale.cpu())
         self.assertEqual(torch_npu.get_npu_format(out_weight), torch_npu.get_npu_format(weight))
 
     @SupportedDevices(['Ascend950'])
