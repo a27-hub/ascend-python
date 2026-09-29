@@ -36,6 +36,8 @@ This API takes effect only when the environment variable `PYTORCH_NPU_ALLOC_CONF
 ## Example
 
 ```python
+>>> import os
+>>> os.environ["PYTORCH_NPU_ALLOC_CONF"] = "expandable_segments:True"
 >>> import torch
 >>> import torch_npu
 >>> x = torch.empty((15000, 1024, 1024), device="npu")

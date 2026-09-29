@@ -41,6 +41,8 @@ torch_npu.npu.empty_virt_addr_cache() -> None
 ## 调用示例
 
 ```python
+>>> import os
+>>> os.environ["PYTORCH_NPU_ALLOC_CONF"] = "expandable_segments:True"
 >>> import torch
 >>> import torch_npu
 >>> x = torch.empty((15000, 1024, 1024), device="npu")
