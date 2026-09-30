@@ -92,6 +92,8 @@ stages:
               echo "-------- env --------"
               env
               echo "-------- env --------"
+              echo "GITCODE_DEFAULT_BRANCH: ${GITCODE_DEFAULT_BRANCH}"
+              echo "GITCODE_TARGET_BRANCH: ${GITCODE_TARGET_BRANCH}"
               echo "org_name: ${{ env.org_name }}"
               echo "-------- pwd --------"
               pwd
