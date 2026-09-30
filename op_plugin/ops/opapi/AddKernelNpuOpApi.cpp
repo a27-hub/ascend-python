@@ -13,12 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/ScalarOps.h>
+#include <ATen/TensorIterator.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+
+// torch_npu device check for kernel tensor inputs: scalar-wrapped CPU tensors
+// are handled as scalars, any other non-NPU input raises the device error.
+static void check_tensor_devices_npu(const at::Tensor& tensor) {
+  if (!npu_preparation::is_scalar_wrapped_to_tensor(tensor)) {
+    CheckNpuTensorValid(tensor);
+  }
+}
 
 inline void alpha_check_npu(const at::ScalarType dtype, at::Scalar alpha) {
   TORCH_CHECK(
@@ -28,6 +38,10 @@ inline void alpha_check_npu(const at::ScalarType dtype, at::Scalar alpha) {
   TORCH_CHECK(
       isFloatingType(dtype) || isComplexType(dtype) || alpha.isIntegral(true),
       "For integral input tensors, argument alpha must not be a floating point number." +
+          OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(
+      isComplexType(dtype) || !alpha.isComplex(),
+      "For non-complex input tensors, argument alpha must not be a complex number." +
           OPS_ERROR(ErrCode::TYPE));
 }
 
@@ -102,14 +116,16 @@ at::Tensor add(
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
-  // calculate the output size
-  at::Tensor output_tensor = add_dest_output(self, other);
-  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
   at::ScalarType result_type = at::native::result_type(self, other);
   alpha_check_npu(result_type, alpha);
-  // construct the output tensor of the NPU
-  at::Tensor result = npu_preparation::apply_tensor_without_format(
-      output_size, output_tensor.options().dtype(result_type));
+  check_tensor_devices_npu(self);
+  check_tensor_devices_npu(other);
+  // Allocate the output through TensorIterator so its strides follow the
+  // memory-dense layout of the inputs, matching ATen native semantics.
+  // Pre-created empty contiguous output; see eq() for the rationale.
+  at::Tensor output_tensor = add_dest_output(self, other);
+  at::Tensor result = at::empty(0, output_tensor.options().dtype(result_type));
+  at::TensorIterator::binary_op(result, self, other);
   // calculate the output result of the NPU
   add_out_npu_nocheck(self, other, alpha, result);
   at::namedinference::propagate_names_if_nonempty(result, maybe_names);
@@ -121,13 +137,12 @@ at::Tensor add(
     const at::Scalar& other,
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
-  // calculate the output size
-  auto output_size = op_infer::input_same_output_size(self);
   at::ScalarType result_type = at::native::result_type(self, other);
   alpha_check_npu(result_type, alpha);
-  // construct the output tensor of the NPU
-  at::Tensor result = npu_preparation::apply_tensor_without_format(
-      output_size, self.options().dtype(result_type));
+  CheckNpuTensorValid(self);
+  at::Tensor result = at::empty(0, self.options().dtype(result_type));
+  at::Tensor other_tensor = at::native::wrapped_scalar_tensor(other);
+  at::TensorIterator::binary_op(result, self, other_tensor);
   // calculate the output result of the NPU
   EXEC_NPU_CMD(aclnnAdds, self, other, alpha, result);
   at::namedinference::propagate_names(result, self);
@@ -143,12 +158,12 @@ at::Tensor& add_out(
   DO_COMPATIBILITY(aclnnAdds, acl_op::add_out(self, other, alpha, result));
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
-  bool isSelfWrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
-  at::Tensor output_tensor = isSelfWrapped ? other : self;
-  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-  at::ScalarType result_type = at::native::result_type(self, other);
-
-  npu_preparation::check_tensor({self}, result, result, output_size);
+  alpha_check_npu(at::native::result_type(self, other), alpha);
+  check_tensor_devices_npu(self);
+  check_tensor_devices_npu(other);
+  // Build the iterator to validate/resize the output with ATen-compatible
+  // memory-dense strides.
+  at::TensorIterator::binary_op(result, self, other);
   npu_preparation::check_memory({self, other}, {result});
   add_out_npu_nocheck(self, other, alpha, result);
   at::namedinference::propagate_names_if_nonempty(result, maybe_names);
