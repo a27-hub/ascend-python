@@ -27,7 +27,7 @@ namespace {
 constexpr int64_t NZ_16 = 16;
 constexpr int64_t NZ_C0_8 = 8;
 constexpr int64_t NZ_C0_16 = 16;
-constexpr int64_t F8F4_NZ_BLOCK_N = 64; // F8F4 FRACTAL_NZ：n 按 64 元素（32B）分块
+constexpr int64_t NZ_C0_32 = 32; // F8F4 T-CG NZ：逻辑 C0=32 个 FP4（16B），NZ_C0_32 风格布局
 constexpr int64_t TCG_GROUP_SIZE = 32;
 constexpr int64_t DIMS_1 = 1;
 constexpr int64_t DIMS_2 = 2;
@@ -475,10 +475,11 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
 
 // F8F4 T-CG NZ（非转置）专用 prepare：torch 侧 uint8 [K, N/2] 非转置输入
 // out_weight: torch 侧保持 uint8 物理打包视图 [K, N/2] + FRACTAL_NZ 标签，
-// storage 为物理分形 {2*ceildiv(N,64), ceildiv(K,16), 16, 16}（n 按 64 元素=32B 补齐，uint8 字节数精确；
-// 若按 ceildiv(N,32) 分配，N%64∈[1,32] 时 buffer 半量，实测出现行截断 + device 堆越界写，见 SRS §2.5）；
-// 经 ConvertType 统一 ×2 还原为 ACL 4-bit view [K, N]、storage {2*ceildiv(N,64), ceildiv(K,16), 16, 32}、
-// format FRACTAL_NZ，与 ops-math 校验一致。
+// storage 为物理分形 {ceildiv(N,32), ceildiv(K,16), 16, 16}（uint8 字节数精确）；
+// 经 ConvertType 统一 ×2 还原为 ACL 4-bit view [K, N]、storage {ceildiv(N,32), ceildiv(K,16), 16, 32}、
+// format FRACTAL_NZ，与 ops-math 校验一致。该布局经探针字节级确证为 qbmmv4 T-CG kernel 真布局
+// （n0=32、N 块在前：nibble addr(k,n) = (n/32)*(ceildiv(K,16)*512) + k*32 + (n%32)，低 nibble=偶数 n），
+// 复用 MX 的 ND→FRACTAL_NZ_C0_32 转换通路产出。
 static void prepare_out_weight_nz_f8f4(QuantContext& ctx) {
   auto weight_sizes = ctx.weight.sizes();
   int64_t weight_dim = ctx.weight.dim();
@@ -487,7 +488,7 @@ static void prepare_out_weight_nz_f8f4(QuantContext& ctx) {
   int64_t n_logical = n_packed * 2; // 每字节 2 个 FP4
 
   c10::SmallVector<int64_t, DIMS_MAX> storage_shape = {
-      2 * ceil_div(n_logical, F8F4_NZ_BLOCK_N), ceil_div(k, NZ_16), NZ_16, NZ_16};
+      ceil_div(n_logical, NZ_C0_32), ceil_div(k, NZ_16), NZ_16, NZ_16};
 
   int64_t storage_size = 1;
   for (auto dim : storage_shape) {
