@@ -72,7 +72,17 @@ if __name__ == "__main__":
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "29505"
     main()
+```
 
+Save the preceding code as `test.py` and run the following command.
+
+```bash
+python3 test.py
+```
+
+The output is as follows. The two lines are the communication domain names obtained by the rank 0 and rank 1 processes, respectively.
+
+```
 group_name_0
 group_name_0
 ```

@@ -78,7 +78,17 @@ if __name__ == "__main__":
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "29505"
     main()
+```
 
+将上述代码保存为test.py，执行如下命令。
+
+```bash
+python3 test.py
+```
+
+输出结果如下，两行分别为rank 0与rank 1进程获取到的集合通信域名称。
+
+```
 group_name_0
 group_name_0
 ```
