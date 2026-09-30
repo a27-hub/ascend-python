@@ -27,7 +27,6 @@ namespace {
 constexpr int64_t NZ_16 = 16;
 constexpr int64_t NZ_C0_8 = 8;
 constexpr int64_t NZ_C0_16 = 16;
-constexpr int64_t NZ_C0_32 = 32; // F8F4 T-CG NZ：逻辑 C0=32 个 FP4（16B），NZ_C0_32 风格布局
 constexpr int64_t TCG_GROUP_SIZE = 32;
 constexpr int64_t DIMS_1 = 1;
 constexpr int64_t DIMS_2 = 2;
@@ -392,44 +391,15 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
   }
 }
 
-// F8F4 T-CG NZ（非转置）专用 prepare：torch 侧 uint8 [K, N/2] 非转置输入
-// out_weight: torch 侧保持 uint8 物理打包视图 [K, N/2] + FRACTAL_NZ 标签，
-// storage 为物理分形 {ceildiv(N,32), ceildiv(K,16), 16, 16}（uint8 字节数精确）；
-// 经 ConvertType 统一 ×2 还原为 ACL 4-bit view [K, N]、storage {ceildiv(N,32), ceildiv(K,16), 16, 32}、
-// format FRACTAL_NZ，与 ops-math 校验一致。该布局经探针字节级确证为 qbmmv4 T-CG kernel 真布局
-// （n0=32、N 块在前：nibble addr(k,n) = (n/32)*(ceildiv(K,16)*512) + k*32 + (n%32)，低 nibble=偶数 n），
-// 复用 MX 的 ND→FRACTAL_NZ_C0_32 转换通路产出。
-static void prepare_out_weight_nz_f8f4(QuantContext& ctx) {
-  auto weight_sizes = ctx.weight.sizes();
-  int64_t weight_dim = ctx.weight.dim();
-  int64_t k = weight_sizes[weight_dim - IDX_2];
-  int64_t n_packed = weight_sizes[weight_dim - IDX_1]; // uint8 物理打包字节数（N/2）
-  int64_t n_logical = n_packed * 2; // 每字节 2 个 FP4
-
-  c10::SmallVector<int64_t, DIMS_MAX> storage_shape = {
-      ceil_div(n_logical, NZ_C0_32), ceil_div(k, NZ_16), NZ_16, NZ_16};
-
-  int64_t storage_size = 1;
-  for (auto dim : storage_shape) {
-    storage_size *= dim;
-  }
-
-  ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
-
-  // 物理打包视图 [K, N/2]：4-bit 的 dtype/format 语义由 ConvertType 与 fake format 标签承担
-  c10::SmallVector<int64_t, DIMS_MAX> out_view_shape = {k, n_packed};
-  ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(out_view_shape);
-
-  at_npu::native::StorageDescHelper::SetDesc(
-      ctx.out_weight, ctx.out_weight.sizes(), storage_shape, ctx.out_weight.strides(), ACL_FORMAT_FRACTAL_NZ);
-}
-
-// F8F4 T-CG 转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → FRACTAL_NZ 转换
+// F8F4 T-CG 转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → FRACTAL_NZ 转换。
+// NZ 分支直接实例化通用 prepare_out_weight_nz 模板：torch 侧 uint8 [K, N/2] 打包视图下
+// NzC0=NZ_C0_16（16B=32 个 FP4）即得 qbmmv4 T-CG 真布局 {ceildiv(N,32), ceildiv(K,16), 16, 32}
+// （n0=32、N 块在前，探针字节级确证；低 nibble=偶数 n），仅 format 标签为 FRACTAL_NZ（T-CG 约定）。
 static void prepare_out_weight_f8f4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
     prepare_out_weight_nd(ctx);
   } else {
-    prepare_out_weight_nz_f8f4(ctx);
+    prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ>(ctx);
   }
 }
 
