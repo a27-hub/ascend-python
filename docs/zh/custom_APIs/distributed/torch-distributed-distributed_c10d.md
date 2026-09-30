@@ -80,3 +80,9 @@ if __name__ == "__main__":
     main()
 
 ```
+预期输出（示例）：
+
+```
+group_name_0
+group_name_0
+```
