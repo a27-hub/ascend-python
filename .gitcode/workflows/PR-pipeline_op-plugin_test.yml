@@ -89,6 +89,9 @@ stages:
               path: code_o
           - name: test
             run: |
+              echo "-------- env --------"
+              env
+              echo "-------- env --------"
               echo "org_name: ${{ env.org_name }}"
               echo "-------- pwd --------"
               pwd
