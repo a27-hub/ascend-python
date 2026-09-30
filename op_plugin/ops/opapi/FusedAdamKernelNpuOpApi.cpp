@@ -16,6 +16,8 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "torch_npu/csrc/core/npu/NPUEvent.h"
+#include "torch_npu/csrc/core/npu/NPUStream.h"
 
 #include <ATen/ops/_fused_adam.h>
 #include <ATen/native/ForeachUtils.h>
@@ -221,6 +223,11 @@ void _fused_adam_(
 		max_exp_avg_sqs_list = at::TensorList(max_exp_avg_sqs_placeholder);
 	}
 
+	auto current_stream = c10_npu::getCurrentNPUStream();
+	c10_npu::NPUEvent start_event;
+	c10_npu::NPUEvent end_event;
+	start_event.record(current_stream);
+
 	_split_and_exec_npu_cmd_fused_adam(
 		self,
 		grads,
@@ -237,6 +244,15 @@ void _fused_adam_(
 		eps,
 		amsgrad,
 		maximize);
+
+	end_event.record(current_stream);
+	end_event.synchronize();
+	const float elapsed_ms = start_event.elapsed_time(end_event);
+	TORCH_NPU_WARN(
+		"FusedAdam NPU elapsed time: ",
+		elapsed_ms,
+		" ms, tensor count: ",
+		self.size());
 }
 
 void _fused_adam_(
