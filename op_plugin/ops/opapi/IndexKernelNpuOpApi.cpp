@@ -44,6 +44,14 @@ at::Tensor index_high_dims_op_api(const at::Tensor& self, std::vector<at::Tensor
 at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Tensor>>& orig)
 {
     DO_COMPATIBILITY(aclnnIndex, acl_op::index(self, orig));
+    if (c10::isComplexType(self.scalar_type())) {
+        // aclnnIndex 不支持 complex64（EZ1001: DT_COMPLEX64 不在 dtype 支持列表）。
+        // 复数索引等价于对 view_as_real 的 [..., 2] 实数视图施加相同索引：
+        // 索引维不含末维，结果末维保持 2 且新分配连续，view_as_complex 合法还原。
+        // 与直接复数索引逐元素一致（910B2 实测：连续/乱序重复/空索引/高维用例均 EXACT）。
+        // 仅覆盖 forward；backward（index_put_ 累计）的 complex64 支持另案处理。
+        return at::view_as_complex(op_api::index(at::view_as_real(self), orig));
+    }
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(orig);
     auto indices = op_plugin::AdvanceIndex::npu_expand_tensors(self, orig, needCast, true);
     return index_high_dims_op_api(self, indices);

@@ -218,6 +218,25 @@ class TestIndex(TestCase):
             npu_output = self.npu_op_exec(npu_input, npu_index)
             self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_index_complex64_dim0(self):
+        torch.manual_seed(0)
+        cpu_input = torch.complex(torch.randn(4, 16, 64), torch.randn(4, 16, 64))
+        npu_input = cpu_input.npu()
+        index = torch.randint(0, 4, (8,))
+        cpu_output = torch.view_as_real(cpu_input[index]).numpy()
+        npu_output = torch.view_as_real(npu_input[index]).cpu().numpy()
+        self.assertRtolEqual(cpu_output, npu_output)
+
+    def test_index_complex64_advanced(self):
+        torch.manual_seed(0)
+        cpu_input = torch.complex(torch.randn(4, 16, 64), torch.randn(4, 16, 64))
+        npu_input = cpu_input.npu()
+        idx_h = torch.randint(0, 16, (4, 32))
+        idx_w = torch.randint(0, 64, (4, 32))
+        cpu_output = torch.view_as_real(cpu_input[:, idx_h, idx_w]).numpy()
+        npu_output = torch.view_as_real(npu_input[:, idx_h, idx_w]).cpu().numpy()
+        self.assertRtolEqual(cpu_output, npu_output)
+
 
 if __name__ == "__main__":
     run_tests()
