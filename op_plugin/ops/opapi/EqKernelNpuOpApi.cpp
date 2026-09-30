@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/ScalarOps.h>
+#include <ATen/TensorIterator.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -20,13 +22,22 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+// torch_npu device check for kernel tensor inputs: scalar-wrapped CPU tensors
+// are handled as scalars, any other non-NPU input raises the device error.
+static void check_tensor_devices_npu(const at::Tensor& tensor) {
+  if (!npu_preparation::is_scalar_wrapped_to_tensor(tensor)) {
+    CheckNpuTensorValid(tensor);
+  }
+}
+
 at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq_out(self, other, result));
   if (is_ascend950_path()) {
     auto [self_device, other_device] = prepare_binary_tensors(self, other);
     auto maybe_names = op_plugin::utils::compute_names_npu({self, other});
-    auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
-    npu_preparation::check_tensor({self_device, other_device}, result, output_size);
+    CheckNpuTensorValid(self_device);
+    CheckNpuTensorValid(other_device);
+    at::TensorIterator::comparison_op(result, self_device, other_device);
     EXEC_NPU_CMD(aclnnEqTensor, self_device, other_device, result);
     at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
@@ -39,9 +50,12 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
   } else if (npu_preparation::IsCPUScalar(self)) {
     return op_api::eq_out(other, self.item(), result);
   }
+  check_tensor_devices_npu(self);
+  check_tensor_devices_npu(other);
 
-  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-  npu_preparation::check_tensor({self, other}, result, at::IntArrayRef(output_size));
+  // Build the iterator to validate/resize the output with ATen-compatible
+  // memory-dense strides.
+  at::TensorIterator::comparison_op(result, self, other);
   EXEC_NPU_CMD(aclnnEqTensor, self, other, result);
   at::namedinference::propagate_names_if_nonempty(result, maybe_names);
   return result;
@@ -52,9 +66,10 @@ at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
   if (is_ascend950_path()) {
     auto [self_device, other_device] = prepare_binary_tensors(self, other);
     auto maybe_names = op_plugin::utils::compute_names_npu({self, other});
-    auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
-    at::Tensor result =
-        npu_preparation::apply_tensor_without_format(output_size, self_device.options().dtype(at::kBool));
+    CheckNpuTensorValid(self_device);
+    CheckNpuTensorValid(other_device);
+    at::Tensor result = at::empty(0, self_device.options().dtype(at::kBool));
+    at::TensorIterator::comparison_op(result, self_device, other_device);
     EXEC_NPU_CMD(aclnnEqTensor, self_device, other_device, result);
     at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
@@ -67,12 +82,16 @@ at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
   } else if (npu_preparation::IsCPUScalar(self)) {
     return op_api::eq(other, self.item());
   }
+  check_tensor_devices_npu(self);
+  check_tensor_devices_npu(other);
 
-  // calculate the output size
-  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-
-  // construct the output tensor of the NPU
-  at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
+  // Allocate the output through TensorIterator so its strides follow the
+  // memory-dense layout of the inputs, matching ATen native semantics.
+  // Pre-create an empty contiguous output: the iterator then resizes it via
+  // as_strided_, avoiding empty() with a non-contiguous memory format that
+  // some strided inputs would otherwise propagate.
+  at::Tensor result = at::empty(0, self.options().dtype(at::kBool));
+  at::TensorIterator::comparison_op(result, self, other);
 
   // calculate the output result of the NPU
   EXEC_NPU_CMD(aclnnEqTensor, self, other, result);
@@ -88,12 +107,10 @@ at::Tensor& eq_out_npu_scalar(at::Tensor& result, const at::Tensor& self, at::Sc
 
 at::Tensor eq(const at::Tensor& self, const at::Scalar& other) {
   DO_COMPATIBILITY(aclnnEqScalar, acl_op::eq(self, other));
-
-  // calculate the output size
-  auto output_size = op_infer::input_same_output_size(self);
-
-  // construct the output tensor of the NPU
-  at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
+  CheckNpuTensorValid(self);
+  at::Tensor result = at::empty(0, self.options().dtype(at::kBool));
+  at::Tensor other_tensor = at::native::wrapped_scalar_tensor(other);
+  at::TensorIterator::comparison_op(result, self, other_tensor);
 
   // calculate the output result of the NPU
   eq_out_npu_scalar(result, self, other);
@@ -102,7 +119,9 @@ at::Tensor eq(const at::Tensor& self, const at::Scalar& other) {
 
 at::Tensor& eq_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnEqScalar, acl_op::eq_out(self, other, result));
-  npu_preparation::check_tensor({self}, result, self.sizes());
+  CheckNpuTensorValid(self);
+  at::Tensor other_tensor = at::native::wrapped_scalar_tensor(other);
+  at::TensorIterator::comparison_op(result, self, other_tensor);
 
   eq_out_npu_scalar(result, self, other);
 

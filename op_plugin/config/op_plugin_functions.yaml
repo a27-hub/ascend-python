@@ -2151,21 +2151,10 @@ official:
     acl_op: all_version
     op_api: all_version
     dvm: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: '(self.scalar_type() == at::ScalarType::Bool || self.scalar_type() == at::ScalarType::Long) ? at::kFloat : self.scalar_type()'
-        name: self
-      exec: aclnnExp
 
   - func: exp.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: self
-        name: self
-      exec: aclnnExp
 
   - func: exp2(Tensor self) -> Tensor
     acl_op: all_version
