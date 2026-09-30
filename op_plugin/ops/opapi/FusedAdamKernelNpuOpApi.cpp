@@ -16,13 +16,12 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/OpAdapter.h"
-#include "torch_npu/csrc/core/npu/NPUEvent.h"
-#include "torch_npu/csrc/core/npu/NPUStream.h"
 
 #include <ATen/ops/_fused_adam.h>
 #include <ATen/native/ForeachUtils.h>
 
 #include <algorithm>
+#include <chrono>
 #include <vector>
 
 namespace op_api {
@@ -130,7 +129,9 @@ void _split_and_exec_npu_cmd_fused_adam(
 		return;
 	}
 
+	int64_t total_batch_construct_ns = 0;
 	for (size_t offset = 0; offset < self.size(); offset += max_tensor_count) {
+		const auto batch_start = std::chrono::steady_clock::now();
 		size_t current_count = std::min(max_tensor_count, self.size() - offset);
 		at::TensorList self_batch(self.data() + offset, current_count);
 		at::TensorList grads_batch(grads.data() + offset, current_count);
@@ -141,6 +142,9 @@ void _split_and_exec_npu_cmd_fused_adam(
 			max_exp_avg_sqs_batch = at::TensorList(max_exp_avg_sqs.data() + offset, current_count);
 		}
 		at::TensorList state_steps_batch(state_steps.data() + offset, current_count);
+		const auto batch_end = std::chrono::steady_clock::now();
+		total_batch_construct_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(
+			batch_end - batch_start).count();
 
 		EXEC_NPU_CMD(
 			aclnnFusedAdam,
@@ -160,6 +164,12 @@ void _split_and_exec_npu_cmd_fused_adam(
 			amsgrad,
 			maximize);
 	}
+
+	TORCH_NPU_WARN(
+		"FusedAdam total batch construction time: ",
+		total_batch_construct_ns,
+		" ns, tensor count: ",
+		self.size());
 }
 } // namespace
 
@@ -223,11 +233,6 @@ void _fused_adam_(
 		max_exp_avg_sqs_list = at::TensorList(max_exp_avg_sqs_placeholder);
 	}
 
-	auto current_stream = c10_npu::getCurrentNPUStream();
-	c10_npu::NPUEvent start_event;
-	c10_npu::NPUEvent end_event;
-	start_event.record(current_stream);
-
 	_split_and_exec_npu_cmd_fused_adam(
 		self,
 		grads,
@@ -244,15 +249,6 @@ void _fused_adam_(
 		eps,
 		amsgrad,
 		maximize);
-
-	end_event.record(current_stream);
-	end_event.synchronize();
-	const float elapsed_ms = start_event.elapsed_time(end_event);
-	TORCH_NPU_WARN(
-		"FusedAdam NPU elapsed time: ",
-		elapsed_ms,
-		" ms, tensor count: ",
-		self.size());
 }
 
 void _fused_adam_(
