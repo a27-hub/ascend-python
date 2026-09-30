@@ -100,7 +100,8 @@ class TestStridePropagation(TestCase):
     def test_exp_default_dtype(self):
         original_dtype = torch.get_default_dtype()
         try:
-            for default_dtype in (torch.float32, torch.float64):
+            # Ascend910B does not support double; validate the supported default.
+            for default_dtype in (torch.float32,):
                 torch.set_default_dtype(default_dtype)
                 for input_dtype in (torch.int32, torch.bool):
                     cpu = torch.arange(6, dtype=torch.int32).reshape(2, 3).t().to(input_dtype)
