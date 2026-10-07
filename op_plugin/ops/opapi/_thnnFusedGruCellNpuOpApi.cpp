@@ -73,8 +73,8 @@ bool thnn_fused_gru_cell_need_graph(
     const c10::optional<at::Tensor>& input_bias,
     const c10::optional<at::Tensor>& hidden_bias) {
   return at::GradMode::is_enabled() && (input_gates.requires_grad() || hidden_gates.requires_grad() ||
-      hx.requires_grad() || (input_bias.has_value() && input_bias->requires_grad()) ||
-      (hidden_bias.has_value() && hidden_bias->requires_grad()));
+      hx.requires_grad() || (input_bias.has_value() && input_bias->defined() && input_bias->requires_grad()) ||
+      (hidden_bias.has_value() && hidden_bias->defined() && hidden_bias->requires_grad()));
 }
 
 // Fused forward (no-graph path: inference / no_grad calls).

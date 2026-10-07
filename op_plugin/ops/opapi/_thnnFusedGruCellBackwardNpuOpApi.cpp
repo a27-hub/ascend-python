@@ -33,8 +33,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> _thnn_fus
         "aclnnThnnFusedGruCellBackward is not available: check the ThnnFusedGruCellGrad vendor package "
         "installation", OPS_ERROR(ErrCode::NOT_SUPPORT));
 
-    // Matches aten checkGRUBackwardSizes (RNN.cu:628): workspace must be 2D with size (B, 5H)
-    TORCH_CHECK(grad_hy.dim() == 2 && workspace.dim() == 2 && workspace.size(0) == grad_hy.size(0) &&
+    // Matches aten checkGRUBackwardSizes (RNN.cu:628): workspace must be 2D with size (B, 5H).
+    // The rank check comes first so the size check below only indexes valid dimensions.
+    TORCH_CHECK(grad_hy.dim() == 2 && workspace.dim() == 2,
+        "expected grad_hy and workspace to be 2D, but got ", grad_hy.dim(), " and ", workspace.dim(),
+        " dims respectively", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(workspace.size(0) == grad_hy.size(0) &&
         workspace.size(1) == grad_hy.size(1) * 5,
         "expected workspace to be 2D with size (B, 5H) = (", grad_hy.size(0), ", ", grad_hy.size(1) * 5,
         ") to match grad_hy, but got ", workspace.sizes(), OPS_ERROR(ErrCode::PARAM));
