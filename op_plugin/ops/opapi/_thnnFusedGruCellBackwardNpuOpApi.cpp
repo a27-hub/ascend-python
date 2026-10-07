@@ -18,7 +18,6 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-using npu_utils = at_npu::native::NpuUtils;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> _thnn_fused_gru_cell_backward(
     const at::Tensor& grad_hy, const at::Tensor& workspace, bool has_bias)
@@ -40,22 +39,23 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> _thnn_fus
         "expected workspace to be 2D with size (B, 5H) = (", grad_hy.size(0), ", ", grad_hy.size(1) * 5,
         ") to match grad_hy, but got ", workspace.sizes(), OPS_ERROR(ErrCode::PARAM));
 
-    auto grad_hy_cont = npu_utils::format_contiguous(grad_hy);
-    auto storage = npu_utils::format_contiguous(workspace);
-    const auto batch_size = storage.size(0);
-    const auto hidden_size = storage.size(1) / 5;
+    // aclnnThnnFusedGruCellBackward accepts strided inputs directly (the
+    // aclTensor descriptors carry the strides), so grad_hy/workspace are
+    // passed through without materialization.
+    const auto batch_size = workspace.size(0);
+    const auto hidden_size = workspace.size(1) / 5;
 
-    at::Tensor grad_input_gates = at::empty({batch_size, 3 * hidden_size}, storage.options());
-    at::Tensor grad_hidden_gates = at::empty({batch_size, 3 * hidden_size}, storage.options());
-    at::Tensor grad_hx = at::empty({batch_size, hidden_size}, storage.options());
+    at::Tensor grad_input_gates = at::empty({batch_size, 3 * hidden_size}, workspace.options());
+    at::Tensor grad_hidden_gates = at::empty({batch_size, 3 * hidden_size}, workspace.options());
+    at::Tensor grad_hx = at::empty({batch_size, hidden_size}, workspace.options());
     // has_bias=false: bias outputs are undefined (matches CUDA RNN.cu:661-663).
     // Undefined tensors are converted to nullptr by the EXEC_NPU_CMD layer
     // (op_api_common.cpp ConvertType), and the aclnn L2 skips bias slot
     // checks entirely when hasBias=false.
-    at::Tensor grad_input_bias = has_bias ? at::empty({3 * hidden_size}, storage.options()) : at::Tensor();
-    at::Tensor grad_hidden_bias = has_bias ? at::empty({3 * hidden_size}, storage.options()) : at::Tensor();
+    at::Tensor grad_input_bias = has_bias ? at::empty({3 * hidden_size}, workspace.options()) : at::Tensor();
+    at::Tensor grad_hidden_bias = has_bias ? at::empty({3 * hidden_size}, workspace.options()) : at::Tensor();
 
-    EXEC_NPU_CMD(aclnnThnnFusedGruCellBackward, grad_hy_cont, storage, has_bias, grad_input_gates, grad_hidden_gates, grad_hx,
+    EXEC_NPU_CMD(aclnnThnnFusedGruCellBackward, grad_hy, workspace, has_bias, grad_input_gates, grad_hidden_gates, grad_hx,
         grad_input_bias, grad_hidden_bias);
 
     return std::make_tuple(std::move(grad_input_gates), std::move(grad_hidden_gates), std::move(grad_hx),
