@@ -1,4 +1,4 @@
-# （beta）torch.distributed.is_hccl_available
+# （beta）torch.distributed.is_hccl_available.
 
 ## 产品支持情况
 
