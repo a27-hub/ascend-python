@@ -90,21 +90,19 @@ stages:
           - name: set build skip flag
             id: set-skip
             run: |
-              echo "changed: ${{ steps.filter.outputs.changed_files }}"
-              echo "non-doc: ${{ steps.filter.outputs.non-doc }}"
-              if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
+              CHANGED_FILES="${{ steps.filter.outputs.changed_files }}"
+              NON_DOC="${{ steps.filter.outputs.non-doc }}"
+
+              echo "changed: $CHANGED_FILES"
+              echo "non-doc: $NON_DOC"
+              if [ "$NON_DOC" = "true" ]; then
                 echo "need_build_ut=yes" >> "$ATOMGIT_OUTPUT"
               else
                 echo "need_build_ut=no" >> "$ATOMGIT_OUTPUT"
               fi
-              echo "${{ steps.filter.outputs.changed_files }}" | tr -d '[]" ' | tr ',' '\n' > modify_files.txt
+
+              echo "$CHANGED_FILES" | tr -d '[]" ' | tr ',' '\n' > modify_files.txt
               cat modify_files.txt
-          - name: upload modify_files.txt
-            uses: upload-artifact
-            with:
-              name: modify_files.txt
-              path: modify_files.txt
-              overwrite: true
 
       associate_pr_comment:
         name: associate_pr_comment
