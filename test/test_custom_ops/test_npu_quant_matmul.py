@@ -772,6 +772,43 @@ class TestQuantMatmul(TestCase):
 
         self.assertTrue(self.golden_compare(npu_out.cpu(), cpu_out, K))
 
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_matmul_a8w4_float_tcg_nz_uint8(self):
+        # A8W4-float T-CG NZ: x1=fp8, x2=uint8 载体打包 2 个 fp4(NZ 布局), x2Scale=fp16, yScale=u64
+        fp4_table = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0,
+                              -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0], dtype=np.float32)
+        m, k, n, gs = 16, 64, 64, 32
+        rng = np.random.default_rng(42)
+        x1_np = rng.uniform(-1.0, 1.0, size=(m, k)).astype(np.float32)
+        weight_np = rng.integers(0, 256, size=(k, n // 2), dtype=np.uint8)
+        scale_np = rng.choice(np.array([0.5, 1.0, 1.5, 2.0], dtype=np.float32),
+                              size=(k // gs, n)).astype(np.float16)
+        yscale_np = rng.choice(np.array([0.5, 1.0, 1.5, 2.0], dtype=np.float32), size=(1, n))
+
+        # golden: fp4 解码 -> fp16 反量化(对齐 kernel CastWeightF4ToF16) -> 舍入 fp8 -> matmul -> yScale
+        w_dec = np.zeros((k, n), dtype=np.float32)
+        w_dec[:, 0::2] = fp4_table[weight_np & 0x0F]
+        w_dec[:, 1::2] = fp4_table[(weight_np >> 4) & 0x0F]
+        scale_br = np.repeat(scale_np.astype(np.float32), gs, axis=0)
+        w_deq = (w_dec.astype(np.float16) * scale_br.astype(np.float16)).astype(np.float32)
+        x1_fp8 = torch.from_numpy(x1_np).to(torch.float8_e4m3fn)
+        w_deq_fp8 = torch.from_numpy(w_deq).to(torch.float8_e4m3fn).float().numpy()
+        golden = (np.matmul(x1_fp8.float().numpy(), w_deq_fp8) * yscale_np).astype(np.float16)
+
+        # NZ weight 由 preprocess 产出(替代 format_cast), uint8 {K, N/2} 直接作 x2
+        out_weight, out_scale, _, _ = torch_npu.npu_weight_quant_preprocess(
+            torch.from_numpy(weight_np).npu(), torch.from_numpy(scale_np).npu(),
+            x_dtype=torch.float8_e4m3fn, weight_dtype=torch_npu.float4_e2m1fn_x2,
+            weight_scale_dtype=torch.float16, x_scale_dtype=None, k_group_size=gs)
+        yscale_u64 = torch.from_numpy(
+            (yscale_np.view(np.uint32).astype(np.uint64)
+             | (np.uint64(1) << np.uint64(46))).view(np.int64)).npu()
+        custom_output = torch_npu.npu_quant_matmul(
+            x1_fp8.npu(), out_weight, out_scale,
+            x2_dtype=torch_npu.float4_e2m1fn_x2, y_scale=yscale_u64,
+            group_sizes=[0, 0, gs], output_dtype=torch.float16)
+        self.assertRtolEqual(golden, custom_output.cpu().numpy(), 0.001)
+
 
 if __name__ == "__main__":
     run_tests()
