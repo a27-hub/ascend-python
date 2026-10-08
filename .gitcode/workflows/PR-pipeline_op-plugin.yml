@@ -103,6 +103,12 @@ stages:
 
               echo "$CHANGED_FILES" | tr -d '[]" ' | tr ',' '\n' > modify_files.txt
               cat modify_files.txt
+          - name: upload modify_files.txt
+            uses: upload-artifact
+            with:
+              name: modify_files.txt
+              path: modify_files.txt
+              overwrite: true
 
       associate_pr_comment:
         name: associate_pr_comment
