@@ -79,6 +79,11 @@ if __name__ == "__main__":
     os.environ["MASTER_PORT"] = "29505"
     main()
 
+```
+
+预期输出（示例）：
+
+```text
 group_name_0
 group_name_0
 ```
