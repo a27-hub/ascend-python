@@ -134,9 +134,11 @@ void _split_and_exec_npu_cmd_fused_adam(
 		at::TensorList grads_batch(grads.data() + offset, current_count);
 		at::TensorList exp_avgs_batch(exp_avgs.data() + offset, current_count);
 		at::TensorList exp_avg_sqs_batch(exp_avg_sqs.data() + offset, current_count);
-		at::TensorList max_exp_avg_sqs_batch = max_exp_avg_sqs;
-		if (amsgrad || max_exp_avg_sqs.size() != 1) {
+		at::TensorList max_exp_avg_sqs_batch;
+		if (amsgrad) {
 			max_exp_avg_sqs_batch = at::TensorList(max_exp_avg_sqs.data() + offset, current_count);
+		} else {
+			max_exp_avg_sqs_batch = at::TensorList();
 		}
 		at::TensorList state_steps_batch(state_steps.data() + offset, current_count);
 
@@ -212,21 +214,15 @@ void _fused_adam_(
 		return;
 	}
 
-	std::vector<at::Tensor> max_exp_avg_sqs_placeholder;
 	const at::Tensor grad_scale_tensor = grad_scale.value_or(at::Tensor());
 	const at::Tensor found_inf_tensor = found_inf.value_or(at::Tensor());
-	at::TensorList max_exp_avg_sqs_list(max_exp_avg_sqs);
-	if (!amsgrad && max_exp_avg_sqs.empty() && !self.empty()) {
-		max_exp_avg_sqs_placeholder.emplace_back(at::zeros({1}, self[0].options().requires_grad(false)));
-		max_exp_avg_sqs_list = at::TensorList(max_exp_avg_sqs_placeholder);
-	}
 
 	_split_and_exec_npu_cmd_fused_adam(
 		self,
 		grads,
 		exp_avgs,
 		exp_avg_sqs,
-		max_exp_avg_sqs_list,
+		max_exp_avg_sqs,
 		state_steps,
 		grad_scale_tensor,
 		found_inf_tensor,
