@@ -23,21 +23,21 @@
 
 namespace op_api {
 
-// bernoulli 随机流 generator offset 前进量（与 CANN ops-math 仓 stateless_bernoulli kernel 实际消耗一致）：
-// - 标量语义：rounds*4，rounds=ceil(numel/(T*4))，T=256*min(ceil(numel/256), 78*8)
-//   （对应 tiling CalcExecutionPoliciesForBlocks：SIMT_THREAD_GROUP_SIZE=256、AIC_CLUSTER_COUNT=78、
-//    MAX_THREADS_PER_AIC=2048；numel<=638976 时恒为 4）
-// - 张量语义：kernel 单轮消耗恒为 4
-// - 空 tensor：不前进（对齐竞品 numel==0 提前返回、不消耗 offset）
-// 注：offset 前进量必须是 4 的倍数（philox counter 按 offset/4 折算，非 4 倍数会被
-// tiling 的 offset%4 校验拒绝，导致同一会话连续调用失败）
+// bernoulli 随机流 generator offset 前进量（PTA 侧适配；kernel 维持 ceil(offset/4) 折算与
+// offset%4==0 约束，不引入竞品 curand 的 floor 语义）：
+// - 标量语义：rounds*4，与竞品标量版一致随 shape 动态（T=256*min(ceil(n/256), 78*8)，
+//   与 CANN ops-math 3510 tiling CalcExecutionPoliciesForBlocks 同式，n<=638976 恒为 4）
+// - 张量语义：12，竞品张量版固定 10（philox_cuda_state(10)）按 4 倍数上取整：
+//   直接用 10 会使同会话下一次调用 offset=10 违反 tiling 的 offset%4==0 约束而被拒绝；
+//   12>=10 同时覆盖 2201 DSA 路径（消耗约定<=10）
+// - 空 tensor：0（对齐竞品，不消耗）
 static uint64_t BernoulliPhiloxOffsetIncr(int64_t numel, bool isScalar)
 {
   if (numel == 0) {
     return 0;
   }
   if (!isScalar) {
-    return 4;
+    return 12;
   }
   constexpr int64_t threadGroup = 256;
   constexpr int64_t clusterThreadsCap = 78 * (2048 / threadGroup);
