@@ -117,9 +117,9 @@ stages:
           - name: setup-python
             uses: setup-python
             with:
-              version: 3.12
+              version: 3.14.3
           - name: api-scan
-            uses: openlibing/api-scan-action@2c7e082937c1389bf2efd6a2d846249ee33d4114
+            uses: openlibing/api-scan-action@v1.0.1
 
   # #     # Antipoison:
   # #     #   name: Antipoison
