@@ -104,6 +104,21 @@ stages:
               echo "${ATOMGIT_WORKSPACE}/code_o"
               ls ${ATOMGIT_WORKSPACE}/code_o
 
+      api-scan:
+        name: api-scan
+        runs-on: [ "codearts-hosted", "ubuntu-latest", "x64", "slim" ]
+        steps:
+          - name: checkout
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+          - name: setup-python
+            uses: setup-python
+            with:
+              version: 3.12
+          - name: api-scan
+            uses: openlibing/api-scan-action@2c7e082937c1389bf2efd6a2d846249ee33d4114
+
   # #     # Antipoison:
   # #     #   name: Antipoison
   # #     #   # runs-on: [ self-hosted, arch=x64, os=euler ]
