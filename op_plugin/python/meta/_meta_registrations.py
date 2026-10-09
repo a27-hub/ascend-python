@@ -4608,6 +4608,11 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
             elif (is_a8w4_float and (x2.dtype == torch.float32 or x2_dtype == torch_npu.float4_e2m1fn_x2)
                     and pertoken_scale is None):
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
+                # TCG ND uint8 载体约定 x2 为 {N, K/2} 连续视图（K 维打包）：末维解包后恰等于 K
+                # 则按 ND 取倒数第二维为 N（K==N 时与 NZ 解释等价，不影响结果）
+                if (x2_dtype == torch_npu.float4_e2m1fn_x2 and x2.dim() >= 2
+                        and x2.size(x2.dim() - 1) * x2_unpack_factor == x1.size(x1.dim() - 1)):
+                    dimn = x2.size(x2.dim() - 2)
 
             dim_list.append(dimm)
             dim_list.append(dimn)
