@@ -69,7 +69,7 @@ class TestNpuWeightQuantPreprocess(TestCase):
     def test_npu_weight_quant_preprocess_f8f4_tcg_nz(self):
         # F8F4 T-CG 非转置：weight uint8 {K, N/2} 沿 N 打包；scale FP16 {G, N}（G=K/32>1）。
         # 非转置走 ND->FRACTAL_NZ 转换，输出 uint8 视图 [K, N/2] + FRACTAL_NZ 标签，
-        # 物理 storage {ceildiv(N,32), ceildiv(K,16), 16, 16}（NZ_C0_32 风格布局）
+        # 物理 storage {ceildiv(N,32), ceildiv(K,16), 16, 16}（C0=32 个 FP4=16B 的 NZ 分形，N 块在前）
         k, n = 256, 128
         g = k // 32
         weight = torch.zeros((k, n // 2), dtype=torch.uint8).npu()
