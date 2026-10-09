@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
 #include <climits>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
@@ -21,15 +22,39 @@
 #include "torch_npu/csrc/aten/mirror/NPUMemoryOverlap.h"
 
 namespace op_api {
-static const uint64_t PHILOX_DEFAULT_NUM = 10;
+
+// bernoulli 随机流 generator offset 前进量（PTA 侧适配；kernel 维持 ceil(offset/4) 折算与
+// offset%4==0 约束，不引入竞品 curand 的 floor 语义）：
+// - 标量语义：rounds*4，与竞品标量版一致随 shape 动态（T=256*min(ceil(n/256), 78*8)，
+//   与 CANN ops-math 3510 tiling CalcExecutionPoliciesForBlocks 同式，n<=638976 恒为 4）
+// - 张量语义：12，竞品张量版固定 10（philox_cuda_state(10)）按 4 倍数上取整：
+//   直接用 10 会使同会话下一次调用 offset=10 违反 tiling 的 offset%4==0 约束而被拒绝；
+//   12>=10 同时覆盖 2201 DSA 路径（消耗约定<=10）
+// - 空 tensor：0（对齐竞品，不消耗）
+static uint64_t BernoulliPhiloxOffsetIncr(int64_t numel, bool isScalar)
+{
+  if (numel == 0) {
+    return 0;
+  }
+  if (!isScalar) {
+    return 12;
+  }
+  constexpr int64_t threadGroup = 256;
+  constexpr int64_t clusterThreadsCap = 78 * (2048 / threadGroup);
+  int64_t totalThreads = threadGroup * std::min((numel + threadGroup - 1) / threadGroup, clusterThreadsCap);
+  return static_cast<uint64_t>(((numel + totalThreads * 4 - 1) / (totalThreads * 4)) * 4);
+}
 
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor& bernoulli_(at::Tensor& self, double p, c10::optional<at::Generator> gen) {
   at_npu::native::assert_no_internal_overlap(self);
+  if (self.numel() == 0) {
+    return self; // 对齐竞品：空 tensor 不消耗 generator offset
+  }
   DO_COMPATIBILITY(aclnnInplaceBernoulli, acl_op::bernoulli_(self, p, gen));
   auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
-  auto pair = gen_->philox_engine_inputs(PHILOX_DEFAULT_NUM);
+  auto pair = gen_->philox_engine_inputs(BernoulliPhiloxOffsetIncr(self.numel(), /*isScalar=*/true));
   const uint64_t seed = pair.first;
   const uint64_t offset = pair.second;
 
@@ -40,6 +65,9 @@ at::Tensor& bernoulli_(at::Tensor& self, double p, c10::optional<at::Generator> 
 
 at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p, c10::optional<at::Generator> gen) {
   at_npu::native::assert_no_internal_overlap(self);
+  if (self.numel() == 0) {
+    return self; // 对齐竞品：空 tensor 不消耗 generator offset
+  }
   DO_COMPATIBILITY(aclnnInplaceBernoulliTensor, acl_op::bernoulli_(self, p, gen));
   at::Tensor cp_p = p;
   if (npu_preparation::IsCPUScalar(p)) {
@@ -47,7 +75,7 @@ at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p, c10::optional<at::
     cp_p = npu_preparation::copy_scalar_to_device(scalar, p.scalar_type(), self.device());
   }
   auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
-  auto pair = gen_->philox_engine_inputs(PHILOX_DEFAULT_NUM);
+  auto pair = gen_->philox_engine_inputs(BernoulliPhiloxOffsetIncr(self.numel(), /*isScalar=*/false));
   const uint64_t seed = pair.first;
   const uint64_t offset = pair.second;
   EXEC_NPU_CMD(aclnnInplaceBernoulliTensor, self, cp_p, seed, offset);
