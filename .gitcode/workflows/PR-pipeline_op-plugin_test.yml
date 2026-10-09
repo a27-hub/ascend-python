@@ -110,11 +110,10 @@ stages:
         runs-on: [ "codearts-hosted", "ubuntu-latest", "x64", "slim" ]
         steps:
           - name: checkout
-            run: |
-              git init .
-              git remote add origin https://gitcode.com/ComputingActionTest/op-plugin.git
-              git fetch --depth=1 origin +refs/merge-requests/${{ env.pr_id }}/merge
-              git checkout FETCH_HEAD
+            uses: checkout
+            with:
+              ref: refs/merge-requests/${{ env.pr_id }}/merge
+              allow-unsafe-pr-checkout: true
           - name: setup-python
             uses: setup-python
             with:
