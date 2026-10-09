@@ -17,6 +17,7 @@ on:
 permissions:
   pr: write
   action: read
+  repository: read
   id-token: write
 
 env:
