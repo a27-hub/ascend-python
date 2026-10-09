@@ -172,7 +172,8 @@ at::Tensor npu_quant_matmul(
   auto x2_dim_num = x2.dim();
   auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
   if (is_a8W4_float_u8 && !trans_x2) {
-    x2_n_dim = x2.size(x2_dim_num - 1) * FP4_IN_INT8;
+    // TCG uint8 载体：NZ 为 {K, N/2}（N 维打包需解包）；ND 按 {N, K/2} 连续视图传入（K 维打包，N 取倒数第二维）
+    x2_n_dim = is_nz_format(x2) ? x2.size(x2_dim_num - 1) * FP4_IN_INT8 : x2.size(x2_dim_num - 2);
   }
 
 #if VERSION_BETWEEN(V2R1, V2R7)
@@ -247,7 +248,9 @@ at::Tensor npu_quant_matmul(
   const at::Tensor& pertoken_scale_real = pertoken_scale.value_or(at::Tensor());
   const at::Tensor& bias_real = bias.value_or(at::Tensor());
   bool transpose1 = false;
-  bool transpose2 = false;
+  // TCG ND uint8 载体：aclnnQuantMatmulV5 对 A8W4 fp8/4 ND 强制 transposeX2=true（x2 按 {N,K} 连续视图传入）；
+  // NZ（WeightNz 入口）要求 transposeX2=false，保持默认
+  bool transpose2 = is_a8W4_float_u8 && !is_nz_format(x2);
 
   TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
   TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
