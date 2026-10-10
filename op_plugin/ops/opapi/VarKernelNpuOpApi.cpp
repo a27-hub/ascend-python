@@ -78,6 +78,10 @@ std::tuple<at::Tensor, at::Tensor> var_mean(
     auto cpu_tup = at::var_mean(self.cpu(), dim, correction, keepdim);
     return std::make_tuple(std::get<0>(cpu_tup).to(self.options()), std::get<1>(cpu_tup).to(self.options()));
   }
+  if (self.scalar_type() == at::kBFloat16) {
+    auto fp32_tup = at::var_mean(self.to(at::kFloat), dim, correction, keepdim);
+    return std::make_tuple(std::get<0>(fp32_tup).to(self.options()), std::get<1>(fp32_tup).to(self.options()));
+  }
   c10::SmallVector<int64_t, N> real_dim = op_plugin::utils::get_dimlist_for_tensor(self);
   if (dim.has_value()) {
     real_dim = op_infer::array_to_small_vector(dim.value());
