@@ -479,7 +479,7 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
 // （n0=32、N 块在前，探针字节级确证；低 nibble=偶数 n）。
 static void prepare_out_weight_f8f4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
-    prepare_out_weight_nd(ctx);
+    prepare_out_weight_nd_direct(ctx);
   } else {
     prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>(ctx);
   }
