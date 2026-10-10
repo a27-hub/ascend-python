@@ -298,7 +298,7 @@ static void prepare_out_weight_scale_direct(QuantContext& ctx) {
   ctx.out_weight_scale = ctx.weight_scale;
 }
 
-static void prepare_out_weight_nd(QuantContext& ctx) {
+static void prepare_out_weight_nd_direct(QuantContext& ctx) {
   // ND 直拷为物理透传，out_weight 直接别名 weight（共享 storage 与 view，转置场景尤为关键）
   ctx.out_weight = ctx.weight;
 }
@@ -385,7 +385,7 @@ static void prepare_out_weight_nz_a16w4(QuantContext& ctx) {
 // A16W4（INT4/FP4）转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → NZ 转换
 static void prepare_out_weight_a16w4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
-    prepare_out_weight_nd(ctx);
+    prepare_out_weight_nd_direct(ctx);
   } else {
     prepare_out_weight_nz_a16w4(ctx);
   }
@@ -398,7 +398,7 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
 // （n0=32、N 块在前，探针字节级确证；低 nibble=偶数 n）。
 static void prepare_out_weight_f8f4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
-    prepare_out_weight_nd(ctx);
+    prepare_out_weight_nd_direct(ctx);
   } else {
     prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>(ctx);
   }
@@ -471,7 +471,7 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>
         prepare_out_weight_offset_direct,
         prepare_out_bias_direct}},
       {judge_mm_a16s4_per_tensor,
-       {prepare_out_weight_nd,
+       {prepare_out_weight_nd_direct,
         prepare_out_weight_scale_direct,
         prepare_out_weight_offset_direct,
         prepare_out_bias_direct}},
