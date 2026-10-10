@@ -72,7 +72,7 @@ void npu_scatter_pa_kv_cache(
   c10::SmallVector<int64_t, op_infer::SIZE> offsets_size = {0, 0};
   at::IntArrayRef offsets = at::IntArrayRef(offsets_size);
 
-  EXEC_NPU_NO_FORMAT_CHECK_CMD(
+  EXEC_NPU_CMD(
       aclnnScatterPaKvCache,
       key,
       key_cache,
