@@ -27,7 +27,6 @@ namespace {
 constexpr int64_t NZ_16 = 16;
 constexpr int64_t NZ_C0_8 = 8;
 constexpr int64_t NZ_C0_16 = 16;
-constexpr int64_t TCG_GROUP_SIZE = 32;
 constexpr int64_t DIMS_1 = 1;
 constexpr int64_t DIMS_2 = 2;
 constexpr int64_t DIMS_3 = 3;
@@ -282,10 +281,11 @@ bool judge_mm_a8f4_tcg(QuantContext& ctx) {
 
   // F8F4 T-CG per-group：FP4 weight + FP16/BF16 per-group scale [G, N]（G > 1，gs 固定 32）；
   // 与 MX（scale=E8M0）、A16 系（x=F16/BF16）由 x dtype / scale dtype / x_scale 互斥；
-  // 转置状态内部分流：转置 → ND 直拷，非转置 → FRACTAL_NZ 转换（prepare_out_weight_f8f4）
+  // 转置状态内部分流：转置 → ND 直拷，非转置 → FRACTAL_NZ_C0_32 转换（prepare_out_weight_f8f4）；
+  // kGroupSize 预处理不消费，不下发判定——gs != 32 由下游 aclnn/tiling 响亮拦截
   if (x_acl_dtype == ACL_FLOAT8_E4M3FN && weight_acl_dtype == ACL_FLOAT4_E2M1 && scale_dtype_match &&
       x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 &&
-      ctx.weight_scale.size(0) > 1 && ctx.k_group_size == TCG_GROUP_SIZE) {
+      ctx.weight_scale.size(0) > 1) {
     check_a16w4_uint8_carrier(ctx);
     ctx.is_weight_trans = is_transpose_certain_two_dims(ctx.weight, 0);
     return true;
@@ -391,15 +391,16 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
   }
 }
 
-// F8F4 T-CG 转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → FRACTAL_NZ 转换。
-// NZ 分支直接实例化通用 prepare_out_weight_nz 模板：torch 侧 uint8 [K, N/2] 打包视图下
-// NzC0=NZ_C0_16（16B=32 个 FP4）即得 qbmmv4 T-CG 真布局 {ceildiv(N,32), ceildiv(K,16), 16, 32}
-// （n0=32、N 块在前，探针字节级确证；低 nibble=偶数 n），仅 format 标签为 FRACTAL_NZ（T-CG 约定）。
+// F8F4 T-CG 转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → FRACTAL_NZ_C0_32 转换。
+// NZ 分支与 mxfp4 同约定实例化通用 prepare_out_weight_nz 模板：torch 侧 uint8 [K, N/2] 打包视图挂
+// 假标签 NZ_C0_16（字节口径，16B=32 个 FP4），ConvertType 经 FORMAT_FAKE_TO_REAL 映射为真实
+// FRACTAL_NZ_C0_32（元素口径），即得 qbmmv4 T-CG 真布局 {ceildiv(N,32), ceildiv(K,16), 16, 32}
+// （n0=32、N 块在前，探针字节级确证；低 nibble=偶数 n）。
 static void prepare_out_weight_f8f4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
     prepare_out_weight_nd(ctx);
   } else {
-    prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ>(ctx);
+    prepare_out_weight_nz<false, NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_16>(ctx);
   }
 }
 
