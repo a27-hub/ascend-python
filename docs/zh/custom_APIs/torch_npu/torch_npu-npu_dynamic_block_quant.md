@@ -26,12 +26,12 @@
   \begin{cases}
   min(input\_max / FP8\_MAX, 1 / min\_scale), & dst\_type \text{ 指定为 FP8} \\
   min(input\_max / HiF8\_MAX, 1 / min\_scale), & dst\_type \text{ 指定为 HiF8} \\
-  min(input\_max / `torch.int8`\_MAX, 1 / min\_scale), & dst\_type \text{ 指定为 `torch.int8`}
+  min(input\_max / INT8\_MAX, 1 / min\_scale), & dst\_type \text{ 指定为 INT8}
   \end{cases}
   $$
 
   $$
-  y = cast\_to\_[FP8/HiF8/`torch.int8`](x / scale)
+  y = cast\_to\_[FP8/HiF8/INT8](x / scale)
   $$
 
   其中$block\_reduce\_max$代表求每个`block`中的最大值。`FP8_MAX`、`HiF8_MAX`、`INT8_MAX`分别表示FP8、HiF8、`torch.int8`目标量化类型可表示的最大正数值，由`dst_type`决定。当`dst_type_max`不为0时，使用`dst_type_max`的值作为目标类型的最大值。

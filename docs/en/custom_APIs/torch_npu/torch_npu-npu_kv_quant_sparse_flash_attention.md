@@ -13,7 +13,7 @@
 
 - Formula:
     $$
-    Attention=\text{softmax}(\frac{Q @ \text{Dequant}({\tilde{K}^{`torch.int8`}},{Scale_K})^T}{\sqrt{d_k}})@\text{Dequant}(\tilde{V}^{`torch.int8`},{Scale_V}),
+    Attention=\text{softmax}(\frac{Q @ \text{Dequant}({\tilde{K}^{INT8}},{Scale_K})^T}{\sqrt{d_k}})@\text{Dequant}(\tilde{V}^{INT8},{Scale_V}),
     $$
     $\tilde{K}$ and $\tilde{V}$ represent the key and value tensors with higher importance obtained through a selection algorithm such as `LightningIndexer`. They typically feature sparse or block-sparse characteristics. $d_k$ represents the per-head dimension of $Q$ and $\tilde{K}$. $\text{Dequant}(\cdot,\cdot)$ represents the dequantization function.
 The `kv_quant_sparse_flash_attention` operator is specifically designed for sparse attention scenarios, with detailed optimizations such as instruction reduction and aggregated data transfer to mitigate the overhead caused by irregular memory access.
