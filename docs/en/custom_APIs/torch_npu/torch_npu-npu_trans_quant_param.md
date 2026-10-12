@@ -15,7 +15,7 @@
 
     1. `out` is a 64-bit value and is initialized to `0`.
 
-    2. Convert `scale` from `float32` to FP19 based on `round_mode`:
+    2. Convert `scale` from `torch.float32` to FP19 based on `round_mode`:
         - When `round_mode` is `0` (truncation and padding mode, default), no R_INT rounding is applied to `scale`.
         - When `round_mode` is `1` (R_INT mode), R_INT rounding is first applied to `scale`:
         $$

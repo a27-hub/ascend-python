@@ -35,13 +35,13 @@
 
     <summary><strong>K-G量化模式</strong></summary>
 
-      - x1为`int8`，x2为`int32`，x1Scale为`float32`，x2Scale为`uint64`/`int64`，yOffset为`float32`：
+      - x1为`torch.int8`，x2为`torch.int32`，x1Scale为`torch.float32`，x2Scale为`torch.uint64`/`torch.int64`，yOffset为`torch.float32`：
 
         $$
         out = ((x1 \mathbin{@} (x2 * \text{x2Scale})) + \text{yOffset}) * \text{x1Scale}
         $$
 
-      - x1、x2为`int4`，x1Scale、x2Scale为`float32`，x2Offset为`float16`，out为`float16`/`bfloat16`（pertoken-pergroup非对称量化）：
+      - x1、x2为`torch_npu.int4`，x1Scale、x2Scale为`torch.float32`，x2Offset为`torch.float16`，out为`torch.float16`/`torch.bfloat16`（pertoken-pergroup非对称量化）：
 
         $$
         out = \text{x1Scale} * \text{x2Scale} * (x1 \mathbin{@} x2 - x1 \mathbin{@} \text{x2Offset})
@@ -59,13 +59,13 @@
         out = x1 \mathbin{@} x2 * \text{x2Scale} * \text{x1Scale}
         $$
 
-      - 有x1Scale，bias为`int32`（此场景无offset）：
+      - 有x1Scale，bias为`torch.int32`（此场景无offset）：
 
         $$
         out = (x1 \mathbin{@} x2 + bias) * \text{x2Scale} * \text{x1Scale}
         $$
 
-      - 有x1Scale，bias为`bfloat16`/`float16`/`float32`（此场景无offset）：
+      - 有x1Scale，bias为`torch.bfloat16`/`torch.float16`/`torch.float32`（此场景无offset）：
 
         $$
         out = x1 \mathbin{@} x2 * \text{x2Scale} * \text{x1Scale} + bias
@@ -83,13 +83,13 @@
         out = x1 \mathbin{@} x2 * \text{x2Scale} + \text{x2Offset}
         $$
 
-      - bias为`int32`：
+      - bias为`torch.int32`：
 
         $$
         out = (x1 \mathbin{@} x2 + bias) * \text{x2Scale} + \text{x2Offset}
         $$
 
-      - bias为`bfloat16`/`float32`（此场景无offset）：
+      - bias为`torch.bfloat16`/`torch.float32`（此场景无offset）：
 
         $$
         out = x1 \mathbin{@} x2 * \text{x2Scale} + bias
@@ -101,7 +101,7 @@
 
     <summary><strong>G-B量化模式</strong></summary>
 
-      x1、x2为`int8`，x1Scale、x2Scale为`float32`，bias为`float32`，out为`float16`/`bfloat16`（pergroup-perblock量化）：
+      x1、x2为`torch.int8`，x1Scale、x2Scale为`torch.float32`，bias为`torch.float32`，out为`torch.float16`/`torch.bfloat16`（pergroup-perblock量化）：
 
       $$
       out = (x1 \mathbin{@} x2) * \text{x1Scale} * \text{x2Scale} + bias
@@ -124,7 +124,7 @@
         out = x1 \mathbin{@} x2 * \text{x2Scale} * \text{x1Scale}
         $$
 
-      - 有x1Scale，bias为`int32`（此场景无offset）：
+      - 有x1Scale，bias为`torch.int32`（此场景无offset）：
 
         $$
         out = (x1 \mathbin{@} x2 + bias) * \text{x2Scale} * \text{x1Scale}
@@ -141,7 +141,7 @@
 
     <summary><strong>K-G量化模式</strong></summary>
 
-      x1、x2为`int4`，x1Scale、x2Scale为`float32`，x2Offset为`float16`，out为`float16`/`bfloat16`（pertoken-pergroup非对称量化）：
+      x1、x2为`torch_npu.int4`，x1Scale、x2Scale为`torch.float32`，x2Offset为`torch.float16`，out为`torch.float16`/`torch.bfloat16`（pertoken-pergroup非对称量化）：
 
       $$
       out = \text{x1Scale} * \text{x2Scale} * (x1 \mathbin{@} x2 - x1 \mathbin{@} \text{x2Offset})
@@ -153,28 +153,28 @@
 
     <summary><strong>T-C和T-T量化模式</strong></summary>
 
-      - x1、x2为`int8`，无x1Scale，x2Scale为`int64`/`uint64`，可选参数x2Offset为`float32`，可选参数bias为`int32`：
+      - x1、x2为`torch.int8`，无x1Scale，x2Scale为`torch.int64`/`torch.uint64`，可选参数x2Offset为`torch.float32`，可选参数bias为`torch.int32`：
 
         $$
         out = (x1 \mathbin{@} x2 + bias) * \text{x2Scale} + \text{x2Offset}
         $$
 
       - 参数满足如下任一条件：
-        - x1、x2为`int8`，无x1Scale，x2Scale为`int64`/`uint64`，可选参数bias为`int32`；
-        - x1、x2为`float8_e4m3fn`/`float8_e5m2`/`hifloat8`，无x1Scale，x2Scale为`int64`/`uint64`，可选参数bias为`float32`；
-        - x1、x2为`int4`，无x1Scale，x2Scale为`int64`/`uint64`，可选参数bias为`int32`。
+        - x1、x2为`torch.int8`，无x1Scale，x2Scale为`torch.int64`/`torch.uint64`，可选参数bias为`torch.int32`；
+        - x1、x2为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`，无x1Scale，x2Scale为`torch.int64`/`torch.uint64`，可选参数bias为`torch.float32`；
+        - x1、x2为`torch_npu.int4`，无x1Scale，x2Scale为`torch.int64`/`torch.uint64`，可选参数bias为`torch.int32`。
 
         $$
         out = (x1 \mathbin{@} x2 + bias) * \text{x2Scale}
         $$
 
-      - x1、x2为`int8`，无x1Scale，x2Scale为`bfloat16`/`float32`，可选参数bias为`bfloat16`/`float32`：
+      - x1、x2为`torch.int8`，无x1Scale，x2Scale为`torch.bfloat16`/`torch.float32`，可选参数bias为`torch.bfloat16`/`torch.float32`：
 
         $$
         out = x1 \mathbin{@} x2 * \text{x2Scale} + bias
         $$
 
-      - x1、x2为`float8_e4m3fn`/`float8_e5m2`/`hifloat8`，x1Scale、x2Scale为`float32`，可选参数bias为`float32`：
+      - x1、x2为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`，x1Scale、x2Scale为`torch.float32`，可选参数bias为`torch.float32`：
 
         $$
         out = x1 \mathbin{@} x2 * \text{x2Scale} * \text{x1Scale} + bias
@@ -187,19 +187,19 @@
     <summary><strong>K-C和K-T量化模式</strong></summary>
 
       - 参数满足如下任一条件：
-        - x1、x2为`int8`，x1Scale为`float32`，x2Scale为`bfloat16`/`float32`，可选参数bias为`int32`；
-        - x1、x2为`int4`，x1Scale为`float32`，x2Scale为`bfloat16`/`float32`，可选参数bias为`int32`。
+        - x1、x2为`torch.int8`，x1Scale为`torch.float32`，x2Scale为`torch.bfloat16`/`torch.float32`，可选参数bias为`torch.int32`；
+        - x1、x2为`torch_npu.int4`，x1Scale为`torch.float32`，x2Scale为`torch.bfloat16`/`torch.float32`，可选参数bias为`torch.int32`。
 
         $$
         out = (x1 \mathbin{@} x2 + bias) * \text{x2Scale} * \text{x1Scale}
         $$
 
       - 参数满足如下任一条件：
-        - x1、x2为`int8`，x1Scale为`float32`，x2Scale为`bfloat16`/`float32`，可选参数bias为`bfloat16`/`float32`；
-        - x1、x2为`int8`，x1Scale为`float32`，x2Scale为`float32`，可选参数bias为`float16`/`float32`；
-        - x1、x2为`int4`，x1Scale为`float32`，x2Scale为`bfloat16`/`float32`，可选参数bias为`bfloat16`/`float32`；
-        - x1、x2为`int4`，x1Scale为`float32`，x2Scale为`float32`，可选参数bias为`float16`/`float32`；
-        - x1、x2为`float8_e4m3fn`/`float8_e5m2`/`hifloat8`，x1Scale、x2Scale为`float32`，可选参数bias为`float32`。
+        - x1、x2为`torch.int8`，x1Scale为`torch.float32`，x2Scale为`torch.bfloat16`/`torch.float32`，可选参数bias为`torch.bfloat16`/`torch.float32`；
+        - x1、x2为`torch.int8`，x1Scale为`torch.float32`，x2Scale为`torch.float32`，可选参数bias为`torch.float16`/`torch.float32`；
+        - x1、x2为`torch_npu.int4`，x1Scale为`torch.float32`，x2Scale为`torch.bfloat16`/`torch.float32`，可选参数bias为`torch.bfloat16`/`torch.float32`；
+        - x1、x2为`torch_npu.int4`，x1Scale为`torch.float32`，x2Scale为`torch.float32`，可选参数bias为`torch.float16`/`torch.float32`；
+        - x1、x2为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`，x1Scale、x2Scale为`torch.float32`，可选参数bias为`torch.float32`。
 
         $$
         out = x1 \mathbin{@} x2 * \text{x2Scale} * \text{x1Scale} + bias
@@ -227,7 +227,7 @@
       out = (x1 \mathbin{@} (x2 * \text{x2Scale})) * \text{yScale}
       $$
 
-      其中，x1为`float8_e4m3fn`，x2为`float4_e2m1fn_x2`，x2Scale为`float16`/`bfloat16`，yScale为`int64`/`uint64`，out类型与x2Scale类型一致。x2为pergroup量化，对输出进行perchannel反量化。
+      其中，x1为`torch.float8_e4m3fn`，x2为`torch_npu.float4_e2m1fn_x2`，x2Scale为`torch.float16`/`torch.bfloat16`，yScale为`torch.int64`/`torch.uint64`，out类型与x2Scale类型一致。x2为pergroup量化，对输出进行perchannel反量化。
 
     </details>
   <!-- end id7 -->

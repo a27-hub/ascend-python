@@ -59,7 +59,7 @@ torch_npu.npu_add_quant_gmm_(self, x1, x2, x2_scale, group_list, *, x1_scale=Non
 - **`group_list`**（`Tensor`）：**必选参数**，代表输入和输出分组轴方向的matmul大小分布，数据类型支持`torch.int64`，1维tensor，shape为\(g，\)，数据格式支持$ND$。当`group_list_type`为0时，`group_list`必须为非负单调非递减数列，并且最后一个值不大于输入tensor的第一维；当`group_list_type`为1时，`group_list`必须为非负数列，并且数值的总和不大于输入tensor的第一维。`group_list`中的值约束了输出数据的有效部分，`group_list`中未指定的部分将不会参与更新。
 - <strong>*</strong>：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **`x1_scale`**（`Tensor`）：**可选参数**，表示矩阵乘法中的左矩阵的缩放因子，数据类型支持`torch_npu.float8_e8m0fnu`、`torch.float32`，shape支持1维、2维或3维，其中`torch_npu.float8_e8m0fnu`需配置可选参数`x1_scale_dtype`为对应类型，此时`x1_scale`本身的`dtype`不再生效，但仍需保证`x1_scale`本身的`dtype`为8bit位的数据类型，以保证shape正确。数据格式支持$ND$。
-- **`group_list_type`**（`int`）：**可选参数**，代表`group_list`的表达形式。数据类型支持`torch.int32`。
+- **`group_list_type`**（`int`）：**可选参数**，代表`group_list`的表达形式。数据类型支持`int32`。
 
   - 0：默认值，`group_list`中数值为分组轴大小的cumsum结果（累积和）。
   - 1：`group_list`中数值为分组轴上每组大小。

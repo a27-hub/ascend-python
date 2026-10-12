@@ -14,7 +14,7 @@
     - `pertoken` quantization: For activation tensors, independent quantization parameters are maintained for each token along the sequence length dimension (`Sequence Length / Token`).
 
 - Calculation formulas:  
-    $x_1$ represents the input `input`. The scenario is determined jointly by `comm_mode` and the data type of `x1`: when `comm_mode` is `ai_cpu`, the basic scenario always applies; when `comm_mode` is `aiv`, the basic scenario applies if `x1` is `float16` or `bfloat16`, and the quantization scenario applies if `x1` is `int8`.
+    $x_1$ represents the input `input`. The scenario is determined jointly by `comm_mode` and the data type of `x1`: when `comm_mode` is `ai_cpu`, the basic scenario always applies; when `comm_mode` is `aiv`, the basic scenario applies if `x1` is `torch.float16` or `torch.bfloat16`, and the quantization scenario applies if `x1` is `torch.int8`.
 
     - Basic scenario:
         $$

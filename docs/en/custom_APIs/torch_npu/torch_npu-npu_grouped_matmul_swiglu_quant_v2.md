@@ -18,7 +18,7 @@
 - Formulas
   - <term>Atlas A3 training products/Atlas A3 inference products</term> and <term>Atlas A2 training products/Atlas A2 inference products</term>:
     <details>
-    <summary>A8W8 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 8 indicates the int8 data type):</summary>
+    <summary>A8W8 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 8 indicates the `torch.int8` data type):</summary>
 
       - **Inputs**
         * $X∈\mathbb{Z_8}^{M \times K}$: activation matrix (left matrix), where $M$ indicates the total number of tokens and $K$ indicates the feature dimension.
@@ -47,7 +47,7 @@
     </details>
 
     <details>
-    <summary>A8W4 quantization scenarios (MSD) (A indicates the activation matrix, W indicates the weight matrix, 8 indicates the int8 data type, and 4 indicates the int4 data type):</summary>
+    <summary>A8W4 quantization scenarios (MSD) (A indicates the activation matrix, W indicates the weight matrix, 8 indicates the `torch.int8` data type, and 4 indicates the `torch_npu.int4` data type):</summary>
 
       - **Inputs**
         * $X∈\mathbb{Z_8}^{M \times K}$: activation matrix (left matrix), where $M$ indicates the total number of tokens and $K$ indicates the feature dimension.
@@ -61,7 +61,7 @@
         * $Q\_scale∈\mathbb{R}^{M}$: quantization scale factor.
       - **Computation**
         1. Determine the token range for each group based on `groupList[i]`, using identical grouping logic to that of A8W8.
-        2. Split the `int8` left matrix input into high and low 4-bit parts.
+        2. Split the `torch.int8` left matrix input into high and low 4-bit parts.
 
           $X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor$，$X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8$
         3. Perform matrix multiplication separately for the high and low parts, apply `perchannel` or `pergroup` quantization scaling, and combine the results with the auxiliary matrix.
@@ -80,7 +80,7 @@
     </details>
 
     <details>
-    <summary>A4W4 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 4 indicates the int4 data type):</summary>
+    <summary>A4W4 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 4 indicates the `torch_npu.int4` data type):</summary>
 
       - **Inputs**
         * $X∈\mathbb{Z_4}^{M \times K}$: activation matrix (left matrix), where $M$ indicates the total number of tokens and $K$ indicates the feature dimension.
@@ -137,9 +137,9 @@
 
          |   DataType    | emax |
          | :-----------: | :--: |
-         | FLOAT8_E4M3FN |  8   |
-         |  FLOAT8_E5M2  |  15  |
-         |  FLOAT4_E2M1  |  2   |
+         | `torch.float8_e4m3fn` |  8   |
+         |  `torch.float8_e5m2`  |  15  |
+         |  `torch_npu.float4_e2m1fn_x2`  |  2   |
 
          where $blocksize$ denotes the number of elements per quantization block. Only `32` is supported.
 
@@ -198,23 +198,23 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 - **`smooth_scale`** (`Tensor`): Optional. Smooth scaling factor, $smoothScale$ in the formulas. The data type can be `torch.float32`. The data layout can be ND. This parameter must be provided only in A4W4 scenarios, and its first axis length must be identical to the first axis dimension of `weight`. The shape of this parameter is `(E, N/2)` or `(E,)`. When shape `(E,)` is used, broadcast multiplication is applied. In other scenarios, the default value is `None`.
 - **`weight_assist_matrix`** (`TensorList`): Optional. Auxiliary matrix for the right matrix, $weightAssistMatrix$ in the formulas. The data type can be `torch.float32`. The data layout can be ND. This parameter must be a 2D tensor. This parameter must be provided only in A8W4 scenarios, where the length of its first dimension must be identical to that of the first dimension of `weight`, and the length of its last dimension must be identical to that of the last dimension of `weight` when restored to the ND layout. In other scenarios, the default value is `None`.
 - **`bias`** (`Tensor`): Optional. Offset value for matrix multiplication computation, $bias$ in the formulas. This parameter must be a 2D tensor. The data type can be `torch.int32`. Currently, only the default value `None` is supported.
-- **`dequant_mode`** (`int`): Optional. Dequantization mode. This parameter is of type `torch.int32` and has a default value of `0`. A value of `0` indicates `pertoken` quantization for the activation matrix and `perchannel` quantization for the weight matrix. A value of `1` indicates `pertoken` quantization for the activation matrix and `pergroup` quantization for the weight matrix. A value of `2` indicates MX quantization.
+- **`dequant_mode`** (`int`): Optional. Dequantization mode. This parameter is of type `int32` and has a default value of `0`. A value of `0` indicates `pertoken` quantization for the activation matrix and `perchannel` quantization for the weight matrix. A value of `1` indicates `pertoken` quantization for the activation matrix and `pergroup` quantization for the weight matrix. A value of `2` indicates MX quantization.
   - <term>Atlas A3 training products/Atlas A3 inference products</term> and <term>Atlas A2 training products/Atlas A2 inference products</term>: In A8W4 scenarios, `dequant_mode` can be `0` or `1`. In A8W8 and A4W4 scenarios, `dequant_mode` can only be `0`.
   - <term>Ascend 950PR/Ascend 950DT</term>: Currently, only `0` and `2` are supported.
 
-- **`dequant_dtype`** (`int`): Optional. Dequantization data type. This parameter is of type `torch.int32`.
+- **`dequant_dtype`** (`int`): Optional. Dequantization data type. This parameter is of type `int32`.
   - <term>Atlas A3 training products/Atlas A3 inference products</term> and <term>Atlas A2 training products/Atlas A2 inference products</term>: Currently, only the default value `6` (indicating `torch.float32`) is supported.
   - <term>Ascend 950PR/Ascend 950DT</term>: The default value is `torch.float32`. Currently, `torch.float32`, `torch.bfloat16`, and `torch.float16` are supported.
 
-- **`quant_mode`** (`int`): Optional. Quantization mode after SwiGLU. This parameter is of type `torch.int32`. Valid values are `0` (default, `pertoken` quantization), `1` (`pergroup` quantization), or `2` (MX quantization).
+- **`quant_mode`** (`int`): Optional. Quantization mode after SwiGLU. This parameter is of type `int32`. Valid values are `0` (default, `pertoken` quantization), `1` (`pergroup` quantization), or `2` (MX quantization).
   - <term>Atlas A3 training products/Atlas A3 inference products</term> and <term>Atlas A2 training products/Atlas A2 inference products</term>: Currently, only the default value `0` (`pertoken` quantization) is supported.
   - <term>Ascend 950PR/Ascend 950DT</term>: Currently, only `0` and `2` are supported.
 
-- **`quant_dtype`** (`int`): Optional. Low-bit data type after quantization. This parameter is of type `torch.int32`.
+- **`quant_dtype`** (`int`): Optional. Low-bit data type after quantization. This parameter is of type `int32`.
   - <term>Atlas A3 training products/Atlas A3 inference products</term> and <term>Atlas A2 training products/Atlas A2 inference products</term>: Currently, only the default value `0` (indicating `torch.int8`) is supported.
   - <term>Ascend 950PR/Ascend 950DT</term>: The default value is `torch.int8`. Currently, `torch.float8_e5m2`, `torch.float8_e4m3fn`, `torch_npu.float4_e2m1fn_x2`, `torch.int8`, and `torch_npu.hifloat8` are supported.
 
-- **`group_list_type`** (`int`): Optional. Input type of `group_list`. This parameter is of type `torch.int32` and has a default value of `0`.
+- **`group_list_type`** (`int`): Optional. Input type of `group_list`. This parameter is of type `int32` and has a default value of `0`.
   - A value of `0` indicates cumsum mode, where each element in `group_list` represents the cumulative length of the current group.
   - A value of `1` indicates count mode, where each element in `group_list` represents the number of elements in the corresponding group.
 - **`tuning_config`** (`List[int]`): Optional. The first element in this parameter array specifies the expected number of tokens processed by each expert. Elements from the second element onward are reserved for future expansion and do not need to be specified by the user. The default value is `None`.

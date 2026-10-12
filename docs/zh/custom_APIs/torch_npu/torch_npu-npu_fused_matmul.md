@@ -33,7 +33,7 @@
   - `x2`是矩阵乘matmul的右矩阵。
   - `x3`是向量计算的矩阵，当`fused_op_type`是`"add"`和`"mul"`时生效。
   - `bias`是矩阵乘的偏置。
-  - `fused_op_type`是输入的string类型，支持`""`（表示不做融合）、`"16cast32"`（表示不做融合，并且输出为FP32，当输入FP16、BF16时会把输出转成FP32）、`"mul"`、`"gelu_erf"`、`"gelu_tanh"`和`"relu"`。
+  - `fused_op_type`是输入的string类型，支持`""`（表示不做融合）、`"16cast32"`（表示不做融合，并且输出为`torch.float32`，当输入`torch.float16`、`torch.bfloat16`时会把输出转成`torch.float32`）、`"mul"`、`"gelu_erf"`、`"gelu_tanh"`和`"relu"`。
 
 ## 函数原型
 

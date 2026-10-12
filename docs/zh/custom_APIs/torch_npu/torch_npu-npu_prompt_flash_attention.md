@@ -128,13 +128,13 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - <term>Atlas A3系列产品</term>：数据类型支持`torch.float32`、`torch.bfloat16`。
     <!-- end id16 -->
 
-- **num_heads** (`int`)：可选参数，代表`query`的head个数，数据类型支持`torch.int64`。
+- **num_heads** (`int`)：可选参数，代表`query`的head个数，数据类型支持`int64`。
 - **scale_value** (`float`)：可选参数，对应公式中$scale$，值通常是$d$开根号的倒数，代表缩放系数，作为计算流中Muls的scalar值，数据类型支持`float`。数据类型与`query`的数据类型需满足数据类型推导规则。默认值为`1.0`。
-- **pre_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention（注意力机制）需要和前几个Token计算关联，数据类型支持`torch.int64`。默认值为2147483647。
+- **pre_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention（注意力机制）需要和前几个Token计算关联，数据类型支持`int64`。默认值为2147483647。
     <!-- npu="310p" id29 -->
     - <term>Atlas推理系列产品</term>仅支持默认值2147483647。
     <!-- end id29 -->
-- **next_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个Token计算关联。数据类型支持`torch.int64`。默认值为`0`。
+- **next_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个Token计算关联。数据类型支持`int64`。默认值为`0`。
     <!-- npu="310p" id30 -->
     - <term>Atlas推理系列产品</term>仅支持0和2147483647。
     <!-- end id30 -->
@@ -155,7 +155,7 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - <term>Atlas A3系列产品</term>：支持TND格式。当key/value的input_layout为TND时，该入参必须传入，且以该入参元素的数量作为Batch值。该入参中每个元素的值表示当前Batch与之前所有Batch的seqlenKV和，因此后一个元素的值必须大于等于前一个元素的值，且不能出现负值。
     <!-- end id18 -->
 
-- **sparse_mode** (`int`)：可选参数，表示sparse的模式，数据类型支持`torch.int64`。默认值为`0`，综合约束请见[约束说明](#section12345537164214)。
+- **sparse_mode** (`int`)：可选参数，表示sparse的模式，数据类型支持`int64`。默认值为`0`，综合约束请见[约束说明](#section12345537164214)。
 
     <!-- npu="310p" id33 -->
     - <term>Atlas推理系列产品</term>仅支持默认值`0`。

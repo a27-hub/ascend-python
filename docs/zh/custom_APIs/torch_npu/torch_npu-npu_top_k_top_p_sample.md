@@ -271,7 +271,7 @@
     \text{logitsSelectIdx}[b] = \text{LogitsIdx}[b][\text{sampleIdx}[b]]
     $$
 
-  * 对于采样种子，当attr.optional.Str.post_sample="multiNomial"时，q约束为INT64，分别从第一列和第二列获取multiNomial采样的seed和offset：
+  * 对于采样种子，当attr.optional.Str.post_sample="multiNomial"时，q约束为`torch.int64`，分别从第一列和第二列获取multiNomial采样的seed和offset：
 
     $$
     \text{seed}[b] =

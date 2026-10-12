@@ -30,10 +30,10 @@
 
       | dst_type | emax |
       | :---: | :---: |
-      | torch_npu.float4_e2m1fn_x2 | 2 |
-      | torch_npu.float4_e1m2fn_x2 | 0 |
-      | torch.float8_e4m3fn | 8 |
-      | torch.float8_e5m2 | 15 |
+      | `torch_npu.float4_e2m1fn_x2` | 2 |
+      | `torch_npu.float4_e1m2fn_x2` | 0 |
+      | `torch.float8_e4m3fn` | 8 |
+      | `torch.float8_e5m2` | 15 |
 
   - 场景2，当`scale_alg`为1时，仅适用于`torch.float8_e4m3fn`、`torch.float8_e5m2`类型：
 
