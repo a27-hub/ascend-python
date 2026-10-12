@@ -134,7 +134,10 @@ void _split_and_exec_npu_cmd_fused_adam(
 		at::TensorList grads_batch(grads.data() + offset, current_count);
 		at::TensorList exp_avgs_batch(exp_avgs.data() + offset, current_count);
 		at::TensorList exp_avg_sqs_batch(exp_avg_sqs.data() + offset, current_count);
-		at::TensorList max_exp_avg_sqs_batch(max_exp_avg_sqs.data() + offset, current_count);
+		at::TensorList max_exp_avg_sqs_batch = max_exp_avg_sqs;
+		if (amsgrad || max_exp_avg_sqs.size() != 1) {
+			max_exp_avg_sqs_batch = at::TensorList(max_exp_avg_sqs.data() + offset, current_count);
+		}
 		at::TensorList state_steps_batch(state_steps.data() + offset, current_count);
 
 		EXEC_NPU_CMD(
@@ -209,24 +212,13 @@ void _fused_adam_(
 		return;
 	}
 
-	std::vector<at::Tensor> state_steps_adjusted;
-	state_steps_adjusted.reserve(state_steps.size());
-	for (size_t i = 0; i < state_steps.size(); i++) {
-		state_steps_adjusted.emplace_back(state_steps[i].sub(1));
-	}
-	std::vector<at::Tensor> max_exp_avg_sqs_adjusted;
-	if (max_exp_avg_sqs.empty()) {
-		max_exp_avg_sqs_adjusted.reserve(self.size());
-		for (const at::Tensor& tensor : self) {
-			max_exp_avg_sqs_adjusted.emplace_back(at::zeros_like(tensor));
-		}
-	}
+	std::vector<at::Tensor> max_exp_avg_sqs_placeholder;
 	const at::Tensor grad_scale_tensor = grad_scale.value_or(at::Tensor());
 	const at::Tensor found_inf_tensor = found_inf.value_or(at::Tensor());
-	at::TensorList state_steps_list(state_steps_adjusted);
 	at::TensorList max_exp_avg_sqs_list(max_exp_avg_sqs);
-	if (max_exp_avg_sqs.empty()) {
-		max_exp_avg_sqs_list = at::TensorList(max_exp_avg_sqs_adjusted);
+	if (!amsgrad && max_exp_avg_sqs.empty() && !self.empty()) {
+		max_exp_avg_sqs_placeholder.emplace_back(at::zeros({1}, self[0].options().requires_grad(false)));
+		max_exp_avg_sqs_list = at::TensorList(max_exp_avg_sqs_placeholder);
 	}
 
 	_split_and_exec_npu_cmd_fused_adam(
@@ -235,7 +227,7 @@ void _fused_adam_(
 		exp_avgs,
 		exp_avg_sqs,
 		max_exp_avg_sqs_list,
-		state_steps_list,
+		state_steps,
 		grad_scale_tensor,
 		found_inf_tensor,
 		lr,
