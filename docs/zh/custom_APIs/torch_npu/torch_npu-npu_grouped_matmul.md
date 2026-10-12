@@ -38,13 +38,13 @@
     y_i = (x_i \text{@} \mathit{weight}_i) \times \mathit{scale}_i + \mathit{offset}_i
     $$
 
-    - x为`torch.int8`输入，bias为`torch.int32`输入（公式2-1）：
+    - x为`int8`输入，bias为`int32`输入（公式2-1）：
 
         $$
         y_i = (x_i \text{@} \mathit{weight}_i + \mathit{bias}_i) \times \mathit{scale}_i + \mathit{offset}_i
         $$
 
-    - x为`torch.int8`输入，bias为`torch.bfloat16`、`torch.float16`、`torch.float32`输入，无offset（公式2-2）：
+    - x为`int8`输入，bias为`bfloat16`、`float16`、`float32`输入，无offset（公式2-2）：
 
         $$
         y_i = (x_i \text{@} \mathit{weight}_i) \times \mathit{scale}_i + \mathit{bias}_i
@@ -56,13 +56,13 @@
     y_i = (x_i \text{@} \mathit{weight}_i + \mathit{bias}_i) \times \mathit{scale}_i \times \mathit{pertokenscale}_i
     $$
 
-    - x为`torch.int8`输入，bias为`torch.int32`输入（公式3-1）：
+    - x为`int8`输入，bias为`int32`输入（公式3-1）：
 
         $$
         y_i = (x_i \text{@} \mathit{weight}_i + \mathit{bias}_i) \times \mathit{scale}_i \times \mathit{pertokenscale}_i
         $$
 
-    - x为`torch.int8`输入，bias为`torch.bfloat16`、`torch.float16`、`torch.float32`输入（公式3-2）：
+    - x为`int8`输入，bias为`bfloat16`、`float16`、`float32`输入（公式3-2）：
 
         $$
         y_i = (x_i \text{@} \mathit{weight}_i) \times \mathit{scale}_i \times \mathit{pertokenscale}_i + \mathit{bias}_i
@@ -85,13 +85,13 @@
   <!-- end id5 -->
   <!-- npu="950" id6 -->
   - 伪量化（mx）场景（公式6）：仅适用于<term>Ascend 950PR&950DT系列产品</term>
-    - x为`torch.float16`、`torch.bfloat16`输入，weight为`torch.float32`（`torch_npu.float4_e2m1fn_x2`）输入（公式6-1）：
+    - x为`float16`、`bfloat16`输入，weight为`float32`（float4\_e2m1fn\_x2）输入（公式6-1）：
 
         $$
         y_i = x_i \text{@} (\mathit{weight}_i \times \mathit{antiquant\_scale}_i) + \mathit{bias}_i
         $$
 
-    - x为`torch.float8_e4m3fn`输入，weight为`torch.float32`（`torch_npu.float4_e2m1fn_x2`）输入（公式6-2）：
+    - x为`float8_e4m3fn`输入，weight为`float32`（float4\_e2m1fn\_x2）输入（公式6-2）：
 
         $$
         y_i = (x_i \times \mathit{pertokenscale}_i) \text{@} (\mathit{weight}_i \times \mathit{antiquant\_scale}_i) + \mathit{bias}_i

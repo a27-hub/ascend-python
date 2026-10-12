@@ -46,7 +46,7 @@
     Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
     $$
 
-    - 将`torch.float32`映射到目标数据类型float8可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值：
+    - 将fp32映射到目标数据类型float8可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值：
 
     $$
     S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
@@ -81,7 +81,7 @@
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
 
-      - 将`torch.float32`映射到目标数据类型可表示的范围内，其中当dst\_type\_max为0时，$Amax(DType)$是目标精度能表示的最大值；当dst\_type\_max不为0时，$Amax(DType)$是dst\_type\_max传入值：
+      - 将fp32映射到目标数据类型可表示的范围内，其中当dst\_type\_max为0时，$Amax(DType)$是目标精度能表示的最大值；当dst\_type\_max不为0时，$Amax(DType)$是dst\_type\_max传入值：
 
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}

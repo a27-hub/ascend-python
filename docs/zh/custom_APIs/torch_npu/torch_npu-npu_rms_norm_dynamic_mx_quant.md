@@ -46,10 +46,10 @@
 
                 | dst_type | emax |
                 | --- | --- |
-                | `torch.float4_e2m1fn_x2` | 2 |
-                | `torch.float4_e1m2fn_x2` | 0 |
-                | `torch.float8_e4m3fn` | 8 |
-                | `torch.float8_e5m2` | 15 |
+                | torch.float4_e2m1fn_x2 | 2 |
+                | torch.float4_e1m2fn_x2 | 0 |
+                | torch.float8_e4m3fn | 8 |
+                | torch.float8_e5m2 | 15 |
 
         - **场景2：当scale_alg为1时，支持Ffp8的动态MX量化。**
             - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型fp8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
@@ -59,7 +59,7 @@
                 Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
                 $$
 
-            - 将`torch.float32`映射到目标数据类型fp8可表示的范围内，其中Amax\(DType\)是目标精度能表示的最大值
+            - 将FP32映射到目标数据类型fp8可表示的范围内，其中Amax\(DType\)是目标精度能表示的最大值
 
                 $$
                 S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}

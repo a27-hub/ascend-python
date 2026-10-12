@@ -27,11 +27,11 @@ $y_i[m_i, n_i] =  x_i[m_i, k_i] \times weight_i[k_i, n_i], i = 1 \ldots g$, wher
 
         $y_i = (x_i @ weight_i) \times scale_i + offset_i$
 
-        - `x` with data type `torch.int8` and `bias` with data type `torch.int32` (Formula 2-1):
+        - `x` with data type `int8` and `bias` with data type `int32` (Formula 2-1):
 
             $y_i = (x_i @ weight_i + bias_i) \times scale_i + offset_i$
 
-        - `x` with data type `torch.int8` and `bias` with data type `torch.bfloat16`, `torch.float16`, or `torch.float32`, without `offset` (Formula 2-2):
+        - `x` with data type `int8` and `bias` with data type `bfloat16`, `float16`, or `float32`, without `offset` (Formula 2-2):
 
             $y_i = (x_i @ weight_i) \times scale_i + bias_i$
 
@@ -39,14 +39,14 @@ $y_i[m_i, n_i] =  x_i[m_i, k_i] \times weight_i[k_i, n_i], i = 1 \ldots g$, wher
 
         $y_i = (x_i @ weight_i + bias_i) \times scale_i \times pertokenscale_i$
 
-        - `x` with data type `torch.int8` and `bias` with data type `torch.int32` (Formula 3-1):
+        - `x` with data type `int8` and `bias` with data type `int32` (Formula 3-1):
 
             $y_i = (x_i @ weight_i + bias_i) \times scale_i \times pertokenscale_i$
 
-        - `x` with data type `torch.int8` and `bias` with data type `torch.bfloat16`, `torch.float16`, or `torch.float32` (Formula 3-2):
+        - `x` with data type `int8` and `bias` with data type `bfloat16`, `float16`, or `float32` (Formula 3-2):
 
             $y_i = (x_i @ weight_i) \times scale_i \times pertokenscale_i + bias_i$
-        - `x` with data type `torch_npu.int4`, `weight` with data type `torch_npu.int4`, and layout `NZ` (Formula 3-3):
+        - `x` with data type `int4`, `weight` with data type `int4`, and layout `NZ` (Formula 3-3):
 
             $y_i=x_i@ (weight_i \times scale_i) \times pertokenscale_i$
         

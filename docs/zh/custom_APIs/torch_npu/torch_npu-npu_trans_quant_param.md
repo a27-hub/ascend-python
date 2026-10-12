@@ -22,7 +22,7 @@
 
     1. `out`为64位格式，初始为0。
 
-    2. 根据`round_mode`将`scale`从`torch.float32`转换为FP19：
+    2. 根据`round_mode`将`scale`从`float32`转换为FP19：
         - 若`round_mode`为0（截断填充模式，默认值）：不对`scale`做R_INT舍入。
         - 若`round_mode`为1（R_INT模式）：先对`scale`执行R_INT舍入：
         $$

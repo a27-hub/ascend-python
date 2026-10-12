@@ -21,7 +21,7 @@
   <!-- npu="A3,910b" id4 -->
   - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
     <details>
-    <summary>量化场景A8W8（A指激活矩阵，W指权重矩阵，8指`torch.int8`数据类型）：</summary>
+    <summary>量化场景A8W8（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -63,7 +63,7 @@
     </details>
 
     <details>
-    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指`torch.int8`数据类型，4指`torch.int4`数据类型）：</summary>
+    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型，4指torch.int4数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -77,7 +77,7 @@
       - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
     - **计算过程**：
       1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
-      2. 将左矩阵`torch.int8`拆为高低4bit两部分：
+      2. 将左矩阵torch.int8拆为高低4bit两部分：
 
           $$
           X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor
@@ -118,7 +118,7 @@
     </details>
 
     <details>
-    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指`torch.int4`数据类型）：</summary>
+    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指torch.int4数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_4}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -209,9 +209,9 @@
 
          |   DataType    | emax |
          | :-----------: | :--: |
-         | `torch.float8_e4m3fn` |  8   |
-         | `torch.float8_e5m2`  |  15  |
-         | `torch.float4_e2m1fn_x2`  |  2   |
+         | torch.float8_e4m3fn |  8   |
+         | torch.float8_e5m2  |  15  |
+         | torch.float4_e2m1fn_x2  |  2   |
 
          其中，$blocksize$表示每次量化的元素个数，仅支持32。
 

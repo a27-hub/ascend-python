@@ -85,8 +85,8 @@
     |:------------:|:----:|
     | float4_e2m1  |  2   |
     | float4_e1m2  |  0   |
-    | `torch.float8_e4m3fn`|  8   |
-    | `torch.float8_e5m2`  |  15  |
+    | float8_e4m3fn|  8   |
+    | float8_e5m2  |  15  |
 
   - 当`scale_alg=1`时（仅涉及两种float8类型），按块计算缩放因子，找到该块中数值的最大绝对值：
 

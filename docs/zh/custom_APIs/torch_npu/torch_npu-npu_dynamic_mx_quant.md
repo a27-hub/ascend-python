@@ -27,10 +27,10 @@
 
       | dst_type | emax |
       | :---: | :---: |
-      | `torch_npu.float4_e2m1fn_x2` | 2 |
-      | `torch_npu.float4_e1m2fn_x2` | 0 |
-      | `torch.float8_e4m3fn` | 8 |
-      | `torch.float8_e5m2` | 15 |
+      | torch_npu.float4_e2m1fn_x2 | 2 |
+      | torch_npu.float4_e1m2fn_x2 | 0 |
+      | torch.float8_e4m3fn | 8 |
+      | torch.float8_e5m2 | 15 |
 
   - 场景2，当`scale_alg`为1时，仅适用于`torch.float8_e4m3fn`、`torch.float8_e5m2`类型：
 
@@ -43,7 +43,7 @@
     $$
     Amax(D_{fp32}^b)=max(Amax(D_{fp32}^b), max\_low\_bound)
     $$
-    - 将`torch.float32`映射到目标数据类型可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值：
+    - 将FP32映射到目标数据类型可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值：
     $$
     S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
     $$
@@ -74,7 +74,7 @@
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-      - 将`torch.float32`映射到目标数据类型可表示的范围内，其中当`dst_type_max`为0时$Amax(DType)$为目标精度能表示的最大值，当`dst_type_max`不为0时$Amax(DType)$为`dst_type_max`传入值：
+      - 将FP32映射到目标数据类型可表示的范围内，其中当`dst_type_max`为0时$Amax(DType)$为目标精度能表示的最大值，当`dst_type_max`不为0时$Amax(DType)$为`dst_type_max`传入值：
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$

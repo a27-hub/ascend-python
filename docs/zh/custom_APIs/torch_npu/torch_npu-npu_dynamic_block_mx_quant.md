@@ -28,10 +28,10 @@
 
       | dst_type | emax |
       | :---: | :---: |
-      | `torch_npu.float4_e2m1fn_x2` | 2 |
-      | `torch_npu.float4_e1m2fn_x2` | 0 |
-      | `torch.float8_e4m3fn` | 8 |
-      | `torch.float8_e5m2` | 15 |
+      | torch_npu.float4_e2m1fn_x2 | 2 |
+      | torch_npu.float4_e1m2fn_x2 | 0 |
+      | torch.float8_e4m3fn | 8 |
+      | torch.float8_e5m2 | 15 |
 
   - 场景2，当`scale_alg`为2时，只涉及`torch_npu.float4_e2m1fn_x2`类型：
     - 将输入按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型`torch_npu.float4_e2m1fn_x2`，scale存储类型为`torch_npu.float8_e8m0fnu`。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
@@ -42,7 +42,7 @@
       $$
 
     - 当`dst_type_max`不为0时，按照传入的数值计算scale；当`dst_type_max`为0时，使用目标数据类型的最大值。
-    - 将`torch.float32`映射到目标数据类型可表示的范围内：
+    - 将FP32映射到目标数据类型可表示的范围内：
 
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{dst\_type\_max}

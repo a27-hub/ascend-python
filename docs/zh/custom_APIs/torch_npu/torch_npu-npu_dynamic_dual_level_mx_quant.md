@@ -46,7 +46,7 @@
 
         | dst_type | emax |
         | --- | --- |
-        | `torch_npu.float4_e2m1fn_x2` | 2 |
+        | float4_e2m1fn_x2 | 2 |
 
 ## 函数原型
 
