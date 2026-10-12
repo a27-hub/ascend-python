@@ -23,12 +23,12 @@
   \begin{cases}
   min(FP8\_MAX / input\_max, 1 / min\_scale), & dst\_type \text{ set to $FP8$} \\
   min(HiF8\_MAX / input\_max, 1 / min\_scale), & dst\_type \text{ set to $HiF8$} \\
-  min(`torch.int8`\_MAX / input\_max, 1 / min\_scale), & dst\_type \text{ set to $`torch.int8`$}
+  min(INT8\_MAX / input\_max, 1 / min\_scale), & dst\_type \text{ set to $INT8$}
   \end{cases}
   $$
 
   $$
-  y = cast\_to\_[FP8/HiF8/`torch.int8`](x / scale)
+  y = cast\_to\_[FP8/HiF8/INT8](x / scale)
   $$
 
   $block\_reduce\_max$ represents the maximum value within each individual block. `FP8_MAX`, `HiF8_MAX`, and `INT8_MAX` represent the maximum representable positive values for the FP8, HiF8, and `torch.int8` target quantization types, respectively, as determined by `dst_type`.

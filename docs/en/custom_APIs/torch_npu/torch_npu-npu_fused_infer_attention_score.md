@@ -45,15 +45,15 @@
   $$
 
   $$
-  score_{`torch.int8`} = quantize(score_{fp}, quant\_scale1)
+  score_{int8} = quantize(score_{fp}, quant\_scale1)
   $$
 
   $$
-  atten\_prob_{`torch.int8`} = softmax(score_{`torch.int8`})
+  atten\_prob_{int8} = softmax(score_{int8})
   $$
 
   $$
-  out_{fp} = atten\_prob_{`torch.int8`} \cdot value_{fp}
+  out_{fp} = atten\_prob_{int8} \cdot value_{fp}
   $$
 
   $$

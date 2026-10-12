@@ -98,13 +98,13 @@
     $$
 
     $$
-    S_{`torch.float32`}^b = \frac{Amax(D^b)}{Amax(DType)}
+    S_{fp32}^b = \frac{Amax(D^b)}{Amax(DType)}
     $$
 
-    将$S_{`torch.float32`}^b$转换为FP8可表示的$S_{ue8m0}^b = 2^{E_{int}^b}$，并对块内元素量化：
+    将$S_{fp32}^b$转换为FP8可表示的$S_{ue8m0}^b = 2^{E_{int}^b}$，并对块内元素量化：
 
     $$
-    d^i = DType(d_{`torch.float32`}^i \cdot R_{`torch.float32`}^b),\quad R_{`torch.float32`}^b = \frac{1}{`torch.float32`(S_{ue8m0}^b)}
+    d^i = DType(d_{fp32}^i \cdot R_{fp32}^b),\quad R_{fp32}^b = \frac{1}{fp32(S_{ue8m0}^b)}
     $$
 
 ## 函数原型
