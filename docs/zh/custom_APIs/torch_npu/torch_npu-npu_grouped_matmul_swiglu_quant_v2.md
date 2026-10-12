@@ -396,7 +396,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：暂不支持该参数，使用默认值。
   <!-- end id26 -->
   <!-- npu="950" id27 -->
-  - <term>Ascend 950PR&950DT系列产品</term>：当`weight_scale`为`torch.float8_e8m0fnu`时，`weight_scale_dtype`需要传入`torch.float8_e8m0fnu`。
+  - <term>Ascend 950PR&950DT系列产品</term>：当`weight_scale`为`torch.float8_e8m0fnu`时，`weight_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
   <!-- end id27 -->
 
 - **`x_scale_dtype`**（`int`）：**可选参数**，指定输入`x_scale`的真实数据类型。默认值为`None`，表示输入`x_scale`真实的`dtype`。
@@ -405,7 +405,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：暂不支持该参数，使用默认值。
   <!-- end id28 -->
   <!-- npu="950" id29 -->
-  - <term>Ascend 950PR&950DT系列产品</term>：当`x_scale`为`torch.float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch.float8_e8m0fnu`。
+  - <term>Ascend 950PR&950DT系列产品</term>：当`x_scale`为`torch.float8_e8m0fnu`时，`x_scale_dtype`需要传入`torch_npu.float8_e8m0fnu`。
   <!-- end id29 -->
 
 ## 返回值说明

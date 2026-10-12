@@ -134,7 +134,7 @@ torch_npu.npu_swiglu_mx_quant(x, *, group_index=None, activate_dim=-1, activate_
 ## 返回值说明
 
 - **y**(`Tensor`)：量化后的输出，对应公式中的$P_i$或$d^i$。数据类型由`dst_type`决定，数据格式为$ND$。当`activate_dim`为尾轴时，shape为$[X_1,\dots,X_n,H]$（即在`activate_dim`轴上为输入的一半）；当`activate_dim`非尾轴时，`activate_dim`轴为输入对应轴的一半。
-- **mxscale**(`Tensor`)：每个分组对应的量化尺度，对应公式中的$mxscale$或$S^b$。数据类型为`torch_npu.float8_e8m0fnu`，数据格式为$ND$。
+- **mxscale**(`Tensor`)：每个分组对应的量化尺度，对应公式中的$mxscale$或$S^b$。数据类型为`torch.float8_e8m0fnu`，数据格式为$ND$。
 
 ## 约束说明
 

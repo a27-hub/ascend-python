@@ -435,7 +435,7 @@
 </tr>
 <tr id="npu_grouped_dynamic_mx_quant"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_grouped_dynamic_mx_quant"><a name="p_npu_grouped_dynamic_mx_quant"></a><a name="p_npu_grouped_dynamic_mx_quant"></a><a href="torch_npu-npu_grouped_dynamic_mx_quant.md">torch_npu.npu_grouped_dynamic_mx_quant</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_grouped_dynamic_mx_quant_desc"><a name="p_npu_grouped_dynamic_mx_quant_desc"></a><a name="p_npu_grouped_dynamic_mx_quant_desc"></a><span>根据传入的分组索引的起始值（group_index）对各个group以基本块（blocksize）为粒度进行目标数据类型为float8/float4的动态MX量化，并输出量化尺度mxscale（<code>torch_npu.float8_e8m0fnu</code>）。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_grouped_dynamic_mx_quant_desc"><a name="p_npu_grouped_dynamic_mx_quant_desc"></a><a name="p_npu_grouped_dynamic_mx_quant_desc"></a><span>根据传入的分组索引的起始值（group_index）对各个group以基本块（blocksize）为粒度进行目标数据类型为float8/float4的动态MX量化，并输出量化尺度mxscale（<code>torch.float8_e8m0fnu</code>）。</span></p>
 </td>
 </tr>
 <tr id="row1045718422215"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p64370382369"><a name="p64370382369"></a><a name="p64370382369"></a><a href="torch_npu-npu_grouped_matmul_add.md">torch_npu.npu_grouped_matmul_add</a></p>
