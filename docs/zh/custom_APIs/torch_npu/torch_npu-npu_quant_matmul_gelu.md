@@ -15,11 +15,11 @@
 
 - 计算公式：
     - 量化矩阵乘计算：
-        - 当`bias`为`torch.int32`时：
+        - 当`bias`为`int32`时：
         $$
         qbmmout = (x1 \mathbin{@} x2 + \text{bias}) * x2Scale * x1Scale
         $$
-        - 当`bias`为`torch.bfloat16`/`torch.float16`/`torch.float32`时：
+        - 当`bias`为`bfloat16`/`float16`/`float32`时：
         $$
         qbmmout = x1 \mathbin{@} x2 * x2Scale * x1Scale + \text{bias}
         $$

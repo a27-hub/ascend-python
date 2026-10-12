@@ -18,7 +18,7 @@
 - Formulas
   - <term>Atlas A3 training products/Atlas A3 inference products</term> and <term>Atlas A2 training products/Atlas A2 inference products</term>:
     <details>
-    <summary>A8W8 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 8 indicates the `torch.int8` data type):</summary>
+    <summary>A8W8 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 8 indicates the int8 data type):</summary>
 
       - **Inputs**
         * $X∈\mathbb{Z_8}^{M \times K}$: activation matrix (left matrix), where $M$ indicates the total number of tokens and $K$ indicates the feature dimension.
@@ -47,7 +47,7 @@
     </details>
 
     <details>
-    <summary>A8W4 quantization scenarios (MSD) (A indicates the activation matrix, W indicates the weight matrix, 8 indicates the `torch.int8` data type, and 4 indicates the `torch_npu.int4` data type):</summary>
+    <summary>A8W4 quantization scenarios (MSD) (A indicates the activation matrix, W indicates the weight matrix, 8 indicates the int8 data type, and 4 indicates the int4 data type):</summary>
 
       - **Inputs**
         * $X∈\mathbb{Z_8}^{M \times K}$: activation matrix (left matrix), where $M$ indicates the total number of tokens and $K$ indicates the feature dimension.
@@ -61,7 +61,7 @@
         * $Q\_scale∈\mathbb{R}^{M}$: quantization scale factor.
       - **Computation**
         1. Determine the token range for each group based on `groupList[i]`, using identical grouping logic to that of A8W8.
-        2. Split the `torch.int8` left matrix input into high and low 4-bit parts.
+        2. Split the `int8` left matrix input into high and low 4-bit parts.
 
           $X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor$，$X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8$
         3. Perform matrix multiplication separately for the high and low parts, apply `perchannel` or `pergroup` quantization scaling, and combine the results with the auxiliary matrix.
@@ -80,7 +80,7 @@
     </details>
 
     <details>
-    <summary>A4W4 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 4 indicates the `torch_npu.int4` data type):</summary>
+    <summary>A4W4 quantization scenarios (A indicates the activation matrix, W indicates the weight matrix, and 4 indicates the int4 data type):</summary>
 
       - **Inputs**
         * $X∈\mathbb{Z_4}^{M \times K}$: activation matrix (left matrix), where $M$ indicates the total number of tokens and $K$ indicates the feature dimension.
@@ -137,8 +137,8 @@
 
          |   DataType    | emax |
          | :-----------: | :--: |
-         | `torch.float8_e4m3fn` |  8   |
-         |  `torch.float8_e5m2`  |  15  |
+         | FLOAT8_E4M3FN |  8   |
+         |  FLOAT8_E5M2  |  15  |
          |  FLOAT4_E2M1  |  2   |
 
          where $blocksize$ denotes the number of elements per quantization block. Only `32` is supported.

@@ -31,7 +31,7 @@
         x'' = kroneckerP1 @ x'
         $$
 
-    3. 沿着$x''$的0维计算最大绝对值并除以$(7 / clipRatio)$，以计算需量化为`torch_npu.int4`格式的量化缩放系数`quantScale`：
+    3. 沿着$x''$的0维计算最大绝对值并除以$(7 / clipRatio)$，以计算需量化为int4格式的量化缩放系数`quantScale`：
 
         $$
         quantScale = \frac{[\max(\operatorname{abs}(x''[0, :, :])),\ \max(\operatorname{abs}(x''[1, :, :])),\ \ldots,\ \max(\operatorname{abs}(x''[K, :, :]))]}{7 / clipRatio}

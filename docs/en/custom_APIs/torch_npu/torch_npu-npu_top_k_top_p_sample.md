@@ -269,7 +269,7 @@
     \text{logitsSelectIdx}[b] = \text{LogitsIdx}[b][\text{sampleIdx}[b]]
     $$
 
-  * For the sampling seed, when `attr.optional.Str.post_sample="multiNomial"`, `q` must be of type `torch.int64`. The seed and offset for multiNomial sampling are obtained from the first and second columns of `q`, respectively:
+  * For the sampling seed, when `attr.optional.Str.post_sample="multiNomial"`, `q` must be of type `INT64`. The seed and offset for multiNomial sampling are obtained from the first and second columns of `q`, respectively:
 
     $$
     \text{seed}[b] =

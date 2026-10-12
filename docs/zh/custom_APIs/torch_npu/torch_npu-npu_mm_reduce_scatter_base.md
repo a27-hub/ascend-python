@@ -27,7 +27,7 @@
     `x1`（即`input`）代表Matmul计算的左矩阵，`x2`代表Matmul计算的右矩阵，`bias`代表Matmul计算的偏置。场景由`comm_mode`与`input`数据类型共同决定：
 
     <!-- npu="A3,910b" id5 -->
-    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：`comm_mode`为`ai_cpu`时，始终为基础场景；`comm_mode`为`aiv`（aiv模式下使用AI Vector核完成通信任务）时，`input`为`torch.float16`或`torch.bfloat16`走基础场景，`input`为`torch.int8`走量化场景。
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：`comm_mode`为`ai_cpu`时，始终为基础场景；`comm_mode`为`aiv`（aiv模式下使用AI Vector核完成通信任务）时，`input`为`float16`或`bfloat16`走基础场景，`input`为`int8`走量化场景。
     <!-- end id5 -->
     <!-- npu="950" id6 -->
     - <term>Ascend 950PR&950DT系列产品</term>：仅支持基础场景。
