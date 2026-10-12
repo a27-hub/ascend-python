@@ -34,7 +34,7 @@
       | `torch.float8_e5m2` | 15 |
 
   - 场景2，当`scale_alg`为2时，只涉及`torch_npu.float4_e2m1fn_x2`类型：
-    - 将输入按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型`torch_npu.float4_e2m1fn_x2`，scale存储类型为`torch_npu.float8_e8m0fnu`。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
+    - 将输入按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型`torch_npu.float4_e2m1fn_x2`，scale存储类型为`torch.float8_e8m0fnu`。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值：
 
       $$
@@ -80,8 +80,8 @@ torch_npu.npu_dynamic_block_mx_quant(input, *, round_mode="rint", dst_type=torch
 ## 返回值说明
 
 - **y** (`Tensor`)：表示input量化后的对应结果，数据类型由参数`dst_type`指定，shape与输入`input`一致。当`dst_type`为`torch_npu.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`时，y的数据类型实际为`torch.uint8`，查看具体值需自行解包。
-- **scale1_out** (`Tensor`)：表示-1轴每个分组对应的量化尺度。数据类型为`torch_npu.float8_e8m0fnu`，实际数据类型为`torch.uint8`，查看具体值需要自行转换。Shape为input的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。
-- **scale2_out** (`Tensor`)：表示-2轴每个分组对应的量化尺度。数据类型为`torch_npu.float8_e8m0fnu`，实际数据类型为`torch.uint8`，查看具体值需要自行转换。Shape在input的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0，scale2_out输出需要对每两行数据交织处理。
+- **scale1_out** (`Tensor`)：表示-1轴每个分组对应的量化尺度。逻辑数据类型为`torch.float8_e8m0fnu`，实际数据类型为`torch.uint8`，查看具体值需要自行转换。Shape为input的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。
+- **scale2_out** (`Tensor`)：表示-2轴每个分组对应的量化尺度。逻辑数据类型为`torch.float8_e8m0fnu`，实际数据类型为`torch.uint8`，查看具体值需要自行转换。Shape在input的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0，scale2_out输出需要对每两行数据交织处理。
 
 ## 约束说明
 

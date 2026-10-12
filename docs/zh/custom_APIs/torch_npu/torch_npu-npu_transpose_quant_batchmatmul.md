@@ -30,8 +30,8 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 - **dtype**（`int`）：必选参数，表示output的数据类型，支持传值`torch.float16`、`torch.bfloat16`和`torch_npu.hifloat8`。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **bias**（`Tensor`）：可选参数，表示矩阵乘的偏置矩阵，当前版本暂不支持该参数，使用默认值即可。
-- **x1\_scale**（`Tensor`）：可选参数，表示左矩阵的量化系数。数据格式支持ND。数据类型支持`torch.float32`、`torch_npu.float8_e8m0fnu`和`torch.int64`。shape支持1维或4维。
-- **x2\_scale**（`Tensor`）：可选参数，表示右矩阵的量化系数。数据格式支持ND。数据类型支持`torch.float32`、`torch_npu.float8_e8m0fnu`和`torch.int64`。shape支持1维或4维。
+- **x1\_scale**（`Tensor`）：可选参数，表示左矩阵的量化系数。数据格式支持ND。数据类型支持`torch.float32`、`torch.float8_e8m0fnu`和`torch.int64`。shape支持1维或4维。
+- **x2\_scale**（`Tensor`）：可选参数，表示右矩阵的量化系数。数据格式支持ND。数据类型支持`torch.float32`、`torch.float8_e8m0fnu`和`torch.int64`。shape支持1维或4维。
 - **group\_sizes**（List\[int\]）：可选参数，表示量化分组大小，数据类型为`torch.int32`。默认值为None。
   - 仅支持三维列表，形如\[group\_m, group\_n, group\_k\]，其分别表示在m、n、k维度上的量化分组情况。以group\_m为例，其表示在m维度上每group\_m个数对应一个量化参数。
   - 当\[group\_m, group\_n, group\_k\]中有1个或多个为0时，接口会根据`x1`、`x2`、`x1_scale`、`x2_scale`输入shape重新设置该值。计算原理：假设group\_m=0，表示m方向量化分组值由接口推断，推断公式为group\_m=m/scale\_m（保证m能被scale\_m整除），m与`x1` shape中的m一致，scale_m与`x1_scale` shape中的m一致。

@@ -128,7 +128,7 @@ torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst
 ## 返回值说明
 
 - **y**（`Tensor`）：表示量化后的输出Tensor，公式中的$y$。shape与输入x保持一致。当dst\_type为float8时，数据类型为`torch.float8_e5m2`或`torch.float8_e4m3fn`；当dst\_type为float4时，实际返回的数据类型为`torch.uint8`，最后一维为输入x最后一维的一半（每个`torch.uint8`元素打包2个float4数据），查看具体值需自行解包，如`y.view(torch_npu.float4_e2m1fn_x2)`。支持空Tensor。float8支持非连续Tensor，float4不支持非连续Tensor。
-- **mxscale**（`Tensor`）：表示每个分组对应的量化尺度，公式中的$mxscale$。数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale.view(torch.float8_e8m0fnu)`。假设x的shape为[m, n]，`group_index`的shape为[g]，则`mxscale`的shape为[(m/(blocksize∗2)+g), n, 2]。支持空Tensor，不支持非连续Tensor。
+- **mxscale**（`Tensor`）：表示每个分组对应的量化尺度，公式中的$mxscale$。逻辑数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`，查看具体值需自行转换，如`mxscale.view(torch.float8_e8m0fnu)`。假设x的shape为[m, n]，`group_index`的shape为[g]，则`mxscale`的shape为[(m/(blocksize∗2)+g), n, 2]。支持空Tensor，不支持非连续Tensor。
 
 ## 约束说明
 

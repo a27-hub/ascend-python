@@ -112,7 +112,7 @@ torch_npu.npu_add_rms_norm_dynamic_mx_quant(x1, x2, gamma, *, beta=None, epsilio
 
 - **y**（`Tensor`）：表示Add和RmsNorm归一化后与beta相加，再进行DynamicMxQuant量化后的输出结果，支持空Tensor，shape和数据格式与输入`x1`保持一致，数据类型由`dst_type`指定，当`dst_type`为296(`torch.float4_e2m1fn_x2`)、297(`torch_npu.float4_e1m2fn_x2`)时，`y`的数据类型实际为`torch.uint8`。
 - **x_out**（`Tensor`）：表示`x1`和`x2`相加的结果，支持空Tensor，shape、数据类型和数据格式与输入`x1`保持一致。
-- **mxscale_out**（`Tensor`）：表示每个分组对应的量化尺度，数据类型为`torch.float8_e8m0fnu`，实际数据类型为`torch.uint8`，支持空Tensor，shape支持2-8维，数据格式要求为$ND$。shape在尾轴上为`x1`对应值除以32向上取整，并对其进行偶数pad，pad填充值为0，具体计算过程见约束说明。
+- **mxscale_out**（`Tensor`）：表示每个分组对应的量化尺度，逻辑数据类型为`torch.float8_e8m0fnu`，实际数据类型为`torch.uint8`，支持空Tensor，shape支持2-8维，数据格式要求为$ND$。shape在尾轴上为`x1`对应值除以32向上取整，并对其进行偶数pad，pad填充值为0，具体计算过程见约束说明。
 - **rstd_out**（`Tensor`）：表示RmsNorm归一化后的标准差的倒数，用于归一化操作，对应公式中的$RMS(x)$的倒数。支持空Tensor，shape与`x1`的前几维保持一致，前几维表示不需要norm的维度，数据格式要求为$ND$。`rstd_out`shape与`x1`shape、`gamma`shape关系举例：若`x1`shape=(2,3,4,8)，`gamma`shape=(8,)，`rstd_out`shape=(2,3,4,1)。
 
 ## 约束说明

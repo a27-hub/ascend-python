@@ -114,7 +114,7 @@ torch_npu.npu_dynamic_mx_quant(input, *, axis=-1, round_mode="rint", dst_type=to
 ## 返回值说明
 
 - **y** (`Tensor`)：量化后的输出张量。当`dst_type`为`torch.float8_e4m3fn`或`torch.float8_e5m2`时，y的数据类型与`dst_type`对应，shape与输入`input`一致。当`dst_type`为`torch_npu.float4_e2m1fn_x2`或`torch_npu.float4_e1m2fn_x2`时，y的实际数据类型为`torch.uint8`，shape的最后一维为`input`最后一维的一半（每两个FP4数据打包为一个`torch.uint8`），查看具体值需自行解包。
-- **mxscale** (`Tensor`)：每个分组对应的量化尺度，数据类型为`torch_npu.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`。`mxscale`的shape比输入`input`多一维，最后一维为2，`axis`轴的大小为`input`对应轴的值除以`block_size`向上取整并偶数pad（pad填充值为0），当`axis`为非尾轴时，`mxscale`输出需要对每两行数据进行交织处理。
+- **mxscale** (`Tensor`)：每个分组对应的量化尺度，逻辑数据类型为`torch.float8_e8m0fnu`，实际返回的数据类型为`torch.uint8`。`mxscale`的shape比输入`input`多一维，最后一维为2，`axis`轴的大小为`input`对应轴的值除以`block_size`向上取整并偶数pad（pad填充值为0），当`axis`为非尾轴时，`mxscale`输出需要对每两行数据进行交织处理。
 
 ## 约束说明
 
