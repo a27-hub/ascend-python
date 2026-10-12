@@ -203,8 +203,8 @@ class TestNpuWeightQuantPreprocess(TestCase):
         self.assertEqual(out_weight.cpu(), weight.cpu())
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_weight_quant_preprocess_a16fp8_e4m3_per_channel(self):
-        # A16FP8 E4M3FN perchannel 非转置：ND 直拷
+    def test_npu_weight_quant_preprocess_a16fp8hif8_e4m3_per_channel(self):
+        # A16FP8HIF8 E4M3FN perchannel 非转置：ND 直拷
         k, n = 256, 128
         weight = torch.randint(0, 255, (k, n), dtype=torch.uint8).to(torch.float8_e4m3fn).npu()
         weight_scale = torch.randn((n,), dtype=torch.float16).npu()
@@ -224,8 +224,8 @@ class TestNpuWeightQuantPreprocess(TestCase):
         self.assertEqual(out_weight_scale.cpu(), weight_scale.cpu())
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_weight_quant_preprocess_a16fp8_e4m3_per_channel_trans(self):
-        # A16FP8 E4M3FN perchannel 转置：ND 直拷
+    def test_npu_weight_quant_preprocess_a16fp8hif8_e4m3_per_channel_trans(self):
+        # A16FP8HIF8 E4M3FN perchannel 转置：ND 直拷
         k, n = 256, 128
         weight = torch.randint(0, 255, (n, k), dtype=torch.uint8).to(torch.float8_e4m3fn).npu().transpose(0, 1)
         weight_scale = torch.randn((n,), dtype=torch.float16).npu()
@@ -244,8 +244,8 @@ class TestNpuWeightQuantPreprocess(TestCase):
         self.assertEqual(out_weight.view(torch.uint8).cpu(), weight.view(torch.uint8).cpu())
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_weight_quant_preprocess_a16fp8_offset_rejected(self):
-        # A16FP8 数据流不支持 weight_offset，传入应报错
+    def test_npu_weight_quant_preprocess_a16fp8hif8_offset_rejected(self):
+        # A16FP8HIF8 数据流不支持 weight_offset，传入应报错
         k, n = 256, 128
         weight = torch.randint(0, 255, (k, n), dtype=torch.uint8).to(torch.float8_e4m3fn).npu()
         weight_scale = torch.randn((n,), dtype=torch.float16).npu()

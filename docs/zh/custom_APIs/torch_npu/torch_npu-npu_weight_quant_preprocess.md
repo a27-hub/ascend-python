@@ -16,7 +16,7 @@
 - MM_A16F4数据流：表示WeightQuantBatchMatmulV2算子的pergroup量化场景，A16F4表示左矩阵为`torch.float16`/`torch.bfloat16`，右矩阵为`torch_npu.float4_e2m1fn_x2`（使用`torch.uint8`承载）。
 - MM_MX_A16F4数据流：表示WeightQuantBatchMatmulV2算子的MX量化场景，A16F4表示左矩阵为`torch.float16`/`torch.bfloat16`，右矩阵为`torch_npu.float4_e2m1fn_x2`（使用`torch.uint8`承载）。
 - MM_A16INT8数据流：表示WeightQuantBatchMatmulV2算子的pertensor/perchannel/pergroup量化场景，A16INT8表示左矩阵为`torch.float16`/`torch.bfloat16`，右矩阵为`torch.int8`。
-- MM_A16FP8数据流：表示WeightQuantBatchMatmulV2算子的perchannel量化场景，A16FP8表示左矩阵为`torch.float16`/`torch.bfloat16`，右矩阵为`torch.float8_e4m3fn`或`torch_npu.hifloat8`。
+- MM_A16FP8HIF8数据流：表示WeightQuantBatchMatmulV2算子的perchannel量化场景，A16FP8HIF8表示左矩阵为`torch.float16`/`torch.bfloat16`，右矩阵为`torch.float8_e4m3fn`或`torch_npu.hifloat8`。
 
 ## 函数原型
 
@@ -35,17 +35,17 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
     - perchannel量化场景：shape为$(N)$、$(1, N)$。
     - pergroup量化场景：shape为$(G, N)$，其中$G$表示group数量。
 - **x\_dtype**（`int`）：**必选参数**，Matmul的激活矩阵的数据类型。
-  - A16S4/A16F4/A16INT8/A16FP8数据流支持`torch.float16`、`torch.bfloat16`；A8W4数据流支持`torch.float8_e4m3fn`。
+  - A16S4/A16F4/A16INT8/A16FP8HIF8数据流支持`torch.float16`、`torch.bfloat16`；A8W4数据流支持`torch.float8_e4m3fn`。
 - **weight\_dtype**（`int`）：**必选参数**，用于指定`weight`中实际承载的数据类型。
-  - A16S4数据流取值为`torch_npu.int4`；A16INT8数据流取值为`torch.int8`；A16FP8数据流取值为`torch.float8_e4m3fn`或`torch_npu.hifloat8`（使用`uint8`承载）；其余数据流取值为`torch_npu.float4_e2m1fn_x2`。
+  - A16S4数据流取值为`torch_npu.int4`；A16INT8数据流取值为`torch.int8`；A16FP8HIF8数据流取值为`torch.float8_e4m3fn`或`torch_npu.hifloat8`（使用`uint8`承载）；其余数据流取值为`torch_npu.float4_e2m1fn_x2`。
 - **weight\_scale\_dtype**（`int`）：**必选参数**，用于指定`weight_scale`中实际承载的数据类型，取值需与`weight_scale`的实际数据类型一致。
   - 支持`torch.float8_e8m0fnu`、`torch.float16`、`torch.bfloat16`。
 - **weight\_offset**（`Tensor`）：**可选参数**，权重的反量化offset参数，默认值为`None`。
-  - A16S4/A16INT8数据流支持透传，其shape和数据类型需与`weight_scale`保持一致；A16FP8/A8W4数据流请传入`None`。
+  - A16S4/A16INT8数据流支持透传，其shape和数据类型需与`weight_scale`保持一致；A16FP8HIF8/A8W4数据流请传入`None`。
 - **bias**（`Tensor`）：**可选参数**，Matmul的偏置矩阵，必须为连续的`Tensor`。
   - 数据类型支持`torch.float16`、`torch.bfloat16`、`torch.float32`，数据格式支持$ND$。支持1维或2维输入，shape为$(N)$、$(1, N)$或$(G, N)$。
 - **x\_scale\_dtype**（`int`）：**可选参数**，激活的量化scale参数的数据类型，默认值为`None`。
-  - A8W4数据流仅支持`torch.float8_e8m0fnu`；A16S4/A16F4/A16INT8/A16FP8数据流请传入`None`。
+  - A8W4数据流仅支持`torch.float8_e8m0fnu`；A16S4/A16F4/A16INT8/A16FP8HIF8数据流请传入`None`。
 - **k\_group\_size**（`int`）：**可选参数**，权重在pergroup量化时K维度的group大小，默认值为`0`。
   - A8W4/A16F4数据流MX量化场景下取值为`32`；A16S4/A16F4/A16INT8数据流pergroup量化场景取值为大于`0`的整数；其余场景使用默认值`0`。
 
@@ -59,7 +59,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   - A16S4数据流下pertensor（`weight`转置/非转置）、perchannel（`weight`转置）、pergroup（`weight`转置）量化场景：`weight`的数据格式仍为$ND$。
   - A16S4数据流下perchannel（`weight`非转置）、pergroup（`weight`非转置）量化场景：`weight`的数据格式由$ND$转为$FRACTAL\_NZ\_C0\_8$。
   - A16INT8数据流下所有场景（pertensor/perchannel/pergroup，`weight`转置/非转置）：`weight`的数据格式仍为$ND$（直拷透传）。
-  - A16FP8数据流下所有场景：`weight`的数据格式仍为$ND$（转置/非转置均直拷透传）。
+  - A16FP8HIF8数据流下所有场景：`weight`的数据格式仍为$ND$（转置/非转置均直拷透传）。
   - A8W4数据流下MX量化场景：`weight`的数据格式由$ND$转为$FRACTAL\_NZ\_C0\_16$。
   - A16F4数据流下pergroup量化场景（仅支持`weight`非转置）：`weight`的数据格式由$ND$转为$FRACTAL\_NZ\_C0\_8$。
   - A16F4数据流下MX量化场景：`weight`转置输入时输出为$ND$直拷，与输入保持相同的sizes/strides；非转置输入时由$ND$转为$FRACTAL\_NZ\_C0\_8$。
@@ -127,7 +127,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
     - pertensor：`weight_scale`仅含单个元素，shape为$\{1\}$或$\{1, 1\}$；`k_group_size`使用默认值`0`；`out_weight`为$ND$直拷输出，与输入`weight`保持相同的sizes/strides。
     - perchannel：`weight_scale`的shape为$\{N\}$或$\{1, N\}$；`k_group_size`使用默认值`0`；转置/非转置输入时`out_weight`均为$ND$直拷输出，与输入`weight`保持相同的sizes/strides。
     - pergroup：`weight_scale`的shape为$\{G, N\}$，其中$G$为group数量且$G > 1$；`k_group_size`必须大于`0`，表示K维pergroup的group大小；转置/非转置输入均为$ND$直拷输出；`weight`转置输入时，`weight_scale`需与`weight`布局一致（同为转置视图）。
-- **MM_A16FP8数据流**：
+- **MM_A16FP8HIF8数据流**：
   - `weight`数据类型必须为`float8_e4m3fn`或`hifloat8`，数据格式为$ND$，支持2维输入，转置与非转置均支持。
   - `weight`的shape为$\{K, N\}$，均为1字节元素，无打包约束。
   - `weight_scale`数据类型为`float16`或`bfloat16`（须与`x_dtype`一致），shape为$\{N\}$或$\{1, N\}$（仅支持perchannel量化）。
@@ -370,13 +370,13 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   )
   ```
 
-- MM_A16FP8数据流场景（perchannel、`weight`非转置，输出$ND$直拷）
+- MM_A16FP8HIF8数据流场景（perchannel、`weight`非转置，输出$ND$直拷）
 
   ```python
   import torch
   import torch_npu
 
-  # MM_A16FP8 数据流示例
+  # MM_A16FP8HIF8 数据流示例
   # 开关：weight 数据类型与转置状态
   use_hifloat8 = False       # True 表示 hifloat8（uint8 承载），False 表示 float8_e4m3fn
   weight_trans = False       # True 表示 weight 转置输入
@@ -400,7 +400,7 @@ torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtyp
   # weight_scale: float16，仅支持 perchannel，shape 为 {N} 或 {1, N}
   weight_scale = torch.randn((n,), dtype=torch.float16).npu()
 
-  # A16FP8 数据流不支持 weight_offset（传 None），k_group_size 使用默认值 0
+  # A16FP8HIF8 数据流不支持 weight_offset（传 None），k_group_size 使用默认值 0
   out_weight, out_weight_scale, out_weight_offset, out_bias = torch_npu.npu_weight_quant_preprocess(
       weight,
       weight_scale,
