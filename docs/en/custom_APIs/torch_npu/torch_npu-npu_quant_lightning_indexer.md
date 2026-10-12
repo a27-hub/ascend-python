@@ -62,13 +62,13 @@ query_dtype=None, key_dtype=None) -> Tensor
 
 - **`layout_key`** (`str`): Optional. Data layout configuration of the input `key`. Valid values are `"PA_BSND"`, `"BSND"`, or `"TND"`. The default value is `"BSND"`. In non-PagedAttention scenarios, the value of this parameter must be identical to that of `layout_query`.
 
-- **`sparse_count`** (`int`): Optional. Number of tokens retained during the Top-K stage. The value range is [1, 2048]. The data type can be `int32`.
+- **`sparse_count`** (`int`): Optional. Number of tokens retained during the Top-K stage. The value range is [1, 2048]. The data type can be `torch.int32`.
 
-- **`sparse_mode`** (`int`): Optional. Sparsification mode. The data type can be `int32`. Valid values: `0`: enables `defaultMask` mode. `3`: enables `rightDownCausal` mode mask, corresponding to lower triangular scenarios where the dividing line extends from the right vertex.
+- **`sparse_mode`** (`int`): Optional. Sparsification mode. The data type can be `torch.int32`. Valid values: `0`: enables `defaultMask` mode. `3`: enables `rightDownCausal` mode mask, corresponding to lower triangular scenarios where the dividing line extends from the right vertex.
 
-- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `int64`. Only the default value `2^63 - 1` is supported.
+- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. Only the default value `2^63 - 1` is supported.
 
-- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. Only the default value `2^63 - 1` is supported.
+- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. Only the default value `2^63 - 1` is supported.
 
 - **`query_dtype`** (`int`): Optional. Actual data type of `query`. The data type can be `torch.int8`, `torch.float8_e4m3fn`, or `torch_npu.hifloat8`.
 
