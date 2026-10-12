@@ -65,14 +65,14 @@ void npu_scatter_pa_kv_cache(
     const c10::optional<at::Tensor>& compress_seq_offsets,
     const c10::optional<at::Tensor>& seq_lens,
     c10::optional<c10::string_view> cache_mode) {
-  char* cache_mode_ptr = cache_mode.has_value() ? const_cast<char*>(cache_mode.value().data()) : nullptr;
+  char* cache_mode_ptr = cache_mode.has_value() ? const_cast<char*>(cache_mode.value().data()) : "Norm";
   char* scatter_mode = "None";
   c10::SmallVector<int64_t, op_infer::SIZE> strides_size = {1, 1};
   at::IntArrayRef strides = at::IntArrayRef(strides_size);
   c10::SmallVector<int64_t, op_infer::SIZE> offsets_size = {0, 0};
   at::IntArrayRef offsets = at::IntArrayRef(offsets_size);
 
-  EXEC_NPU_NO_FORMAT_CHECK_CMD(
+  EXEC_NPU_CMD(
       aclnnScatterPaKvCache,
       key,
       key_cache,
