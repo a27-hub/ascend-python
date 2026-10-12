@@ -327,7 +327,7 @@ bool judge_mm_a16int8_per_group(QuantContext& ctx) {
   return false;
 }
 // A16FP8HIF8 per-channel：weight FLOAT8_E4M3FN/HIFLOAT8，仅 per-channel（C 量化），
-// 转置/非转置均 ND 直拷（wqbmmv2 FP8 不支持 weightNZ），offset 不支持
+// 转置/非转置均 ND 直拷（wqbmmv2 FP8、HIF8不支持 weightNZ），offset 不支持
 bool judge_mm_a16fp8hif8_per_channel(QuantContext& ctx) {
   aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
   aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
