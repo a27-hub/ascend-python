@@ -184,7 +184,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **block_table** (`Tensor`,可选)：PageAttention中KV存储的block映射表。数据类型：`torch.int32`，数据格式：$ND$，必须为二维：[B, maxBlockNumPerSeq]，blockid合法性由用户保证，传入此参数即开启PageAttention。默认值：None。
 
-- **block_size** (`Tensor`,可选)：PageAttention中每个block最多token个数。数据类型：`torch.int64`，Q_S > 1：最小128，最大512，须为128倍数。 Q_S = 1： 非0值，最大512。`torch.float16`/`torch.bfloat16`需16字节对齐，`torch.int8`需32字节对齐，推荐128。默认值：0（不开启PageAttention）。
+- **block_size** (`int`,可选)：PageAttention中每个block最多token个数，以 Python `int` 传入。Q_S > 1：最小128，最大512，须为128倍数。 Q_S = 1： 非0值，最大512。`torch.float16`/`torch.bfloat16`需16字节对齐，`torch.int8`需32字节对齐，推荐128。默认值：0（不开启PageAttention）。
 
   <!-- npu="950" id16 -->
   - <term>Ascend 950PR&950DT系列产品</term>：Q_S = 1： key、value输入类型是`torch_npu.int4（torch.int32）`时需要64对齐。
@@ -246,7 +246,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 #### 其他标量参数
 
-- **num_heads** (`int`,可选)：`query`的head个数。默认值：1。
+- **num_heads** (`int`,可选)：`query`的head个数，以 Python `int` 传入。默认值：1。
 
   <!-- npu="A3,910b" id17 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：BNSD场景下需与`query`的N轴一致。
@@ -282,7 +282,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 - **next_tokens** (`int`,可选)：稀疏计算中attention与后几个token的关联范围。Q_S=1时无效。默认值：2147483647。
 
-- **num_key_value_heads** (`int`,可选)：`key/value`中head个数，用于GQA。0表示与`query`的head数相等。需满足`num_heads`能被`num_key_value_heads`整除（即`num_heads` ÷ `num_key_value_heads`为整数），且比值 ≤ 64。默认值：0。
+- **num_key_value_heads** (`int`,可选)：`key/value`中head个数，以 Python `int` 传入，用于GQA。0表示与`query`的head数相等。需满足`num_heads`能被`num_key_value_heads`整除（即`num_heads` ÷ `num_key_value_heads`为整数），且比值 ≤ 64。默认值：0。
 
   <!-- npu="A3,910b" id19 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：BSND/BNSD/BNSD_BSND场景需与`key/value`的N轴一致。

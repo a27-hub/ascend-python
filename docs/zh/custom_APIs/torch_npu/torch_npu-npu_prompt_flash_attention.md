@@ -128,18 +128,18 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - <term>Atlas A3系列产品</term>：数据类型支持`torch.float32`、`torch.bfloat16`。
     <!-- end id16 -->
 
-- **num_heads** (`int`)：可选参数，代表`query`的head个数，数据类型支持`torch.int64`。
+- **num_heads** (`int`)：可选参数，代表`query`的head个数，以 Python `int` 传入。
 - **scale_value** (`float`)：可选参数，对应公式中$scale$，值通常是$d$开根号的倒数，代表缩放系数，作为计算流中Muls的scalar值，数据类型支持`float`。数据类型与`query`的数据类型需满足数据类型推导规则。默认值为`1.0`。
-- **pre_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention（注意力机制）需要和前几个Token计算关联，数据类型支持`torch.int64`。默认值为2147483647。
+- **pre_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention（注意力机制）需要和前几个Token计算关联，数据类型支持`int64`。默认值为2147483647。
     <!-- npu="310p" id29 -->
     - <term>Atlas推理系列产品</term>仅支持默认值2147483647。
     <!-- end id29 -->
-- **next_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个Token计算关联。数据类型支持`torch.int64`。默认值为`0`。
+- **next_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个Token计算关联。数据类型支持`int64`。默认值为`0`。
     <!-- npu="310p" id30 -->
     - <term>Atlas推理系列产品</term>仅支持0和2147483647。
     <!-- end id30 -->
 - **input_layout** (`str`)：可选参数，用于标识输入`query`、`key`、`value`的数据排布格式，当前支持$BSH$、$BSND$、$BNSD$、$BNSD\_BSND$（输入为$BNSD$时，输出格式为$BSND$）。默认值为`"BSH"`。
-- **num_key_value_heads**：可选参数，代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，GQA是介于MHA（Multi-Head Attention，多头注意力）和MQA（Multi-Query Attention，多查询注意力）之间的折中方案：多个query head共享同一组key/value head，从而在保持模型效果接近MHA的同时，显著降低KV Cache显存占用和访存开销，数据类型支持`torch.int64`。默认值为`0`，表示`key`/`value`和`query`的head个数相等。限制：需要满足`num_key_value_heads`整除`num_heads`，`num_heads`与`num_key_value_heads`的比值不能大于64，且在$BSND$、$BNSD$、$BNSD\_BSND$场景下，需要与shape中的`key`/`value`的$N$轴shape值相同，否则报错。
+- **num_key_value_heads**（`int`）：可选参数，代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，GQA是介于MHA（Multi-Head Attention，多头注意力）和MQA（Multi-Query Attention，多查询注意力）之间的折中方案：多个query head共享同一组key/value head，从而在保持模型效果接近MHA的同时，显著降低KV Cache显存占用和访存开销，以 Python `int` 传入。默认值为`0`，表示`key`/`value`和`query`的head个数相等。限制：需要满足`num_key_value_heads`整除`num_heads`，`num_heads`与`num_key_value_heads`的比值不能大于64，且在$BSND$、$BNSD$、$BNSD\_BSND$场景下，需要与shape中的`key`/`value`的$N$轴shape值相同，否则报错。
     <!-- npu="310p" id32 -->
     - <term>Atlas推理系列产品</term>仅支持默认值`0`。
     <!-- end id32 -->
@@ -155,7 +155,7 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - <term>Atlas A3系列产品</term>：支持TND格式。当key/value的input_layout为TND时，该入参必须传入，且以该入参元素的数量作为Batch值。该入参中每个元素的值表示当前Batch与之前所有Batch的seqlenKV和，因此后一个元素的值必须大于等于前一个元素的值，且不能出现负值。
     <!-- end id18 -->
 
-- **sparse_mode** (`int`)：可选参数，表示sparse的模式，数据类型支持`torch.int64`。默认值为`0`，综合约束请见[约束说明](#section12345537164214)。
+- **sparse_mode** (`int`)：可选参数，表示sparse的模式，数据类型支持`int64`。默认值为`0`，综合约束请见[约束说明](#section12345537164214)。
 
     <!-- npu="310p" id33 -->
     - <term>Atlas推理系列产品</term>仅支持默认值`0`。

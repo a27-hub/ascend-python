@@ -95,7 +95,7 @@ torch_npu.npu_rms_norm_dynamic_mx_quant(x, gamma, *, beta=None, epsilon=1e-06, s
 - **gamma**（`Tensor`）：必选参数，表示RmsNorm的缩放因子，即公式中的$gamma$。shape支持1维，shape需要与`x`的最后一维保持一致，数据类型需要与`x`保持一致或者为`torch.float32`，数据格式支持$ND$，支持空Tensor，支持非连续的Tensor。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **beta**（`Tensor`）：可选参数，表示添加到RmsNorm结果上的偏置张量，即公式中的$beta$。若存在，shape、数据类型和数据格式需要与`gamma`保持一致，支持空Tensor，支持非连续Tensor。
-- **epsilon**（`float`）：可选参数，表示添加到分母中的值，以确保数值稳定，即公式中的$epsilon$。数据类型为`torch.double`，默认值为1e-06。
+- **epsilon**（`float`）：可选参数，表示添加到分母中的值，以确保数值稳定，即公式中的$epsilon$。数据类型为`double`，默认值为1e-06。
 - **scale_alg**（`int`）：可选参数，表示`mxscale_out`的计算方法。int类型，支持取0（默认值）和1。当`dst_type`为296(`torch.float4_e2m1fn_x2`)、297(`torch_npu.float4_e1m2fn_x2`)时仅支持取0，当`dst_type`为291(`torch.float8_e5m2`)、292(`torch.float8_e4m3fn`)时支持取值为0和1，默认值为0。
   - 取值0：表示场景1，表示OCP（Open Compute Project）实现。
   - 取值1：表示场景2，表示cuBLAS实现。

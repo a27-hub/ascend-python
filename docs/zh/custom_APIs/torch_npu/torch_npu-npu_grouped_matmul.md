@@ -288,7 +288,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
 - **`activation_input`**（`List[Tensor]`）：**可选参数**，代表激活函数的反向输入，当前仅支持传入None。
 - **`activation_quant_scale`**（`List[Tensor]`）：**可选参数**，预留参数，当前只支持传入None。
 - **`activation_quant_offset`**（`List[Tensor]`）：**可选参数**，预留参数，当前只支持传入None。
-- **`split_item`**（`int`）：**可选参数**，用于指定切分模式。数据类型支持`torch.int64`。
+- **`split_item`**（`int`）：**可选参数**，用于指定切分模式。数据类型支持`int64`。
   - 0、1：输出为多个张量，数量与weight相同。
   - 2、3：输出为单个张量。
 
@@ -296,7 +296,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   - <term>Ascend 950PR&950DT系列产品</term>：非量化和伪量化支持取0/1/2/3，量化当前支持取2和3。
   <!-- end id37 -->
 
-- **`group_type`**（`int`）：**可选参数**，代表需要分组的轴。数据类型支持`torch.int64`。
+- **`group_type`**（`int`）：**可选参数**，代表需要分组的轴。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
   - `group_list`输入类型为`Tensor`时，若矩阵乘为C\[m,n\]=A\[m,k\]xB\[k,n\]，group\_type支持的枚举值为：-1代表不分组；0代表m轴分组；1代表n轴分组，2代表k轴分组。
 
@@ -313,7 +313,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
       - 伪量化场景支持取-1、0。
     <!-- end id40 -->
 
-- **`group_list_type`**（`int`）：**可选参数**，代表`group_list`的表达形式。数据类型支持`torch.int64`。
+- **`group_list_type`**（`int`）：**可选参数**，代表`group_list`的表达形式。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
   - `group_list`输入类型为`Tensor`时可取值0、1或2：
     - 0：默认值，`group_list`中数值为分组轴大小的cumsum（累积和）结果。
@@ -331,7 +331,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     - <term>Ascend 950PR&950DT系列产品</term>：K-CG伪量化场景下，`group_list_type`仅支持取1。
     <!-- end id43 -->
 
-- **`act_type`**（`int`）：**可选参数**，代表激活函数类型。数据类型支持`torch.int64`。
+- **`act_type`**（`int`）：**可选参数**，代表激活函数类型。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
   - `group_list`输入类型为`Tensor`时，支持的枚举值包括：0代表NONE，不启用激活；1代表RELU激活；2代表GELU\_TANH激活；3代表GELU\_ERR\_FUNC激活，目前暂不支持；4代表FAST\_GELU激活；5代表SILU激活。
 

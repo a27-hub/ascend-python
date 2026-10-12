@@ -32,7 +32,7 @@ torch_npu.npu_rms_norm(self, gamma, epsilon=1e-06) -> (Tensor, Tensor)
 
 - **`self`** (`Tensor`): Required. Input for normalization computation, $x$ in the formulas. The shape must have 2 to 8 dimensions. The data layout can be ND. Non-contiguous tensors and empty tensors are supported.
 - **`gamma`** (`Tensor`): Required. Scaling factor (weight) for normalization computation, $g$ in the computation formulas. The shape must have 2 to 8 dimensions. The data layout can be ND. The shape must satisfy `gamma_shape = self_shape[n:]`, where `n < self_shape.dims()`, which is typically the last dimension of `self`. Non-contiguous tensors and empty tensors are supported.
-- **`epsilon`** (`double`): Optional. Used to prevent division-by-zero errors, $eps$ in the formula. The data type is `torch.double`. The default value is `1e-6`.
+- **`epsilon`** (`double`): Optional. Used to prevent division-by-zero errors, $eps$ in the formula. The data type is `double`. The default value is `1e-6`.
 
 ## Return Values
 
