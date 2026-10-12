@@ -106,7 +106,7 @@ torch_npu.npu_add_rms_norm_dynamic_mx_quant(x1, x2, gamma, *, beta=None, epsilio
 - **gamma**（`Tensor`）：必选参数，表示RmsNorm的缩放因子，公式中的$gamma$，shape支持1维，shape需要与`x1`的最后一维保持一致，数据类型需要与`x1`保持一致或者为`torch.float32`，数据格式支持ND，支持空Tensor，支持非连续的Tensor。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **beta**（`Tensor`）：可选参数，表示添加到RmsNorm结果上的偏置张量，公式中的$beta$。若存在，shape、数据类型和数据格式需要与`gamma`保持一致，支持空Tensor，支持非连续Tensor。
-- **epsilon**（`float`）：可选参数，表示添加到分母中的值，以确保数值稳定，公式中的$epsilon$，数据类型为`double`，默认值为1e-06。
+- **epsilon**（`float`）：可选参数，表示添加到分母中的值，以确保数值稳定，公式中的$epsilon$，数据类型为`torch.double`，默认值为1e-06。
 - **scale_alg**（`int`）：可选参数，int类型，表示`mxscale_out`的计算方法，仅支持取值0(表示场景1，OCP实现)和1（表示场景2，cuBLAS实现）。当`dst_type`为296(`torch.float4_e2m1fn_x2`)、297(`torch_npu.float4_e1m2fn_x2`)时仅支持取值为0，当`dst_type`为291(`torch.float8_e5m2`)、292(`torch.float8_e4m3fn`)时支持取值为0和1，默认值为0。
 - **round_mode**（`str`）：可选参数，string类型，表示指定量化结果cast到输出y的数据类型模式；当`dst_type`为296(`torch.float4_e2m1fn_x2`)、297(`torch_npu.float4_e1m2fn_x2`)时，模式支持"rint"、"floor"、"round"；当`dst_type`为291(`torch.float8_e5m2`)、292(`torch.float8_e4m3fn`)时，模式仅支持"rint"，默认值为"rint"。
 - **dst_type**（`int`）：可选参数，int类型，指定输出`y`的数据类型，输入范围为{291、292、296、297}，分别对应输出y的数据类型为{291：`torch.float8_e5m2`，292：`torch.float8_e4m3fn`，296：`torch.float4_e2m1fn_x2`，297：`torch_npu.float4_e1m2fn_x2`}。默认值为296（`torch.float4_e2m1fn_x2`）。

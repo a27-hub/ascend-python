@@ -40,7 +40,7 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 - **perm\_x1**（List\[int\]）：可选参数，表示矩阵乘第一个矩阵的转置序列，size为3，数据类型为`torch.int64`，数据格式支持ND，只支持\[1, 0, 2\]。
 - **perm\_x2**（List\[int\]）：可选参数，表示矩阵乘第二个矩阵的转置序列，size为3，数据类型为`torch.int64`，数据格式支持ND。支持\[0, 1, 2\]或\[0, 2, 1\]。
 - **perm\_y**（List\[int\]）：可选参数，表示矩阵乘输出矩阵的转置序列，size为3，数据类型为`torch.int64`，数据格式支持ND，只支持\[1, 0, 2\]。
-- **batch\_split\_factor**（`int`）：可选参数，用于指定矩阵乘输出矩阵中b维的切分大小。数据类型为`int32`。默认值为1，当前仅支持配置为1。
+- **batch\_split\_factor**（`int`）：可选参数，用于指定矩阵乘输出矩阵中b维的切分大小。数据类型为`torch.int32`。默认值为1，当前仅支持配置为1。
 - **x1_dtype**（`int`）：可选参数，表示x1的数据类型，支持传值`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.hifloat8`。
 - **x2_dtype**（`int`）：可选参数，表示x2的数据类型，支持传值`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch_npu.hifloat8`。
 
