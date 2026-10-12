@@ -84,7 +84,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **`key_rope`** (`Tensor`): Optional. RoPE information for the key in the MLA structure. Non-contiguous tensors are not supported. The data layout can be ND. The data type can be `torch.bfloat16` or `torch.float16`.
 
-- **`sparse_block_size`** (`int`): Optional. Block size used in the sparse phase during the importance score computation. The data type can be `torch.int64`. The value must be a power of 2 in the range of [1, 128].
+- **`sparse_block_size`** (`int`): Optional. Block size used in the sparse phase during the importance score computation. The data type can be `int64`. The value must be a power of 2 in the range of [1, 128].
     - When `sparse_block_size` is set to `1`, token-wise sparsification is enabled. Each token acts as an independent unit. The configuration evaluates the independent correlation degree between each query token and each key-value token during importance score computations.
     - When `sparse_block_size` is greater than `1` and less than or equal to `128`, block-wise sparsification is enabled. The token sequences are partitioned into continuous blocks of a fixed size. Importance evaluations are performed based on blocks. Tokens within a block share the identical sparsification decision.
 
@@ -92,13 +92,13 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **`layout_kv`** (`str`): Optional. Data layout of the input `key`. Valid values are `TND`, `BSND`, or `PA_BSND`. If omitted, the default value `BSND` is used. `PA_BSND` is used when PagedAttention is enabled.
 
-- **`sparse_mode`** (`int`): Optional. Sparse mode. The data type can be `torch.int64`.
+- **`sparse_mode`** (`int`): Optional. Sparse mode. The data type can be `int64`.
     - `0`: enables full computation.
     - `3`: enables the `rightDownCausal` mode mask, corresponding to lower triangular scenarios where the dividing line extends from the bottom-right vertex to the top-left vertex.
 
-- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. Only the default value `9223372036854775807` is supported.
+- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `int64`. Only the default value `9223372036854775807` is supported.
 
-- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. Only the default value `9223372036854775807` is supported.
+- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. Only the default value `9223372036854775807` is supported.
 
 - **`attention_mode`**: Optional. Indicates the attention mode. The data type can be `torch.int64`. Only the value `2` is supported, indicating the MLA-absorb mode. In this mode, computations concatenate the `nope` portion of the query or key with the rope portion of `query_rope` or `key_rope` along the head dimension `D`. This merges them to form the final query or key for subsequent computations. The key or value shares the identical underlying tensor data.
 

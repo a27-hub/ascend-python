@@ -28,7 +28,7 @@
         x'' = kroneckerP1 @ x'
         $$
 
-    3. 沿着$x''$的0维计算最大绝对值并除以$(7 / clipRatio)$，以计算需量化为int4格式的量化缩放系数`quantScale`：
+    3. 沿着$x''$的0维计算最大绝对值并除以$(7 / clipRatio)$，以计算需量化为`torch_npu.int4`格式的量化缩放系数`quantScale`：
 
         $$
         quantScale = \frac{[\max(\operatorname{abs}(x''[0, :, :])),\ \max(\operatorname{abs}(x''[1, :, :])),\ \ldots,\ \max(\operatorname{abs}(x''[K, :, :]))]}{7 / clipRatio}
@@ -101,7 +101,7 @@ torch_npu.npu_kronecker_quant(x, kronecker_p1, kronecker_p2, clip_ratio=None, ds
 
 - **out**(`Tensor`)：量化后的输出，对应公式中的`out`。数据格式支持$ND$。
   - pertoken量化方式：数据类型支持`torch.int32`，shape为(K, M, N / 8)。
-  - pergroup量化方式：数据类型支持`torch_npu.float4_e2m1`，shape为(K, M*N)。
+  - pergroup量化方式：数据类型支持`torch_npu.float4_e2m1fn_x2`，shape为(K, M*N)。
 
 - **quant_scale**(`Tensor`)：量化缩放系数，对应公式中的`quantScale`。数据格式支持$ND$。
   - pertoken量化方式：数据类型支持`torch.float32`，shape为(K,)。

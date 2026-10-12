@@ -21,7 +21,7 @@
   <!-- npu="A3,910b" id4 -->
   - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
     <details>
-    <summary>量化场景A8W8（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型）：</summary>
+    <summary>量化场景A8W8（A指激活矩阵，W指权重矩阵，8指`torch.int8`数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -63,7 +63,7 @@
     </details>
 
     <details>
-    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指torch.int8数据类型，4指torch.int4数据类型）：</summary>
+    <summary>MSD场景A8W4（A指激活矩阵，W指权重矩阵，8指`torch.int8`数据类型，4指`torch_npu.int4`数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -77,7 +77,7 @@
       - $Q\_scale∈\mathbb{R}^{M}$：量化缩放因子。
     - **计算过程**：
       1. 根据groupList\[i\]确定当前分组的token，分组逻辑与A8W8相同。
-      2. 将左矩阵torch.int8拆为高低4bit两部分：
+      2. 将左矩阵`torch.int8`拆为高低4bit两部分：
 
           $$
           X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor
@@ -118,7 +118,7 @@
     </details>
 
     <details>
-    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指torch.int4数据类型）：</summary>
+    <summary>量化场景A4W4（A指激活矩阵，W指权重矩阵，4指`torch_npu.int4`数据类型）：</summary>
 
     - **输入**：
       - $X∈\mathbb{Z_4}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
@@ -209,9 +209,9 @@
 
          |   DataType    | emax |
          | :-----------: | :--: |
-         | torch.float8_e4m3fn |  8   |
-         | torch.float8_e5m2  |  15  |
-         | torch.float4_e2m1fn_x2  |  2   |
+         | `torch.float8_e4m3fn` |  8   |
+         | `torch.float8_e5m2`  |  15  |
+         | `torch.float4_e2m1fn_x2`  |  2   |
 
          其中，$blocksize$表示每次量化的元素个数，仅支持32。
 
@@ -327,7 +327,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **`bias`**（`Tensor`）：**可选参数**，矩阵乘计算的偏移值。数据类型支持`torch.int32`，当前仅支持传入默认值`None`。
 
-- **`dequant_mode`**（`int`）：**可选参数**，表示反量化模式，数据类型为`torch.int32`，默认值为`0`。取值为`0`时，表示激活矩阵pertoken、权重矩阵perchannel；取值为`1`时，表示激活矩阵pertoken、权重矩阵pergroup；取值为`2`时，表示MX量化。
+- **`dequant_mode`**（`int`）：**可选参数**，表示反量化模式，数据类型为`int32`，默认值为`0`。取值为`0`时，表示激活矩阵pertoken、权重矩阵perchannel；取值为`1`时，表示激活矩阵pertoken、权重矩阵pergroup；取值为`2`时，表示MX量化。
 
   <!-- npu="A3,910b" id14 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：当前仅支持传入默认值`0`。
@@ -336,7 +336,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Ascend 950PR&950DT系列产品</term>：当前仅支持传入`0`以及`2`。
   <!-- end id15 -->
 
-- **`dequant_dtype`**（`int`）：**可选参数**，表示反量化类型，数据类型为`torch.int32`。
+- **`dequant_dtype`**（`int`）：**可选参数**，表示反量化类型，数据类型为`int32`。
 
   <!-- npu="A3,910b" id16 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：预留输入，当前仅支持传入默认值`torch.float32`。
@@ -345,7 +345,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Ascend 950PR&950DT系列产品</term>：默认值为`torch.float32`，当前仅支持传入`torch.float32`、`torch.bfloat16`、`torch.float16`。
   <!-- end id17 -->
 
-- **`quant_mode`**（`int`）：**可选参数**，表示SwiGLU后的量化模式，数据类型为`torch.int32`。支持取值：`0`（默认值）表示pertoken量化；`1`表示pergroup量化；`2`表示MX量化。
+- **`quant_mode`**（`int`）：**可选参数**，表示SwiGLU后的量化模式，数据类型为`int32`。支持取值：`0`（默认值）表示pertoken量化；`1`表示pergroup量化；`2`表示MX量化。
 
   <!-- npu="A3,910b" id18 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：当前仅支持传入默认值`0`。
@@ -354,7 +354,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Ascend 950PR&950DT系列产品</term>：当前仅支持传入`0`以及`2`。
   <!-- end id19 -->
 
-- **`quant_dtype`**（`int`）：**可选参数**，表示量化后低比特数据类型，数据类型为`torch.int32`。
+- **`quant_dtype`**（`int`）：**可选参数**，表示量化后低比特数据类型，数据类型为`int32`。
 
   <!-- npu="A3,910b" id20 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：当前仅支持传入默认值`torch.int8`。
@@ -363,7 +363,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Ascend 950PR&950DT系列产品</term>：默认值为`torch.int8`，当前支持传入`torch.float8_e5m2`、`torch.float8_e4m3fn`、`torch.float4_e2m1fn_x2`、`torch_npu.float4_e1m2fn_x2`、`torch.int8`、`torch_npu.hifloat8`。
   <!-- end id21 -->
 
-- **`group_list_type`**（`int`）：**可选参数**，表示`group_list`的输入类型，数据类型为`torch.int32`，默认值为`0`。
+- **`group_list_type`**（`int`）：**可选参数**，表示`group_list`的输入类型，数据类型为`int32`，默认值为`0`。
   - 取值为`0`时，表示cumsum模式，`group_list`中的每个元素代表当前分组的累计长度。
   - 取值为`1`时，表示count模式，`group_list`中的每个元素代表该分组包含的元素个数。
 

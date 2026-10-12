@@ -13,11 +13,11 @@
 
 - Formulas:
     - Quantized matrix multiplication:
-        - When `bias` is `int32`:
+        - When `bias` is `torch.int32`:
         $$
         qbmmout = (x1 \mathbin{@} x2 + \text{bias}) * x2Scale * x1Scale
         $$
-        - When `bias` is `bfloat16`, `float16`, or `float32`:
+        - When `bias` is `torch.bfloat16`, `torch.float16`, or `torch.float32`:
         $$
         qbmmout = x1 \mathbin{@} x2 * x2Scale * x1Scale + \text{bias}
         $$

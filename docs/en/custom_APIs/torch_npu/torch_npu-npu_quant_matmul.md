@@ -17,11 +17,11 @@
     $$
     out = x1 \mathbin{@} x2 * \text{scale} + \text{offset}
     $$
-    - When `bias` is `int32`:
+    - When `bias` is `torch.int32`:
     $$
     out = (x1 \mathbin{@} x2 + \text{bias}) * \text{scale} + \text{offset}
     $$
-    - When `bias` is `bfloat16` or `float32` (without `offset`):
+    - When `bias` is `torch.bfloat16` or `torch.float32` (without `offset`):
     $$
     out = x1 \mathbin{@} x2 * \text{scale} + \text{bias}
     $$
