@@ -35,9 +35,6 @@
   "op_api: torch_npu.npu_format_cast_(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
-  "op_api: torch_npu.npu_gelu_backward(*args, **kwargs)": {
-    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
-  },
   "op_api: torch_npu.npu_fused_floyd_attention(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
@@ -120,9 +117,6 @@
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_quant_gmm_alltoallv(*args, **kwargs)": {
-    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
-  },
-  "op_api: torch_npu.npu_moe_update_expert(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_mrope(*args, **kwargs)": {
@@ -443,9 +437,6 @@
   "op_api: torch_npu.npu_gather_sparse_index(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
-  "op_api: torch_npu.npu_gelu_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
   "op_api: torch_npu.npu_gemma_rms_norm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
@@ -524,9 +515,6 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_moe_distribute_combine_add_rms_norm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
-  "op_api: torch_npu.npu_moe_update_expert(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_rotate_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -845,9 +833,6 @@
     "version": ["all_version"]
   },
   "func: npu_kv_rmsnorm_rope_cache(Tensor kv, Tensor gamma, Tensor cos, Tensor sin, Tensor index, Tensor k_cache, Tensor ckv_cache, *, Tensor? k_rope_scale=None, Tensor? c_kv_scale=None, Tensor? k_rope_offset=None, Tensor? c_kv_offset=None, Tensor? v=None, float epsilon=1e-5, str cache_mode='Norm', bool is_output_kv=False) -> (Tensor, Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
-  },
-  "func: npu_moe_update_expert(Tensor expert_ids, Tensor eplb_table, *, Tensor? expert_scales=None, Tensor? pruning_threshold=None, Tensor? active_mask=None, int local_rank_id=-1, int world_size=-1, int balance_mode=0) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_quant_grouped_matmul_dequant(Tensor x, Tensor quantized_weight, Tensor weight_scale, Tensor group_list, *, Tensor? bias=None, Tensor? x_scale=None, Tensor? x_offset=None, Tensor? smooth_scale=None, str? quant_mode='pertoken') -> Tensor": {
@@ -1213,9 +1198,6 @@
   "func: npu_multi_head_attention_backward(Tensor query, Tensor key, Tensor value, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor out_proj_weight, Tensor? query_bias, Tensor? key_bias, Tensor? value_bias, Tensor? out_proj_bias, Tensor query_res, Tensor key_res, Tensor value_res, Tensor attn_scores, Tensor attn_res, Tensor context, Tensor y_grad, Tensor dropout_mask, int attn_head_num, int attn_dim_per_head, int src_len, int tgt_len, float dropout_prob, bool softmax_use_float) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
-  },
   "func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
@@ -1230,9 +1212,6 @@
   },
   "func: npu_ring_attention_update(Tensor prev_attn_out, Tensor prev_softmax_max, Tensor prev_softmax_sum, Tensor cur_attn_out, Tensor cur_softmax_max, Tensor cur_softmax_sum, *, Tensor? actual_seq_qlen=None, str input_layout=\"SBH\", str input_softmax_layout=\"\") -> (Tensor, Tensor, Tensor)": {
     "version": ["v2.7", "newest"]
-  },
-  "func: npu_add_layer_norm_backward(Tensor? dy_opt, Tensor x1, Tensor x2, Tensor rstd, Tensor mean, Tensor gamma, Tensor? dsum_opt) -> (Tensor, Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
   },
   "func: npu_rms_norm(Tensor self, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor)": {
     "version": ["all_version"]
@@ -4887,12 +4866,6 @@
     "version": ["all_version"]
   },
   "func: _upsample_nearest_exact3d(Tensor self, SymInt[3] output_size, float? scales_d=None, float? scales_h=None, float? scales_w=None) -> Tensor": {
-    "version": ["all_version"]
-  },
-  "func: npu_gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor": {
-    "version": ["all_version"]
-  },
-  "func: npu_gelu(Tensor self, *, str approximate='none') -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_gelu_quant(Tensor self, *, Tensor? input_scale=None, Tensor? input_offset=None, str approximate='none', str quant_mode='dynamic', int? dst_type=None, str round_mode='rint') -> (Tensor, Tensor)": {

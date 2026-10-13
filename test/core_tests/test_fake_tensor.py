@@ -1191,24 +1191,6 @@ class TestFastGelu(TestCase):
             self.assertTrue(a.shape == a.grad.shape)
 
 
-class TestGelu(TestCase):
-
-    def test_npu_gelu(self):
-        with FakeTensorMode():
-            a = torch.randn(10, 3, 4).npu()
-            a.requires_grad = True
-            result = torch.ops.npu.npu_gelu(a)
-            self.assertTrue(a.shape == result.shape)
-
-    def test_npu_gelu_backward(self):
-        with FakeTensorMode():
-            a = torch.randn(10, 3, 4).npu()
-            a.requires_grad = True
-            result = torch.ops.npu.npu_gelu(a)
-            result.sum().backward()
-            self.assertTrue(a.shape == a.grad.shape)
-
-
 class TestGeluMul(TestCase):
 
     def test_npu_gelu_mul(self):
@@ -3915,37 +3897,6 @@ class TestAddRmsNormDynamicMxQuant(TestCase):
             self.assertEqual(mxscale_npu.dtype, torch.uint8)
             self.assertEqual(rstd_npu.shape, torch.Size([8, 1]))
             self.assertEqual(rstd_npu.dtype, torch.float32)
-
-
-class TestMoeUpdateExpert(TestCase):
-    def test_moe_update_expert(self):
-        with FakeTensorMode():
-            dtype = torch.bfloat16
-            world_size = 8
-            local_rank_id = 0
-            balance_mode = 0
-            bs = 32
-            k = 8
-            f = 4
-            moe_expert_num = 256
-            expert_ids = torch.randn(bs, k).to(torch.int32)
-            eplb_table = torch.randn(moe_expert_num, f).to(torch.int32)
-            expert_scales = torch.sort(torch.rand(bs, k, dtype=dtype), dim=-1, descending=True).values
-            pruning_threshold = torch.rand(k, dtype=dtype)
-            num_true = np.random.randint(0, bs + 1)
-            active_mask_arr = np.concatenate([np.ones(num_true, dtype=bool), np.zeros(bs - num_true, dtype=bool)])
-            active_mask = torch.from_numpy(active_mask_arr).to(torch.bool)
-            result = torch_npu.npu_moe_update_expert(expert_ids=expert_ids, eplb_table=eplb_table,
-            expert_scales=expert_scales, pruning_threshold=pruning_threshold, active_mask=active_mask,
-            local_rank_id=local_rank_id, world_size=world_size, balance_mode=balance_mode)
-
-            self.assertEqual(result[0].shape[0], 32)
-            self.assertEqual(result[0].shape[1], 8)
-            self.assertEqual(result[0].dtype, torch.int32)
-
-            self.assertEqual(result[1].shape[0], 32)
-            self.assertEqual(result[1].shape[1], 8)
-            self.assertEqual(result[1].dtype, torch.bool)
 
 
 class TestNpuMropeMeta(TestCase):
