@@ -15,33 +15,34 @@ on:
 
   pull_request_comment:
     types: [created]
-    branches: [ 'master', '26.1.0', '26.0.0', '7.3.0' ]
+    branches: [ 'master', '26.2.0', '26.1.0', '26.0.0', '7.3.0' ]
     comments: [ '^compile$' ]
 
 env:
   repo: ${{ atomgit.event.repository.name }}
   pr_id: ${{ atomgit.event.pull_request.number }}
-  org_name: "ComputingActionTest"
-  img_master_arm: "pytorch_master_a2_aarch64_builder:20260804"
+  TARGET_BRANCH: ${{ atomgit.event.pull_request.base.ref }}
+  org_name: "Ascend"
+  img_master_arm: "pytorch_master_a2_aarch64_builder:20260922"
   img_2_7_1_arm: "pytorch_2.7.1_a2_aarch64_builder:20260804"
   img_2_9_0_arm: "pytorch_2.9.0_a2_aarch64_builder:20260901"
   img_2_10_0_arm: "pytorch_2.10.0_a2_aarch64_builder:20260804"
   img_2_11_0_arm: "pytorch_2.11.0_a2_aarch64_builder:20260804"
   img_2_12_0_arm: "pytorch_2.12.0_a2_aarch64_builder:20260804"
-  img_2_13_0_arm: "pytorch_2.13.0_a2_aarch64_builder:20260804"
-  img_master_x86: "pytorch_master_a1_x86_64_builder:20260804"
+  img_master_x86: "pytorch_master_a1_x86_64_builder:20260922"
   img_2_7_1_x86: "pytorch_2.7.1_a1_x86_64_builder:20260804"
   img_2_9_0_x86: "pytorch_2.9.0_a1_x86_64_builder:20260901"
   img_2_10_0_x86: "pytorch_2.10.0_a1_x86_64_builder:20260704"
   img_2_11_0_x86: "pytorch_2.11.0_a1_x86_64_builder:20260704"
   img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260704"
-  img_2_13_0_x86: "pytorch_2.13.0_a1_x86_64_builder:20260709"
 
 permissions:
   project: read
   repository: read
   id-token: write
   pr: write
+  note: write
+  action: read
 
 stages:
   stage_1:
@@ -50,9 +51,9 @@ stages:
     jobs:
       Detect_file_changes:
         name: Detect_file_changes
-        runs-on: [ self-hosted, x86, cpu=32 ]
+        runs-on: [ self-hosted, default, x86, cpu=16 ]
         container:
-          image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         outputs:
           need_build_ut: ${{ steps.set-skip.outputs.need_build_ut }}
         steps:
@@ -62,6 +63,7 @@ stages:
               ref: refs/merge-requests/${{ env.pr_id }}/merge
               fetch-depth: 0
               allow-unsafe-pr-checkout: true
+
           - name: Only_doc_commit
             id: filter
             uses: paths-changes-filter
@@ -88,16 +90,20 @@ stages:
 
           - name: set build skip flag
             id: set-skip
+            env:
+              CHANGED_FILES: ${{ steps.filter.outputs.changed_files }}
+              NON_DOC: ${{ steps.filter.outputs.non-doc }}
             run: |
-              echo "changed: ${{ steps.filter.outputs.changed_files }}"
-              echo "non-doc: ${{ steps.filter.outputs.non-doc }}"
-              if [ "${{ steps.filter.outputs.non-doc }}" = "true" ]; then
+              echo "changed: $CHANGED_FILES"
+              echo "non-doc: $NON_DOC"
+              if [ "$NON_DOC" = "true" ]; then
                 echo "need_build_ut=yes" >> "$ATOMGIT_OUTPUT"
               else
                 echo "need_build_ut=no" >> "$ATOMGIT_OUTPUT"
               fi
-              echo "${{ steps.filter.outputs.changed_files }}" | tr -d '[]" ' | tr ',' '\n' > modify_files.txt
+              printf '%s' "$CHANGED_FILES" | python3 -c "import json,sys; print('\n'.join(json.load(sys.stdin)))" > modify_files.txt
               cat modify_files.txt
+
           - name: upload modify_files.txt
             uses: upload-artifact
             with:
@@ -108,9 +114,9 @@ stages:
       associate_pr_comment:
         name: associate_pr_comment
         select: selected_by_default
-        runs-on: [ self-hosted, x86, cpu=32 ]
+        runs-on: [ self-hosted, default, x86, cpu=16 ]
         container:
-          image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         steps:
           - name: associate-pr-comment
             uses: associate-pr-comment
@@ -118,7 +124,7 @@ stages:
             id: pre_pipeline
             uses: cann/.gitcode/actions/pre-pipeline@689551d6b29a77d8c2a005b8f1b3883db24820ef
             with:
-              owner: ${{ vars.EMM }}
+              owner: ${{ env.org_name }}
               repo: ${{ atomgit.event.repository.name }}
               pr_number: ${{ atomgit.event.pull_request.number }}
               token: ${{ secrets.GIT_TOKEN }}
@@ -130,9 +136,9 @@ stages:
     select: selected_by_default
     jobs:
       CodeCheck_pre_commit:
-        name: CodeCheck_pre_commit
+        name: pre-commit
         if : ${{ jobs.Detect_file_changes.outputs.need_build_ut == 'yes' }}
-        runs-on: [ self-hosted, x86, cpu=32 ]
+        runs-on: [ self-hosted, default, x86, cpu=16 ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
         steps:
@@ -153,12 +159,16 @@ stages:
               wget --no-host-directories -c --no-check-certificate https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta-codecheck/gitleaks
               chmod +x gitleaks
               cd -
-          - name: pre-commit
-            uses: openlibing-pre-commit-action
+          - name: Run pre-commit
+            uses: openlibing/pre-commit-action@v1.0.0
+            env:
+              SKIP: clang-tidy
 
       sca-pr:
         if : ${{ jobs.Detect_file_changes.outputs.need_build_ut == 'yes' }}
-        runs-on: [ self-hosted, x86, cpu=32 ]
+        runs-on: [ self-hosted, default, x86, cpu=16 ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         steps:
           - name: checkout
             uses: checkout
@@ -169,7 +179,9 @@ stages:
 
       malicious-scan:
         if : ${{ jobs.Detect_file_changes.outputs.need_build_ut == 'yes' }}
-        runs-on: [ self-hosted, x86, cpu=32 ]
+        runs-on: [ self-hosted, default, x86, cpu=16 ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
         steps:
           - name: checkout
             uses: checkout
@@ -198,7 +210,7 @@ stages:
             include:
               - branch: "master"
                 arch: "x86"
-                img: "pytorch_master_a1_x86_64_builder:20260804"
+                img: "pytorch_master_a1_x86_64_builder:20260922"
               - branch: "v2.7.1"
                 arch: "x86"
                 img: "pytorch_2.7.1_a1_x86_64_builder:20260804"
@@ -216,7 +228,7 @@ stages:
                 img: "pytorch_2.12.0_a1_x86_64_builder:20260704"
               - branch: "master"
                 arch: "arm"
-                img: "pytorch_master_a2_aarch64_builder:20260804"
+                img: "pytorch_master_a2_aarch64_builder:20260922"
               - branch: "v2.7.1"
                 arch: "arm"
                 img: "pytorch_2.7.1_a2_aarch64_builder:20260804"
@@ -232,7 +244,6 @@ stages:
               - branch: "v2.12.0"
                 arch: "arm"
                 img: "pytorch_2.12.0_a2_aarch64_builder:20260804"
-
 
   stage_4:
     name: UT
@@ -251,11 +262,11 @@ stages:
           matrix:
             include:
               - branch: "master"
-                img: "pytorch_master_a2_aarch64_builder:20260804"
+                img: "pytorch_master_a2_aarch64_builder:20260922"
                 TEST_RANK: "1"
                 TEST_WORLD_SIZE: "2"
               - branch: "master"
-                img: "pytorch_master_a2_aarch64_builder:20260804"
+                img: "pytorch_master_a2_aarch64_builder:20260922"
                 TEST_RANK: "2"
                 TEST_WORLD_SIZE: "2"
               - branch: "v2.7.1"
@@ -269,12 +280,16 @@ stages:
               - branch: "v2.12.0"
                 img: "pytorch_2.12.0_a2_aarch64_builder:20260804"
 
+      UT_212_CPP:
+        if : ${{ jobs.Detect_file_changes.outputs.need_build_ut == 'yes' && ( env.TARGET_BRANCH == 'master' || env.TARGET_BRANCH == '26.2.0' ) }}
+        uses: .gitcode/workflows/ut_cpp_job.yml
+        with:
+          pytorch_branch: "v2.12.0"
+          CP_DOCKER_IMG: "pytorch_2.12.0_a2_aarch64_builder:20260804"
+
 post:
   jobs:
     query_pipeline:
-      runs-on: [ self-hosted, x86, cpu=32 ]
-      container:
-        image: swr.cn-north-4.myhuaweicloud.com/atlas-ci/common:latest
       steps:
         - name: query_pipeline
           id: query_pipeline
