@@ -24,7 +24,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
     bool compute_uv,
     c10::optional<c10::string_view> driver) {
   int64_t MIN_DIM = 2;
-  TORCH_CHECK(A.dtype() == at::kFloat, "svd_npu only supported Float, but get", A.dtype(), OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(
+      A.dtype() == at::kFloat || A.dtype() == at::kDouble || A.dtype() == at::kComplexFloat ||
+          A.dtype() == at::kComplexDouble,
+      "svd_npu only supported Float, Double, Complex64 and Complex128, but get", A.dtype(), OPS_ERROR(ErrCode::TYPE));
   TORCH_CHECK(A.dim() >= MIN_DIM, "The dim of input tensor must larger than two.", OPS_ERROR(ErrCode::VALUE));
 
   int64_t m = A.size(-2);
