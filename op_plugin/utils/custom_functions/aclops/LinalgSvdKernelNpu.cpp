@@ -97,7 +97,10 @@ inline c10::MaybeOwned<at::Tensor> borrow_else_clone(
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _svd_helper(const at::Tensor& self, bool some, bool compute_uv) {
   TORCH_CHECK(
-      self.dtype() == at::kFloat, "svd_npu only supported Float, but get", self.dtype(), OPS_ERROR(ErrCode::TYPE));
+      self.dtype() == at::kFloat || self.dtype() == at::kDouble || self.dtype() == at::kComplexFloat ||
+          self.dtype() == at::kComplexDouble,
+      "svd_npu only supported Float, Double, Complex64 and Complex128, but get", self.dtype(),
+      OPS_ERROR(ErrCode::TYPE));
   TORCH_CHECK(self.dim() >= 2, "The dim of input tensor must larger than two.", OPS_ERROR(ErrCode::VALUE));
   std::vector<int64_t> infos(batch_count(self), 0);
   int64_t m = self.size(-2);
