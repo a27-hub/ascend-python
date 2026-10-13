@@ -1,11 +1,10 @@
 import torch
 import numpy as np
 from torch import linalg as LA
-import unittest
 
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
+from torch_npu.testing.common_utils import create_common_tensor
 
 
 class TestLinalgSvd(TestCase):
@@ -48,16 +47,21 @@ class TestLinalgSvd(TestCase):
                 npu_S_diag_filled = self.construct_S_diag_filled(full_matrices, npu_U, npu_S, npu_Vh)
                 npu_A_reconstructed = npu_U @ npu_S_diag_filled @ npu_Vh
 
-                self.assertRtolEqual(cpu_A_reconstructed.numpy(), npu_A_reconstructed.numpy())
+                if cpu_A_reconstructed.is_complex():
+                    torch.testing.assert_close(cpu_A_reconstructed, npu_A_reconstructed, rtol=1e-3, atol=1e-3)
+                else:
+                    self.assertRtolEqual(cpu_A_reconstructed.numpy(), npu_A_reconstructed.numpy())
 
     def test_linalg_svd(self):
         dtype_list = [np.float32]
         self.exec_linalg_svd(dtype_list)
 
-    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
-    @SupportedDevices(['Ascend910B'])
     def test_linalg_svd_fp64(self):
         dtype_list = [np.float64]
+        self.exec_linalg_svd(dtype_list)
+
+    def test_linalg_svd_complex(self):
+        dtype_list = [np.complex64, np.complex128]
         self.exec_linalg_svd(dtype_list)
 
     def test_linalg_svd_empty_and_zero_dim(self):
