@@ -54,10 +54,14 @@ class TestLinalgSvd(TestCase):
         dtype_list = [np.float32]
         self.exec_linalg_svd(dtype_list)
 
-    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_linalg_svd_fp64(self):
         dtype_list = [np.float64]
+        self.exec_linalg_svd(dtype_list)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_linalg_svd_complex(self):
+        dtype_list = [np.complex64, np.complex128]
         self.exec_linalg_svd(dtype_list)
 
     def test_linalg_svd_empty_and_zero_dim(self):
