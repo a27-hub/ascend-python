@@ -52,7 +52,12 @@ at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out) {
   auto ret = aclGetViewShape(npuAclParams.Get<1>(), &view_dims, &view_dim_num);
   TORCH_CHECK(ret == 0, "aclGetViewShape failed.", OPS_ERROR(ErrCode::ACL));
   c10::SmallVector<int64_t, op_infer::SIZE> output_size(view_dims, view_dims + view_dim_num);
+  auto print_stride = [](const at::Tensor& t, const char* tag) {
+    std::cout << tag << " sizes=" << t.sizes() << " strides=" << t.strides() << std::endl;
+  };
+  print_stride(out, "[debug] before resize_");
   out = out.resize_(output_size);
+  print_stride(out, "[debug] after resize_");
   // Need to use delete[] to release memory to avoid memory leakage!
   delete[] view_dims;
   view_dims = nullptr;
