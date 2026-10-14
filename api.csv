@@ -1,4 +1,4 @@
-API名称	是否支持
+API名称	是否支持	对应已支持API
 Function.backward	未提供
 Function.forward	未提供
 Function.jvp	未提供
@@ -364,7 +364,7 @@ Tensor.logsumexp	支持
 Tensor.long	支持
 Tensor.lt	支持
 Tensor.lt_	支持
-Tensor.lu	未提供
+Tensor.lu	未提供	torch.lu
 Tensor.lu_solve	支持
 Tensor.mH	支持
 Tensor.mT	支持
@@ -401,7 +401,7 @@ Tensor.nan_to_num	支持
 Tensor.nan_to_num_	支持
 Tensor.nanmean	支持
 Tensor.nanmedian	支持
-Tensor.nanquantile	未提供
+Tensor.nanquantile	未提供	torch.nanquantile
 Tensor.nansum	支持
 Tensor.narrow	支持
 Tensor.narrow_copy	支持
@@ -602,7 +602,7 @@ __getstate__	未提供
 __setstate__	未提供
 align_as	未提供
 align_to	未提供
-flatten	未提供
+flatten	未提供	Tensor.flatten
 names	未提供
 profile.export_chrome_trace	未提供
 profile.key_averages	未提供
@@ -1107,7 +1107,7 @@ torch._utils._unflatten_dense_tensors	未提供
 torch._utils.is_compiling	未提供
 torch._utils_internal.get_file_path_2	未提供
 torch.abs	支持
-torch.abs_	未提供
+torch.abs_	未提供	Tensor.abs_
 torch.absolute	支持
 torch.accelerator.Event	支持
 torch.accelerator.Graph	未提供
@@ -1146,7 +1146,7 @@ torch.accelerator.set_stream	支持
 torch.accelerator.stream	支持
 torch.accelerator.synchronize	支持
 torch.acos	支持
-torch.acos_	未提供
+torch.acos_	未提供	Tensor.acos_
 torch.acosh	支持
 torch.acosh_	支持
 torch.adaptive_avg_pool1d	不支持
@@ -1157,7 +1157,7 @@ torch.addcdiv	支持
 torch.addcmul	支持
 torch.addmm	支持
 torch.addmv	支持
-torch.addmv_	未提供
+torch.addmv_	未提供	Tensor.addmv_
 torch.addr	支持
 torch.adjoint	支持
 torch.affine_grid_generator	支持
@@ -1689,18 +1689,18 @@ torch.ao.quantization.utils.getattr_from_fqn	未提供
 torch.ao.quantization.utils.validate_qmin_qmax	未提供
 torch.arange	支持
 torch.arccos	支持
-torch.arccos_	未提供
+torch.arccos_	未提供	Tensor.arccos_
 torch.arccosh	支持
-torch.arccosh_	未提供
+torch.arccosh_	未提供	Tensor.arccosh_
 torch.arcsin	支持
-torch.arcsin_	未提供
+torch.arcsin_	未提供	Tensor.arcsin_
 torch.arcsinh	支持
-torch.arcsinh_	未提供
+torch.arcsinh_	未提供	Tensor.arcsinh_
 torch.arctan	支持
 torch.arctan2	支持
-torch.arctan_	未提供
+torch.arctan_	未提供	Tensor.arctan_
 torch.arctanh	支持
-torch.arctanh_	未提供
+torch.arctanh_	未提供	Tensor.arctanh_
 torch.are_deterministic_algorithms_enabled	支持
 torch.argmax	支持
 torch.argmin	支持
@@ -1713,14 +1713,14 @@ torch.as_strided_scatter	未提供
 torch.as_tensor	支持
 torch.asarray	支持
 torch.asin	支持
-torch.asin_	未提供
+torch.asin_	未提供	Tensor.asin_
 torch.asinh	支持
-torch.asinh_	未提供
+torch.asinh_	未提供	Tensor.asinh_
 torch.atan	支持
 torch.atan2	支持
-torch.atan_	未提供
+torch.atan_	未提供	Tensor.atan_
 torch.atanh	支持
-torch.atanh_	未提供
+torch.atanh_	未提供	Tensor.atanh_
 torch.atleast_1d	支持
 torch.atleast_2d	支持
 torch.atleast_3d	支持
@@ -2018,7 +2018,7 @@ torch.cat	支持
 torch.ccol_indices_copy	未提供
 torch.cdist	支持
 torch.ceil	支持
-torch.ceil_	未提供
+torch.ceil_	未提供	Tensor.ceil_
 torch.celu_	支持
 torch.chain_matmul	支持
 torch.channel_shuffle	未提供
@@ -2028,7 +2028,7 @@ torch.cholesky_solve	支持
 torch.choose_qparams_optimized	支持
 torch.chunk	支持
 torch.clamp	支持
-torch.clamp_	未提供
+torch.clamp_	未提供	Tensor.clamp_
 torch.clamp_max_	未提供
 torch.clamp_min	支持
 torch.clamp_min_	未提供
@@ -2080,7 +2080,7 @@ torch.cond	支持
 torch.configs.set_pyboost	未提供
 torch.conj	支持
 torch.conj_physical	支持
-torch.conj_physical_	未提供
+torch.conj_physical_	未提供	Tensor.conj_physical_
 torch.constant_pad_nd	支持
 torch.conv1d	支持
 torch.conv3d	不支持
@@ -2092,9 +2092,9 @@ torch.convolution	支持
 torch.copysign	支持
 torch.corrcoef	支持
 torch.cos	支持
-torch.cos_	未提供
+torch.cos_	未提供	Tensor.cos_
 torch.cosh	支持
-torch.cosh_	未提供
+torch.cosh_	未提供	Tensor.cosh_
 torch.cosine_embedding_loss	未提供
 torch.cosine_similarity	支持
 torch.count_nonzero	支持
@@ -2422,7 +2422,7 @@ torch.deg2rad_	未提供
 torch.dequantize	支持
 torch.det	支持
 torch.detach	支持
-torch.detach_	未提供
+torch.detach_	未提供	Tensor.detach_
 torch.detach_copy	未提供
 torch.device	支持
 torch.diag	支持
@@ -3940,17 +3940,17 @@ torch.enable_grad	支持
 torch.eq	支持
 torch.equal	支持
 torch.erf	支持
-torch.erf_	未提供
+torch.erf_	未提供	Tensor.erf_
 torch.erfc	支持
-torch.erfc_	未提供
+torch.erfc_	未提供	Tensor.erfc_
 torch.erfinv	支持
 torch.exp	支持
 torch.exp2	支持
 torch.exp2_	未提供
-torch.exp_	未提供
+torch.exp_	未提供	Tensor.exp_
 torch.expand_copy	未提供
 torch.expm1	支持
-torch.expm1_	未提供
+torch.expm1_	未提供	Tensor.expm1_
 torch.export.Constraint	未提供
 torch.export.ExportBackwardSignature	未提供
 torch.export.ExportGraphSignature	未提供
@@ -4038,21 +4038,21 @@ torch.fill	支持
 torch.fill_	支持
 torch.finfo	支持
 torch.fix	支持
-torch.fix_	未提供
+torch.fix_	未提供	Tensor.fix_
 torch.flatten	支持
 torch.flip	支持
 torch.fliplr	支持
 torch.flipud	支持
 torch.float_power	支持
 torch.floor	支持
-torch.floor_	未提供
+torch.floor_	未提供	Tensor.floor_
 torch.floor_divide	支持
 torch.fmax	支持
 torch.fmin	支持
 torch.fmod	支持
 torch.fork	未提供
 torch.frac	支持
-torch.frac_	未提供
+torch.frac_	未提供	Tensor.frac_
 torch.frexp	支持
 torch.frobenius_norm	支持
 torch.from_dlpack	不支持
@@ -4730,7 +4730,7 @@ torch.fx.traceback.preserve_node_meta	未提供
 torch.fx.wrap	支持
 torch.gather	支持
 torch.gcd	支持
-torch.gcd_	未提供
+torch.gcd_	未提供	Tensor.gcd_
 torch.ge	支持
 torch.geqrf	支持
 torch.ger	支持
@@ -4743,7 +4743,7 @@ torch.get_current_dtype	支持
 torch.get_default_device	支持
 torch.get_default_dtype	支持
 torch.get_deterministic_debug_mode	支持
-torch.get_device	未提供
+torch.get_device	未提供	Tensor.get_device
 torch.get_device_module	支持
 torch.get_float32_matmul_precision	不支持
 torch.get_num_interop_threads	支持
@@ -4765,7 +4765,7 @@ torch.hash_tensor	未提供
 torch.heaviside	支持
 torch.hinge_embedding_loss	未提供
 torch.histc	支持
-torch.histogram	未提供
+torch.histogram	未提供	Tensor.histogram
 torch.histogramdd	未提供
 torch.hsmm	未提供
 torch.hsplit	支持
@@ -4781,7 +4781,7 @@ torch.hub.load_state_dict_from_url	支持
 torch.hub.set_dir	支持
 torch.hypot	支持
 torch.i0	支持
-torch.i0_	未提供
+torch.i0_	未提供	Tensor.i0_
 torch.igamma	支持
 torch.igammac	支持
 torch.iinfo	支持
@@ -4793,7 +4793,7 @@ torch.index_add	支持
 torch.index_copy	支持
 torch.index_fill	支持
 torch.index_put	支持
-torch.index_put_	未提供
+torch.index_put_	未提供	Tensor.index_put_
 torch.index_reduce	支持
 torch.index_select	支持
 torch.indices_copy	未提供
@@ -4932,9 +4932,9 @@ torch.kron	支持
 torch.kthvalue	支持
 torch.layout	支持
 torch.lcm	支持
-torch.lcm_	未提供
+torch.lcm_	未提供	Tensor.lcm_
 torch.ldexp	支持
-torch.ldexp_	未提供
+torch.ldexp_	未提供	Tensor.ldexp_
 torch.le	支持
 torch.lerp	支持
 torch.less	支持
@@ -5013,11 +5013,11 @@ torch.load	支持
 torch.lobpcg	支持
 torch.log	支持
 torch.log10	支持
-torch.log10_	未提供
+torch.log10_	未提供	Tensor.log10_
 torch.log1p	支持
-torch.log1p_	未提供
+torch.log1p_	未提供	Tensor.log1p_
 torch.log2	支持
-torch.log2_	未提供
+torch.log2_	未提供	Tensor.log2_
 torch.log_	支持
 torch.log_softmax	支持
 torch.logaddexp	支持
@@ -5030,7 +5030,7 @@ torch.logical_not	支持
 torch.logical_or	支持
 torch.logical_xor	支持
 torch.logit	支持
-torch.logit_	未提供
+torch.logit_	未提供	Tensor.logit_
 torch.logspace	支持
 torch.logsumexp	支持
 torch.lstm	未提供
@@ -5229,9 +5229,9 @@ torch.native_layer_norm	支持
 torch.native_norm	未提供
 torch.ne	支持
 torch.neg	支持
-torch.neg_	未提供
+torch.neg_	未提供	Tensor.neg_
 torch.negative	支持
-torch.negative_	未提供
+torch.negative_	未提供	Tensor.negative_
 torch.nested._internal.nested_tensor.NestedTensor	支持
 torch.nested._internal.ops.extract_kwargs	支持
 torch.nested.as_nested_tensor	支持
@@ -7172,11 +7172,11 @@ torch.profiler.schedule	支持
 torch.profiler.tensorboard_trace_handler	支持
 torch.promote_types	支持
 torch.put	未提供
-torch.q_per_channel_axis	未提供
-torch.q_per_channel_scales	未提供
-torch.q_per_channel_zero_points	未提供
-torch.q_scale	未提供
-torch.q_zero_point	未提供
+torch.q_per_channel_axis	未提供	Tensor.q_per_channel_axis
+torch.q_per_channel_scales	未提供	Tensor.q_per_channel_scales
+torch.q_per_channel_zero_points	未提供	Tensor.q_per_channel_zero_points
+torch.q_scale	未提供	Tensor.q_scale
+torch.q_zero_point	未提供	Tensor.q_zero_point
 torch.qr	支持
 torch.quantile	支持
 torch.quantization.default_eval_fn	未提供
@@ -7218,14 +7218,14 @@ torch.range	支持
 torch.ravel	支持
 torch.real	支持
 torch.reciprocal	支持
-torch.reciprocal_	未提供
+torch.reciprocal_	未提供	Tensor.reciprocal_
 torch.relu	支持
 torch.relu_	支持
 torch.remainder	支持
 torch.renorm	支持
 torch.repeat_interleave	支持
 torch.reshape	支持
-torch.resize_as_	未提供
+torch.resize_as_	未提供	Tensor.resize_as_
 torch.resize_as_sparse_	未提供
 torch.resolve_conj	支持
 torch.resolve_neg	支持
@@ -7242,13 +7242,13 @@ torch.rnn_tanh_cell	未提供
 torch.roll	支持
 torch.rot90	支持
 torch.round	支持
-torch.round_	未提供
+torch.round_	未提供	Tensor.round_
 torch.row_indices_copy	未提供
 torch.row_stack	支持
 torch.rrelu	未提供
 torch.rrelu_	未提供
 torch.rsqrt	支持
-torch.rsqrt_	未提供
+torch.rsqrt_	未提供	Tensor.rsqrt_
 torch.rsub	支持
 torch.saddmm	未提供
 torch.save	支持
@@ -7300,7 +7300,7 @@ torch.set_vital	未提供
 torch.set_warn_always	支持
 torch.sgn	支持
 torch.sigmoid	支持
-torch.sigmoid_	未提供
+torch.sigmoid_	未提供	Tensor.sigmoid_
 torch.sign	支持
 torch.signal.windows.bartlett	支持
 torch.signal.windows.blackman	支持
@@ -7326,11 +7326,11 @@ torch.signal.windows.windows.kaiser	未提供
 torch.signal.windows.windows.nuttall	未提供
 torch.signbit	支持
 torch.sin	支持
-torch.sin_	未提供
+torch.sin_	未提供	Tensor.sin_
 torch.sinc	支持
-torch.sinc_	未提供
+torch.sinc_	未提供	Tensor.sinc_
 torch.sinh	支持
-torch.sinh_	未提供
+torch.sinh_	未提供	Tensor.sinh_
 torch.slice_copy	未提供
 torch.slice_inverse	未提供
 torch.slice_scatter	支持
@@ -8551,9 +8551,9 @@ torch.split_with_sizes	支持
 torch.split_with_sizes_copy	支持
 torch.spmm	未提供
 torch.sqrt	支持
-torch.sqrt_	未提供
+torch.sqrt_	未提供	Tensor.sqrt_
 torch.square	支持
-torch.square_	未提供
+torch.square_	未提供	Tensor.square_
 torch.squeeze	支持
 torch.squeeze_copy	未提供
 torch.sspaddmm	未提供
@@ -8584,7 +8584,7 @@ torch.t_copy	未提供
 torch.take	支持
 torch.take_along_dim	支持
 torch.tan	支持
-torch.tan_	未提供
+torch.tan_	未提供	Tensor.tan_
 torch.tanh	支持
 torch.tanh_	支持
 torch.tensor	支持
@@ -8634,12 +8634,12 @@ torch.triu	支持
 torch.triu_indices	支持
 torch.true_divide	支持
 torch.trunc	支持
-torch.trunc_	未提供
+torch.trunc_	未提供	Tensor.trunc_
 torch.typename	支持
 torch.unbind	支持
 torch.unbind_copy	未提供
 torch.unflatten	支持
-torch.unfold	未提供
+torch.unfold	未提供	Tensor.unfold
 torch.unfold_copy	未提供
 torch.unique	支持
 torch.unique_consecutive	支持
@@ -8909,7 +8909,7 @@ torch.vstack	支持
 torch.wait	未提供
 torch.where	支持
 torch.xlogy	支持
-torch.xlogy_	未提供
+torch.xlogy_	未提供	Tensor.xlogy_
 torch.xpu.Event	未提供
 torch.xpu.Event.elapsed_time	未提供
 torch.xpu.Event.query	未提供
@@ -9067,4 +9067,4 @@ torch_npu.npu_moe_token_unpermute	支持
 torch_npu.npu_rms_norm	支持
 torch_npu.npu_rotary_mul	支持
 torch_npu.npu_swiglu	支持
-view	未提供
+view	未提供	Tensor.view
