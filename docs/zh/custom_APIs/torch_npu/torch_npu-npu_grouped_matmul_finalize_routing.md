@@ -221,7 +221,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 
     > **mx量化输出为`torch.bfloat16`的场景说明**：
     > - `w`数据格式要求FRACTAL\_NZ格式，`bias`必须为None，`row_index`必须为`torch.int32`，仅支持单算子模式，暂不支持图模式。
-
+    >
     > **MxA8W4场景说明**：
     > - `x`数据类型为`torch.float8_e4m3fn`，`w`数据类型为`torch_npu.float4_e2m1fn_x2`。`w`数据格式要求FRACTAL\_NZ格式，可通过torch\_npu.npu\_format\_cast接口实现ND转FRACTAL\_NZ格式。
     > - `x`要求非转置，`w`要求转置，`w`的shape支持\(e, n, k\), 要求e<=1024、k和n满足32对齐。图模式场景下要求e不等于1，同时k\>64。
