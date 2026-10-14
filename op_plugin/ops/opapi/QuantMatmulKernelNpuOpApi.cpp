@@ -170,10 +170,19 @@ at::Tensor npu_quant_matmul(
   bool trans_x2 = is_transpose_last_two_dims(x2);
   auto x1_dim_num = x1.dim();
   auto x2_dim_num = x2.dim();
-  auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
+  // TCG ND uint8 载体：preprocess ND 直拷输出为转置视图 {K/2, N} stride{1, K/2}（K 维打包）。
+  // aclnnQuantMatmulV5 ND 入口的 TensorContiguousProcess 会识别转置视图并翻转 transposeX2，
+  // 与 TCG ND 强制 transposeX2=true 冲突，故统一翻回 {N, K/2} 连续视图（零拷贝）再下行
+  at::Tensor x2_flip_view;
+  if (is_a8W4_float_u8 && !is_nz_format(x2) && trans_x2) {
+    x2_flip_view = x2.transpose(x2_dim_num - 2, x2_dim_num - 1);
+    trans_x2 = false;
+  }
+  const at::Tensor& x2_nd = x2_flip_view.defined() ? x2_flip_view : x2;
+  auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2_nd.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2_nd.size(x2_dim_num - 1);
   if (is_a8W4_float_u8 && !trans_x2) {
-    // TCG uint8 载体：NZ 为 {K, N/2}（N 维打包需解包）；ND 按 {N, K/2} 连续视图传入（K 维打包，N 取倒数第二维）
-    x2_n_dim = is_nz_format(x2) ? x2.size(x2_dim_num - 1) * FP4_IN_INT8 : x2.size(x2_dim_num - 2);
+    // TCG uint8 载体：NZ 为 {K, N/2}（N 维打包需解包）；ND 为 {N, K/2}（K 维打包，N 取倒数第二维）
+    x2_n_dim = is_nz_format(x2_nd) ? x2_nd.size(x2_dim_num - 1) * FP4_IN_INT8 : x2_nd.size(x2_dim_num - 2);
   }
 
 #if VERSION_BETWEEN(V2R1, V2R7)
@@ -253,7 +262,7 @@ at::Tensor npu_quant_matmul(
   bool transpose2 = is_a8W4_float_u8 && !is_nz_format(x2);
 
   TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
-  TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
+  TensorWrapper x2_wrapper = make_wrapper(x2_nd, x2_dtype);
   TensorWrapper x1_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
   TensorWrapper x2_scale_wrapper = make_wrapper(scale, scale_dtype);
   TensorWrapper result_wrapper = make_wrapper(result, output_dtype);
