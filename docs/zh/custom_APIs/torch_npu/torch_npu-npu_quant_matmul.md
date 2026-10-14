@@ -841,6 +841,75 @@ torch_npu.npu_quant_matmul(x1, x2, scale, *, offset=None, pertoken_scale=None, b
     ```
   <!-- end id62 -->
 
+  <!-- npu="950" id78 -->
+  - F8F4 T-CG伪量化：`torch_npu.float4_e2m1fn_x2`权重由`torch.uint8`承载（1个字节打包2个fp4），ND数据格式，weight转置场景配合`npu_weight_quant_preprocess`预处理直传，示例代码如下，仅支持<term>Ascend 950PR&950DT系列产品</term>
+
+    ```python
+    import torch
+    import torch_npu
+
+    M = 64
+    K = 256
+    N = 128
+    GROUP_SIZE = 32  # T-CG伪量化group_size固定为32
+
+    cpu_x1 = torch.randint(-5, 5, (M, K), dtype=torch.int8).to(torch.float8_e4m3fn)
+    # float4_e2m1fn_x2权重由torch.uint8承载（1个字节打包2个fp4，沿K维打包，低4bit为偶数k），物理(N, K/2)连续
+    cpu_w = torch.randint(0, 256, (N, K // 2), dtype=torch.uint8)
+    # per-group scale，物理(N, K/GROUP_SIZE)连续（转置场景与weight一致，按转置视图喂入）
+    w_scale = torch.randn(N, K // GROUP_SIZE, dtype=torch.float16)
+    y_scale = torch.randn(1, N, dtype=torch.float32)
+
+    # weight预处理：转置输入（view (K/2, N)、stride (1, K/2)）→ ND直拷透传，输出与输入共享物理内存
+    out_weight, out_scale, _, _ = torch_npu.npu_weight_quant_preprocess(
+        cpu_w.npu().transpose(0, 1), w_scale.npu().transpose(0, 1),
+        x_dtype=torch.float8_e4m3fn, weight_dtype=torch_npu.float4_e2m1fn_x2,
+        weight_scale_dtype=torch.float16, x_scale_dtype=None, k_group_size=GROUP_SIZE)
+
+    # T-CG伪量化场景y_scale需由float32打包为int64
+    y_scale = torch_npu.npu_trans_quant_param(y_scale.npu())
+
+    # preprocess输出可直接作为x2/x2Scale传入（ND场景内部按转置视图处理，置transposeX2=true）
+    npu_out = torch_npu.npu_quant_matmul(
+        cpu_x1.npu(), out_weight, out_scale,
+        x2_dtype=torch_npu.float4_e2m1fn_x2,
+        y_scale=y_scale, group_sizes=[0, 0, GROUP_SIZE], output_dtype=torch.float16)
+    ```
+
+  <!-- npu="950" id79 -->
+  - F8F4 T-CG伪量化：`torch_npu.float4_e2m1fn_x2`权重由`torch.uint8`承载，NZ数据格式，weight非转置场景`npu_weight_quant_preprocess`输出直传，示例代码如下，仅支持<term>Ascend 950PR&950DT系列产品</term>
+
+    ```python
+    import torch
+    import torch_npu
+
+    M = 64
+    K = 256
+    N = 128
+    GROUP_SIZE = 32  # T-CG伪量化group_size固定为32
+
+    cpu_x1 = torch.randint(-5, 5, (M, K), dtype=torch.int8).to(torch.float8_e4m3fn)
+    # float4_e2m1fn_x2权重由torch.uint8承载（沿N维打包，低4bit为偶数n），非转置(K, N/2)连续
+    cpu_w = torch.randint(0, 256, (K, N // 2), dtype=torch.uint8)
+    w_scale = torch.randn(K // GROUP_SIZE, N, dtype=torch.float16)  # 逻辑(K/GROUP_SIZE, N)
+    y_scale = torch.randn(1, N, dtype=torch.float32)
+
+    # weight预处理：非转置输入 → FRACTAL_NZ格式转换输出
+    out_weight, out_scale, _, _ = torch_npu.npu_weight_quant_preprocess(
+        cpu_w.npu(), w_scale.npu(),
+        x_dtype=torch.float8_e4m3fn, weight_dtype=torch_npu.float4_e2m1fn_x2,
+        weight_scale_dtype=torch.float16, x_scale_dtype=None, k_group_size=GROUP_SIZE)
+
+    # T-CG伪量化场景y_scale需由float32打包为int64
+    y_scale = torch_npu.npu_trans_quant_param(y_scale.npu())
+
+    # NZ输出（uint8视图{K, N/2}）直接作为x2传入，内部路由aclnnQuantMatmulWeightNz
+    npu_out = torch_npu.npu_quant_matmul(
+        cpu_x1.npu(), out_weight, out_scale,
+        x2_dtype=torch_npu.float4_e2m1fn_x2,
+        y_scale=y_scale, group_sizes=[0, 0, GROUP_SIZE], output_dtype=torch.float16)
+    ```
+
 - 图模式调用（ND数据格式）
   - 输出`torch.float16`
 
