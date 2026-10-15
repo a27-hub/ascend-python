@@ -812,9 +812,8 @@ class TestQuantMatmul(TestCase):
     @SupportedDevices(['Ascend950'])
     def test_npu_quant_matmul_a8w4_float_tcg_nd_uint8(self):
         # A8W4-float T-CG ND: x1=fp8, x2=uint8 载体(K 维打包), x2Scale=fp16, yScale=u64
-        # op-plugin 内部对 TCG ND 置 transposeX2=true(aclnnQuantMatmulV5 强制), 输出 N 取倒数第二维;
-        # x2 双形态均支持: preprocess 直拷出的 {K/2, N} 转置视图直传(op 侧零拷贝翻回, e3ef901c)
-        # 或调用侧 transpose(0,1) 得 {N, K/2} 连续视图
+        # 调用约定: preprocess 转置直拷出的 {K/2, N} 转置视图直传(aclnn ND 入口自行翻回连续
+        # 并翻转 transposeX2, 恰满足 TCG 强制 transposeX2=true); {N,K/2} 连续形态为约定外(V5 拒)
         fp4_table = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0,
                               -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0], dtype=np.float32)
         m, k, n, gs = 16, 64, 64, 32
@@ -845,13 +844,12 @@ class TestQuantMatmul(TestCase):
         yscale_u64 = torch.from_numpy(
             (yscale_np.view(np.uint32).astype(np.uint64)
              | (np.uint64(1) << np.uint64(46))).view(np.int64)).npu()
-        # 双形态: 直传 {K/2,N} 转置视图(推荐) + 转回 {N,K/2} 连续视图(兼容回归)
-        for x2_carrier in (out_weight, out_weight.transpose(0, 1)):
-            custom_output = torch_npu.npu_quant_matmul(
-                x1_fp8.npu(), x2_carrier, out_scale.transpose(0, 1),
-                x2_dtype=torch_npu.float4_e2m1fn_x2, y_scale=yscale_u64,
-                group_sizes=[0, 0, gs], output_dtype=torch.float16)
-            self.assertRtolEqual(golden, custom_output.cpu().numpy(), 0.001)
+        # 直传 {K/2,N} 转置视图(唯一约定形态)
+        custom_output = torch_npu.npu_quant_matmul(
+            x1_fp8.npu(), out_weight, out_scale.transpose(0, 1),
+            x2_dtype=torch_npu.float4_e2m1fn_x2, y_scale=yscale_u64,
+            group_sizes=[0, 0, gs], output_dtype=torch.float16)
+        self.assertRtolEqual(golden, custom_output.cpu().numpy(), 0.001)
 
         # N=1 退化: scale {G,1} 转置视图直传(stride {1,G}, aclnn 规范化处理);
         # torch 连续性判定对 size-1 维放水, 用 as_strided 保证 stride 真实

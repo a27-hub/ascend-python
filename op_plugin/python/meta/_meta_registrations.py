@@ -4559,13 +4559,11 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
             elif (is_a8w4_float and (x2.dtype == torch.float32 or x2_dtype == torch_npu.float4_e2m1fn_x2)
                     and pertoken_scale is None):
-                # TCG uint8 载体 N 推断：转置视图 {K/2,N}（preprocess ND 直拷）取末维；
-                # 转置连续 {N,K/2} 取倒数第二维（K==N 时两解释等价）；非转置 {K,N/2} 走通用末维*2
-                tcg_u8 = x2_dtype == torch_npu.float4_e2m1fn_x2
-                if tcg_u8 and is_transpose_last_two_dims(x2):
+                # TCG uint8 载体：转置视图 {K/2,N}（preprocess ND 直拷约定形态）N 取末维；
+                # 非转置 {K,N/2} 走通用末维*2
+                if (x2_dtype == torch_npu.float4_e2m1fn_x2
+                        and is_transpose_last_two_dims(x2)):
                     dimn = x2.size(x2.dim() - 1)
-                elif tcg_u8 and x2.size(x2.dim() - 2) != x1.size(x1.dim() - 1):
-                    dimn = x2.size(x2.dim() - 2)
                 else:
                     dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
 
