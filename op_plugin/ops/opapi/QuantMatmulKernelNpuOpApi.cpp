@@ -49,19 +49,6 @@ bool static is_transpose_last_two_dims(const at::Tensor& tensor) {
   return false;
 }
 
-// TCG ND 的 scale 翻回 {N,G} 连续视图：转置视图 {G,N} stride{1,G} 由 stride 判据识别；
-// N==1 退化（{G,1} 物理连续等价，stride 可为 {1,1}——transpose 后 aclnn 仍按同一模糊 stride
-// 误判转置）须用 as_strided 显式构造标准连续 {1,G} 视图；其余形态返回未定义 tensor（不翻）
-static at::Tensor tcg_nd_flip_scale(const at::Tensor& scale, int64_t x2_n) {
-  if (scale.dim() >= 2 && is_transpose_last_two_dims(scale)) {
-    return scale.transpose(scale.dim() - 2, scale.dim() - 1);
-  }
-  if (scale.dim() == 2 && x2_n == 1 && scale.size(1) == 1) {
-    return scale.as_strided({1, scale.size(0)}, {scale.size(0), 1});
-  }
-  return at::Tensor();
-}
-
 static bool is_transpose_certain_two_dims(const at::Tensor& tensor, int64_t dim) {
   return tensor.stride(dim + 1) == tensor.stride(dim) * tensor.size(dim);
 }
@@ -186,19 +173,16 @@ at::Tensor npu_quant_matmul(
   // ND 通路（x2 为 ND）：preprocess 直拷出转置视图 {K/2,N} stride{1,K/2}（K 维打包），而
   //   aclnnQuantMatmulV5 对 TCG ND 强制 transposeX2=true、x2 按 {N,K/2} 连续视图传入，且其 ND
   //   入口会把转置视图翻回并翻转 transposeX2（与本约定冲突）——故在 op 侧统一零拷贝翻回
-  //   {N,K/2} 连续视图再下行，scale 同步翻回 {N,G} 连续视图（见 tcg_nd_flip_scale）；
-  //   兼容形态 {N,K/2} 连续视图（调用侧已 transpose）不翻。
+  //   {N,K/2} 连续视图再下行；兼容形态 {N,K/2} 连续视图（调用侧已 transpose）不翻。
+  //   scale 透传即可，转置视图由 aclnn 规范化（scale 不参与 transposeX2 翻转，无冲突）。
   // NZ 通路（x2 为 NZ）：载体 {K,N/2} 直传 aclnnQuantMatmulWeightNz，transposeX2 保持 false。
   bool tcg_nd = is_a8W4_float_u8 && !is_nz_format(x2);
   at::Tensor x2_flip_view;
-  at::Tensor scale_flip_view;
   if (tcg_nd && trans_x2) {
     x2_flip_view = x2.transpose(x2_dim_num - 2, x2_dim_num - 1);
     trans_x2 = false;
-    scale_flip_view = tcg_nd_flip_scale(scale, x2.size(x2_dim_num - 1));
   }
   const at::Tensor& x2_nd = x2_flip_view.defined() ? x2_flip_view : x2;
-  const at::Tensor& scale_nd = scale_flip_view.defined() ? scale_flip_view : scale;
 
   // N 维推断：TCG ND 载体统一为 {N,K/2}（K 维打包，N 取倒数第二维）；TCG NZ 为 {K,N/2}（N 维打包需解包）
   int64_t x2_n_dim;
@@ -288,7 +272,7 @@ at::Tensor npu_quant_matmul(
   TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
   TensorWrapper x2_wrapper = make_wrapper(x2_nd, x2_dtype);
   TensorWrapper x1_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
-  TensorWrapper x2_scale_wrapper = make_wrapper(scale_nd, scale_dtype);
+  TensorWrapper x2_scale_wrapper = make_wrapper(scale, scale_dtype);
   TensorWrapper result_wrapper = make_wrapper(result, output_dtype);
   at::Tensor x1_offset = at::empty({0}, options);
   at::Tensor x2_offset = at::Tensor();
