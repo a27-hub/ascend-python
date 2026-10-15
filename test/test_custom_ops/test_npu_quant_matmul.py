@@ -853,6 +853,38 @@ class TestQuantMatmul(TestCase):
                 group_sizes=[0, 0, gs], output_dtype=torch.float16)
             self.assertRtolEqual(golden, custom_output.cpu().numpy(), 0.001)
 
+        # N=1 退化: scale 转置视图 {G,1} 物理连续等价(stride 可能为 {1,1}), 直传由 op 侧 as_strided 翻回
+        m1, k1, n1, gs1 = 1, 64, 1, 32
+        g1 = k1 // gs1
+        rng1 = np.random.default_rng(7)
+        x1_np1 = rng1.uniform(-1.0, 1.0, size=(m1, k1)).astype(np.float32)
+        w_packed1 = rng1.integers(0, 256, size=(n1, k1 // 2), dtype=np.uint8)
+        scale_np1 = rng1.choice(np.array([0.5, 1.0, 1.5, 2.0], dtype=np.float32),
+                                size=(g1, n1)).astype(np.float16)
+        yscale_np1 = rng1.choice(np.array([0.5, 1.0, 1.5, 2.0], dtype=np.float32), size=(1, n1))
+        w_dec1 = np.zeros((k1, n1), dtype=np.float32)
+        w_dec1[0::2, :] = fp4_table[w_packed1 & 0x0F].T
+        w_dec1[1::2, :] = fp4_table[(w_packed1 >> 4) & 0x0F].T
+        w_deq1 = (w_dec1.astype(np.float16) * np.repeat(scale_np1.astype(np.float32), gs1, axis=0).astype(np.float16)
+                  ).astype(np.float32)
+        x1_fp8_1 = torch.from_numpy(x1_np1).to(torch.float8_e4m3fn)
+        golden1 = (np.matmul(x1_fp8_1.float().numpy(),
+                             torch.from_numpy(w_deq1).to(torch.float8_e4m3fn).float().numpy())
+                   * yscale_np1).astype(np.float16)
+        out_weight1, out_scale1, _, _ = torch_npu.npu_weight_quant_preprocess(
+            torch.from_numpy(w_packed1).npu().transpose(0, 1),
+            torch.from_numpy(np.ascontiguousarray(scale_np1.T)).npu().transpose(0, 1),
+            x_dtype=torch.float8_e4m3fn, weight_dtype=torch_npu.float4_e2m1fn_x2,
+            weight_scale_dtype=torch.float16, x_scale_dtype=None, k_group_size=gs1)
+        yscale_u64_1 = torch.from_numpy(
+            (yscale_np1.view(np.uint32).astype(np.uint64)
+             | (np.uint64(1) << np.uint64(46))).view(np.int64)).npu()
+        custom_output1 = torch_npu.npu_quant_matmul(
+            x1_fp8_1.npu(), out_weight1, out_scale1,  # scale 直传(转置视图退化)
+            x2_dtype=torch_npu.float4_e2m1fn_x2, y_scale=yscale_u64_1,
+            group_sizes=[0, 0, gs1], output_dtype=torch.float16)
+        self.assertRtolEqual(golden1, custom_output1.cpu().numpy(), 0.001)
+
 
 if __name__ == "__main__":
     run_tests()

@@ -174,11 +174,22 @@ at::Tensor npu_quant_matmul(
   // aclnnQuantMatmulV5 ND 入口的 TensorContiguousProcess 会识别转置视图并翻转 transposeX2，
   // 与 TCG ND 强制 transposeX2=true 冲突，故统一翻回 {N, K/2} 连续视图（零拷贝）再下行
   at::Tensor x2_flip_view;
+  at::Tensor scale_flip_view;
   if (is_a8W4_float_u8 && !is_nz_format(x2) && trans_x2) {
     x2_flip_view = x2.transpose(x2_dim_num - 2, x2_dim_num - 1);
     trans_x2 = false;
+    // scale 同步翻回 {N, G} 连续视图：转置视图 {G,N} stride{1,G} 由 stride 判据识别；
+    // N==1 时退化（{G,1} 物理连续等价，stride 可能为 {1,1}，transpose 后 aclnn 仍按同一模糊
+    // stride 误判转置翻回去），须用 as_strided 显式构造标准连续 {1,G} 视图
+    if (scale.dim() >= 2 && is_transpose_last_two_dims(scale)) {
+      scale_flip_view = scale.transpose(scale.dim() - 2, scale.dim() - 1);
+    } else if (scale.dim() == 2 && x2.size(x2_dim_num - 1) == 1 && scale.size(1) == 1) {
+      int64_t scale_g = scale.size(0);
+      scale_flip_view = scale.as_strided({1, scale_g}, {scale_g, 1});
+    }
   }
   const at::Tensor& x2_nd = x2_flip_view.defined() ? x2_flip_view : x2;
+  const at::Tensor& scale_nd = scale_flip_view.defined() ? scale_flip_view : scale;
   auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2_nd.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2_nd.size(x2_dim_num - 1);
   if (is_a8W4_float_u8 && !trans_x2) {
     // TCG uint8 载体：NZ 为 {K, N/2}（N 维打包需解包）；ND 为 {N, K/2}（K 维打包，N 取倒数第二维）
@@ -264,7 +275,7 @@ at::Tensor npu_quant_matmul(
   TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
   TensorWrapper x2_wrapper = make_wrapper(x2_nd, x2_dtype);
   TensorWrapper x1_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
-  TensorWrapper x2_scale_wrapper = make_wrapper(scale, scale_dtype);
+  TensorWrapper x2_scale_wrapper = make_wrapper(scale_nd, scale_dtype);
   TensorWrapper result_wrapper = make_wrapper(result, output_dtype);
   at::Tensor x1_offset = at::empty({0}, options);
   at::Tensor x2_offset = at::Tensor();
