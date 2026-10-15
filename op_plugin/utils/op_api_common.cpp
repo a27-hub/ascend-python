@@ -20,8 +20,8 @@
 #include "torch_npu/csrc/framework/OpParamMaker.h"
 #include "torch_npu/csrc/core/npu/NPUFunctions.h"
 
-thread_local char g_hash_buf[g_hash_buf_size];
-thread_local int g_hash_offset = 0;
+TORCH_NPU_API thread_local char g_hash_buf[g_hash_buf_size];
+TORCH_NPU_API thread_local int g_hash_offset = 0;
 constexpr int g_rShift33Bits = 33;
 constexpr uint64_t MIX_STEP1 = 18397679294719823053LLU;
 constexpr uint64_t MIX_STEP2 = 14181476777654086739LLU;
@@ -746,7 +746,7 @@ uint64_t gen_hash(const void* key, const int len, const uint32_t seed = 0xdeadb0
   return hax;
 }
 
-uint64_t calc_hash_id() {
+TORCH_NPU_API uint64_t calc_hash_id() {
   if (g_hash_offset == g_hash_buf_max_size) {
     return 0;
   }
