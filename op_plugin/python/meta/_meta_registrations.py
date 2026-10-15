@@ -2590,16 +2590,6 @@ def npu_fast_gelu_meta(self):
     return torch.empty_like(self)
 
 
-@impl(m, "npu_gelu")
-def npu_gelu_meta(self, *, approximate="none"):
-    return torch.empty_like(self)
-
-
-@impl(m, "npu_gelu_backward")
-def npu_gelu_backward_meta(grad, self, *, approximate="none"):
-    return torch.empty_like(self)
-
-
 @impl(m, "npu_silu")
 def npu_silu_meta(self):
     return torch.empty_like(self)
@@ -2613,19 +2603,6 @@ def npu_silu_backward_meta(grad_output, x0, x1):
 @impl(m, "npu_layer_norm_eval")
 def npu_layer_norm_eval_meta(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     return torch.empty_like(input)
-
-
-@impl(m, "npu_add_layer_norm")
-def npu_add_layer_norm_meta(x1, x2, gamma, beta, epsilon=1e-5, additional_output=False):
-    rstd_dim = x1.dim() - gamma.dim()
-    ret = []
-    for i in range(x1.dim()):
-        if i < rstd_dim:
-            ret.append(x1.size(i))
-        else:
-            ret.append(1)
-    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
-    return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
 
 
 @impl(m, "npu_gelu_mul")
@@ -3459,15 +3436,6 @@ def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_id
 @impl(m, "_npu_distribute_barrier")
 def _npu_distribute_barrier(x_ref, group, world_size, *, time_out=None, elastic_info=None):
     return torch.empty_like(x_ref)
-
-
-@impl(m, "npu_moe_update_expert")
-def npu_moe_update_expert_meta(expert_ids, eplb_table, expert_scales=None, pruning_threshold=None, active_mask=None, local_rank_id=-1, world_size=-1, balance_mode=0):
-    dim_list = []
-    dim_list.append(expert_ids.size(0))
-    dim_list.append(expert_ids.size(1))
-
-    return (expert_ids.new_empty(tuple(dim_list), dtype=expert_ids.dtype), expert_ids.new_empty(tuple(dim_list), dtype=torch.bool))
 
 
 @impl(m, "npu_ffn")

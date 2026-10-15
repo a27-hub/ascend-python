@@ -5692,27 +5692,6 @@ custom:
   - func: _amp_foreach_non_finite_check(Tensor[] scaled_grads) -> bool
     acl_op: all_version
 
-  - func: npu_gelu(Tensor self, *, str approximate='none') -> Tensor
-    op_api: [v2.1, newest]
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      new_params:
-        approximate_mode: 'npu_gelu_approximate_mode(approximate)'
-      exec: aclnnGeluV2, self, approximate_mode, out
-
-  - func: npu_gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor
-    op_api: [v2.1, newest]
-    gen_opapi:
-      out:
-        size: 'broadcast_ops_npu_output_size(grad_output, self)'
-        dtype: 'at::native::result_type(grad_output, self)'
-      new_params:
-        approximate_str: 'npu_gelu_approximate_str(approximate)'
-        approximate_ptr: 'const_cast<char *>(approximate_str.c_str())'
-      exec: aclnnGeluBackwardV2, grad_output, self, approximate_ptr, out
-
   - func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
@@ -5835,14 +5814,6 @@ custom:
 
   - func: matmul_double_backward(Tensor? grad_self, Tensor? grad_other, Tensor grad_out, Tensor self, Tensor other, bool[3] mask) -> (Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
-
-  - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
-    acl_op: all_version
-    op_api: all_version
-
-  - func: npu_add_layer_norm_backward(Tensor? dy_opt, Tensor x1, Tensor x2, Tensor rstd, Tensor mean, Tensor gamma, Tensor? dsum_opt) -> (Tensor, Tensor, Tensor, Tensor)
-    acl_op: all_version
-    op_api: all_version
 
   - func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
@@ -6670,19 +6641,6 @@ custom:
 
   - func: _npu_distribute_barrier(Tensor x_ref, str group, int world_size, *, Tensor? time_out=None, Tensor? elastic_info=None) -> Tensor
     op_api: all_version
-
-  - func: npu_moe_update_expert(Tensor expert_ids, Tensor eplb_table, *, Tensor? expert_scales=None, Tensor? pruning_threshold=None, Tensor? active_mask=None, int local_rank_id=-1, int world_size=-1, int balance_mode=0) -> (Tensor, Tensor)
-    op_api: all_version
-    gen_opapi:
-      out_balanced_expert_ids:
-        size: expert_ids
-        dtype: expert_ids
-      out_balanced_active_mask:
-        size: '{expert_ids.size(0), expert_ids.size(1)}'
-        dtype: at::kBool
-      exec: aclnnMoeUpdateExpert
-    exposed: all_version
-
 
   - func: npu_moe_re_routing(Tensor tokens, Tensor expert_token_num_per_rank, *, Tensor? per_token_scales=None, int expert_token_num_type=1, int idx_type=0, int? tokens_dtype=None) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version

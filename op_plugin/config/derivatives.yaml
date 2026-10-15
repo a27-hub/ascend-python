@@ -72,15 +72,6 @@ backward:
   grad_out, self, other: matmul_double_backward(grads[0], grads[1], grad_out, self, other, grad_input_mask)
   version: [v2.1, newest]
 
-- name: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
-  output_differentiability: [true, false, false, true]
-  x1, x2, gamma, beta: npu_add_layer_norm_backward(grads[0], x1, x2, result2, result1, gamma, grads[1])
-  version: [v2.1, newest]
-
-- name: npu_gelu(Tensor self, *, str approximate='none') -> Tensor
-  self: npu_gelu_backward(grad, self, approximate)
-  version: [v2.1, newest]
-
 - name: npu_bmmV2(Tensor self, Tensor mat2, int[] output_sizes) -> Tensor
   self: npu_bmm_v2_mat1_backward(grad, self, mat2, self.sym_sizes())
   mat2: npu_bmm_v2_mat2_backward(grad, self, mat2, mat2.sym_sizes())
