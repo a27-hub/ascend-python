@@ -52,6 +52,7 @@ bool static is_transpose_last_two_dims(const at::Tensor& tensor) {
 static bool is_transpose_certain_two_dims(const at::Tensor& tensor, int64_t dim) {
   return tensor.stride(dim + 1) == tensor.stride(dim) * tensor.size(dim);
 }
+
 static bool is_x_scale_same_transpose(const at::Tensor& x, const at::Tensor& scale, int64_t dim_x, int64_t dim_scale) {
   if (x.dim() < dim_x + 2 || scale.dim() < dim_scale + 2) { // make sure dims after the start dim are no less than 2
     return true;
@@ -169,13 +170,10 @@ at::Tensor npu_quant_matmul(
   bool trans_x2 = is_transpose_last_two_dims(x2);
   auto x1_dim_num = x1.dim();
   auto x2_dim_num = x2.dim();
-  // ---- TCG uint8 载体形态规范化 ----
-  // ND 通路（x2 为 ND）：preprocess 直拷出转置视图 {K/2,N} stride{1,K/2}（K 维打包），而
-  //   aclnnQuantMatmulV5 对 TCG ND 强制 transposeX2=true、x2 按 {N,K/2} 连续视图传入，且其 ND
-  //   入口会把转置视图翻回并翻转 transposeX2（与本约定冲突）——故在 op 侧统一零拷贝翻回
-  //   {N,K/2} 连续视图再下行；兼容形态 {N,K/2} 连续视图（调用侧已 transpose）不翻。
-  //   scale 透传即可，转置视图由 aclnn 规范化（scale 不参与 transposeX2 翻转，无冲突）。
-  // NZ 通路（x2 为 NZ）：载体 {K,N/2} 直传 aclnnQuantMatmulWeightNz，transposeX2 保持 false。
+  // TCG ND uint8 载体：aclnnQuantMatmulV5 强制 transposeX2=true、x2 按 {N,K/2} 连续视图传入，
+  // 其 ND 入口会把转置视图翻回并翻转 transposeX2（与本约定冲突）——故转置视图 {K/2,N}
+  // （preprocess 直拷输出）在 op 侧零拷贝翻回再下行，连续视图不翻；scale 透传由 aclnn 规范化。
+  // TCG NZ 载体 {K,N/2} 直传 aclnnQuantMatmulWeightNz，transposeX2 保持 false。
   bool tcg_nd = is_a8W4_float_u8 && !is_nz_format(x2);
   at::Tensor x2_flip_view;
   if (tcg_nd && trans_x2) {
@@ -266,8 +264,7 @@ at::Tensor npu_quant_matmul(
   const at::Tensor& pertoken_scale_real = pertoken_scale.value_or(at::Tensor());
   const at::Tensor& bias_real = bias.value_or(at::Tensor());
   bool transpose1 = false;
-  // TCG ND 强制 transposeX2=true（x2 已翻回 {N,K/2} 连续视图）；NZ（WeightNz 入口）保持 false
-  bool transpose2 = tcg_nd;
+  bool transpose2 = tcg_nd; // TCG ND 强制 transposeX2=true；NZ（WeightNz 入口）保持 false
 
   TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
   TensorWrapper x2_wrapper = make_wrapper(x2_nd, x2_dtype);
