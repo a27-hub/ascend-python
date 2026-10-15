@@ -259,8 +259,6 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
 def npu_mhc_pre_backward_meta(x, phi, alpha, grad_h_in, grad_h_post, grad_h_res,
                               inv_rms, h_mix, h_pre, h_post, gamma=None,
                               hc_eps=1e-6, grad_x_post=None, inner_precise=0):
-    # Match the output allocations in MhcPreBackwardNpuOpapi.cpp. In particular,
-    # dgamma is returned even when the optional gamma input is absent.
     for name, tensor in (
         ("x", x), ("phi", phi), ("alpha", alpha), ("grad_h_in", grad_h_in),
         ("grad_h_post", grad_h_post), ("grad_h_res", grad_h_res),
