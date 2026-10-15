@@ -4,7 +4,6 @@ import torch_npu
 from torch_npu.testing.common_utils import SupportedDevices
 from torch_npu.testing.testcase import TestCase, run_tests
 
-FRACTAL_NZ = 29
 FRACTAL_NZ_C0_16 = 50
 
 
@@ -68,8 +67,8 @@ class TestNpuWeightQuantPreprocess(TestCase):
     @SupportedDevices(['Ascend950'])
     def test_npu_weight_quant_preprocess_f8f4_tcg_nz(self):
         # F8F4 T-CG 非转置：weight uint8 {K, N/2} 沿 N 打包；scale FP16 {G, N}（G=K/32>1）。
-        # 非转置走 ND->FRACTAL_NZ 转换，输出 uint8 视图 [K, N/2] + FRACTAL_NZ 标签，
-        # 物理 storage {ceildiv(N,32), ceildiv(K,16), 16, 16}（C0=32 个 FP4=16B 的 NZ 分形，N 块在前）
+        # 非转置走 ND->NZ 转换，输出 uint8 视图 [K, N/2] 挂假标签 FRACTAL_NZ_C0_16（字节口径），
+        # 物理 storage {ceildiv(N,32), ceildiv(K,16), 16, 16}（真实布局 C0=32 个 FP4=16B 的 NZ 分形，N 块在前）
         k, n = 256, 128
         g = k // 32
         weight = torch.zeros((k, n // 2), dtype=torch.uint8).npu()
@@ -87,10 +86,10 @@ class TestNpuWeightQuantPreprocess(TestCase):
         self.assertEqual(out_weight.dtype, weight.dtype)
         self.assertEqual(out_weight_scale.shape, weight_scale.shape)
         self.assertEqual(out_weight_scale.cpu(), weight_scale.cpu())
-        # 注：FRACTAL_NZ fake format 的 uint8 out_weight 不支持 format-aware .cpu() 回读
+        # 注：FRACTAL_NZ_C0_16 fake format 的 uint8 out_weight 不支持 format-aware .cpu() 回读
         # （copy_ 不支持 internal format），物理布局 bit-wise 校验由 aclnn STC 覆盖
         if torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT") == b"enable":
-            self.assertEqual(torch_npu.get_npu_format(out_weight), FRACTAL_NZ)
+            self.assertEqual(torch_npu.get_npu_format(out_weight), FRACTAL_NZ_C0_16)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_weight_quant_preprocess_f8f4_tcg_trans_nd(self):
