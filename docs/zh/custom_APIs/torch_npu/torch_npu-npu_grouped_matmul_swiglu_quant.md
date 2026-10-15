@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id4 -->
-- <term>Ascend 950PR&950DT系列产品</term>：支持INT8 A8W8、激活per-token和权重per-channel量化、weight FRACTAL\_NZ场景
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id4 -->
 
 <!-- npu="A3" id1 -->
