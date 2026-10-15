@@ -853,7 +853,8 @@ class TestQuantMatmul(TestCase):
                 group_sizes=[0, 0, gs], output_dtype=torch.float16)
             self.assertRtolEqual(golden, custom_output.cpu().numpy(), 0.001)
 
-        # N=1 退化: scale 转置视图 {G,1} 物理连续等价(stride 可能为 {1,1}), 直传由 op 侧 as_strided 翻回
+        # N=1 退化: scale {G,1} 转置视图直传(stride {1,G}, aclnn 规范化处理);
+        # torch 连续性判定对 size-1 维放水, 用 as_strided 保证 stride 真实
         m1, k1, n1, gs1 = 1, 64, 1, 32
         g1 = k1 // gs1
         rng1 = np.random.default_rng(7)
@@ -871,16 +872,17 @@ class TestQuantMatmul(TestCase):
         golden1 = (np.matmul(x1_fp8_1.float().numpy(),
                              torch.from_numpy(w_deq1).to(torch.float8_e4m3fn).float().numpy())
                    * yscale_np1).astype(np.float16)
+        scale_buf1 = torch.from_numpy(np.ascontiguousarray(scale_np1.T)).npu()  # {N,G} 物理连续
         out_weight1, out_scale1, _, _ = torch_npu.npu_weight_quant_preprocess(
             torch.from_numpy(w_packed1).npu().transpose(0, 1),
-            torch.from_numpy(np.ascontiguousarray(scale_np1.T)).npu().transpose(0, 1),
+            scale_buf1.as_strided((g1, n1), (1, g1)),  # {G,N} stride {1,G} 转置视图
             x_dtype=torch.float8_e4m3fn, weight_dtype=torch_npu.float4_e2m1fn_x2,
             weight_scale_dtype=torch.float16, x_scale_dtype=None, k_group_size=gs1)
         yscale_u64_1 = torch.from_numpy(
             (yscale_np1.view(np.uint32).astype(np.uint64)
              | (np.uint64(1) << np.uint64(46))).view(np.int64)).npu()
         custom_output1 = torch_npu.npu_quant_matmul(
-            x1_fp8_1.npu(), out_weight1, out_scale1,  # scale 直传(转置视图退化)
+            x1_fp8_1.npu(), out_weight1, out_scale1,  # scale 直传(转置视图)
             x2_dtype=torch_npu.float4_e2m1fn_x2, y_scale=yscale_u64_1,
             group_sizes=[0, 0, gs1], output_dtype=torch.float16)
         self.assertRtolEqual(golden1, custom_output1.cpu().numpy(), 0.001)
