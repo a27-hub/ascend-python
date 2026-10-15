@@ -22,8 +22,8 @@
 
 constexpr int g_hash_buf_size = 8192;
 constexpr int g_hash_buf_max_size = g_hash_buf_size + 1024;
-extern thread_local char g_hash_buf[g_hash_buf_size];
-extern thread_local int g_hash_offset;
+extern TORCH_NPU_API thread_local char g_hash_buf[g_hash_buf_size];
+extern TORCH_NPU_API thread_local int g_hash_offset;
 extern const std::vector<std::string> g_custom_lib_path;
 extern const std::vector<std::string> g_default_custom_lib_path;
 extern const std::vector<std::string> g_opApiSoFiles;
@@ -89,7 +89,7 @@ void* GetOpApiFuncAddrFromFeatureLib(const char* api_name);
 
 bool check_aclnn_kernel_available(std::string aclnn_name);
 
-uint64_t calc_hash_id();
+TORCH_NPU_API uint64_t calc_hash_id();
 
 #define DO_COMPATIBILITY(aclnn_api, originCallExpression)                                         \
   do {                                                                                            \
