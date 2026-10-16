@@ -132,15 +132,13 @@ torch_npu.npu_format_cast(input, acl_format, *, customize_dtype=None, input_dtyp
     | `torch.float32` | $FRACTAL\_NZ\_C0\_16$ | 2 | NA | NA |
     | `torch.float32` | $FRACTAL\_NZ\_C0\_32$ | 2 | NA | NA |
 
-  MX scale格式转换场景：
+  特殊场景说明：
 
-  - 当`input`的真实数据类型为`torch_npu.float8_e8m0fnu`、数据格式为$ND$/$NCL$/$NCHW$，且`acl_format`为29时，支持将MX scale转换为$FRACTAL\_NZ$昇腾亲和存储格式。
-  - 输入shape支持3维`(ceil(K/64), N, 2)`或4维`(g, ceil(K/64), N, 2)`，各维大小必须大于0。其中，`K`为被量化矩阵的归约维大小，`N`为列数，`g`为分组数。
-  - 转换后的存储shape分别为`(ceil(N/16), ceil(K/64), 16, 2)`或`(g, ceil(N/16), ceil(K/64), 16, 2)`，输出Tensor的逻辑shape与输入`input`保持一致。
-  - 该场景支持单算子模式，不支持图模式。
+  - MX scale格式转换场景，`input`的真实数据类型为`torch_npu.float8_e8m0fnu`，仅支持3维或4维输入，各维大小必须大于0，末轴必须为2。输出存储shape为`(..., ceil(N/16), KScale, 16, 2)`，其中`KScale`、`N`分别为输入的倒数第三维、倒数第二维大小，前置维度保持不变；逻辑shape与输入保持一致。
 
   当前不支持的特殊场景：
 
+  - `input`的真实数据类型为`torch_npu.float8_e8m0fnu`时，MX scale格式转换不支持图模式，仅支持单算子模式。
   - $ND$转$FRACTAL\_NZ$场景，当`srcTensor.dtype`和`additionalDtype`相同且类型为`torch.float16`、`torch.bfloat16`时，若维度表示为\[k, n\]，则k为1场景暂不支持。
   - 调用本接口转为$FRACTAL\_NZ$格式后，不支持进行任何能修改Tensor的操作，包括contiguous、pad、view、slice等。
   - `srcTensor`的shape后两维任意一维度shape等于1场景，不允许转$FRACTAL\_NZ$后进行任何能修改Tensor的操作，包括transpose等。
