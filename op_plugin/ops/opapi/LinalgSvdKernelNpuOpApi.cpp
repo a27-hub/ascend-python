@@ -58,7 +58,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
     Vh = at::empty({0}, A.options());
   }
 
-  // Handle empty tensor case (same logic as linalg_svd_out_common in aclops)
+  // Handle empty tensor case (same logic as linalg_svd_out_common in aclops).
+  // aclnnSvd requires sigma to share the same dtype as the input (complex for
+  // complex A), but linalg.svd must return real S. On this branch we don't call
+  // aclnnSvd, so build the real S directly.
   if (A.numel() == 0) {
     if (compute_uv && full_matrices) {
       if (U.numel() != 0) {
@@ -70,9 +73,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
         Vh.diagonal(0, -2, -1).fill_(1.);
       }
     }
-    return std::make_tuple(U, S, Vh);
+    return std::make_tuple(U, S.to(c10::toRealValueType(A.scalar_type())), Vh);
   }
 
-  return op_api::_linalg_svd_out(A, full_matrices, compute_uv, driver, U, S, Vh);
+  std::tie(U, S, Vh) = op_api::_linalg_svd_out(A, full_matrices, compute_uv, driver, U, S, Vh);
+  // aclnnSvd returns S with the input dtype; convert to the real dtype expected by torch.linalg.svd.
+  return std::make_tuple(U, S.to(c10::toRealValueType(A.scalar_type())), Vh);
 }
 } // namespace op_api
