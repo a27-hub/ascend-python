@@ -581,7 +581,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     >   - perchannel伪量化场景，且输入`x`为`torch.float16`/`torch.bfloat16`、`weight`为`torch.int8`/`torch.int32`（`torch_npu.int4`）时。
     >   - pergroup伪量化场景，且输入`x`为`torch.float16`/`torch.bfloat16`、`weight`为`torch.int32`（`torch_npu.int4`）时。
     > - 伪量化场景不支持激活函数计算。全量化场景下，当x和weight为`torch.int8`，量化模式为静态T-C量化或动态K-C量化，且scale类型为`torch.float32`/`torch.bfloat16`时，act\_type参数支持传入0、1、2、4、5。其余全量化场景act\_type参数仅支持传入0。
-    > - 非量化场景在x、weight、out数据类型为BFLOAT16/FLOAT16且group\_type为0/-1场景下支持act\_type参数传入0/2；其余场景act\_type参数仅支持传入0。
+    > - 非量化场景在x、weight、out数据类型为`torch.float16`/`torch.bfloat16`、数据格式为ND且group\_type为0/-1场景下支持act\_type参数传入0/2；其余场景act\_type参数仅支持传入0。
 
     | group_type | 支持场景 | 场景说明 | 场景限制 |
     | --- | --- | --- | --- |
