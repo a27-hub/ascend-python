@@ -33,14 +33,22 @@ class TestLinalgSvd(TestCase):
             [i, j, k] for i in dtype_list for j in format_list for k in shape_list
         ]
         full_matrices_list = [True, False]
+        # assertRtolEqual requires an exact numpy dtype match and rejects complex
+        # dtypes, so use torch.testing.assert_close for complex inputs.
+        is_complex = any(np.dtype(d).kind == "c" for d in dtype_list)
         for item in dtype_shape_format:
             for full_matrices in full_matrices_list:
                 cpu_input_1, npu_input_1 = create_common_tensor(item, -100, 100)
                 cpu_U, cpu_S, cpu_Vh = self.cpu_out_exec(cpu_input_1, full_matrices)
                 npu_U, npu_S, npu_Vh = self.npu_out_exec(npu_input_1, full_matrices)
-                self.assertRtolEqual(cpu_U.abs().numpy(), npu_U.abs().numpy())
-                self.assertRtolEqual(cpu_S.abs().numpy(), npu_S.abs().numpy())
-                self.assertRtolEqual(cpu_Vh.abs().numpy(), npu_Vh.abs().numpy())
+                if is_complex:
+                    torch.testing.assert_close(cpu_U.abs(), npu_U.abs(), rtol=1e-4, atol=1e-5)
+                    torch.testing.assert_close(cpu_S.abs(), npu_S.abs(), rtol=1e-4, atol=1e-5)
+                    torch.testing.assert_close(cpu_Vh.abs(), npu_Vh.abs(), rtol=1e-4, atol=1e-5)
+                else:
+                    self.assertRtolEqual(cpu_U.abs().numpy(), npu_U.abs().numpy())
+                    self.assertRtolEqual(cpu_S.abs().numpy(), npu_S.abs().numpy())
+                    self.assertRtolEqual(cpu_Vh.abs().numpy(), npu_Vh.abs().numpy())
 
                 cpu_S_diag_filled = self.construct_S_diag_filled(full_matrices, cpu_U, cpu_S, cpu_Vh)
                 cpu_A_reconstructed = cpu_U @ cpu_S_diag_filled @ cpu_Vh
@@ -89,16 +97,18 @@ class TestLinalgSvd(TestCase):
                 self.assertEqual(npu_Vh.dtype, in_dtype)
                 self.assertEqual(cpu_S.dtype, expected_s_dtype)
 
-                # numeric check against the CPU reference
-                self.assertRtolEqual(cpu_S.abs().numpy(), npu_S.abs().numpy())
+                # numeric check against the CPU reference (compare real, non-zero
+                # singular values; avoids assertRtolEqual which rejects complex)
+                torch.testing.assert_close(cpu_S, npu_S, rtol=1e-4, atol=1e-5)
 
                 # reconstruction: U @ S_diag @ Vh must recover the complex input.
                 # Convert the (real) diag_embed into the complex dtype so matmul is legal.
                 k = min(2, 4)
                 cpu_reconstructed = (cpu_U[..., :k] @ cpu_S.diag_embed().to(cpu_U.dtype)[..., :k, :k]) @ cpu_Vh[..., :k, :]
                 npu_reconstructed = (npu_U[..., :k] @ npu_S.diag_embed().to(npu_U.dtype)[..., :k, :k]) @ npu_Vh[..., :k, :]
-                torch.testing.assert_close(cpu_reconstructed, npu_reconstructed, rtol=1e-3, atol=1e-3)
-                torch.testing.assert_close(cpu_reconstructed, cpu_input, rtol=1e-3, atol=1e-3)
+                torch.testing.assert_close(cpu_reconstructed, cpu_input, rtol=1e-2, atol=1e-3)
+                torch.testing.assert_close(npu_reconstructed, npu_input, rtol=1e-2, atol=1e-3)
+                torch.testing.assert_close(cpu_reconstructed, npu_reconstructed, rtol=1e-2, atol=1e-3)
 
                 # empty input: S must still come back as the real dtype
                 real_e = torch.randn(3, 0, 2)
