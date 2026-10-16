@@ -12806,15 +12806,12 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_grouped_matmul_swiglu_quant(Tensor x, Tensor weight, Tensor group_list, Tensor weight_scale, Tensor x_scale, *, Tensor? bias=None, Tensor? offset=None) -> (Tensor, Tensor, Tensor)
 功能描述
-支持Ascend 950上的INT8 A8W8、激活per-token与权重per-channel量化、weight NZ场景，torch_npu统一调用aclnnGroupedMatmulSwigluQuantWeightNZ，由ACLNN在950 INT8场景转发至aclnnGroupedMatmulSwigluQuantWeightNzV2。
-旧ACLNN普通入口aclnnGroupedMatmulSwigluQuant在A5 INT8 A8W8场景转发至aclnnGroupedMatmulSwigluQuantV2GetWorkspaceSize；旧WeightNZ入口转发至WeightNzV2GetWorkspaceSize。第二阶段仍使用各旧入口执行，转发失败直接返回。
-本Python旧接口仅走WeightNZ入口，仍要求真实NZ权重；普通ACLNN入口转发不会新增本Python接口的ND权重支持。ND权重使用显式npu_grouped_matmul_swiglu_quant_v2并遵守其规格。
-旧接口保留三个返回值，向ACLNN传入空outputOffset；显式Python V2保持自身参数与调用选择规则。
+支持Ascend 950上的INT8 A8W8、激活per-token与权重per-channel量化、weight NZ场景。
 aclnnGroupedMatmulV4、aclnnDynamicDequant、aclnnSwigluQuant融合, deepseek模型使用，对比小算子做性能优化。
 
 参数说明
 x（Tensor）：输入，左矩阵，公式中的X，Device侧的aclTensor。shape支持2维，数据类型支持INT8，数据格式支持ND，支持非连续的Tensor。
-weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTensor。支持3维逻辑view或5维显式NZ数据，数据类型支持INT8，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。
+weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTensor。逻辑shape和NZ物理存储须满足对应产品的底层接口约束，数据类型支持INT8，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。
 group_list （Tensor）：输入，指示每个分组参与计算的Token个数，公式中的grouplist，Device侧的aclTensor。shape支持1维，长度需与weight的首轴维度相等，数据类型支持INT64，数据格式支持ND，支持非连续的Tensor。
 weight_scale （Tensor）：输入，右矩阵的量化因子，公式中的w_scale，Device侧的aclTensor。shape支持2维，首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴相同，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
 x_scale （Tensor）：输入，左矩阵的量化因子，公式中的x_scale，Device侧的aclTensor。shape支持1维，长度需与x的首轴维度相等，数据类型支持FLOAT，数据格式支持ND，支持非连续的Tensor。
@@ -12836,9 +12833,10 @@ Ascend 950约束
 x为二维[M, K]、INT8、ND，支持非转置；weight为INT8且必须已经采用NZ存储，不自动转换普通ND权重。
 weight_scale为二维[E, N]，支持FLOAT、FLOAT16、BFLOAT16；x_scale为一维[M]、FLOAT。
 group_list为一维[E]、INT64，使用cumsum形式；E不超过1024，N大于0且为64的整数倍。
-所有输入必须位于同一设备，bias和offset必须为None。支持M=0的空token输入。
+所有输入必须位于同一设备，bias和offset必须为None。
 固定dequantMode=0、dequantDtype=0（GE FLOAT）、quantMode=0、groupListType=0。
-CANN必须包含旧WeightNZ接口的950 INT8转发实现及WeightNzV2接口；转发与参数校验由ACLNN完成。
+本接口仍调用aclnnGroupedMatmulSwigluQuantWeightNZ，由ACLNN第一阶段内部转调用aclnnGroupedMatmulSwigluQuantWeightNzV2GetWorkspaceSize，第二阶段仍使用原WeightNZ接口执行；CANN须包含该转发实现及对应V2接口。
+weight与weight_scale分别包装为单元素TensorList；x_scale、group_list对应V2的xScale、groupList；output、output_scale对应output、outputScale。保留第三个占位返回值output_offset，向ACLNN传入空outputOffset。ND权重请使用npu_grouped_matmul_swiglu_quant_v2并遵守其规格。
 
 调用示例
 import torch
