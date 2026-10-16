@@ -413,7 +413,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   - 伪量化场景下，`x_dtype`只支持传入None，`weight_dtype`支持传入None或`torch_npu.hifloat8`。
   - 伪量化场景下，`x_dtype`为`torch.float16`/`torch.bfloat16`、`weight_dtype`为`torch_npu.int4`的PerGroup量化场景下，不支持图模式运行。
   - 非量化场景下，`x_dtype`只支持传入None，`weight_dtype`只支持传入None。
-  - 非量化场景下，`x`输入多tensor且`y`输出多tensor场景下，`split_item`参数输入0。`x`输入单tensor且`y`输出多tensor场景下，`split_item`参数输入1。`y`输出单tensor场景下，`split_item`参数输入2/3。
+  - 非量化场景下，`x`输入多tensor且`y`输出多tensor场景下，`split_item`参数仅支持输入0。`x`输入单tensor且`y`输出多tensor场景下，`split_item`参数仅支持输入1。`y`输出单tensor场景下，`split_item`参数支持输入2/3。
   - 全量化场景下，若输出数据类型`y`为`torch.int8`，则不支持图模式运行。全量化MX量化且`weight`输入格式为FRACTAL\_NZ格式，若weight多tensor输入，则不支持图模式运行。若`x`和`weight`输入类型都为`torch_npu.int4`，则暂不支持图模式。
 <!-- end id57 -->
 <!-- npu="950" id58 -->
