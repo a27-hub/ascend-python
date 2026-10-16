@@ -198,6 +198,135 @@ class TestIndexPut(TestCase):
         with self.assertRaises(IndexError):
             result = data.index_put(indices, values, accumulate=False)
 
+    def make_complex_base(self, shape, dtype):
+        float_dtype = torch.float32 if dtype == torch.complex64 else torch.float64
+        numel = 1
+        for dim in shape:
+            numel *= dim
+        real = torch.arange(1, numel + 1, dtype=float_dtype).reshape(shape)
+        return torch.complex(real, real + 0.5)
+
+    def case_complex_exec(self, dtype):
+        # Data is built on CPU with exactly representable values and then
+        # copied to NPU, to keep accumulate results bit-comparable.
+        idx_row = torch.tensor([3, 1])
+        idx_dup = torch.tensor([2, 0, 0, 3])
+        value = self.make_complex_base((2, 5), dtype)
+        value_dup = self.make_complex_base((4, 5), dtype)
+
+        # out-of-place unique replace
+        cpu_base = self.make_complex_base((4, 5), dtype)
+        npu_base = cpu_base.npu()
+        cpu_out = cpu_base.index_put((idx_row,), value, accumulate=False)
+        npu_out = npu_base.index_put((idx_row.npu(),), value.npu(),
+                                     accumulate=False)
+        self.assertEqual(cpu_out.numpy(), npu_out.cpu().numpy())
+
+        # out-of-place accumulate with duplicate and out-of-order indices
+        cpu_out2 = cpu_base.index_put((idx_dup,), value_dup, accumulate=True)
+        npu_out2 = npu_base.index_put((idx_dup.npu(),), value_dup.npu(),
+                                      accumulate=True)
+        self.assertEqual(cpu_out2.numpy(), npu_out2.cpu().numpy())
+
+        # in-place accumulate with duplicate and out-of-order indices
+        cpu_inp = self.make_complex_base((4, 5), dtype)
+        npu_inp = cpu_inp.npu()
+        cpu_inp.index_put_((idx_dup,), value_dup, accumulate=True)
+        npu_inp.index_put_((idx_dup.npu(),), value_dup.npu(), accumulate=True)
+        self.assertEqual(cpu_inp.numpy(), npu_inp.cpu().numpy())
+
+        # in-place unique replace
+        cpu_inp2 = self.make_complex_base((4, 5), dtype)
+        npu_inp2 = cpu_inp2.npu()
+        cpu_inp2.index_put_((idx_row,), value, accumulate=False)
+        npu_inp2.index_put_((idx_row.npu(),), value.npu(), accumulate=False)
+        self.assertEqual(cpu_inp2.numpy(), npu_inp2.cpu().numpy())
+
+        # row value broadcast
+        row_value = self.make_complex_base((5,), dtype)
+        cpu_inp3 = self.make_complex_base((4, 5), dtype)
+        npu_inp3 = cpu_inp3.npu()
+        cpu_inp3.index_put_((idx_row,), row_value, accumulate=False)
+        npu_inp3.index_put_((idx_row.npu(),), row_value.npu(),
+                            accumulate=False)
+        self.assertEqual(cpu_inp3.numpy(), npu_inp3.cpu().numpy())
+
+        # complex scalar value; the update decomposes to two per-lane real
+        # writes (regression shape: a trailing-undefined index call would
+        # silently mis-write this case on the current float32 real kernel)
+        scalar_value = torch.tensor(2 + 3j, dtype=dtype)
+        cpu_inp4 = self.make_complex_base((4, 5), dtype)
+        npu_inp4 = cpu_inp4.npu()
+        cpu_inp4.index_put_((idx_row,), scalar_value, accumulate=True)
+        npu_inp4.index_put_((idx_row.npu(),), scalar_value.npu(),
+                            accumulate=True)
+        self.assertEqual(cpu_inp4.numpy(), npu_inp4.cpu().numpy())
+
+        # direct (accumulate=true, unsafe=true) entry: the signature the
+        # autograd backward of index reaches this op with
+        cpu_inp5 = self.make_complex_base((4, 5), dtype)
+        npu_inp5 = cpu_inp5.npu()
+        grad = self.make_complex_base((2, 5), dtype)
+        torch.ops.aten._index_put_impl_(cpu_inp5, (idx_row,), grad, True, True)
+        torch.ops.aten._index_put_impl_(npu_inp5, (idx_row.npu(),), grad.npu(),
+                                        True, True)
+        self.assertEqual(cpu_inp5.numpy(), npu_inp5.cpu().numpy())
+
+        # bool mask indices on the original rank; value numel > 1 keeps the
+        # per-lane write out of the masked_fill fast path
+        mask = torch.zeros(4, 5, dtype=torch.bool)
+        mask[1, 2] = True
+        mask[3, 4] = True
+        value_mask = self.make_complex_base((2,), dtype)
+        cpu_inp6 = self.make_complex_base((4, 5), dtype)
+        npu_inp6 = cpu_inp6.npu()
+        cpu_inp6.index_put_((mask,), value_mask, accumulate=False)
+        npu_inp6.index_put_((mask.npu(),), value_mask.npu(), accumulate=False)
+        self.assertEqual(cpu_inp6.numpy(), npu_inp6.cpu().numpy())
+
+        # non-contiguous target: the write must alias back to the base tensor
+        cpu_nc = self.make_complex_base((5, 4), dtype)
+        npu_nc = cpu_nc.npu()
+        cpu_dst = cpu_nc.t()
+        npu_dst = npu_nc.t()
+        self.assertEqual(cpu_dst.data_ptr(), cpu_nc.data_ptr())
+        self.assertEqual(npu_dst.data_ptr(), npu_nc.data_ptr())
+        cpu_dst.index_put_((idx_row,), value, accumulate=False)
+        npu_dst.index_put_((idx_row.npu(),), value.npu(), accumulate=False)
+        self.assertEqual(npu_dst.data_ptr(), npu_nc.data_ptr())
+        self.assertEqual(cpu_nc.numpy(), npu_nc.cpu().numpy())
+
+    def test_index_put_complex64(self):
+        self.case_complex_exec(torch.complex64)
+
+    def test_index_put_complex128(self):
+        self.case_complex_exec(torch.complex128)
+
+    def test_index_put_complex_dtype_mismatch(self):
+        for dtype in (torch.complex64, torch.complex128):
+            cpu_base = self.make_complex_base((2, 3), dtype)
+            npu_base = cpu_base.npu()
+            value = torch.ones(2, 3, dtype=torch.float32)
+            with self.assertRaises(RuntimeError):
+                cpu_base.index_put_((torch.tensor([0, 1]),), value)
+            with self.assertRaises(RuntimeError):
+                npu_base.index_put_((torch.tensor([0, 1]).npu(),),
+                                    value.npu())
+
+    def test_index_put_complex_too_many_indices(self):
+        for dtype in (torch.complex64, torch.complex128):
+            cpu_base = self.make_complex_base((2, 3), dtype)
+            npu_base = cpu_base.npu()
+            value = self.make_complex_base((1,), dtype)
+            with self.assertRaises(IndexError):
+                cpu_base.index_put_(
+                    (torch.tensor([0]), torch.tensor([1]),
+                     torch.tensor([0])), value)
+            with self.assertRaises(IndexError):
+                npu_base.index_put_(
+                    (torch.tensor([0]).npu(), torch.tensor([1]).npu(),
+                     torch.tensor([0]).npu()), value.npu())
+
 
 if __name__ == "__main__":
     run_tests()
