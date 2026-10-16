@@ -812,8 +812,8 @@ class TestQuantMatmul(TestCase):
     @SupportedDevices(['Ascend950'])
     def test_npu_quant_matmul_a8w4_float_tcg_nd_uint8(self):
         # A8W4-float T-CG ND: x1=fp8, x2=uint8 载体(K 维打包), x2Scale=fp16, yScale=u64
-        # 调用约定: preprocess 转置直拷出的 {K/2, N} 转置视图直传(aclnn ND 入口自行翻回连续
-        # 并翻转 transposeX2, 恰满足 TCG 强制 transposeX2=true); {N,K/2} 连续形态为约定外(V5 拒)
+        # 调用约定: preprocess 直拷出的 {K/2, N} 转置视图直传(aclnn ND 入口自翻连续并置
+        # transposeX2=true, 恰满足 TCG 强制); {N,K/2} 连续形态 V5 拒收
         fp4_table = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0,
                               -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0], dtype=np.float32)
         m, k, n, gs = 16, 64, 64, 32
