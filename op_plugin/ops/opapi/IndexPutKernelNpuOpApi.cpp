@@ -133,6 +133,25 @@ at::Tensor& _index_put_impl_(
 
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
+    // aclnnIndexPutImpl rejects complex64/complex128 (EZ1001), so complex
+    // updates are decomposed into their real views below. Indices must first
+    // be interpreted on the ORIGINAL complex self: view_as_real appends a
+    // size-2 real/imag lane, and indices that are illegal on the original
+    // tensor (e.g. more indices than its dims) must not become legal by
+    // consuming that lane.
+    const bool isComplexDtype = self.scalar_type() == at::kComplexFloat ||
+        self.scalar_type() == at::kComplexDouble;
+    if (isComplexDtype) {
+        int64_t num_defined_indices = 0;
+        for (const at::Tensor& index : indices_after) {
+            if (index.defined()) {
+                num_defined_indices++;
+            }
+        }
+        TORCH_CHECK_INDEX(num_defined_indices <= self.dim(),
+            "too many indices for tensor of dimension ", self.dim(), " (got ",
+            num_defined_indices, ")", OPS_ERROR(ErrCode::VALUE));
+    }
     std::vector<at::Tensor> all_defined_indices;
     at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
     at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
@@ -145,6 +164,44 @@ at::Tensor& _index_put_impl_(
         "shape mismatch: value tensor of shape ", value.sizes(),
         " cannot be broadcast to indexing result of shape ", info.src.sizes(),
         OPS_ERROR(ErrCode::PARAM));
+    if (isComplexDtype) {
+        TORCH_CHECK(value.scalar_type() == self.scalar_type(),
+            "Index put requires the source and destination dtypes match, got ",
+            self.scalar_type(), " for the destination and ", value.scalar_type(),
+            " for the source.", OPS_ERROR(ErrCode::TYPE));
+        // Complex updates decompose per real/imag lane: (a+bi) op (c+di) is
+        // two independent real updates with no cross term. The lanes are
+        // written through two select() views instead of indexing
+        // view_as_real(self) with an appended trailing undefined index: that
+        // call shape silently mis-writes, and can crash, on the current
+        // float32 real kernel when the value must broadcast over the appended
+        // lane (reproduced on 910B4, CANN 9.1.0). view_as_real and select
+        // alias the storage of self and value, so both writes land in the
+        // original complex tensor and self is returned unchanged;
+        // accumulate/unsafe pass through unchanged (the autograd backward of
+        // index reaches this op with accumulate=true, unsafe=true). The
+        // masked_fill fast path above cannot trigger on the complex self
+        // because complex dtypes are absent from its whitelist; if a per-lane
+        // call hits it for bool-mask indices it is an exact per-lane replace,
+        // which matches the complex semantics for accumulate=false.
+        // Conjugate/mH destinations are materialized by the dispatcher's
+        // ConjugateFallback before this kernel; the copy-back after it is
+        // broken on current torch_npu (documented in the PR), so conjugate
+        // targets are not claimed as supported here.
+        at::Tensor self_real = at::view_as_real(self);
+        at::Tensor value_real = at::view_as_real(value);
+        // _index_put_impl_ takes the destination as Tensor&: the lane views
+        // must be named lvalues, a temporary select() result cannot bind.
+        at::Tensor self_lane_real = self_real.select(-1, 0);
+        at::Tensor self_lane_imag = self_real.select(-1, 1);
+        at::Tensor value_lane_real = value_real.select(-1, 0);
+        at::Tensor value_lane_imag = value_real.select(-1, 1);
+        at::_index_put_impl_(self_lane_real, indices_expand_list,
+            value_lane_real, accumulate, unsafe);
+        at::_index_put_impl_(self_lane_imag, indices_expand_list,
+            value_lane_imag, accumulate, unsafe);
+        return self;
+    }
     for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
         if (indices_after[i].defined()) {
             all_defined_indices.emplace_back(indices_after[i]);
