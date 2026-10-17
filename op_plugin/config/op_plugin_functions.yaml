@@ -6937,6 +6937,7 @@ custom:
 
   - func: npu_sign_bits_pack(Tensor self, int size) -> Tensor
     acl_op: all_version
+    op_api: all_version
     exposed: all_version
 
   - func: npu_sign_bits_unpack(Tensor input, int size, ScalarType dtype) -> Tensor
