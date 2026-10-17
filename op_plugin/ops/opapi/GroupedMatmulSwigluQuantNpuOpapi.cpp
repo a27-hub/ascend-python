@@ -28,15 +28,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
 {
     auto x_size = x.sizes();
     // CANN WeightNZ infers logical N from weightScale, not from packed/NZ weight storage shape.
-    int64_t n = weight_scale.sizes().back();
-    int64_t m = x_size[0];
+    int n = weight_scale.sizes().back();
+    int m = x_size[0];
+    int k = x_size[1];
 
     at::Tensor output = npu_preparation::apply_tensor_without_format({m, n/2}, c10::dtype(c10::ScalarType::Char));
     at::Tensor output_scale = npu_preparation::apply_tensor_without_format(x_scale, {m});
     at::Tensor output_offset = npu_preparation::apply_tensor_without_format({}, c10::dtype(c10::ScalarType::Float));
 
-    // output_offset is a reserved Python placeholder; ACLNN expects no outputOffset.
-    at::Tensor empty_output_offset;
     EXEC_NPU_CMD(
         aclnnGroupedMatmulSwigluQuantWeightNZ,
         x,
@@ -48,7 +47,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
         group_list,
         output,
         output_scale,
-        empty_output_offset);
+        output_offset);
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(output, output_scale, output_offset);
 }
 }

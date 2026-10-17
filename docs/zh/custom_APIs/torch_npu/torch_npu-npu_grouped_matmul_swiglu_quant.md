@@ -209,7 +209,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 >
 > 参数映射：x、x_scale、group_list分别对应V2的x、xScale、groupList；weight、weight_scale分别包装为单元素TensorList，对应weight、weightScale；output、output_scale对应output、outputScale。固定dequantMode=0、dequantDtype=0（GE FLOAT）、quantMode=0、groupListType=0。如出现参数错误提示，可参考上述映射关系。
 >
-> Python仍返回三个Tensor；output_offset为预留占位，向ACLNN传入的outputOffset为空指针。需要ND权重时，请使用[`npu_grouped_matmul_swiglu_quant_v2`](torch_npu-npu_grouped_matmul_swiglu_quant_v2.md)并遵守其规格。
+> Python仍返回三个Tensor；output_offset为预留占位，按原调用方式传给ACLNN并作为第三个结果返回；950路由忽略该参数，不写入且不传给V2。需要ND权重时，请使用[`npu_grouped_matmul_swiglu_quant_v2`](torch_npu-npu_grouped_matmul_swiglu_quant_v2.md)并遵守其规格。
 <!-- end id6 -->
 
 ## 调用示例
