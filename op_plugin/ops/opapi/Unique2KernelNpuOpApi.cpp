@@ -20,6 +20,25 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+namespace {
+// aclnn unique kernels compare half/bfloat16 payloads bitwise and report
+// -0.0 and +0.0 as two distinct unique values, while torch merges them per
+// IEEE 754 (-0.0 == +0.0); fp32 inputs are unaffected (issue #595).
+// Normalize -0.0 to +0.0 on a private copy before the kernel call: the
+// mask comparison below is IEEE ==, so both zeros are rewritten to +0.0
+// while NaN/Inf and every other payload pass through unchanged. The value
+// set, counts and inverse indices of the merged zero bucket then match the
+// CPU contract.
+at::Tensor unique_normalize_neg_zero(const at::Tensor& self) {
+  if (self.scalar_type() != at::kHalf && self.scalar_type() != at::kBFloat16) {
+    return self;
+  }
+  at::Tensor input = self.clone();
+  input.masked_fill_(input == 0, 0.0);
+  return input;
+}
+} // namespace
+
 #if VERSION_BETWEEN(V2R1, V2R1)
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
     const at::Tensor& self,
@@ -41,9 +60,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
   }();
   using aclGetViewShapeFunc = int (*)(const aclTensor* tensor, int64_t** view_dims, uint64_t* view_dims_num);
   auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
-  OP_EXEC_LOG(aclnnUnique2, "EXEC_NPU_CMD_SYNC", self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
+  at::Tensor input = unique_normalize_neg_zero(self);
+  OP_EXEC_LOG(aclnnUnique2, "EXEC_NPU_CMD_SYNC", input, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
   auto npuAclParams =
-      EXEC_NPU_CMD_SYNC(aclnnUnique2, self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
+      EXEC_NPU_CMD_SYNC(aclnnUnique2, input, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
   int64_t* view_dims = nullptr;
   uint64_t view_dim_num = 0;
   auto ret = aclGetViewShape(npuAclParams.Get<4>(), &view_dims, &view_dim_num);
@@ -81,9 +101,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
   }();
   using aclGetViewShapeFunc = int (*)(const aclTensor* tensor, int64_t** view_dims, uint64_t* view_dims_num);
   auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
-  OP_EXEC_LOG(aclnnUnique2, "EXEC_NPU_CMD_SYNC", self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
+  at::Tensor input = unique_normalize_neg_zero(self);
+  OP_EXEC_LOG(aclnnUnique2, "EXEC_NPU_CMD_SYNC", input, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
   auto npuAclParams =
-      EXEC_NPU_CMD_SYNC(aclnnUnique2, self, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
+      EXEC_NPU_CMD_SYNC(aclnnUnique2, input, sorted, return_inverse, return_counts, y, y_inverse, y_counts);
   int64_t* view_dims = nullptr;
   uint64_t view_dim_num = 0;
   auto ret = aclGetViewShape(npuAclParams.Get<4>(), &view_dims, &view_dim_num);
