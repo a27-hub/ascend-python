@@ -135,11 +135,38 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool2d_with_indices(
         : c10::SmallVector<int64_t, SIZE>({n_input_plane, mask_H, mask_W * 32});
     indices = npu_preparation::apply_tensor_without_format(indices_size, self.options().dtype(at::kChar));
     EXEC_NPU_CMD(aclnnMaxPool2dWithMask, self, kernel_sizes, strides, paddings, dilations, ceil_mode, output, indices);
+    // aclnnMaxPool2dWithMask writes the argmax indices as an int8-packed
+    // buffer of (N, C, kH * kW, mask_W * 32): the leading bytes of the
+    // flattened buffer hold the little-endian int64 indices and each row
+    // keeps a 16B-aligned guard tail (mask_W = CeilDiv(Ho * Wo, 16) + 1).
+    // Fold the packed bytes back to the ATen contract: int64 dtype and
+    // (N, C, Ho, Wo) / (C, Ho, Wo) shape. Observed on Atlas A3 the
+    // reassembled values match the CPU golden bitwise.
+    // See https://gitcode.com/Ascend/op-plugin/issues/590.
+    const int64_t batch_plane = self.ndimension() == DIM_SIZE ? n_batch * n_input_plane : n_input_plane;
+    const int64_t indices_numel = batch_plane * output_height * output_width;
+    if (mask_H == 1) {
+      // A 1x1 window always selects position 0, no need to decode the buffer.
+      indices = at::zeros(output_size, self.options().dtype(at::kLong));
+    } else {
+      TORCH_CHECK(
+          mask_H * mask_W * 32 / static_cast<int64_t>(sizeof(int64_t)) >= indices_numel,
+          "max_pool2d: packed indices buffer of aclnnMaxPool2dWithMask is too small to fold into int64,",
+          " unsupported kernel configuration, see issue 590",
+          OPS_ERROR(ErrCode::INTERNAL));
+      indices = indices.view({-1})
+                    .narrow(0, 0, indices_numel * static_cast<int64_t>(sizeof(int64_t)))
+                    .view(at::kLong)
+                    .view(output_size);
+    }
   } else {
     indices_size = output_size;
     indices = npu_preparation::apply_tensor_without_format(indices_size, self.options().dtype(at::kInt));
     EXEC_NPU_CMD(
         aclnnMaxPool2dWithIndices, self, kernel_sizes, strides, paddings, dilations, ceil_mode, output, indices);
+    // aclnnMaxPool2dWithIndices writes int32 indices; promote them to the
+    // int64 dtype required by the ATen contract.
+    indices = indices.to(at::kLong);
   }
   at::namedinference::propagate_names_if_nonempty(output, maybe_names);
   at::namedinference::propagate_names_if_nonempty(indices, maybe_names);
