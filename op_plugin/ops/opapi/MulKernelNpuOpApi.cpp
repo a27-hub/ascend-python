@@ -29,7 +29,16 @@ static at::Tensor self_tensor_to_device(
   if (npu_preparation::is_scalar_wrapped_to_tensor(tensor) ||
       (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
     at::Scalar scalar = tensor.item();
-    return npu_preparation::copy_scalar_to_device(scalar, result_type, device);
+    // Mirror native CUDA semantics (aten/src/ATen/native/cuda/Loops.cuh:
+    // "NB: scalar is stored in higher precision!"): a floating CPU scalar
+    // joins the compute at opmath precision (float for half/bfloat16)
+    // instead of being pre-rounded to the output dtype.
+    at::ScalarType scalar_type = result_type;
+    if (scalar.isFloatingPoint() &&
+        (result_type == at::ScalarType::Half || result_type == at::ScalarType::BFloat16)) {
+      scalar_type = at::ScalarType::Float;
+    }
+    return npu_preparation::copy_scalar_to_device(scalar, scalar_type, device);
   }
   return tensor;
 }
