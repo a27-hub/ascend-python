@@ -2,6 +2,10 @@
 
 ## 产品支持情况
 
+<!-- npu="950" id4 -->
+- <term>Ascend 950PR&950DT系列产品</term>：支持
+<!-- end id4 -->
+
 <!-- npu="A3" id1 -->
 - <term>Atlas A3系列产品</term>：支持
 <!-- end id1 -->
@@ -11,8 +15,8 @@
 
 ## 功能说明
 
-<!-- npu="A3,910b" id3 -->
-- API功能：融合GroupedMatmul（分组矩阵乘）、dequant（反量化）、swiglu（SwiGLU激活）和quant（量化）四个计算环节，deepseek模型使用，对比小算子做性能优化，weight需以FRACTAL\_NZ格式传入。该API是`npu_grouped_matmul_swiglu_quant_v2`的简化版本，仅支持<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>。
+<!-- npu="950,A3,910b" id3 -->
+- API功能：融合GroupedMatmul（分组矩阵乘）、dequant（反量化）、swiglu（SwiGLU激活）和quant（量化）四个计算环节，deepseek模型使用，对比小算子做性能优化，weight需以FRACTAL\_NZ格式传入。该API是`npu_grouped_matmul_swiglu_quant_v2`的简化版本，支持<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>，以及<term>Ascend 950PR&950DT系列产品</term>上的INT8 A8W8 per-token × per-channel量化场景。
   
   多算子融合计算顺序（依次执行）：
   1. GroupedMatmul：根据group\_list对token按组切分，各组计算$X_{i}\cdot W_{i}$；
@@ -54,7 +58,7 @@
     Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
     $$
 
-- 量化场景**A8W4**（A指激活矩阵，W指权重矩阵，4指`torch_npu.int4`数据类型）：激活为`torch.int8`、权重为`torch_npu.int4`，通过将左矩阵拆分为高低4bit两部分分别与权重做矩阵乘，再结合离线生成的辅助矩阵bias还原结果，其余计算过程与A8W8一致。该场景下`weight_scale`支持2维（perchannel）或3维（pergroup）输入。
+- A2/A3量化场景**A8W4**（A指激活矩阵，W指权重矩阵，4指`torch_npu.int4`数据类型）：激活为`torch.int8`、权重为`torch_npu.int4`，通过将左矩阵拆分为高低4bit两部分分别与权重做矩阵乘，再结合离线生成的辅助矩阵bias还原结果，其余计算过程与A8W8一致。该场景下`weight_scale`支持2维（perchannel）或3维（pergroup）输入。
   - 输入：
     - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度；
     - $W∈\mathbb{Z_4}^{E \times K \times N}$：分组权重矩阵（右矩阵），E是专家个数，K是特征维度，N是输出维度；
@@ -155,10 +159,10 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 
 ## 参数说明
 
-- **x**（`Tensor`）：必选参数，左矩阵，公式中的$X$。shape支持2维[M, K]，数据类型支持`torch.int8`，数据格式支持ND，支持非连续Tensor。A8W8场景K必须小于65536，A8W4场景K必须小于20000。
-- **weight**（`Tensor`）：必选参数，权重矩阵，公式中的$W$。需先通过`torch_npu.npu_format_cast(weight, 29)`转换为FRACTAL\_NZ格式（5维存储shape），数据类型支持`torch.int8`、`torch_npu.int4`、`torch.int32`（`torch.int32`为适配用途，实际1个`torch.int32`会被解释为8个`torch_npu.int4`数据），支持非连续Tensor。该接口会忽略weight的数据格式，强制视为FRACTAL\_NZ格式。
+- **x**（`Tensor`）：必选参数，左矩阵，公式中的$X$。shape支持2维[M, K]，数据类型支持`torch.int8`，数据格式支持ND，支持非连续Tensor。A2/A3的A8W8场景K必须小于65536，A8W4场景K必须小于20000；Ascend 950仅支持INT8 A8W8 per-token量化，x不支持转置。
+- **weight**（`Tensor`）：必选参数，权重矩阵，公式中的$W$。需先通过`torch_npu.npu_format_cast(weight, 29)`转换为FRACTAL\_NZ格式（5维存储shape），数据类型支持`torch.int8`、`torch_npu.int4`、`torch.int32`（`torch.int32`为适配用途，实际1个`torch.int32`会被解释为8个`torch_npu.int4`数据），支持非连续Tensor。该接口将已有NZ数据强制视为FRACTAL\_NZ格式；950仅支持torch.int8，不接受普通三维ND权重。
 - **group\_list**（`Tensor`）：必选参数，指示每个分组参与计算的Token个数，公式中的$groupList$。shape支持1维，长度需与weight的首轴维度（专家数E）相等，数据类型支持`torch.int64`，数据格式支持ND，支持非连续Tensor。为cumsum形式的分组索引列表，最后一个值约束了输出数据的有效部分。
-- **weight\_scale**（`Tensor`）：必选参数，右矩阵的量化因子，公式中的$w\_scale$。shape支持2维（perchannel）或3维（pergroup），首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴（N）相同。数据类型支持`torch.float32`、`torch.float16`、`torch.bfloat16`、`torch.int64`（perchannel），数据格式支持ND，支持非连续Tensor。
+- **weight\_scale**（`Tensor`）：必选参数，右矩阵的量化因子，公式中的$w\_scale$。shape支持2维（perchannel）或3维（pergroup），首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴（N）相同。数据类型支持`torch.float32`、`torch.float16`、`torch.bfloat16`、`torch.int64`（perchannel），数据格式支持ND，支持非连续Tensor。950仅支持二维perchannel scale，数据类型支持torch.float32、torch.float16、torch.bfloat16。
 - **x\_scale**（`Tensor`）：必选参数，左矩阵的量化因子，公式中的$x\_scale$。shape支持1维，长度需与x的首轴维度（M）相等。数据类型支持`torch.float32`，数据格式支持ND，支持非连续Tensor。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **bias**（`Tensor`）：可选参数，计算矩阵乘时的辅助矩阵，对应公式中的$weightAssistMatrix$。shape支持2维[E, N]，数据类型支持`torch.float32`，数据格式支持ND。仅在A8W4场景生效，A8W8场景需传入None。默认值为None。
@@ -172,20 +176,57 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 
 ## 约束说明
 
-- 该接口支持训练、推理场景下使用。
-- 确定性计算：默认确定性实现。
-- **A8W8**场景：
-  - x的尾轴长度（K）不能大于等于65536。
-  - N轴长度不能超过10240。
-  - bias需传入None。
-- **A8W4**场景：
-  - x的尾轴长度（K）不能大于等于20000。
-  - N轴长度不能超过10240。
-  - bias（weightAssistMatrix）为必传参数。
-- weight需为FRACTAL\_NZ格式的5维存储，首轴长度为专家数E。
-- group\_list的长度需与weight的首轴维度相等；group\_list为cumsum形式，其最后一个值约束了输出的有效数据范围。
+<!-- npu="A3,910b" id5 -->
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+
+  - 该接口支持训练、推理场景下使用。
+  - 确定性计算：默认确定性实现。
+  - **A8W8**场景：
+    - x的尾轴长度（K）不能大于等于65536。
+    - N轴长度不能超过10240。
+    - bias需传入None。
+  - **A8W4**场景：
+    - x的尾轴长度（K）不能大于等于20000。
+    - N轴长度不能超过10240。
+    - bias（weightAssistMatrix）为必传参数。
+  - weight需为FRACTAL\_NZ格式的5维存储，首轴长度为专家数E。
+  - group\_list的长度需与weight的首轴维度相等；group\_list为cumsum形式，其最后一个值约束了输出的有效数据范围。
+<!-- end id5 -->
+
+<!-- npu="950" id6 -->
+- <term>Ascend 950PR&950DT系列产品</term>：
+
+  - group\_list第1维最大支持1024，即最多支持1024个group。
+  - A8W8 Pertoken量化场景需满足以下约束条件：
+    - 输入和输出Tensor的数据类型组合如下；本接口仅支持表中的INT8组合，不支持MX或A8W4量化。
+
+      | 量化场景 | x | weight | group_list | weight_scale | x_scale | bias | offset | output | output_scale |
+      | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+      | Pertoken量化 | `torch.int8` | `torch.int8` | `torch.int64` | `torch.float32`/`torch.float16`/`torch.bfloat16` | `torch.float32` | None | None | `torch.int8` | `torch.float32` |
+
+    - 输入和输出Tensor的shape组合如下；weight为单个Tensor，其物理存储必须为FRACTAL\_NZ。
+
+      | 支持场景 | x | weight逻辑shape（非转置） | weight物理存储shape（非转置） | weight_scale | x_scale | group_list | output | output_scale |
+      | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+      | 单单单 | (M,K) | (E,K,N) | (E,ceil(N/32),ceil(K/16),16,32) | (E,N) | (M,) | (E,) | (M,N/2) | (M,) |
+
+    - x仅支持非转置；weight支持底层WeightNzV2接口规定的非转置和转置NZ布局，逻辑K、N须与x、weight_scale及输出一致。
+    - N必须大于0且为64的整数倍。所有输入必须位于同一设备，bias和offset必须为None。
+    - group_list使用cumsum形式，最后一个值不大于M；仅比较或读取group_list覆盖的有效输出区域。
+    - 激活per-token与权重per-channel反量化采用FLOAT计算，SwiGLU后执行per-token INT8量化，对应V2的dequantMode=0、dequantDtype=0（GE FLOAT）、quantMode=0、groupListType=0；本接口不开放这些属性。
+
+> [!NOTE]
+>
+> 在<term>Ascend 950PR&950DT系列产品</term>上，本接口仍调用`aclnnGroupedMatmulSwigluQuantWeightNZ`，由ACLNN第一阶段内部转调用`aclnnGroupedMatmulSwigluQuantWeightNzV2GetWorkspaceSize`；第二阶段仍使用原WeightNZ接口执行。CANN须包含该转发实现及对应V2接口。
+>
+> 参数映射：x、x_scale、group_list分别对应V2的x、xScale、groupList；weight、weight_scale分别包装为单元素TensorList，对应weight、weightScale；output、output_scale对应output、outputScale。固定dequantMode=0、dequantDtype=0（GE FLOAT）、quantMode=0、groupListType=0。如出现参数错误提示，可参考上述映射关系。
+>
+> Python仍返回三个Tensor；output_offset为预留占位，按原调用方式传给ACLNN并作为第三个结果返回；950路由忽略该参数，不写入且不传给V2。需要ND权重时，请使用[`npu_grouped_matmul_swiglu_quant_v2`](torch_npu-npu_grouped_matmul_swiglu_quant_v2.md)并遵守其规格。
+<!-- end id6 -->
 
 ## 调用示例
+
+### Atlas A2/A3
 
 - 单算子模式调用（A8W8场景）
 
@@ -297,3 +338,23 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
     torch.Size([512]) torch.float32
     torch.Size([])
     ```
+
+### Ascend 950 INT8 A8W8 weight NZ
+
+```python
+import torch
+import torch_npu
+
+torch.npu.config.allow_internal_format = True
+E, M, K, N = 4, 17, 128, 256
+x = torch.randint(-128, 128, (M, K), dtype=torch.int8, device="npu")
+weight = torch.randint(-128, 128, (E, K, N), dtype=torch.int8, device="npu")
+weight_nz = torch_npu.npu_format_cast(weight, 29)
+weight_scale = torch.full((E, N), 0.01, dtype=torch.float32, device="npu")
+x_scale = torch.full((M,), 0.01, dtype=torch.float32, device="npu")
+group_list = torch.tensor([3, 7, 7, 17], dtype=torch.int64, device="npu")
+output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(
+    x, weight_nz, group_list, weight_scale, x_scale, bias=None, offset=None)
+# output: [17, 128], INT8；output_scale: [17], FLOAT32。
+# output_offset仅为0维FLOAT32占位Tensor，不读取其数值。
+```
