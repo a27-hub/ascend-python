@@ -32,8 +32,8 @@ enum class fft_mode {
     c2r,
 };
 
- void conjugate_symmetry(at::Tensor& input, int64_t dim)
- {
+void conjugate_symmetry(at::Tensor& input, int64_t dim)
+{
     const auto ndim = input.dim();
     if (dim < 0) {
         dim = ndim + dim;
@@ -83,6 +83,17 @@ const at::Tensor &_fft_apply_normalization(const at::Tensor &self, int64_t norma
 {
     auto scale = _fft_normalization_scale(normalization, sizes, dims);
     return (scale == 1.0) ? self : self.mul_(scale);
+}
+
+static inline bool fft_input_is_empty(const at::Tensor& self, at::Tensor& out)
+{
+#if VERSION_BETWEEN(V2R15, VERSION_NEWEST)
+    if (self.numel() == 0) {
+        out.zero_();
+        return true;
+    }
+#endif
+    return false;
 }
 
 static void HackComplexintoFloat(at::Tensor& self)
@@ -513,8 +524,7 @@ at::Tensor _fft_c2c(const at::Tensor& self, at::IntArrayRef dim, int64_t normali
     TORCH_CHECK(self.is_complex(), OPS_ERROR(ErrCode::PARAM));
     auto output_size = op_infer::input_same_output_size(self);
     auto out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(self.scalar_type()));
-    if (self.numel() == 0) {
-        out.zero_();
+    if (fft_input_is_empty(self, out)) {
         return out;
     }
     DO_ASDSIP_COMPATIBILITY(C2C, _exec_fft(out, self, self.sizes(), dim, normalization, forward, 0));
@@ -531,8 +541,7 @@ at::Tensor& _fft_c2c_out(const at::Tensor& self, at::IntArrayRef dim, int64_t no
 {
     TORCH_CHECK(self.is_complex(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(out.is_complex(), OPS_ERROR(ErrCode::PARAM));
-    if (self.numel() == 0) {
-        out.zero_();
+    if (fft_input_is_empty(self, out)) {
         return out;
     }
     DO_ASDSIP_COMPATIBILITY(C2C, _exec_fft(out, self, self.sizes(), dim, normalization, forward, 0));
@@ -556,8 +565,7 @@ at::Tensor _fft_r2c(const at::Tensor& self, at::IntArrayRef dim, int64_t normali
     }
     auto out = npu_preparation::apply_tensor_without_format(
         out_sizes, self.options().dtype(c10::toComplexType(self.scalar_type())));
-    if (self.numel() == 0) {
-        out.zero_();
+    if (fft_input_is_empty(self, out)) {
         return out;
     }
 
@@ -583,8 +591,7 @@ at::Tensor &_fft_r2c_out(const at::Tensor &self, at::IntArrayRef dim,
 {
     TORCH_CHECK(self.is_floating_point(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(out.is_complex(), OPS_ERROR(ErrCode::PARAM));
-    if (self.numel() == 0) {
-        out.zero_();
+    if (fft_input_is_empty(self, out)) {
         return out;
     }
     auto input_sizes = self.sizes();
@@ -619,8 +626,7 @@ at::Tensor _fft_c2r(const at::Tensor& self, at::IntArrayRef dim, int64_t normali
     out_sizes[dim.back()] = lastdim;
     auto out = npu_preparation::apply_tensor_without_format(
         out_sizes, self.options().dtype(c10::toRealValueType(self.scalar_type())));
-    if (self.numel() == 0) {
-        out.zero_();
+    if (fft_input_is_empty(self, out)) {
         return out;
     }
     DO_ASDSIP_COMPATIBILITY(C2R, _exec_fft(out, self, out_sizes, dim, normalization, self.is_conj(), 2));
@@ -637,8 +643,7 @@ at::Tensor &_fft_c2r_out(const at::Tensor &self, at::IntArrayRef dim,
 {
     TORCH_CHECK(self.is_complex(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(out.is_floating_point(), OPS_ERROR(ErrCode::PARAM));
-    if (self.numel() == 0) {
-        out.zero_();
+    if (fft_input_is_empty(self, out)) {
         return out;
     }
     auto in_sizes = self.sizes();
