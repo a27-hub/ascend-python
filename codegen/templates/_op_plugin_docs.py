@@ -12810,7 +12810,9 @@ aclnnGroupedMatmulV4、aclnnDynamicDequant、aclnnSwigluQuant融合, deepseek模
 
 参数说明
 x（Tensor）：输入，左矩阵，公式中的X，Device侧的aclTensor。shape支持2维，数据类型支持INT8，数据格式支持ND，支持非连续的Tensor。
-weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTensor。shape支持5维，数据类型支持INT8，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。
+weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTensor。
+    A2/A3：shape支持5维，数据类型支持INT8，数据格式支持FRACTAL_NZ，支持非连续的Tensor；该接口会将weight的数据格式强制视为FRACTAL_NZ格式。
+    Ascend 950：数据类型为INT8，逻辑shape为3维；权重必须已采用FRACTAL_NZ存储，物理存储shape为[E, ceil(N/32), ceil(K/16), 16, 32]。逻辑shape、stride及转置布局须满足底层WeightNzV2接口约束，不自动转换普通ND权重。
 group_list （Tensor）：输入，指示每个分组参与计算的Token个数，公式中的grouplist，Device侧的aclTensor。shape支持1维，长度需与weight的首轴维度相等，数据类型支持INT64，数据格式支持ND，支持非连续的Tensor。
 weight_scale （Tensor）：输入，右矩阵的量化因子，公式中的w_scale，Device侧的aclTensor。shape支持2维，首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴相同，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
 x_scale （Tensor）：输入，左矩阵的量化因子，公式中的x_scale，Device侧的aclTensor。shape支持1维，长度需与x的首轴维度相等，数据类型支持FLOAT，数据格式支持ND，支持非连续的Tensor。
@@ -12826,6 +12828,12 @@ output_offset（预留输出，暂不支持，Tensor）：输出的非对称量�
 支持的型号
 A2训练、推理系列产品
 A3训练、推理系列产品
+Ascend 950PR&950DT系列产品
+
+Ascend 950约束
+仅支持INT8 A8W8、激活per-token与权重per-channel量化，不支持A8W4或per-group量化。
+x仅支持非转置；专家数E不超过1024；N必须大于0且为64的整数倍。
+bias和offset必须为None。
 
 调用示例
 import torch
