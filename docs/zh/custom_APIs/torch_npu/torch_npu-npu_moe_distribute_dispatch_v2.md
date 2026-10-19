@@ -255,7 +255,9 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     <!-- npu="910b" id4 -->
     - <term>Atlas A2系列产品</term>：额外支持`torch.int32`，每个`torch.int32`元素作为8个`torch_npu.int4`数据的打包载体，算子内部按位透传。
     <!-- end id4 -->
+    <!-- npu="950" id73 -->
     - <term>Ascend 950DT系列产品</term>：额外支持`torch_npu.hifloat8`/`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`。
+    <!-- end id73 -->
 
 - **expert\_ids**（`Tensor`）：**必选参数**，表示每个token的topK个专家索引，决定每个token要发给哪些专家。要求为2维张量，shape为\(BS, K\)。数据类型支持`torch.int32`，数据格式为$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)的`expert_ids`输入，张量里value取值范围为\[0, moe\_expert\_num\)，且同一行中的K个value不能重复。
 - **group\_ep**（`str`）：**必选参数**，EP通信域名称，专家并行的通信域。字符串长度范围为\[1, 128\)。取值不能和`group_tp`相同。
