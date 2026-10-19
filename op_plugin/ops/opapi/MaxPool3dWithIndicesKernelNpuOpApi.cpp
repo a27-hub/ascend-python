@@ -107,6 +107,11 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool3d_with_indices(
     EXEC_NPU_CMD(aclnnMaxPool3dWithArgmax, self, kernel_size,
                  stride, padding, dilation, ceil_mode, output, indices);
 
+    // aclnnMaxPool3dWithArgmax writes int32 indices; promote them to the
+    // int64 dtype required by the ATen contract.
+    // See https://gitcode.com/Ascend/op-plugin/issues/590.
+    indices = indices.to(at::kLong);
+
     return std::tuple<at::Tensor, at::Tensor>(output, indices);
 }
 
