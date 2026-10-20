@@ -22,6 +22,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+// no-op comment for baseline pipeline verification
+
 static at::Tensor self_tensor_to_device(
     const at::Tensor& tensor,
     const at::ScalarType result_type,
