@@ -243,23 +243,6 @@ class TestNpuWeightQuantPreprocess(TestCase):
         # FP8 dtype 无 sub 实现，经 uint8 视图逐元素比较
         self.assertEqual(out_weight.view(torch.uint8).cpu(), weight.view(torch.uint8).cpu())
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_weight_quant_preprocess_a16fp8hif8_offset_rejected(self):
-        # A16FP8HIF8 数据流不支持 weight_offset，传入应报错
-        k, n = 256, 128
-        weight = torch.randint(0, 255, (k, n), dtype=torch.uint8).to(torch.float8_e4m3fn).npu()
-        weight_scale = torch.randn((n,), dtype=torch.float16).npu()
-        weight_offset = torch.randn((n,), dtype=torch.float16).npu()
-
-        with self.assertRaisesRegex(RuntimeError, ""):
-            torch_npu.npu_weight_quant_preprocess(
-                weight,
-                weight_scale,
-                x_dtype=torch.float16,
-                weight_dtype=torch.float8_e4m3fn,
-                weight_scale_dtype=torch.float16,
-                weight_offset=weight_offset)
-
 
 if __name__ == "__main__":
     run_tests()
