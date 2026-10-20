@@ -17,6 +17,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/MoeDistributeAssist.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
 namespace op_api {
@@ -238,9 +239,12 @@ tensor_list npu_moe_distribute_dispatch_v2(
       {ep_recv_cnt_num}, x.options().dtype(at::kInt));
   at::Tensor tp_recv_counts = npu_preparation::apply_tensor_without_format(
       {tp_world_size}, x.options().dtype(at::kInt));
+  const int64_t assist_elements = op_plugin::utils::IsMoeRoceHierarchy(comm_alg)
+      ? op_plugin::utils::GetMoeRoceAssistSize(global_bs_real, ep_world_size, moe_expert_num, k)
+      : std::max(bs * k, a * 128);
   at::Tensor assist_info_forcombine =
       npu_preparation::apply_tensor_without_format(
-          {std::max(bs * k, a * 128)}, x.options().dtype(at::kInt));
+          {assist_elements}, x.options().dtype(at::kInt));
 
   // a2分层方案
   at::Tensor expand_scales = npu_preparation::apply_tensor_without_format(
