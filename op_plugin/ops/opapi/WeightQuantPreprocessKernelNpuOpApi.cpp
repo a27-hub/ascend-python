@@ -335,10 +335,8 @@ bool judge_mm_a8f4_tcg(QuantContext& ctx) {
 
   bool scale_dtype_match = (weight_scale_acl_dtype == ACL_FLOAT16 || weight_scale_acl_dtype == ACL_BF16);
 
-  // F8F4 T-CG per-group：FP4 weight + FP16/BF16 per-group scale [G, N]（G > 1，gs 固定 32）；
-  // 与 MX（scale=E8M0）、A16 系（x=F16/BF16）由 x dtype / scale dtype / x_scale 互斥；
-  // 转置状态内部分流：转置 → ND 直拷，非转置 → FRACTAL_NZ_C0_32 转换（prepare_out_weight_f8f4）；
-  // kGroupSize 预处理不消费，不下发判定——gs != 32 由下游 aclnn/tiling 响亮拦截
+  // A8F4 T-CG：FP4 weight + FP16/BF16 per-group scale [G, N]（G>1，gs=32）+ FP8 x，
+  // 与 MX（scale=E8M0）、A16（x=F16/BF16）按 dtype 互斥；kGroupSize 不下发，gs!=32 由下游拦截
   if (x_acl_dtype == ACL_FLOAT8_E4M3FN && weight_acl_dtype == ACL_FLOAT4_E2M1 && scale_dtype_match &&
       x_scale_acl_dtype == ACL_DT_UNDEFINED && ctx.weight.dim() == DIMS_2 && ctx.weight_scale.dim() == DIMS_2 &&
       ctx.weight_scale.size(0) > 1) {
@@ -374,7 +372,7 @@ bool judge_mm_a16fp8hif8_per_channel(QuantContext& ctx) {
   return false;
 }
 
-// 直拷输出别名：out 直接复用输入 tensor（共享 storage 与 view），aclnn 直拷路径同址时无拷贝
+// 直拷输出：out 直接别名输入（共享 storage 与 view）
 static void prepare_out_weight_scale_direct(QuantContext& ctx) {
   ctx.out_weight_scale = ctx.weight_scale;
 }
@@ -472,11 +470,9 @@ static void prepare_out_weight_a16w4(QuantContext& ctx) {
   }
 }
 
-// F8F4 T-CG 转置分流：转置 weight → ND 直拷（物理透传，与转置布局无关）；非转置 → FRACTAL_NZ_C0_32 转换。
-// NZ 分支与 mxfp4 同约定实例化通用 prepare_out_weight_nz 模板：torch 侧 uint8 [K, N/2] 打包视图挂
-// 假标签 NZ_C0_16（字节口径，16B=32 个 FP4），ConvertType 经 FORMAT_FAKE_TO_REAL 映射为真实
-// FRACTAL_NZ_C0_32（元素口径），即得 qbmmv4 T-CG 真布局 {ceildiv(N,32), ceildiv(K,16), 16, 32}
-// （n0=32、N 块在前，探针字节级确证；低 nibble=偶数 n）。
+// F8F4 T-CG 转置分流：转置 → ND 直拷；非转置 → FRACTAL_NZ_C0_32 转换
+// 非转置分支：uint8 [K, N/2] 打包视图挂假标签 NZ_C0_16（字节口径），ConvertType 经 FAKE_TO_REAL
+// 映射为真实 FRACTAL_NZ_C0_32（元素口径，16B = 32 个 FP4，N 块在前）
 static void prepare_out_weight_f8f4(QuantContext& ctx) {
   if (ctx.is_weight_trans) {
     prepare_out_weight_nd_direct(ctx);
