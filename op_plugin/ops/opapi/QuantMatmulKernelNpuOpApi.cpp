@@ -16,6 +16,7 @@
 #include <vector>
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/framework/StorageDescHelper.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
 namespace op_api {
@@ -74,6 +75,45 @@ static bool is_nz_format(const at::Tensor& x2) {
   const torch_npu::NPUStorageDesc& tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(x2)->npu_desc_;
   return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ || tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_4 ||
       tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_16;
+}
+
+static bool is_mx_scale_nz_format(const at::Tensor& scale) {
+  const torch_npu::NPUStorageDesc& tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(scale)->npu_desc_;
+  return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ ||
+      tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_2 ||
+      tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_4 ||
+      tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_16;
+}
+
+static bool is_mx_scale_nz_storage(const at::Tensor& scale) {
+  return scale.dim() == 4 && scale.size(2) == 16 && scale.size(3) == 2;
+}
+
+static at::Tensor make_mx_scale_nz_view(const at::Tensor& scale, int64_t n, int64_t k) {
+  constexpr int64_t scaleGroupSize = 64;
+  constexpr int64_t nzRowAlign = 16;
+  const int64_t scaleKGroups = (k + scaleGroupSize - 1) / scaleGroupSize;
+  const int64_t nBlocks = (n + nzRowAlign - 1) / nzRowAlign;
+  TORCH_CHECK(
+      scale.size(0) == nBlocks && scale.size(1) == scaleKGroups,
+      "MX ScaleB NZ storage shape should be [ceil(N/16), ceil(K/64), 16, 2], but got ",
+      scale.sizes(),
+      " for N=",
+      n,
+      " and K=",
+      k,
+      OPS_ERROR(ErrCode::PARAM));
+
+  const std::vector<int64_t> viewShape{n, scaleKGroups, 2};
+  const std::vector<int64_t> viewStrides{scaleKGroups * 2, 2, 1};
+  at::Tensor scaleView = scale.as_strided(viewShape, viewStrides);
+  at_npu::native::StorageDescHelper::SetDesc(
+      scaleView,
+      viewShape,
+      scale.sizes(),
+      viewStrides,
+      ACL_FORMAT_FRACTAL_NZ_C0_2);
+  return scaleView;
 }
 
 uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2, std::vector<uint64_t> &batch_record)
@@ -159,6 +199,15 @@ at::Tensor npu_quant_matmul(
         "aclnnQuantMatmulV5 support A8W4, please upgrade CANN.",
         OPS_ERROR(ErrCode::TYPE));
   }
+  at::Tensor scaleNzView;
+  const at::Tensor* scaleRealPtr = &scale;
+  if (is_nz_format(x2) && is_mx_scale_nz_storage(scale)) {
+    const int64_t realN = x2.size(x2.dim() - 1);
+    const int64_t realK = x1.size(x1.dim() - 1);
+    scaleNzView = make_mx_scale_nz_view(scale, realN, realK);
+    scaleRealPtr = &scaleNzView;
+  }
+  const at::Tensor& scaleReal = *scaleRealPtr;
   bool is_a8W4_int = x1.dtype() == at::kChar && x2.dtype() == at::kInt;
   bool is_a8W4_float = x1.dtype() == at::kFloat8_e4m3fn && x2.dtype() == at::kFloat;
   at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
@@ -247,7 +296,7 @@ at::Tensor npu_quant_matmul(
   TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
   TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
   TensorWrapper x1_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
-  TensorWrapper x2_scale_wrapper = make_wrapper(scale, scale_dtype);
+  TensorWrapper x2_scale_wrapper = make_wrapper(scaleReal, scale_dtype);
   TensorWrapper result_wrapper = make_wrapper(result, output_dtype);
   at::Tensor x1_offset = at::empty({0}, options);
   at::Tensor x2_offset = at::Tensor();
@@ -266,9 +315,9 @@ at::Tensor npu_quant_matmul(
       : (pertoken_scale.has_value() ? c10_npu::GetAclDataType(static_cast<int64_t>(pertoken_scale_real.scalar_type()))
                                     : aclDataType::ACL_INT8);
   bool need_check_trans = pertoken_scale.has_value() &&
-      (((pertoken_scale_real.dim() == x1.dim() && scale.dim() == x2.dim()) ||
+      (((pertoken_scale_real.dim() == x1.dim() && scaleReal.dim() == x2.dim()) ||
         pertoken_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0) &&
-       (pertoken_scale_real.dim() >= 2 && scale.dim() >= 2)) &&
+       (pertoken_scale_real.dim() >= 2 && scaleReal.dim() >= 2)) &&
       !(is_a8W4_float || is_a8W4_int);
   if (need_check_trans) {
     int64_t dim_x1 = x1.dim() - 2; //  check the last 2 dim
@@ -282,22 +331,25 @@ at::Tensor npu_quant_matmul(
       dim_x2_scale = scale.dim() - scaleNonBatchDim; // check the last 2 dim in GB/BB
     } else if (pertoken_scale_real.dim() > 2) {
       dim_x1_scale = pertoken_scale_real.dim() - mxScaleNonBatchDim; // MX: skip batch + trailing 3D
-      dim_x2_scale = scale.dim() - mxScaleNonBatchDim;
+      dim_x2_scale = scaleReal.dim() - mxScaleNonBatchDim;
     }
     TORCH_CHECK(
         is_x_scale_same_transpose(x1, pertoken_scale_real, dim_x1, dim_x1_scale),
         "Input x1 tensor and pertoken_scale tensor's transpose are not same, please check input.",
         OPS_ERROR(ErrCode::PARAM));
+    // An MX scale in FRACTAL_NZ carries its logical shape, while its physical
+    // stride is determined by the fractal storage. ND transpose inference is
+    // not applicable to that storage.
     TORCH_CHECK(
-        is_x_scale_same_transpose(x2, scale, dim_x2, dim_x2_scale),
+        is_mx_scale_nz_format(scaleReal) || is_x_scale_same_transpose(x2, scaleReal, dim_x2, dim_x2_scale),
         "Input x2 tensor and scale tensor's transpose are not same, please check input.",
         OPS_ERROR(ErrCode::PARAM));
   }
 
-  bool use_trans_quant_param = scale.dtype() == at::kFloat && !pertoken_scale.has_value() &&
+  bool use_trans_quant_param = scaleReal.dtype() == at::kFloat && !pertoken_scale.has_value() &&
       (output_acltype != ACL_BF16 || use_aclnn_v5) && output_acltype != ACL_INT32;
   if (use_trans_quant_param) {
-    const at::Tensor quant_param = op_api::npu_trans_quant_param(scale, offset);
+    const at::Tensor quant_param = op_api::npu_trans_quant_param(scaleReal, offset);
     if (is_nz_format(x2)) {
       EXEC_NPU_CMD(
           aclnnQuantMatmulWeightNz,
