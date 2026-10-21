@@ -97,6 +97,8 @@ std::vector<at::Tensor> _foreach_norm(const at::TensorList self, const at::Scala
   static const bool is_support_nd_out =
       (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
            c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1 ||
+       c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_9391 &&
+           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 ||
        c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950);
   if (!is_support_nd_out) {
     return at::native::foreach_tensor_norm_slow(self, scalar);
@@ -129,6 +131,8 @@ std::vector<at::Tensor> _foreach_norm(
   static const bool is_support_nd_out =
       (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
            c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1 ||
+       c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_9391 &&
+           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 ||
        c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950);
   if (!is_support_nd_out) {
     return at::native::foreach_tensor_norm_slow(self, scalar, opt_dtype);
