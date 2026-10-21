@@ -37,18 +37,18 @@ function torch_install_other() {
 
 function torch_install_master() {
     if [ "${ARCH}" == "x86_64" ]; then
-        wget --no-check-certificate --no-verbose -P ${WORKSPACE} https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}/torch-${nightly_version}%2Bcpu-cp310-cp310-manylinux_2_28_x86_64.whl
+        wget --no-check-certificate --no-verbose -P ${WORKSPACE} https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}/torch-${nightly_version}%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl
     elif [ "${ARCH}" == "aarch64" ]; then
-        wget --no-check-certificate --no-verbose -P ${WORKSPACE} https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}/torch-${nightly_version}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl
+        wget --no-check-certificate --no-verbose -P ${WORKSPACE} https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}/torch-${nightly_version}%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl
     fi
 }
 
 function torch_install_master_2() {
     test_version=${nightly_version:0:6}
     if [ "${ARCH}" == "x86_64" ]; then
-        wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${test_version}/torch-${test_version}%2Bcpu-cp310-cp310-manylinux_2_28_x86_64.whl
+        wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${test_version}/torch-${test_version}%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl
     elif [ "${ARCH}" == "aarch64" ]; then
-        wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${test_version}/torch-${test_version}%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl
+        wget --no-check-certificate --no-verbose -P "${WORKSPACE}" https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/v${test_version}/torch-${test_version}%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl
     fi
 }
 
@@ -59,7 +59,11 @@ function torch_npu_install() {
 }
 
 function main() {
-    pip"${py_version}" install https://ascend-cann-open.obs.cn-north-4.myhuaweicloud.com/Triton_Innersource/triton-ascend/20260428190056/triton_ascend-3.2.1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+    if [ "${py_version}" = "3.11" ]; then
+        pip"${py_version}" install https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly/triton-ascend/triton_ascend-3.2.2+release20260701-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+    else
+        pip"${py_version}" install https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly/triton-ascend/triton_ascend-3.2.2+release20260701-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+    fi
     cd ${WORKSPACE}
     rm -rf "${python_path}"/lib/python"${py_version}"/site-packages/torch
     rm -rf "${python_path}"/lib/python"${py_version}"/site-packages/~orch
