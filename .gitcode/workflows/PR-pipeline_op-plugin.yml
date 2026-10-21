@@ -228,7 +228,7 @@ stages:
                 img: "pytorch_2.12.0_a1_x86_64_builder:20260704"
               - branch: "master"
                 arch: "arm"
-                img: "pytorch_master_a2_aarch64_builder:20260922"
+                img: "pytorch_master_a2_aarch64_test:20261018"
               - branch: "v2.7.1"
                 arch: "arm"
                 img: "pytorch_2.7.1_a2_aarch64_builder:20260804"
@@ -262,11 +262,11 @@ stages:
           matrix:
             include:
               - branch: "master"
-                img: "pytorch_master_a2_aarch64_builder:20260922"
+                img: "pytorch_master_a2_aarch64_test:20261018"
                 TEST_RANK: "1"
                 TEST_WORLD_SIZE: "2"
               - branch: "master"
-                img: "pytorch_master_a2_aarch64_builder:20260922"
+                img: "pytorch_master_a2_aarch64_test:20261018"
                 TEST_RANK: "2"
                 TEST_WORLD_SIZE: "2"
               - branch: "v2.7.1"
