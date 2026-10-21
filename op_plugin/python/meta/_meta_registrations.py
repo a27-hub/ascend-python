@@ -3355,6 +3355,19 @@ def get_dispatch_dynamic_shape(x, scales, quant_mode, a, h):
     return shape
 
 
+def _moe_roce_assist_size(global_bs, ep_world_size, moe_expert_num, k):
+    torch._check(ep_world_size > 0, lambda: "RoCE ep_world_size must be positive.")
+    torch._check(global_bs > 0 and global_bs % ep_world_size == 0,
+                 lambda: "RoCE global_bs must be positive and divisible by ep_world_size.")
+    torch._check(moe_expert_num > 0 and moe_expert_num % ep_world_size == 0 and k > 0,
+                 lambda: "RoCE requires evenly sharded ordinary experts and positive topk.")
+    rows = global_bs * min(moe_expert_num // ep_world_size, k)
+    aligned_tokens = ((global_bs // ep_world_size + 15) // 16) * 16
+    elements = 3 * rows + ep_world_size * aligned_tokens // 2
+    torch._check(elements <= 2**63 - 1, lambda: "RoCE assist capacity exceeds int64 range.")
+    return elements
+
+
 @impl(m, "npu_moe_distribute_dispatch_v2")
 def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, scales=None, x_active_mask=None, expert_scales=None, elastic_info=None, performance_info=None, group_tp="", tp_world_size=0,
                                         tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1, comm_alg="",
@@ -3441,7 +3454,10 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
     if y_dtype is not None:
         outDtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
 
-    expand_idx = x.new_empty((max(bs * k, a * 128)), dtype=torch.int32)
+    assist_elements = max(bs * k, a * 128)
+    if comm_alg == "hierarchy" and get_soc_version() >= _ASCEND950_SOC_VERSION:
+        assist_elements = _moe_roce_assist_size(global_bs_real, ep_world_size, moe_expert_num, k)
+    expand_idx = x.new_empty((assist_elements,), dtype=torch.int32)
     if (y_dtype == 296 or y_dtype == 297) and (scales == None): # float4_e2m1 or float4_e1m2
         if h % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
@@ -3482,7 +3498,16 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 @impl(m, "npu_moe_distribute_combine_v2")
 def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
                                        tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, performance_info=None, group_tp="", tp_world_size=0,
-                                       tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg="", zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
+                                       tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg="", zero_expert_num=0, copy_expert_num=0, const_expert_num=0, enable_pre_reduce=True):
+    torch._check(enable_pre_reduce or (comm_alg == "hierarchy" and get_soc_version() >= _ASCEND950_SOC_VERSION),
+                 lambda: "enable_pre_reduce=False requires the A5 hierarchy RoCE path." + ops_error(ErrCode.NOT_SUPPORT))
+    if comm_alg == "hierarchy" and get_soc_version() >= _ASCEND950_SOC_VERSION:
+        capacity = global_bs if global_bs != 0 else expert_ids.size(0) * ep_world_size
+        assist_elements = _moe_roce_assist_size(capacity, ep_world_size, moe_expert_num, expert_ids.size(1))
+        torch._check(assist_info_for_combine.dim() == 1,
+                     lambda: "RoCE assist_info_for_combine must be one-dimensional.")
+        torch._check(assist_info_for_combine.numel() >= assist_elements,
+                     lambda: "RoCE assist_info_for_combine must contain triples followed by the server bitmap.")
     dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
     return expand_x.new_empty(dim_tuple)

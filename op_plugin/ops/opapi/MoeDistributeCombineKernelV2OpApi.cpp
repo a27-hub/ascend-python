@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/MoeDistributeAssist.h"
 
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
@@ -58,8 +59,12 @@ at::Tensor npu_moe_distribute_combine_v2(const at::Tensor &expand_x, const at::T
                                          c10::string_view group_tp, int64_t tp_world_size, int64_t tp_rank_id,
                                          int64_t expert_shard_type, int64_t shared_expert_num, int64_t shared_expert_rank_num,
                                          int64_t global_bs, int64_t comm_quant_mode,
-                                         c10::string_view comm_alg, int64_t zero_expert_num, int64_t copy_expert_num, int64_t const_expert_num)
+                                         c10::string_view comm_alg, int64_t zero_expert_num, int64_t copy_expert_num, int64_t const_expert_num,
+                                         bool enable_pre_reduce)
 {
+    TORCH_CHECK(enable_pre_reduce || op_plugin::utils::IsMoeRoceHierarchy(comm_alg),
+                "enable_pre_reduce=False requires the A5 hierarchy RoCE path.",
+                OPS_ERROR(ErrCode::NOT_SUPPORT));
     TORCH_CHECK((expand_x.dim() == DIM_TWO) && (expert_ids.dim() == DIM_TWO), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf) || (expand_x.scalar_type() == at::kInt),
                 "dtype of expand_x should be BFloat16, Float16 or Int, but got " + std::string(c10::toString(expand_x.scalar_type())),
@@ -73,6 +78,13 @@ at::Tensor npu_moe_distribute_combine_v2(const at::Tensor &expand_x, const at::T
     int64_t bs = expert_ids_size[0];
     int64_t h = expand_x_size[1];
     int64_t global_bs_real = (global_bs == 0) ? (bs * ep_world_size) : global_bs;
+    if (op_plugin::utils::IsMoeRoceHierarchy(comm_alg)) {
+        const int64_t assist_elements = op_plugin::utils::GetMoeRoceAssistSize(
+            global_bs_real, ep_world_size, moe_expert_num, expert_ids_size[1]);
+        TORCH_CHECK(assist_info_for_combine.dim() == 1 && assist_info_for_combine.numel() >= assist_elements,
+                    "RoCE assist_info_for_combine requires at least ", assist_elements,
+                    " int32 elements containing triples followed by the server bitmap.", OPS_ERROR(ErrCode::PARAM));
+    }
 
     char *group_ep_ptr = const_cast<char *>(group_ep.data());
     std::string group_tp_str = std::string(group_tp);
@@ -83,13 +95,26 @@ at::Tensor npu_moe_distribute_combine_v2(const at::Tensor &expand_x, const at::T
     } else {
         output = npu_preparation::apply_tensor_without_format({bs, h}, expert_ids.options().dtype(at::kBFloat16));
     }
-    
+
     c10::optional<at::Tensor> nulltensor = c10::nullopt;
     int64_t out_dtype = 0;
     int64_t group_list_type = 0;
 
     std::string comm_alg_str = std::string(comm_alg);
     char *comm_alg_ptr = const_cast<char *>(comm_alg_str.c_str());
+
+    if (op_plugin::utils::IsMoeRoceHierarchy(comm_alg) &&
+        check_aclnn_kernel_available("aclnnMoeDistributeCombineV6")) {
+        EXEC_NPU_CMD(aclnnMoeDistributeCombineV6, expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, tp_send_counts, x_active_mask,
+                     nulltensor, nulltensor, nulltensor, expand_scales, shared_expert_x, elastic_info, ori_x, const_expert_alpha_1, const_expert_alpha_2, const_expert_v,
+                     performance_info, group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num, group_tp_ptr, tp_world_size, tp_rank_id,
+                     expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, out_dtype, comm_quant_mode, group_list_type,
+                     comm_alg_ptr, zero_expert_num, copy_expert_num, const_expert_num, enable_pre_reduce, output);
+        return output;
+    }
+    TORCH_CHECK(!op_plugin::utils::IsMoeRoceHierarchy(comm_alg),
+                "A5 hierarchy RoCE requires aclnnMoeDistributeCombineV6 with enable_pre_reduce support.",
+                OPS_ERROR(ErrCode::NOT_SUPPORT));
 
     if (check_aclnn_kernel_available("aclnnMoeDistributeCombineV4")) {
         EXEC_NPU_CMD(aclnnMoeDistributeCombineV4, expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, tp_send_counts, x_active_mask,
