@@ -112,4 +112,10 @@ jobs:
           # 将 download-artifact 下载的构建产物拷回工作目录供 UT 脚本使用
           cp -rf ../output/${{ inputs.pr_id }}/* ./
           ls ${ATOMGIT_WORKSPACE}
-          bash cie/.gitcode/workflows/scripts/UT/op-plugin_ut_general.sh ${{ inputs.pytorch_branch }} ${{ inputs.py_version }} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
+          PYTORCH_BRANCH="${{ inputs.pytorch_branch }}"
+          if [ "${PYTORCH_BRANCH}" = "master" ]; then
+             py_version=3.11
+          else
+             py_version=${{ inputs.py_version }}
+          fi
+          bash cie/.gitcode/workflows/scripts/UT/op-plugin_ut_general.sh ${PYTORCH_BRANCH} ${py_version} ${{ inputs.pr_id }} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
