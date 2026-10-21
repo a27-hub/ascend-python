@@ -21,7 +21,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor& gelu_out(const at::Tensor & self, c10::string_view approximate, at::Tensor& out)
 {
     static auto gelu_sc = at_npu::native::env::CheckCompatibleImpl();
-    if (!c10_npu::IsAclnnOnly() && !gelu_sc) {
+    std::string approximate_str = std::string(approximate);
+    if (!c10_npu::IsAclnnOnly() && !gelu_sc && approximate_str == "none") {
         DO_COMPATIBILITY(aclnnGelu, acl_op::gelu_out(self, approximate, out));
         EXEC_NPU_CMD(aclnnGelu, self, out);
     } else {
