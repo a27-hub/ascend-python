@@ -111,9 +111,9 @@ jobs:
             url_base="https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/torch/master/${nightly_date}"
           fi
 
-          torch_url="${url_base}/torch-${ver}%2Bcpu-cp310-cp310-manylinux_2_28_${TORCH_ARCH}.whl"
+          torch_url="${url_base}/torch-${ver}%2Bcpu-cp311-cp311-manylinux_2_28_${TORCH_ARCH}.whl"
           echo "torch_url=${torch_url}"
-          pip3.10 install $torch_url
+          pip3.11 install $torch_url
 
       - name: checkout
         if: ${{ steps.check_support.outputs.need_build == 'yes' }}
