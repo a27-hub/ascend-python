@@ -62,7 +62,8 @@ at::Tensor npu_moe_distribute_combine_v2(const at::Tensor &expand_x, const at::T
                                          c10::string_view comm_alg, int64_t zero_expert_num, int64_t copy_expert_num, int64_t const_expert_num,
                                          bool enable_pre_reduce)
 {
-    TORCH_CHECK(enable_pre_reduce, "enable_pre_reduce=False is not implemented; only accumulation is supported.",
+    TORCH_CHECK(enable_pre_reduce || op_plugin::utils::IsMoeRoceHierarchy(comm_alg),
+                "enable_pre_reduce=False requires the A5 hierarchy RoCE path.",
                 OPS_ERROR(ErrCode::NOT_SUPPORT));
     TORCH_CHECK((expand_x.dim() == DIM_TWO) && (expert_ids.dim() == DIM_TWO), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf) || (expand_x.scalar_type() == at::kInt),
@@ -102,6 +103,19 @@ at::Tensor npu_moe_distribute_combine_v2(const at::Tensor &expand_x, const at::T
     std::string comm_alg_str = std::string(comm_alg);
     char *comm_alg_ptr = const_cast<char *>(comm_alg_str.c_str());
 
+    if (op_plugin::utils::IsMoeRoceHierarchy(comm_alg) &&
+        check_aclnn_kernel_available("aclnnMoeDistributeCombineV6")) {
+        EXEC_NPU_CMD(aclnnMoeDistributeCombineV6, expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, tp_send_counts, x_active_mask,
+                     nulltensor, nulltensor, nulltensor, expand_scales, shared_expert_x, elastic_info, ori_x, const_expert_alpha_1, const_expert_alpha_2, const_expert_v,
+                     performance_info, group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num, group_tp_ptr, tp_world_size, tp_rank_id,
+                     expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, out_dtype, comm_quant_mode, group_list_type,
+                     comm_alg_ptr, zero_expert_num, copy_expert_num, const_expert_num, enable_pre_reduce, output);
+        return output;
+    }
+    TORCH_CHECK(!op_plugin::utils::IsMoeRoceHierarchy(comm_alg),
+                "A5 hierarchy RoCE requires aclnnMoeDistributeCombineV6 with enable_pre_reduce support.",
+                OPS_ERROR(ErrCode::NOT_SUPPORT));
+
     if (check_aclnn_kernel_available("aclnnMoeDistributeCombineV4")) {
         EXEC_NPU_CMD(aclnnMoeDistributeCombineV4, expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, tp_send_counts, x_active_mask,
                      nulltensor, nulltensor, nulltensor, expand_scales, shared_expert_x, elastic_info, ori_x, const_expert_alpha_1, const_expert_alpha_2, const_expert_v,
@@ -118,9 +132,6 @@ at::Tensor npu_moe_distribute_combine_v2(const at::Tensor &expand_x, const at::T
                      expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, out_dtype, comm_quant_mode, group_list_type,
                      comm_alg_ptr, zero_expert_num, copy_expert_num, const_expert_num, output);
     } else {
-        TORCH_CHECK(!op_plugin::utils::IsMoeRoceHierarchy(comm_alg),
-                    "A5 hierarchy RoCE requires aclnnMoeDistributeCombineV3 or V4.",
-                    OPS_ERROR(ErrCode::NOT_SUPPORT));
         TORCH_CHECK(!check_v3_param(elastic_info, zero_expert_num, copy_expert_num, const_expert_num), "The aclnnMoeDistributeCombineV3 is not supported", OPS_ERROR(ErrCode::PARAM));
         EXEC_NPU_CMD(aclnnMoeDistributeCombineV2, expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, tp_send_counts, x_active_mask,
                      nulltensor, nulltensor, nulltensor, expand_scales, shared_expert_x, group_ep_ptr, ep_world_size, ep_rank_id,
