@@ -39,5 +39,14 @@ class TestUpsamleNearest2D(TestCase):
             self.assertRtolEqual(cpu_output, npu_output)
 
 
+    def test_upsample_nearest2d_zero_output_size_raises(self):
+        cpu_input = torch.randn(1, 1, 4, 4)
+        npu_input = cpu_input.npu()
+        with self.assertRaises(RuntimeError):
+            torch.nn.functional.interpolate(cpu_input, size=0, mode="nearest")
+        with self.assertRaises(RuntimeError):
+            torch.nn.functional.interpolate(npu_input, size=0, mode="nearest")
+
+
 if __name__ == "__main__":
     run_tests()
