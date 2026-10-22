@@ -18,6 +18,7 @@
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
+#include "op_plugin/utils/FlashAttention.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
 
@@ -1054,7 +1055,7 @@ at::Tensor dropout_gen_mask(const at::Tensor &query, const at::Tensor &key, doub
     return drop_mask;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_backward(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> flash_attention_backward_impl(
     const at::Tensor &query,
     const at::Tensor &key,
     const at::Tensor &value,
@@ -1234,7 +1235,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
     return std::make_tuple(dq, dk, dv, dpse, dsink);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_grad(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> flash_attention::backward(
     const at::Tensor &query,
     const at::Tensor &key,
     const at::Tensor &value,
@@ -1312,7 +1313,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
     }
-    auto result = npu_fusion_attention_backward(query,
+    auto result = flash_attention_backward_impl(query,
         key, value, dy, head_num, input_layout_str, pse, drop_mask, padding_mask, atten_mask,
         softmax_max, softmax_sum, softmax_in, attention_in, scale_value, keep_prob, pre_tockens,
         next_tockens, inner_precise, seed, offset, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode,
@@ -1326,7 +1327,45 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
     return result;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> npu_fusion_attention(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_grad(
+    const at::Tensor &query,
+    const at::Tensor &key,
+    const at::Tensor &value,
+    const at::Tensor &dy,
+    int64_t head_num,
+    c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &softmax_max,
+    const c10::optional<at::Tensor> &softmax_sum,
+    const c10::optional<at::Tensor> &softmax_in,
+    const c10::optional<at::Tensor> &attention_in,
+    double scale_value,
+    double keep_prob,
+    int64_t pre_tockens,
+    int64_t next_tockens,
+    int64_t inner_precise,
+    int64_t seed,
+    int64_t offset,
+    int64_t numels,
+    c10::OptionalIntArrayRef prefix,
+    c10::OptionalIntArrayRef actual_seq_qlen,
+    c10::OptionalIntArrayRef actual_seq_kvlen,
+    int64_t sparse_mode,
+    bool gen_mask_parallel,
+    bool sync,
+    c10::string_view softmax_layout,
+    const c10::optional<at::Tensor> &sink)
+{
+    return flash_attention::backward(
+        query, key, value, dy, head_num, input_layout, pse, padding_mask, atten_mask, softmax_max, softmax_sum,
+        softmax_in, attention_in, scale_value, keep_prob, pre_tockens, next_tockens, inner_precise, seed, offset,
+        numels, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout,
+        sink);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> flash_attention::forward(
     const at::Tensor &query, const at::Tensor &key,
     const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
@@ -1595,6 +1634,23 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
         seed, offset, numels);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> npu_fusion_attention(
+    const at::Tensor &query, const at::Tensor &key,
+    const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
+    c10::OptionalIntArrayRef prefix, c10::OptionalIntArrayRef actual_seq_qlen,
+    c10::OptionalIntArrayRef actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink, const c10::optional<at::Tensor> &dropout_mask,
+    int64_t seed, int64_t offset)
+{
+    return flash_attention::forward(
+        query, key, value, head_num, input_layout, pse, padding_mask, atten_mask, scale, keep_prob, pre_tockens,
+        next_tockens, inner_precise, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel,
+        sync, softmax_layout, sink, dropout_mask, seed, offset);
 }
 
 at::Tensor npu_prompt_flash_attention(
