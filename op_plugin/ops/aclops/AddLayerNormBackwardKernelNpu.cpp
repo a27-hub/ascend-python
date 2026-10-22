@@ -38,7 +38,9 @@ npu_add_layer_norm_backward(
   const at::Tensor& dsum =
       c10::value_or_else(dsum_opt, [] { return at::Tensor(); });
   auto d_y = dy.defined() ? dy : at::zeros(x1.sizes(), x1.options());
-  auto d_sum = dsum.defined() ? dsum : at::zeros(x1.sizes(), x1.options());
+  // A disabled additional output has an empty gradient when used in a loss.
+  auto d_sum = dsum.defined() && dsum.numel() != 0
+      ? dsum : at::zeros(x1.sizes(), x1.options());
 
   at::Tensor dx = npu_preparation::apply_tensor(d_y);
   at::Tensor dgamma =

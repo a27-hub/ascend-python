@@ -2673,7 +2673,10 @@ def npu_add_layer_norm_meta(x1, x2, gamma, beta, epsilon=1e-5, additional_output
         else:
             ret.append(1)
     rstd = torch.empty(ret, dtype=torch.float32, device='meta')
-    return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
+    output_dtype = x1.dtype if x1.dtype == x2.dtype else torch.float32
+    y = torch.empty_like(x1, dtype=output_dtype)
+    x = torch.empty_like(y) if additional_output else y.new_empty((0,))
+    return (y, torch.empty_like(rstd), torch.empty_like(rstd), x)
 
 
 @impl(m, "npu_gelu_mul")
