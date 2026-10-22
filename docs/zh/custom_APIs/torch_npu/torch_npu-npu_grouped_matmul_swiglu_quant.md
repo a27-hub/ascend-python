@@ -15,15 +15,18 @@
 
 ## 功能说明
 
-<!-- npu="950,A3,910b" id3 -->
-- API功能：融合GroupedMatmul（分组矩阵乘）、dequant（反量化）、swiglu（SwiGLU激活）和quant（量化）四个计算环节，deepseek模型使用，对比小算子做性能优化，weight需以FRACTAL\_NZ格式传入。该API是`npu_grouped_matmul_swiglu_quant_v2`的简化版本，支持<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>，以及<term>Ascend 950PR&950DT系列产品</term>上的INT8 A8W8 pertoken perchannel量化场景。
+- API功能：融合GroupedMatmul（分组矩阵乘）、dequant（反量化）、swiglu（SwiGLU激活）和quant（量化）四个计算环节，deepseek模型使用，对比小算子做性能优化，weight需以FRACTAL\_NZ格式传入。
   
   多算子融合计算顺序（依次执行）：
   1. GroupedMatmul：根据group\_list对token按组切分，各组计算$X_{i}\cdot W_{i}$；
   2. dequant：矩阵乘结果与激活量化因子$x_scale$、权重量化因子$w_scale$逐元素相乘，完成反量化；
   3. swiglu：反量化结果沿N轴对半切分为$C_{i,act}$与$gate_{i}$，计算$S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$；
   4. quant：$Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$，$Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil$，得到量化输出Q与量化因子Q\_scale。
+
+<!-- npu="950" id3 -->
+- <term>Ascend 950PR&950DT系列产品</term>：不支持**A8W4**量化场景，仅支持**A8W8** pertoken perchannel量化场景。
 <!-- end id3 -->
+
 - 量化场景**A8W8**（A指激活矩阵，W指权重矩阵，8指`torch.int8`数据类型）：
   - 输入：
     - $X∈\mathbb{Z_8}^{M \times K}$为激活矩阵（左矩阵），M是总token数，K是特征维度；
@@ -58,7 +61,7 @@
     Q_{i} = \left\lfloor \frac{S_{i}}{Q\_scale_{i}} \right\rceil
     $$
 
-- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>量化场景**A8W4**（A指激活矩阵，W指权重矩阵，4指`torch_npu.int4`数据类型）：激活为`torch.int8`、权重为`torch_npu.int4`，通过将左矩阵拆分为高低4bit两部分分别与权重做矩阵乘，再结合离线生成的辅助矩阵bias还原结果，其余计算过程与A8W8一致。该场景下`weight_scale`支持2维（perchannel）或3维（pergroup）输入。
+- 量化场景**A8W4**（A指激活矩阵，W指权重矩阵，4指`torch_npu.int4`数据类型）：激活为`torch.int8`、权重为`torch_npu.int4`，通过将左矩阵拆分为高低4bit两部分分别与权重做矩阵乘，再结合离线生成的辅助矩阵bias还原结果，其余计算过程与A8W8一致。该场景下`weight_scale`支持2维（perchannel）或3维（pergroup）输入。
   - 输入：
     - $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度；
     - $W∈\mathbb{Z_4}^{E \times K \times N}$：分组权重矩阵（右矩阵），E是专家个数，K是特征维度，N是输出维度；
@@ -146,11 +149,6 @@
 
 - group\_list分组说明：根据groupList[i]确定当前分组的token，$i \in [0,Len(groupList))$。例如groupList=[3,4,4,6]：第0个右矩阵W[0,:,:]对应token x[0:3]；第1个对应x[3:4]；第2个对应x[4:4]（0个token）；第3个对应x[4:6]。groupList中未指定的部分不会参与更新：例如groupList=[12,14,18]、x的shape为[30,N/2]时，Q[18:, :]与Q\_scale[18:]不会进行更新或初始化，其中数据为显存空间申请时的原数据，即输出的Q[:groupList[-1],:]和Q\_scale[:groupList[-1]]为有效数据部分。
 
-> [!NOTE]
->
-> - weight需先通过`torch_npu.npu_format_cast(weight, 29)`转换为FRACTAL\_NZ格式（5维）再传入；该接口会忽略weight的数据格式标志，直接强制视为FRACTAL\_NZ格式，但要求weight的存储shape为NZ打包后的5维。
-> - 该接口提供非原地语义：输出output为新建Tensor，不修改输入。
-
 ## 函数原型
 
 ```python
@@ -204,6 +202,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
   - 该接口支持训练、推理场景下使用。
+  - 该接口支持单算子模式。
   - 确定性计算：默认确定性实现。
   - **A8W8**场景：
     - x的尾轴长度（K）不能大于等于65536。
@@ -220,6 +219,8 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 <!-- npu="950" id6 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
 
+  - 该接口支持训练、推理场景下使用。
+  - 该接口支持单算子模式。
   - group\_list第1维最大支持1024，即最多支持1024个group。
   - A8W8 Pertoken量化场景需满足以下约束条件：
     - 输入和输出Tensor的数据类型组合如下；本接口仅支持表中的INT8组合，不支持MX或A8W4量化。
@@ -376,7 +377,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 <!-- end id13 -->
 
 <!-- npu="950" id14 -->
-- <term>Ascend 950PR&950DT系列产品</term>：Pertoken量化weight NZ场景示例（`torch.int8`）
+- <term>Ascend 950PR&950DT系列产品</term>：单算子模式调用(A8W8 pertoken perchannel场景)
 
     ```python
     import torch
