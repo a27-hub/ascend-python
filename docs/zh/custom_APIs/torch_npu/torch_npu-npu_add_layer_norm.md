@@ -29,6 +29,12 @@ torch_npu.npu_add_layer_norm(x1, x2, gamma, beta, epsilon=1e-5, additional_outpu
 
 关闭额外输出时，第四项仅表示未请求加法结果，不应作为加法结果使用。需要该结果时，请显式传入 `additional_output=True`。
 
+## 验证范围
+
+关闭额外输出的存储优化最低已验证 CANN 版本为 **8.5.0**，同时验证了 CANN 9.2.0。验证硬件为 aarch64 / Ascend 910B3，覆盖 ACLNN 与 aclops 路径，包括 `jit_compile=True` 的单算子编译模式。
+
+该优化依赖后端在 `additional_output=False` 时不写入加法结果输出。上述版本为已验证范围，不代表所有后续版本或其他硬件均已验证；TorchAir 图模式尚未验证。
+
 ## 调用示例
 
 ```python

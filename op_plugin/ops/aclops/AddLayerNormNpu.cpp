@@ -45,6 +45,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_layer_norm(
       ? npu_preparation::apply_tensor(y)
       : at::empty({0}, y.options());
   // The backend requires a full-shaped x output even when it is not written.
+  // Aliasing relies on additional_output=false suppressing writes to x.
+  // Validated on CANN 8.5.0 (minimum tested) and 9.2.0, including JIT mode.
   // Reuse y internally in that case, but return a separate empty tensor.
   at::Tensor x_out = additional_output ? x : y;
 

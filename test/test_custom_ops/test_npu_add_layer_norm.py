@@ -1,10 +1,21 @@
 import unittest
+from contextlib import contextmanager
 import numpy as np
 import torch_npu
 import torch
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import get_npu_device, SupportedDevices
 torch.npu.set_compile_mode(jit_compile=False)
+
+
+@contextmanager
+def jit_compile_mode(enabled):
+    previous = not torch.npu.is_jit_compile_false()
+    try:
+        torch.npu.set_compile_mode(jit_compile=enabled)
+        yield
+    finally:
+        torch.npu.set_compile_mode(jit_compile=previous)
 
 
 class AddLayerNormOutputParams:
@@ -167,6 +178,22 @@ class TestNPUAddLayerNorm(TestCase):
                 reference_loss.backward()
                 for actual, expected in zip(npu_inputs, cpu_inputs):
                     torch.testing.assert_close(actual.grad.cpu(), expected.grad, atol=1e-4, rtol=1e-4)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_add_layer_norm_optional_output_aclops(self):
+        # JIT-enabled dispatch selects aclops even when ACLNN is available.
+        with jit_compile_mode(True):
+            self.test_add_layer_norm_optional_output()
+
+    @SupportedDevices(['Ascend910B'])
+    def test_add_layer_norm_optional_output_noncontiguous_aclops(self):
+        with jit_compile_mode(True):
+            self.test_add_layer_norm_optional_output_noncontiguous()
+
+    @SupportedDevices(['Ascend910B'])
+    def test_add_layer_norm_optional_output_backward_aclops(self):
+        with jit_compile_mode(True):
+            self.test_add_layer_norm_optional_output_backward()
 
     def test_add_layer_norm_optional_output_meta(self):
         for dtype1, dtype2 in ((torch.float16, torch.float16),
