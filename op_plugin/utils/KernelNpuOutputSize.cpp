@@ -2665,22 +2665,12 @@ c10::SmallVector<int64_t, SIZE> gru_npu_output_size(
   if (batch_sizes.has_value()) {
     const at::Tensor& bs_tensor = batch_sizes.value();
     if (bs_tensor.numel() > 0) {
-      time_step = bs_tensor.size(0);
-      TORCH_CHECK(
-          time_step > 0 && input.size(0) % time_step == 0,
-          "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
-          "time_step=",
-          time_step,
-          ", input_size0=",
-          input.size(0),
-          ", batch_sizes_shape=",
-          bs_tensor.sizes(),
-          OPS_ERROR(ErrCode::PARAM));
-      batch_size = input.size(0) / time_step;
-    } else {
-      batch_size = batch_first ? input.size(0) : input.size(1);
-      time_step = batch_first ? input.size(1) : input.size(0);
+      // Packed sequence: out0 must be 2D [sum(batch_sizes), D*hidden], where
+      // sum(batch_sizes) equals the number of rows of the packed input data.
+      return {input.size(0), output_last_dim};
     }
+    batch_size = batch_first ? input.size(0) : input.size(1);
+    time_step = batch_first ? input.size(1) : input.size(0);
   } else {
     batch_size = batch_first ? input.size(0) : input.size(1);
     time_step = batch_first ? input.size(1) : input.size(0);
