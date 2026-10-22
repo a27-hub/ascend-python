@@ -6504,6 +6504,7 @@ custom:
 
   - func: _gru_npu(Tensor input, Tensor hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
+    device_check: NoCheck
     tags: nondeterministic_seeded
 
   - func: _gru_npu_backward(Tensor grad_y, Tensor grad_h, Tensor input, Tensor hx, Tensor[] params, Tensor r, Tensor z, Tensor n, Tensor h_n, Tensor h, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor[])
