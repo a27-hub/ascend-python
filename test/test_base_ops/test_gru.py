@@ -121,6 +121,7 @@ class TestGru(TestCase):
             self.assertRtolEqual(cpu_output_y.detach().numpy(), npu_output_y.cpu().detach().numpy())
             self.assertRtolEqual(cpu_output_h.detach().numpy(), npu_output_h.cpu().detach().numpy())
 
+    @unittest.skip("skip test_gru_sequence: aclnnGRU does not support packed sequence (batch_sizes) yet")
     def test_gru_sequence(self):
         max_len = 6
         embedding_size = 2
@@ -175,6 +176,7 @@ class TestGru(TestCase):
         self.assertRtolEqual(pade_outputs.detach().numpy(),
                              pade_outputs_npu.cpu().to(torch.float).detach().numpy(), prec=1.e-4)
 
+    @unittest.skip("skip test_gru_sequence_bidirection: aclnnGRU does not support packed sequence (batch_sizes) yet")
     def test_gru_sequence_bidirection(self):
         max_len = 6
         embedding_size = 2
@@ -224,6 +226,7 @@ class TestGru(TestCase):
         self.assertRtolEqual(pade_outputs.detach().numpy(),
                              pade_outputs_npu.cpu().detach().numpy(), prec=1.e-4)
 
+    @unittest.skip("skip test_gru_sequence_double_layer: aclnnGRU does not support packed sequence (batch_sizes) yet")
     def test_gru_sequence_double_layer(self):
         for item in [True, False]:
             max_len, embedding_size, hidden_size, vocab_size = 6, 2, 16, 20
