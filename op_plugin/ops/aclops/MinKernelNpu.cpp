@@ -200,6 +200,10 @@ at::Tensor amin(const at::Tensor& self, at::IntArrayRef dims, bool keepdim) {
 }
 
 at::Tensor min(const at::Tensor& self) {
+  TORCH_CHECK(
+      self.numel() > 0,
+      "min(): Expected reduction dim to be specified for input.numel() == 0. "
+      "Specify the reduction dim with the 'dim' argument.");
   c10::SmallVector<int64_t, SIZE> dims = op_plugin::utils::get_dimlist_for_tensor(self);
   return acl_op::amin(self, dims, false);
 }
