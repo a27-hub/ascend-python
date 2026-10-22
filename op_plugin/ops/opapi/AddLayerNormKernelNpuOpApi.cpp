@@ -38,16 +38,19 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_layer_norm(
   shape.emplace_back(1);
 
   at::Tensor y;
-  at::Tensor x;
   if (x1.dtype() == x2.dtype()) {
     y = npu_preparation::apply_tensor(x1);
-    x = npu_preparation::apply_tensor(x1);
   } else {
     y = npu_preparation::apply_tensor(
         x1.sizes(), x1.options().dtype(at::kFloat), x1);
-    x = npu_preparation::apply_tensor(
-        x1.sizes(), x1.options().dtype(at::kFloat), x1);
   }
+
+  at::Tensor x = additional_output
+      ? npu_preparation::apply_tensor(y)
+      : at::empty({0}, y.options());
+  // The backend requires a full-shaped x output even when it is not written.
+  // Reuse y internally in that case, but return a separate empty tensor.
+  at::Tensor x_out = additional_output ? x : y;
 
   at::Tensor mean =
       npu_preparation::apply_tensor(shape, x1.options().dtype(at::kFloat), x1);
@@ -67,7 +70,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_layer_norm(
       y,
       mean,
       rstd,
-      x);
+      x_out);
   return std::make_tuple(y, mean, rstd, x);
 }
 } // namespace op_api
