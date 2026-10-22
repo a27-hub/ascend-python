@@ -29,6 +29,9 @@ at::SmallVector<int64_t, SIZE> upsample_nearest2d_output_size_npu(
   int64_t C = input.size(1);
   int64_t H = output_size[0];
   int64_t W = output_size[1];
+  TORCH_CHECK(H > 0 && W > 0,
+      "Input and output sizes should be greater than 0, but got input (H: ", input.size(-2),
+      ", W: ", input.size(-1), ") output (H: ", H, ", W: ", W, ")", OPS_ERROR(ErrCode::PARAM));
   at::SmallVector<int64_t, SIZE> outputSize = {N, C, H, W};
   return outputSize;
 }
