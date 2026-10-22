@@ -408,7 +408,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     - <term>Atlas A3系列产品</term>、<term>Ascend 950DT系列产品</term>：当前版本仅支持""、"fullmesh\_v1"、"fullmesh\_v2"三种输入方式。
         - ""：默认值，不开启fullmesh\_v2模板。
         - "fullmesh\_v1"：不开启fullmesh\_v2模板。
-        - "fullmesh\_v2"：开启fullmesh\_v2模板，其中`comm_alg`仅在`tp_world_size`取值为1时生效，且不支持在各卡BS不一致、输入`x_active_mask`和特殊专家场景下开启。
+        - "fullmesh\_v2"：开启fullmesh\_v2模板，其中`comm_alg`仅在`tp_world_size`取值为1时生效，且不支持在各卡BS不一致、输入`x_active_mask`和特殊专家场景下开启。**该模板的K与BS上限和产品相关：<term>Atlas A3系列产品</term>支持0<K≤12、0<BS≤256；<term>Ascend 950DT系列产品</term>支持0<K≤16、0<BS≤512。**
     <!-- end id34 -->
 
 - **zero\_expert\_num**（`int`）：**可选参数**，表示零专家的数量。
@@ -550,13 +550,21 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - <term>Atlas A2系列产品</term>：取值范围为0<BS≤256。
         <!-- end id60 -->
         <!-- npu="A3" id61 -->
-        - <term>Atlas A3系列产品</term>：取值范围为0<BS≤512。
+        - <term>Atlas A3系列产品</term>：取值范围为0<BS≤512；**`comm_alg`取值"fullmesh\_v2"或"hierarchy"时，取值范围为0<BS≤256。**
         <!-- end id61 -->
         <!-- npu="950" id62 -->
         - <term>Ascend 950DT系列产品</term>：取值范围为0<BS≤512。
         <!-- end id62 -->
 
-    - K：表示选取topK个专家，`comm_alg`取值""或"fullmesh\_v1"时取值范围为0<K≤16，`comm_alg`取值"fullmesh\_v2"时，0<K≤12。需同时满足0 < K ≤ moe\_expert\_num + zero\_expert\_num + copy\_expert\_num + const\_expert\_num。
+    - K：表示选取topK个专家，`comm_alg`取值""或"fullmesh\_v1"时取值范围为0<K≤16。需同时满足0 < K ≤ moe\_expert\_num + zero\_expert\_num + copy\_expert\_num + const\_expert\_num。
+
+        <!-- npu="A3" id74 -->
+        - **<term>Atlas A3系列产品</term>：`comm_alg`取值"fullmesh\_v2"时，K取值范围为0<K≤12。**
+        <!-- end id74 -->
+        <!-- npu="950" id75 -->
+        - **<term>Ascend 950DT系列产品</term>：`comm_alg`取值"fullmesh\_v2"时，K取值范围为0<K≤16。**
+        <!-- end id75 -->
+
     - server\_num：表示服务器的节点数，取值只支持2、4、8。
 
         <!-- npu="910b" id63 -->
@@ -613,15 +621,15 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     <!-- end id67 -->
     <!-- npu="A3" id68 -->
     - <term>Atlas A3系列产品</term>：该场景不仅支持通过环境变量HCCL\_BUFFSIZE配置，还支持通过hccl\_buffer\_size配置（参考[《PyTorch训练模型迁移调优》](https://hiascend.com/document/redirect/canncommercial-ptmigr)中“性能调优\>性能调优方法\>通信优化\>优化方法\>hccl\_buffer\_size”章节）。
-        - ep通信域内，`comm_alg`配置为"fullmesh\_v1"或""：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*Align512\(Align32\(2\*H\)+64\)+\(K+shared\_expert\_num\)\*max\_bs\*Align512\(2\*H\)\)。
-        - ep通信域内，`comm_alg`配置为"fullmesh\_v2"：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*480Align512\(Align32\(2\*H\)+64\)+\(K+shared\_expert\_num\)\*max\_bs\*Align512\(2\*H\)\)。
+        - ep通信域内，`comm_alg`配置为"fullmesh\_v1"或""：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*Align512\(Align32\(2\*H\)+**44**\)+\(K+shared\_expert\_num\)\*max\_bs\*Align512\(2\*H\)\)。
+        - ep通信域内，`comm_alg`配置为"fullmesh\_v2"：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*480Align512\(Align32\(2\*H\)+**44**\)+\(K+shared\_expert\_num\)\*max\_bs\*Align512\(2\*H\)\)。
         - tp通信域内：设置大小要求\>=(A \* Align512(Align32(H \* 2) + 44) + A \* Align512(H \* 2)) \* 2。
         - 其中480Align512(x) = ((x+480-1)/480)\*512，Align512(x) = ((x+512-1)/512)\*512，Align32(x) = ((x+32-1)/32)\*32。
     <!-- end id68 -->
     <!-- npu="950" id69 -->
     - <term>Ascend 950DT系列产品</term>：取值范围如下所示。
-        - ep通信域内，`comm_alg`配置为"fullmesh\_v1"或""：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*Align512\(Align32\(2\*H\)+64\)+\(K+shared\_expert\_num\)\*max\_bs\*Align512\(2\*H\)\) + 1024 \* 1024 \* 10。
-        - ep通信域内，`comm_alg`配置为"fullmesh\_v2"：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*480Align512\(Align32\(2\*H\)+64\)+\(K+shared\_expert\_num\)\*max\_bs\*Align512\(2\*H\)\) + 1024 \* 1024 \* 10。
+        - ep通信域内，`comm_alg`配置为"fullmesh\_v1"或""：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*Align512\(Align32\(2\*H\)+**44**\)+\(K+shared\_expert\_num\)\*max\_bs\***480Align512**\(2\*H\)\) + 1024 \* 1024 \* 10。
+        - ep通信域内，`comm_alg`配置为"fullmesh\_v2"：设置大小要求\>=2\*\(local\_expert\_num\*max\_bs\*ep\_world\_size\*480Align512\(Align32\(2\*H\)+**44**\)+\(K+shared\_expert\_num\)\*max\_bs\***480Align512**\(2\*H\)\) + 1024 \* 1024 \* 10。
         - 其中480Align512(x) = ((x+480-1)/480)\*512，Align512(x) = ((x+512-1)/512)\*512，Align32(x) = ((x+32-1)/32)\*32。
     <!-- end id69 -->
 
@@ -676,7 +684,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     moe_expert_num = 32  # moe专家数
     bs = 8  # token数量
     h = 7168  # 每个token的长度
-    k = 8
+    k = 16
     random_seed = 0
     tp_world_size = 1
     ep_world_size = int(world_size / tp_world_size)
@@ -776,14 +784,14 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
         # 创建输入tensor
         x = torch.randn(bs, h, dtype=input_dtype).npu()
-        expert_ids = torch.tensor([[5, 7, 17, 4, 2, 6, 11, 16],
-                                [10, 12, 13, 15, 19, 4, 18, 1],
-                                [19, 33, 1, 17, 9, 5, 0, 32],
-                                [19, 11, 17, 0, 10, 5, 7, 9],
-                                [10, 16, 11, 17, 33, 8, 9, 3],
-                                [12, 19, 5, 7, 1, 3, 18, 16],
-                                [11, 9, 13, 16, 12, 33, 17, 14],
-                                [16, 4, 9, 5, 0, 10, 11, 17]], dtype=torch.int32).npu()
+        expert_ids = torch.tensor([[5, 7, 17, 4, 2, 6, 11, 16, 0, 1, 3, 8, 9, 10, 12, 13],
+                                [10, 12, 13, 15, 19, 4, 18, 1, 0, 2, 3, 5, 6, 7, 8, 9],
+                                [19, 33, 1, 17, 9, 5, 0, 32, 2, 3, 4, 6, 7, 8, 10, 11],
+                                [19, 11, 17, 0, 10, 5, 7, 9, 1, 2, 3, 4, 6, 8, 12, 13],
+                                [10, 16, 11, 17, 33, 8, 9, 3, 0, 1, 2, 4, 5, 6, 7, 12],
+                                [12, 19, 5, 7, 1, 3, 18, 16, 0, 2, 4, 6, 8, 9, 10, 11],
+                                [11, 9, 13, 16, 12, 33, 17, 14, 0, 1, 2, 3, 4, 5, 6, 7],
+                                [16, 4, 9, 5, 0, 10, 11, 17, 1, 2, 3, 6, 7, 8, 12, 13]], dtype=torch.int32).npu()
         expert_scales = torch.randn(bs, k, dtype=torch.float32).npu()
 
         scales_shape = (1 + moe_expert_num, h) if shared_expert_rank_num else (moe_expert_num, h)
@@ -911,7 +919,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     moe_expert_num = 32  # moe专家数
     bs = 8  # token数量
     h = 7168  # 每个token的长度
-    k = 8
+    k = 16
     random_seed = 0
     tp_world_size = 1
     ep_world_size = int(world_size / tp_world_size)
@@ -1080,14 +1088,14 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         # 创建输入tensor
         x = torch.randn(bs, h, dtype=input_dtype).npu()
         expert_ids = torch.tensor([
-            [0, 8, 4, 1, 6, 12, 14, 17],
-            [14, 10, 7, 3, 0, 12, 11, 17],
-            [12, 0, 5, 11, 19, 4, 6, 18],
-            [17, 3, 4, 10, 18, 0, 1, 2],
-            [13, 16, 9, 10, 15, 6, 7, 14],
-            [17, 15, 14, 8, 16, 18, 3, 12],
-            [4, 12, 2, 17, 15, 3, 9, 10],
-            [16, 7, 12, 9, 18, 3, 19, 17]
+            [0, 8, 4, 1, 6, 12, 14, 17, 2, 3, 5, 7, 9, 10, 11, 13],
+            [14, 10, 7, 3, 0, 12, 11, 17, 1, 2, 4, 5, 6, 8, 9, 13],
+            [12, 0, 5, 11, 19, 4, 6, 18, 1, 2, 3, 7, 8, 9, 10, 13],
+            [17, 3, 4, 10, 18, 0, 1, 2, 5, 6, 7, 8, 9, 11, 12, 13],
+            [13, 16, 9, 10, 15, 6, 7, 14, 0, 1, 2, 3, 4, 5, 8, 11],
+            [17, 15, 14, 8, 16, 18, 3, 12, 0, 1, 2, 4, 5, 6, 9, 10],
+            [4, 12, 2, 17, 15, 3, 9, 10, 0, 1, 5, 6, 7, 8, 11, 13],
+            [16, 7, 12, 9, 18, 3, 19, 17, 0, 1, 2, 4, 5, 6, 8, 10]
         ], dtype=torch.int32).npu()
 
         expert_scales = torch.randn(bs, k, dtype=torch.float32).npu()
