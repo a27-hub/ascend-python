@@ -209,6 +209,10 @@ at::Tensor amax(const at::Tensor& self, at::IntArrayRef dim, bool keepdim) {
 }
 
 at::Tensor max(const at::Tensor& self) {
+  TORCH_CHECK(
+      self.numel() > 0,
+      "max(): Expected reduction dim to be specified for input.numel() == 0. "
+      "Specify the reduction dim with the 'dim' argument.");
   at::SmallVector<int64_t, SIZE> dims = op_plugin::utils::get_dimlist_for_tensor(self);
   return acl_op::amax(self, dims, false);
 }
