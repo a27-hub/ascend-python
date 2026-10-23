@@ -42,7 +42,7 @@
 ## 函数原型<a name="zh-cn_topic_0000002168254826_section45077510411"></a>
 
 ```
-torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, performance_info=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg="", zero_expert_num=0, copy_expert_num=0, const_expert_num=0) -> Tensor
+torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, performance_info=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg="", zero_expert_num=0, copy_expert_num=0, const_expert_num=0, enable_pre_reduce=True) -> Tensor
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000002168254826_section112637109429"></a>
@@ -51,7 +51,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持共享专家场景。
 
 -   **expert\_ids** (`Tensor`)：必选参数，每个token的topK个专家索引，要求为2维张量，shape为\(BS, K\)。数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的`expert_ids`输入，张量里value取值范围为\[0, moe\_expert\_num\)，且同一行中的K个value不能重复。
--   **assist\_info\_for\_combine** (`Tensor`)：必选参数，表示给同一专家发送的token个数，要求为1维张量，shape为\(A \* 128, \)。数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的`assist_info_for_combine`输出。
+-   **assist\_info\_for\_combine** (`Tensor`)：必选参数，要求为1维`int32`张量，必须原样使用[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的`assist_info_for_combine`输出。Ascend 950 RoCE hierarchy场景下，该Tensor除三元组外还包含共享token计数和token位图。
 
 -   **ep\_send\_counts** (`Tensor`)：必选参数，表示本卡每个专家发给EP（Expert Parallelism）域每个卡的token数（token数以前缀和的形式表示），要求为1维张量。数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的`ep_recv_counts`输出。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：要求shape为\(moe\_expert\_num+2\*global\_bs\*K\*server\_num, \)，前`moe_expert_num`个数表示在EP通信域内，该卡上每个专家收到来自其他各卡的token数（以前缀和的形式表示），2\*global\_bs\*K\*server\_num用于存储机间和机内通信前，combine可提前做reduce操作的token个数和通信区偏移量，`global_bs`传入0时此处按照bs\*ep\_world\_size计算。
@@ -163,6 +163,8 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 -   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的常量专家的ID值是\[moe\_expert\_num+zero\_expert\_num+copy\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。
+
+-   **enable\_pre\_reduce** (`bool`)：可选参数，默认值为`True`。Ascend 950 RoCE `hierarchy`场景下，`True`表示在框内先对同一token的专家结果做预累加，再进行框间传输；`False`表示保留各路专家结果并分别转发。使用`False`需要CANN提供`aclnnMoeDistributeCombineV6`接口。
 
 ## 返回值说明<a name="zh-cn_topic_0000002168254826_section22231435517"></a>
 `Tensor`

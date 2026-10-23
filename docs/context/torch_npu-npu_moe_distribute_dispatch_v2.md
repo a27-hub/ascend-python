@@ -183,7 +183,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
 -   **expand\_x** (`Tensor`)：表示本卡收到的token数据，要求为2维张量，shape为\(max\(tp\_world\_size, 1\) \*A, H\)，A表示在EP通信域可能收到的最大token数，数据类型支持`bfloat16`、`float16`、`int8`。量化时类型为`int8`，非量化时与`x`数据类型保持一致。数据格式为$ND$，支持非连续的Tensor。
 -   **dynamic\_scales** (`Tensor`)：表示计算得到的动态量化参数。当`quant_mode`不为0时才有该输出，要求为1维张量，shape为\(A,\)，数据类型支持`float`，数据格式支持$ND$，支持非连续的Tensor。
--   **assist\_info\_for\_combine** (`Tensor`)：表示给同一专家发送的token个数，要求是一个1维张量，shape为\(A \* 128, \)。数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)的`assist_info_for_combine`输入。
+-   **assist\_info\_for\_combine** (`Tensor`)：表示给同一专家发送的token信息，要求是一个1维`int32`张量。普通通信算法下shape为\(max\(BS * K, A * 128\), \)；Ascend 950且`comm_alg="hierarchy"`时，前\(A * 3\)个元素保存三元组，尾部保存RoCE Combine使用的共享token计数和token位图，元素总数为\(A * 3 + ceil\(ep\_world\_size * \(align16\(global\_bs / ep\_world\_size\) + 1\) / 2\), \)。该Tensor应原样传给[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)。
 
 -   **expert\_token\_nums** (`Tensor`)：本卡每个专家实际收到的token数量，要求为1维张量，shape为\(local\_expert\_num,\)，数据类型`int64`，数据格式支持$ND$，支持非连续的Tensor。
 -   **ep\_recv\_counts** (`Tensor`)：表示EP通信域各卡收到的token数（token数以前缀和的形式表示），要求为1维张量，数据类型`int32`，数据格式支持$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)的`ep_send_counts`输入。

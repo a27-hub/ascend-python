@@ -17,6 +17,8 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+#include <cstring>
+
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
     using npu_utils = at_npu::native::NpuUtils;
@@ -38,6 +40,32 @@ static bool check_v3_param(const c10::optional<at::Tensor> &elastic_info, int64_
         return true;
     }
     return false;
+}
+
+static bool is_ascend_950()
+{
+    static const char *soc_name = aclrtGetSocName();
+    return soc_name != nullptr && std::strstr(soc_name, "Ascend950") != nullptr;
+}
+
+static int64_t get_assist_info_numel(int64_t a, int64_t bs, int64_t k, int64_t global_bs,
+                                     int64_t ep_world_size, bool is_roce)
+{
+    if (!is_roce) {
+        return std::max(bs * k, a * 128);
+    }
+    constexpr int64_t triple_elements_per_row = 3;
+    constexpr int64_t bitmap_token_alignment = 16;
+    constexpr int64_t uint16_elements_per_int32 = sizeof(int32_t) / sizeof(uint16_t);
+    constexpr int64_t shared_count_elements_per_server = 1;
+    const int64_t max_tokens_per_rank = global_bs / ep_world_size;
+    const int64_t aligned_tokens_per_rank =
+        (max_tokens_per_rank + bitmap_token_alignment - 1) / bitmap_token_alignment * bitmap_token_alignment;
+    const int64_t assist_tail_uint16_elements =
+        ep_world_size * (shared_count_elements_per_server + aligned_tokens_per_rank);
+    const int64_t assist_tail_int32_elements =
+        (assist_tail_uint16_elements + uint16_elements_per_int32 - 1) / uint16_elements_per_int32;
+    return a * triple_elements_per_row + assist_tail_int32_elements;
 }
 
 tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor &expert_ids,
@@ -157,7 +185,9 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
     std::string comm_alg_str = std::string(comm_alg);
     char *comm_alg_ptr = const_cast<char *>(comm_alg_str.c_str());
     
-    assist_info_forcombine = npu_preparation::apply_tensor_without_format({std::max(bs * k, a * 128)}, x.options().dtype(at::kInt));
+    const bool is_roce = is_ascend_950() && comm_alg_str == "hierarchy";
+    const int64_t assist_info_numel = get_assist_info_numel(a, bs, k, global_bs_real, ep_world_size, is_roce);
+    assist_info_forcombine = npu_preparation::apply_tensor_without_format({assist_info_numel}, x.options().dtype(at::kInt));
     if (check_aclnn_kernel_available("aclnnMoeDistributeDispatchV4")) {
         EXEC_NPU_CMD(aclnnMoeDistributeDispatchV4, x, expert_ids, scales, x_active_mask, expert_scales, elastic_info, performance_info,
                      group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num,
