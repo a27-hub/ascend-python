@@ -30,6 +30,18 @@ class TestUnfoldBackward(TestCase):
             out_npu = self.npu_op_exec(npu_input, item[1], item[2], item[3], item[4])
             self.assertRtolEqual(out_cpu, out_npu)
 
+    def test_unfold_backward_empty_output(self):
+        # input_sizes with a zero dim yields an empty output and must not hit
+        # the CANN empty-tensor error.
+        shape_format = [
+            [[np.float32, 0, (0, 20)], [0, 20], 0, 20, 2],
+        ]
+        for item in shape_format:
+            cpu_input, npu_input = create_common_tensor(item[0], -5, 5)
+            out_cpu = self.cpu_op_exec(cpu_input, item[1], item[2], item[3], item[4])
+            out_npu = self.npu_op_exec(npu_input, item[1], item[2], item[3], item[4])
+            self.assertRtolEqual(out_cpu, out_npu)
+
 
 if __name__ == "__main__":
     run_tests()
