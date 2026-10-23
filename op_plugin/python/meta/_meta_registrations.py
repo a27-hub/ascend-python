@@ -3488,7 +3488,6 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
         return x.new_empty(tuple(dim_list))
 
 
-<<<<<<< Updated upstream
 def gmm_get_dtype(output_dtype):
     if not output_dtype:
         return output_dtype
@@ -3500,7 +3499,8 @@ def gmm_get_dtype(output_dtype):
 
 def is_transpose_weight(weight):
     return weight.stride()[-2] == 1 and weight.stride()[-1] == weight.shape[-2]
-=======
+
+
 @impl(m_aten, "_grouped_mm")
 def _grouped_mm_meta(self, mat2, *, offs=None, bias=None, out_dtype=None):
     a_is_2d = self.dim() == 2
@@ -3519,7 +3519,6 @@ def _grouped_mm_meta(self, mat2, *, offs=None, bias=None, out_dtype=None):
     else:
         # 3D x 3D: (G, M, K) x (G, K, N) -> (G, M, N)
         return self.new_empty((self.size(0), self.size(1), mat2.size(-1)), dtype=dtype)
->>>>>>> Stashed changes
 
 
 @impl(m, "npu_grouped_matmul")
