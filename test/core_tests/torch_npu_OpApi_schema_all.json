@@ -2278,6 +2278,9 @@
   "func: bitwise_xor_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)": {
     "version": ["all_version"]
   },
+  "func: _grouped_mm(Tensor self, Tensor mat2, Tensor? offs=None, Tensor? bias=None, ScalarType? out_dtype=None) -> Tensor": {
+    "version": ["all_version"]
+  },
   "func: bmm(Tensor self, Tensor mat2) -> Tensor": {
     "version": ["all_version"]
   },
