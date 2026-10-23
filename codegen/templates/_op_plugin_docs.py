@@ -12810,7 +12810,7 @@ aclnnGroupedMatmulV4、aclnnDynamicDequant、aclnnSwigluQuant融合, deepseek模
 
 参数说明
 x（Tensor）：输入，左矩阵，公式中的X，Device侧的aclTensor。shape支持2维，数据类型支持INT8，数据格式支持ND，支持非连续的Tensor。Ascend 950PR&950DT系列产品仅支持INT8 A8W8、激活pertoken与权重perchannel量化，不支持A8W4或pergroup量化；x仅支持非转置。
-weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTensor。shape支持5维，数据类型支持INT8，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。Ascend 950PR&950DT系列产品上weight的逻辑shape为3维；权重必须已采用FRACTAL_NZ存储，物理存储shape为[E, ceil(N/32), ceil(K/16), 16, 32]。逻辑shape、stride及转置布局须满足底层WeightNzV2接口约束，不自动转换普通ND权重。N必须大于0且为64的整数倍。
+weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTensor。shape支持5维，数据类型支持INT8，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。Ascend 950PR&950DT系列产品上weight的view shape仅支持3维，非转置时为[E, K, N]；权重必须已采用FRACTAL_NZ存储，物理存储shape为[E, ceil(N/32), ceil(K/16), 16, 32]。逻辑shape、stride及转置布局须满足底层WeightNzV2接口约束，不自动转换普通ND权重。N必须大于0且为64的整数倍。
 group_list （Tensor）：输入，指示每个分组参与计算的Token个数，公式中的grouplist，Device侧的aclTensor。shape支持1维，长度需与weight的首轴维度相等，数据类型支持INT64，数据格式支持ND，支持非连续的Tensor。Ascend 950PR&950DT系列产品上专家数E不超过1024。
 weight_scale （Tensor）：输入，右矩阵的量化因子，公式中的w_scale，Device侧的aclTensor。shape支持2维，首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴相同，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
 x_scale （Tensor）：输入，左矩阵的量化因子，公式中的x_scale，Device侧的aclTensor。shape支持1维，长度需与x的首轴维度相等，数据类型支持FLOAT，数据格式支持ND，支持非连续的Tensor。
