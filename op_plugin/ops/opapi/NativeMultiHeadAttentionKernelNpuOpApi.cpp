@@ -13,11 +13,57 @@
 
 #include <ATen/ops/_native_multi_head_attention_native.h>
 
+#include <cmath>
+
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/OpAdapter.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+
+#if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
+static const int64_t TOKEN_MAX = 2147483647;
+
+// Convert the merged mask (as produced by `torch.nn.functional.multi_head_attention_forward::merge_masks`)
+// into the `atten_mask` accepted by `npu_fusion_attention`. Both share the same semantics: True == mask out,
+// False == keep, so no logical inversion is required here.
+static c10::optional<at::Tensor> prepare_mha_attn_mask(
+    const c10::optional<at::Tensor>& mask,
+    const c10::optional<int64_t>& mask_type,
+    int64_t B,
+    int64_t N,
+    int64_t S)
+{
+    if (!mask.has_value()) {
+        return c10::nullopt;
+    }
+    at::Tensor atten_mask = mask.value();
+    if (atten_mask.dtype() != at::kBool) {
+        atten_mask = atten_mask.to(at::kBool);
+    }
+    if (!mask_type.has_value()) {
+        // If the mask layout is unknown, leave it untouched; the caller only enters the fused path
+        // when the mask_layout is given, so this branch is a defensive fall through.
+        return atten_mask;
+    }
+    switch (mask_type.value()) {
+        case 1:
+            // key_padding_mask: [B, S] -> [B, 1, 1, S] -> [B, N, S, S]
+            if (atten_mask.dim() == 2) {
+                atten_mask = atten_mask.contiguous().view({B, 1, 1, S}).expand({B, N, S, S}).contiguous();
+            }
+            break;
+        case 2:
+        case 0:
+        default:
+            // mask_type == 2: default_mask, already [B, N, S, S].
+            // mask_type == 0: src_mask, [S, S], broadcast over batch and head.
+            break;
+    }
+    return atten_mask;
+}
+#endif
 
 std::tuple<at::Tensor, at::Tensor> _native_multi_head_attention(
     const at::Tensor& query,
@@ -34,6 +80,50 @@ std::tuple<at::Tensor, at::Tensor> _native_multi_head_attention(
     bool average_attn_weights,
     const c10::optional<int64_t> mask_type)
 {
+#if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
+    const auto B = query.size(0);
+    const auto S = query.size(1);
+    const auto head_dim = embed_dim / num_head;
+    const bool is_self_attn = query.is_same(key) && key.is_same(value);
+    const bool supported_dtype = query.scalar_type() == at::kFloat ||
+        query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16;
+
+    // Boundary guard: only fuse plain self-attention without attention weights.
+    if (!need_weights && is_self_attn && query.numel() != 0 && embed_dim % num_head == 0 && supported_dtype &&
+        (!mask.has_value() || mask_type.has_value())) {
+        // Packed QKV projection: query is [B, S, D], qkv_weight is [3 * D, D].
+        // q is kept un-scaled here; the scaling is applied inside npu_fusion_attention via `scale`.
+        auto qkv = at::linear(query, qkv_weight, qkv_bias);
+        auto q_proj = qkv.slice(2, 0, embed_dim);
+        auto k_proj = qkv.slice(2, embed_dim, 2 * embed_dim);
+        auto v_proj = qkv.slice(2, 2 * embed_dim, 3 * embed_dim);
+
+        // Reshape to BNSD ([B, N, S, head_dim]) for the fused attention op.
+        auto q = q_proj.view({B, S, num_head, head_dim}).transpose(1, 2).contiguous();
+        auto k = k_proj.view({B, S, num_head, head_dim}).transpose(1, 2).contiguous();
+        auto v = v_proj.view({B, S, num_head, head_dim}).transpose(1, 2).contiguous();
+
+        c10::optional<at::Tensor> atten_mask = prepare_mha_attn_mask(mask, mask_type, B, num_head, S);
+        c10::optional<at::Tensor> nulltensor = c10::nullopt;
+        c10::OptionalIntArrayRef nulllen = c10::nullopt;
+        c10::string_view input_layout = "BNSD";
+        double scale = 1.0 / std::sqrt(static_cast<double>(head_dim));
+        double keep_prob = 1.0;
+        // Mirror the SDPA accuracy knob: use high precision softmax when a mask is applied on multi-token sequences.
+        int64_t inner_precise = (mask.has_value() && S > 1) ? 2 : 0;
+        int64_t sparse_mode = 0;  // defaultMask
+        int64_t head_num = num_head;
+
+        auto output = at_npu::native::custom_ops::npu_fusion_attention(
+            q, k, v, head_num, input_layout, nulltensor, nulltensor, atten_mask, scale, keep_prob,
+            TOKEN_MAX, TOKEN_MAX, inner_precise, nulllen, nulllen, nulllen, sparse_mode, true, false);
+
+        // attention_out is [B, N, S, head_dim] -> [B, S, D] -> out projection.
+        auto attn_out = std::get<0>(output).transpose(1, 2).contiguous().view({B, S, embed_dim});
+        auto out_proj = at::linear(attn_out, proj_weight, proj_bias);
+        return std::make_tuple(out_proj, at::Tensor());
+    }
+#endif
     return at::native::native_multi_head_attention_cpu(
         query, key, value, embed_dim, num_head, qkv_weight, qkv_bias,
         proj_weight, proj_bias, mask, need_weights, average_attn_weights, mask_type);
