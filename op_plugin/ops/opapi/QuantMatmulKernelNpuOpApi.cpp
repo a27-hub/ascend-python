@@ -299,7 +299,9 @@ at::Tensor npu_quant_matmul(
         "Input x1 tensor and pertoken_scale tensor's transpose are not same, please check input.",
         OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
-        is_x_scale_same_transpose(x2, scale, dim_x2, dim_x2_scale),
+        // ScaleNZ always describes [Kg, N, 2], independent of the weight view.
+        (pertoken_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0 && is_nz_format(scale)) ||
+            is_x_scale_same_transpose(x2, scale, dim_x2, dim_x2_scale),
         "Input x2 tensor and scale tensor's transpose are not same, please check input.",
         OPS_ERROR(ErrCode::PARAM));
   }

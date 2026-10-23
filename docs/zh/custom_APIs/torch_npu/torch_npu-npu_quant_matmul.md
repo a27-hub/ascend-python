@@ -1,5 +1,7 @@
 # torch_npu.npu_quant_matmul
 
+Ascend 950 MXFP8/MXFP4 使用 E8M0 ScaleNZ 时，在 `npu_format_cast` 前须将 ScaleB 整理为 `[batch_B..., ceil(K/64), N, 2]`，并保持转换后的逻辑 shape 不变，与 weight 的转置状态无关。如果原数据为 `[batch_B..., N, ceil(K/64), 2]`，先 `transpose(-3,-2).contiguous()`，不能用 reshape 替代。ScaleNZ 只做 shape 和布局合法性检查；`N==ceil(K/64)` 时不能通过 shape 识别两轴含义输反，须由用户保证。ND scale 和 A/ScaleA 的原有转置约束不变。公开接口参数不变。
+
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
