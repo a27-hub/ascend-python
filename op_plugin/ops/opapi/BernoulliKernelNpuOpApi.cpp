@@ -33,8 +33,11 @@ at::Tensor& bernoulli_(at::Tensor& self, double p, c10::optional<at::Generator> 
   }
   DO_COMPATIBILITY(aclnnInplaceBernoulli, acl_op::bernoulli_(self, p, gen));
   auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
-  // 对齐社区 scalar 版：offset 按 numel/unroll 动态计算（复用通用工具函数）
-  auto pair = gen_->philox_engine_inputs(op_plugin::utils::calc_final_counter_offset(self));
+  // A5(Ascend950+) 对齐社区：scalar 版 offset 按 numel 动态计算；其他芯片保持固定 10
+  const uint64_t counter_offset = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950)
+      ? static_cast<uint64_t>(op_plugin::utils::calc_final_counter_offset(self))
+      : PHILOX_DEFAULT_NUM;
+  auto pair = gen_->philox_engine_inputs(counter_offset);
   const uint64_t seed = pair.first;
   const uint64_t offset = pair.second;
 
@@ -55,7 +58,6 @@ at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p, c10::optional<at::
     cp_p = npu_preparation::copy_scalar_to_device(scalar, p.scalar_type(), self.device());
   }
   auto gen_ = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(gen, at_npu::detail::getDefaultNPUGenerator());
-  // 对齐社区 tensor 版：手工 kernel 语义，offset 固定预留 10
   auto pair = gen_->philox_engine_inputs(PHILOX_DEFAULT_NUM);
   const uint64_t seed = pair.first;
   const uint64_t offset = pair.second;
