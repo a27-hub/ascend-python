@@ -158,8 +158,8 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
         group_type = M_SPLIT;
         int64_t M = mat_a.size(0);
         int64_t N = mat_b.size(-1);
-        x_vec = {mat_a};
-        weight_vec = {mat_b};
+        x_vec = {mat_a.contiguous()};
+        weight_vec = {mat_b.contiguous()};
         auto output_size = op_infer::array_to_small_vector({M, N});
         result_vec = {npu_preparation::apply_tensor_without_format(output_size, options)};
     } else if (!a_is_2d && b_is_2d) {
@@ -184,7 +184,7 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
         int64_t N = mat_b.size(1);
         int64_t G = offs->size(0);
         x_vec = {mat_a.t().contiguous().t()};
-        weight_vec = {mat_b};
+        weight_vec = {mat_b.contiguous()};
         auto output_size = op_infer::array_to_small_vector({G, M, N});
         result_vec = {npu_preparation::apply_tensor_without_format(output_size, options)};
     }
