@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import SupportedDevices
 
 # _grouped_mm is available since PyTorch 2.8, skip on older versions
 SKIP_TESTS = not hasattr(torch, "_grouped_mm")
@@ -59,7 +58,6 @@ class TestGroupedMm(TestCase):
     # Scenario 1: 2D x 3D (MoE forward)
     # =====================================================
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_3d_fp16(self, device="npu"):
         """2D x 3D, fp16, 3 experts"""
         torch.manual_seed(0)
@@ -72,7 +70,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_3d_bf16(self, device="npu"):
         """2D x 3D, bf16, 4 experts"""
         torch.manual_seed(0)
@@ -85,7 +82,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_3d_single_group(self, device="npu"):
         """2D x 3D, fp16, single group (G=1)"""
         torch.manual_seed(0)
@@ -98,7 +94,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_3d_backward(self, device="npu"):
         """2D x 3D, fp16, backward gradients"""
         torch.manual_seed(0)
@@ -128,7 +123,6 @@ class TestGroupedMm(TestCase):
     # Scenario 2: 3D x 2D (backward mat2 gradient)
     # =====================================================
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_2d_fp16(self, device="npu"):
         """3D x 2D, fp16, 3 groups"""
         torch.manual_seed(0)
@@ -141,7 +135,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_2d_bf16(self, device="npu"):
         """3D x 2D, bf16, 4 groups"""
         torch.manual_seed(0)
@@ -154,7 +147,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_2d_single_group(self, device="npu"):
         """3D x 2D, fp16, single group (G=1)"""
         torch.manual_seed(0)
@@ -167,7 +159,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_2d_backward(self, device="npu"):
         """3D x 2D, fp16, backward gradients"""
         torch.manual_seed(0)
@@ -195,7 +186,6 @@ class TestGroupedMm(TestCase):
     # Scenario 3: 2D x 2D (backward mat1 gradient)
     # =====================================================
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_2d_fp16(self, device="npu"):
         """2D x 2D, fp16, 3 groups"""
         torch.manual_seed(0)
@@ -208,7 +198,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_2d_bf16(self, device="npu"):
         """2D x 2D, bf16, 4 groups"""
         torch.manual_seed(0)
@@ -221,7 +210,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_2d_single_group(self, device="npu"):
         """2D x 2D, fp16, single group (G=1)"""
         torch.manual_seed(0)
@@ -234,7 +222,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_2d_x_2d_backward(self, device="npu"):
         """2D x 2D, fp16, backward gradients"""
         torch.manual_seed(0)
@@ -262,7 +249,6 @@ class TestGroupedMm(TestCase):
     # Scenario 4: 3D x 3D (standard BMM)
     # =====================================================
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_3d_fp16(self, device="npu"):
         """3D x 3D, fp16, 4 groups"""
         torch.manual_seed(0)
@@ -274,7 +260,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_3d_bf16(self, device="npu"):
         """3D x 3D, bf16, 3 groups"""
         torch.manual_seed(0)
@@ -286,7 +271,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.004)
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_3d_single_group(self, device="npu"):
         """3D x 3D, fp16, single group (G=1)"""
         torch.manual_seed(0)
@@ -298,7 +282,6 @@ class TestGroupedMm(TestCase):
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu())
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
-    @SupportedDevices(['Ascend910B'])
     def test_3d_x_3d_backward(self, device="npu"):
         """3D x 3D, fp16, backward gradients"""
         torch.manual_seed(0)
@@ -325,7 +308,6 @@ class TestGroupedMm(TestCase):
     # Output shape verification
     # =====================================================
 
-    @SupportedDevices(['Ascend910B'])
     def test_output_shape(self, device="npu"):
         """Verify output shapes for all 4 scenarios"""
         torch.manual_seed(0)
@@ -365,7 +347,6 @@ class TestGroupedMm(TestCase):
     # Negative tests
     # =====================================================
 
-    @SupportedDevices(['Ascend910B'])
     def test_neg_dtype_mismatch(self, device="npu"):
         """Negative: mat_a and mat_b have different dtypes"""
         mat_a = torch.randn(64, 32, dtype=torch.float16).npu()
@@ -374,7 +355,6 @@ class TestGroupedMm(TestCase):
         with self.assertRaisesRegex(RuntimeError, r"same dtype"):
             torch._grouped_mm(mat_a, mat_b, offs=offs)
 
-    @SupportedDevices(['Ascend910B'])
     def test_neg_invalid_dim(self, device="npu"):
         """Negative: mat_a is 1D"""
         mat_a = torch.randn(64, dtype=torch.float16).npu()
@@ -383,7 +363,6 @@ class TestGroupedMm(TestCase):
         with self.assertRaisesRegex(RuntimeError, r"2 or 3d"):
             torch._grouped_mm(mat_a, mat_b, offs=offs)
 
-    @SupportedDevices(['Ascend910B'])
     def test_neg_missing_offs(self, device="npu"):
         """Negative: offs not provided for 2D input"""
         mat_a = torch.randn(64, 32, dtype=torch.float16).npu()
@@ -391,7 +370,6 @@ class TestGroupedMm(TestCase):
         with self.assertRaisesRegex(RuntimeError, r"offset"):
             torch._grouped_mm(mat_a, mat_b)
 
-    @SupportedDevices(['Ascend910B'])
     def test_neg_offs_with_3d_3d(self, device="npu"):
         """Negative: offs provided for 3D x 3D"""
         mat_a = torch.randn(2, 64, 32, dtype=torch.float16).npu()
@@ -400,7 +378,6 @@ class TestGroupedMm(TestCase):
         with self.assertRaisesRegex(RuntimeError, r"offset"):
             torch._grouped_mm(mat_a, mat_b, offs=offs)
 
-    @SupportedDevices(['Ascend910B'])
     def test_neg_bias_not_supported(self, device="npu"):
         """Negative: bias not supported"""
         mat_a = torch.randn(64, 32, dtype=torch.float16).npu()
