@@ -27,6 +27,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 // Execute aclnnGroupedMatmulV5 (with fallback to V4 if V5 is not available).
 // All optional quantization/activation parameters are passed as empty TensorLists.
+// This mirrors how npu_grouped_matmul calls V5 — pure data forwarding, no scenario logic.
 static void exec_grouped_matmul_v5(
     const std::vector<at::Tensor>& x_vec,
     const std::vector<at::Tensor>& weight_vec,
@@ -80,91 +81,6 @@ static at::Tensor prepare_group_list(const at::Tensor& offs)
     return group_list.contiguous();
 }
 
-// Scenario 1: 2D x 3D — mat_a(M, K) x mat_b(G, K, N), offs(G,) -> out(M, N)
-// Maps to V5 groupType=0 (M-axis split), splitItem=3, single x + single 3D weight
-static at::Tensor grouped_mm_2d_x_3d(const at::Tensor& mat_a, const at::Tensor& mat_b,
-                                      const at::Tensor& offs, c10::ScalarType out_dtype)
-{
-    int64_t M = mat_a.size(0);
-    int64_t N = mat_b.size(-1);
-    auto options = mat_a.options().dtype(out_dtype);
-    auto output_size = op_infer::array_to_small_vector({M, N});
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
-
-    auto group_list = prepare_group_list(offs);
-    std::vector<at::Tensor> x_vec = {mat_a};
-    std::vector<at::Tensor> weight_vec = {mat_b};
-    std::vector<at::Tensor> result_vec = {out};
-
-    exec_grouped_matmul_v5(x_vec, weight_vec, group_list, IN_SPLIT_OUT_SPLIT, M_SPLIT, result_vec);
-    return out;
-}
-
-// Scenario 2: 3D x 2D — mat_a(G, M, K) x mat_b(K, N), offs(G,) -> out(M, N)
-// Uses transpose trick: out^T(N, M) = mat_b^T(N, K) x mat_a^T(G, K, M)
-// Maps to V5 groupType=0 (M-axis split on transposed N dim), splitItem=3
-static at::Tensor grouped_mm_3d_x_2d(const at::Tensor& mat_a, const at::Tensor& mat_b,
-                                      const at::Tensor& offs, c10::ScalarType out_dtype)
-{
-    int64_t N = mat_b.size(-1);
-    int64_t M = mat_a.size(1);
-    auto options = mat_a.options().dtype(out_dtype);
-    auto output_size = op_infer::array_to_small_vector({N, M});
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
-
-    auto group_list = prepare_group_list(offs);
-    // x = mat_b^T -> (N, K), weight = mat_a^T -> (G, K, M)
-    at::Tensor x_tensor = mat_b.transpose(-2, -1).contiguous();
-    at::Tensor weight_tensor = mat_a.transpose(-2, -1).contiguous();
-    std::vector<at::Tensor> x_vec = {x_tensor};
-    std::vector<at::Tensor> weight_vec = {weight_tensor};
-    std::vector<at::Tensor> result_vec = {out};
-
-    exec_grouped_matmul_v5(x_vec, weight_vec, group_list, IN_SPLIT_OUT_SPLIT, M_SPLIT, result_vec);
-    // out is (N, M), transpose back to (M, N)
-    return out.transpose(-2, -1).contiguous();
-}
-
-// Scenario 3: 2D x 2D — mat_a(M, K) x mat_b(K, N), offs(G,) -> out(G, M, N)
-// Maps to V5 groupType=2 (K-axis split), splitItem=2
-// V5 requires x to be "transposed" (non-contiguous strides) but logical shape (M, K)
-// so that x.dim(1) == weight.dim(0) == K passes the dimension check.
-// Achieved via: mat_a.t().contiguous().t() — rearrange memory to column-major, then view as (M, K)
-static at::Tensor grouped_mm_2d_x_2d(const at::Tensor& mat_a, const at::Tensor& mat_b,
-                                      const at::Tensor& offs, c10::ScalarType out_dtype)
-{
-    int64_t M = mat_a.size(0);
-    int64_t N = mat_b.size(1);
-    int64_t G = offs.size(0);
-    auto options = mat_a.options().dtype(out_dtype);
-    auto output_size = op_infer::array_to_small_vector({G, M, N});
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
-
-    auto group_list = prepare_group_list(offs);
-    // V5 groupType=2: x must be non-contiguous (transposed) with logical shape (M, K)
-    // mat_a.t().contiguous() → (K, M) contiguous (column-major data)
-    // .t() → (M, K) non-contiguous (transposed strides), dim(1)=K matches weight.dim(0)=K
-    at::Tensor x_tensor = mat_a.t().contiguous().t();
-    std::vector<at::Tensor> x_vec = {x_tensor};
-    std::vector<at::Tensor> weight_vec = {mat_b};
-    std::vector<at::Tensor> result_vec = {out};
-
-    exec_grouped_matmul_v5(x_vec, weight_vec, group_list, IN_NOT_SPLIT_OUT_SPLIT, K_SPLIT, result_vec);
-    return out;
-}
-
-// Scenario 4: 3D x 3D — mat_a(G, M, K) x mat_b(G, K, N), no offs -> out(G, M, N)
-// Direct bmm — NPU already has optimized aclnnBatchMatMul dispatch
-static at::Tensor grouped_mm_3d_x_3d(const at::Tensor& mat_a, const at::Tensor& mat_b,
-                                     c10::ScalarType out_dtype)
-{
-    auto options = mat_a.options().dtype(out_dtype);
-    auto output_size = op_infer::array_to_small_vector({mat_a.size(0), mat_a.size(1), mat_b.size(-1)});
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
-    at::bmm_out(out, mat_a, mat_b);
-    return out;
-}
-
 at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
                        const c10::optional<at::Tensor>& offs,
                        const c10::optional<at::Tensor>& bias,
@@ -213,20 +129,72 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
                 "Grouped gemm output dtype must match mat_a dtype",
                 OPS_ERROR(ErrCode::TYPE));
 
-    // Dispatch to the appropriate scenario
-    if (a_is_2d && !b_is_2d) {
-        // Scenario 1: 2D x 3D — MoE forward
-        return grouped_mm_2d_x_3d(mat_a, mat_b, offs.value(), out_dtype_);
-    } else if (!a_is_2d && b_is_2d) {
-        // Scenario 2: 3D x 2D — uses transpose trick to become 2D x 3D
-        return grouped_mm_3d_x_2d(mat_a, mat_b, offs.value(), out_dtype_);
-    } else if (a_is_2d && b_is_2d) {
-        // Scenario 3: 2D x 2D — K-axis split, each group independent
-        return grouped_mm_2d_x_2d(mat_a, mat_b, offs.value(), out_dtype_);
-    } else {
-        // Scenario 4: 3D x 3D — standard BMM
-        return grouped_mm_3d_x_3d(mat_a, mat_b, out_dtype_);
+    auto options = mat_a.options().dtype(out_dtype_);
+
+    // 3D x 3D -> aclnnBatchMatMul (via at::bmm_out, NPU auto-dispatches)
+    if (!a_is_2d && !b_is_2d) {
+        auto output_size = op_infer::array_to_small_vector({mat_a.size(0), mat_a.size(1), mat_b.size(-1)});
+        at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
+        at::bmm_out(out, mat_a, mat_b);
+        return out;
     }
+
+    // Rest -> aclnnGroupedMatmulV5
+    // Infer split_item and group_type from input dimensions, prepare data, then
+    // forward to V5 — same pattern as npu_grouped_matmul (allocate output + call V5).
+    auto group_list = prepare_group_list(offs.value());
+
+    int64_t split_item = 0;
+    int64_t group_type = 0;
+    std::vector<at::Tensor> x_vec;
+    std::vector<at::Tensor> weight_vec;
+    std::vector<at::Tensor> result_vec;
+    bool need_transpose_back = false;
+
+    if (a_is_2d && !b_is_2d) {
+        // 2D x 3D: mat_a(M, K) x mat_b(G, K, N) -> out(M, N)
+        // M-axis split, direct forwarding — no data transformation needed
+        split_item = IN_SPLIT_OUT_SPLIT;
+        group_type = M_SPLIT;
+        int64_t M = mat_a.size(0);
+        int64_t N = mat_b.size(-1);
+        x_vec = {mat_a};
+        weight_vec = {mat_b};
+        auto output_size = op_infer::array_to_small_vector({M, N});
+        result_vec = {npu_preparation::apply_tensor_without_format(output_size, options)};
+    } else if (!a_is_2d && b_is_2d) {
+        // 3D x 2D: mat_a(G, M, K) x mat_b(K, N) -> out(M, N)
+        // V5 groupType=0 expects x=2D, weight=3D — swap via transpose
+        split_item = IN_SPLIT_OUT_SPLIT;
+        group_type = M_SPLIT;
+        int64_t N = mat_b.size(-1);
+        int64_t M = mat_a.size(1);
+        x_vec = {mat_b.transpose(-2, -1).contiguous()};
+        weight_vec = {mat_a.transpose(-2, -1).contiguous()};
+        auto output_size = op_infer::array_to_small_vector({N, M});
+        result_vec = {npu_preparation::apply_tensor_without_format(output_size, options)};
+        need_transpose_back = true;
+    } else {
+        // 2D x 2D: mat_a(M, K) x mat_b(K, N), offs(G,) -> out(G, M, N)
+        // K-axis split. V5 groupType=2 requires x non-contiguous (transposed strides)
+        // with logical shape (M, K) so dim(1)=K matches weight.dim(0)=K.
+        split_item = IN_NOT_SPLIT_OUT_SPLIT;
+        group_type = K_SPLIT;
+        int64_t M = mat_a.size(0);
+        int64_t N = mat_b.size(1);
+        int64_t G = offs->size(0);
+        x_vec = {mat_a.t().contiguous().t()};
+        weight_vec = {mat_b};
+        auto output_size = op_infer::array_to_small_vector({G, M, N});
+        result_vec = {npu_preparation::apply_tensor_without_format(output_size, options)};
+    }
+
+    exec_grouped_matmul_v5(x_vec, weight_vec, group_list, split_item, group_type, result_vec);
+
+    if (need_transpose_back) {
+        return result_vec[0].transpose(-2, -1).contiguous();
+    }
+    return result_vec[0];
 }
 
 }  // namespace op_api
