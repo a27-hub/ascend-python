@@ -127,8 +127,9 @@ static at::Tensor grouped_mm_3d_x_2d(const at::Tensor& mat_a, const at::Tensor& 
 
 // Scenario 3: 2D x 2D — mat_a(M, K) x mat_b(K, N), offs(G,) -> out(G, M, N)
 // Maps to V5 groupType=2 (K-axis split), splitItem=2
-// V5 requires x to be transposed: (K, M), non-contiguous (transposed strides)
-// weight = mat_b as-is (K, N)
+// V5 requires x to be "transposed" (non-contiguous strides) but logical shape (M, K)
+// so that x.dim(1) == weight.dim(0) == K passes the dimension check.
+// Achieved via: mat_a.t().contiguous().t() — rearrange memory to column-major, then view as (M, K)
 static at::Tensor grouped_mm_2d_x_2d(const at::Tensor& mat_a, const at::Tensor& mat_b,
                                       const at::Tensor& offs, c10::ScalarType out_dtype)
 {
@@ -140,8 +141,10 @@ static at::Tensor grouped_mm_2d_x_2d(const at::Tensor& mat_a, const at::Tensor& 
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
 
     auto group_list = prepare_group_list(offs);
-    // V5 groupType=2 requires x transposed to (K, M), MUST be non-contiguous
-    at::Tensor x_tensor = mat_a.t();  // (K, M), non-contiguous
+    // V5 groupType=2: x must be non-contiguous (transposed) with logical shape (M, K)
+    // mat_a.t().contiguous() → (K, M) contiguous (column-major data)
+    // .t() → (M, K) non-contiguous (transposed strides), dim(1)=K matches weight.dim(0)=K
+    at::Tensor x_tensor = mat_a.t().contiguous().t();
     std::vector<at::Tensor> x_vec = {x_tensor};
     std::vector<at::Tensor> weight_vec = {mat_b};
     std::vector<at::Tensor> result_vec = {out};
