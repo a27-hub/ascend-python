@@ -363,8 +363,9 @@ at::Tensor _scaled_mm_v2(
   at::TensorList scale_b(scale_b_owned);
 
   // check A5
+  static const bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   TORCH_CHECK(
-      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
+      isRegBaseSoc,
       "_scaled_mm is supported only on the Ascend950 platform and after.",
       OPS_ERROR(ErrCode::PARAM));
 

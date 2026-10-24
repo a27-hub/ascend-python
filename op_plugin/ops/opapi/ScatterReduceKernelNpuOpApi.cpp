@@ -111,8 +111,9 @@ at::Tensor scatter_reduce(
     const at::Tensor& src,
     c10::string_view reduce,
     bool include_self) {
+  static const bool isNotRegBaseSoc = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
   if (include_self && (reduce == "sum" || reduce == "add") &&
-      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 && self.scalar_type() == at::kFloat) {
+      isNotRegBaseSoc && self.scalar_type() == at::kFloat) {
     DO_COMPATIBILITY_COMMON(
         aclnnScatterReduce, scatter_reduce_cpu_fallback(self, dim, index, src, reduce, include_self));
     auto result = self.clone(at::MemoryFormat::Contiguous);
@@ -148,8 +149,9 @@ at::Tensor& scatter_reduce_(
     const at::Tensor& src,
     c10::string_view reduce,
     bool include_self) {
+  static const bool isNotRegBaseSoc = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
   if (include_self && (reduce == "sum" || reduce == "add") &&
-      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 && self.scalar_type() == at::kFloat) {
+      isNotRegBaseSoc && self.scalar_type() == at::kFloat) {
     DO_COMPATIBILITY_COMMON(
         aclnnInplaceScatterReduce, scatter_reduce_inplace_cpu_fallback(self, dim, index, src, reduce, include_self));
     npu_preparation::CheckMemory({self, index, src}, {self});

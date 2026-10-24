@@ -414,7 +414,8 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
     int64_t default_query_quant_mode = 0;
     int64_t default_pse_type_value = 0;
     
-    if (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950) {
+    static const bool isNotRegBaseSoc = c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950;
+    if (isNotRegBaseSoc) {
         // dispatch hostAPI
         if (!op_plugin::utils::is_gte_cann_version_810rc1() &&
             (query_rope.has_value() || key_rope.has_value() || key_rope_antiquant_scale.has_value())) {
@@ -494,7 +495,8 @@ std::tuple<at::Tensor &, at::Tensor &> npu_fused_infer_attention_score_out_symin
     int64_t default_query_quant_mode = 0;
     int64_t default_pse_type_value = 0;
 
-    if (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950) {
+    static const bool isNotRegBaseSoc = c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950;
+    if (isNotRegBaseSoc) {
         // dispatch hostAPI
         if (!op_plugin::utils::is_gte_cann_version_810rc1() &&
             (query_rope.has_value() || key_rope.has_value() || key_rope_antiquant_scale.has_value())) {
@@ -605,7 +607,8 @@ at::Tensor _npu_fused_infer_attention_score_get_max_workspace_symint(
     int64_t default_pse_type_value = 0;
     uint64_t workspace_size = 0;
 
-    if (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950) {
+    static const bool isNotRegBaseSoc = c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950;
+    if (isNotRegBaseSoc) {
         // dispatch hostAPI
         if (!op_plugin::utils::is_gte_cann_version_810rc1() &&
             (query_rope.has_value() || key_rope.has_value() || key_rope_antiquant_scale.has_value())) {

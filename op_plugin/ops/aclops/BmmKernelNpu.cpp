@@ -102,7 +102,7 @@ at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2) {
           (!(static_cast<uint64_t>(mat2.size(1)) & 0xF)) && (!(static_cast<uint64_t>(mat2.size(2)) & 0xF));
     };
     static auto mm_bmm_nd = !at_npu::native::env::CheckMmBmmNDDisable();
-    static bool is_support_nd_out = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
+    static const bool is_support_nd_out = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
     // There is a data trampling problem in non-aligned scenes.
     // For the time being, only aligned scenes are supported.
     if (npu_format_helper::IsBaseFormatType(self) && npu_format_helper::IsBaseFormatType(mat2) && mm_bmm_nd &&

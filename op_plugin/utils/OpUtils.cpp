@@ -134,7 +134,9 @@ bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2)
         return true;
     }
     // Case 2: 3D ND * 3D NZ, only support Ascend950
-    if (d1 == k3D && d2 == k3D && c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend910_9362) {
+    static const bool isSocVersionGtAscend910_9362 =
+        c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend910_9362;
+    if (d1 == k3D && d2 == k3D && isSocVersionGtAscend910_9362) {
         return true;
     }
     return false;

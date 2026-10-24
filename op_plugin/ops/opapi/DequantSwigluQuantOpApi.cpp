@@ -77,7 +77,8 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
   const at::Tensor& activate_scale_opt = c10::value_or_else(activation_scale, [] { return at::Tensor(); });
   const at::Tensor& bias_opt = c10::value_or_else(bias, [] { return at::Tensor(); });
 
-  if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+  static const bool isNotRegBaseSoc = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
+  if (isNotRegBaseSoc) {
     TORCH_CHECK(x.size(x.dim() - 1) % SWISH_NUM == 0, "x last dim should be even", OPS_ERROR(ErrCode::PARAM));
 
     for (int i = 0; i < x.dim() - 1; i++) {

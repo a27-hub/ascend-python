@@ -699,8 +699,10 @@ at::Tensor slow_conv3d_forward(
         input, weight, bias_opt, stride, padding, dilation, transposed, output_padding, groups);
   }
 
-  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
-      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+  static const bool isAtLeast310P1 = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1;
+  static const bool isBelow910B1 = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1;
+  if (isAtLeast310P1 &&
+      isBelow910B1) {
     return acl_op::slow_conv3d_forward(input, weight, kernel_size, bias_opt, stride, padding);
   }
   c10::MaybeOwned<at::Tensor> bias_maybe_owned = at::borrow_from_optional_tensor(bias_opt);
@@ -758,8 +760,10 @@ at::Tensor& slow_conv3d_forward_out(
     at::IntArrayRef stride,
     at::IntArrayRef padding,
     at::Tensor& output) {
-  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
-      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+  static const bool isAtLeast310P1 = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1;
+  static const bool isBelow910B1 = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1;
+  if (isAtLeast310P1 &&
+      isBelow910B1) {
     return acl_op::slow_conv3d_forward_out(input, weight, kernel_size, bias_opt, stride, padding, output);
   }
   c10::MaybeOwned<at::Tensor> bias_maybe_owned = at::borrow_from_optional_tensor(bias_opt);

@@ -42,7 +42,7 @@ std::string real_path(const std::string& path);
 bool checkOwner(string cusLibPath);
 
 inline bool Is310PBoolCheck() {
-  bool isSoc310P =
+  static const bool isSoc310P =
       (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
        c10_npu::GetSocVersion() <= c10_npu::SocVersion::Ascend310P7);
   return isSoc310P;
@@ -932,7 +932,9 @@ inline std::tuple<at::Tensor, at::Tensor> prepare_binary_tensors(const at::Tenso
 
 // Check if current platform is Ascend950 with CANN >= 9.1.0.
 inline bool is_ascend950_path() {
-  return c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && op_plugin::utils::is_gte_cann_version_910();
+  static const bool is_ascend950 =
+      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && op_plugin::utils::is_gte_cann_version_910();
+  return is_ascend950;
 }
 
 // Check if npu_sparse_flash_attention supports value=None: CANN >= 9.2.0.
