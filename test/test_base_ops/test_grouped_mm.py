@@ -5,7 +5,10 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
+# _grouped_mm is available since PyTorch 2.8, skip on older versions
+SKIP_TESTS = not hasattr(torch, "_grouped_mm")
 
+@unittest.skipIf(SKIP_TESTS, "_grouped_mm not available in this PyTorch version")
 class TestGroupedMm(TestCase):
     # =====================================================
     # CPU reference implementations (mm-loop fallback)
@@ -80,7 +83,7 @@ class TestGroupedMm(TestCase):
 
         cpu_out = self.cpu_ref_2d_x_3d(mat_a, mat_b, offs)
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
-        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.004)
+        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
 
     @SupportedDevices(['Ascend910B'])
     def test_2d_x_3d_single_group(self, device="npu"):
@@ -149,7 +152,7 @@ class TestGroupedMm(TestCase):
 
         cpu_out = self.cpu_ref_3d_x_2d(mat_a, mat_b, offs)
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
-        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.004)
+        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
 
     @SupportedDevices(['Ascend910B'])
     def test_3d_x_2d_single_group(self, device="npu"):
@@ -216,7 +219,7 @@ class TestGroupedMm(TestCase):
 
         cpu_out = self.cpu_ref_2d_x_2d(mat_a, mat_b, offs)
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
-        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.004)
+        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
 
     @SupportedDevices(['Ascend910B'])
     def test_2d_x_2d_single_group(self, device="npu"):

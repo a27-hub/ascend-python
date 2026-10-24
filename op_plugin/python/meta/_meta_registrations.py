@@ -3501,26 +3501,6 @@ def is_transpose_weight(weight):
     return weight.stride()[-2] == 1 and weight.stride()[-1] == weight.shape[-2]
 
 
-@impl(m_aten, "_grouped_mm")
-def _grouped_mm_meta(self, mat2, *, offs=None, bias=None, out_dtype=None):
-    a_is_2d = self.dim() == 2
-    b_is_2d = mat2.dim() == 2
-    dtype = out_dtype if out_dtype is not None else self.dtype
-
-    if a_is_2d and not b_is_2d:
-        # 2D x 3D: (M, K) x (G, K, N) -> (M, N)
-        return self.new_empty((self.size(0), mat2.size(-1)), dtype=dtype)
-    elif not a_is_2d and b_is_2d:
-        # 3D x 2D: (G, M, K) x (K, N) -> (M, N)
-        return self.new_empty((self.size(1), mat2.size(1)), dtype=dtype)
-    elif a_is_2d and b_is_2d:
-        # 2D x 2D: (M, K) x (K, N) -> (G, M, N)
-        return self.new_empty((offs.size(0), self.size(0), mat2.size(1)), dtype=dtype)
-    else:
-        # 3D x 3D: (G, M, K) x (G, K, N) -> (G, M, N)
-        return self.new_empty((self.size(0), self.size(1), mat2.size(-1)), dtype=dtype)
-
-
 @impl(m, "npu_grouped_matmul")
 @impl(m, "npu_grouped_matmul.List")
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,

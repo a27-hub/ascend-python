@@ -139,8 +139,8 @@ static at::Tensor grouped_mm_2d_x_2d(const at::Tensor& mat_a, const at::Tensor& 
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
 
     auto group_list = prepare_group_list(offs);
-    // x must be transposed: mat_a(M, K) -> mat_a^T(K, M), non-contiguous
-    at::Tensor x_tensor = mat_a.transpose(-2, -1);
+    // x must be transposed: mat_a(M, K) -> mat_a^T(K, M), V5 requires contiguous
+    at::Tensor x_tensor = mat_a.transpose(-2, -1).contiguous();
     // weight not transposed: mat_b(K, N)
     std::vector<at::Tensor> x_vec = {x_tensor};
     std::vector<at::Tensor> weight_vec = {mat_b};

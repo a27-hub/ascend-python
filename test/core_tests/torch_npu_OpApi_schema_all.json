@@ -2279,7 +2279,7 @@
     "version": ["all_version"]
   },
   "func: _grouped_mm(Tensor self, Tensor mat2, Tensor? offs=None, Tensor? bias=None, ScalarType? out_dtype=None) -> Tensor": {
-    "version": ["all_version"]
+    "version": ["v2.9", "newest"]
   },
   "func: bmm(Tensor self, Tensor mat2) -> Tensor": {
     "version": ["all_version"]
