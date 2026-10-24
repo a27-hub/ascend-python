@@ -93,7 +93,8 @@ at::Tensor npu_one_hot(
     int64_t depth,
     const at::Scalar& on_value,
     const at::Scalar& off_value) {
-  if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+  static const bool isNotRegBaseSoc = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
+  if (isNotRegBaseSoc) {
     return acl_op::npu_one_hot(self, num_classes, depth, on_value, off_value);
   }
 

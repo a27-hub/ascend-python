@@ -60,9 +60,9 @@ void split_with_sizes_copy_out(
     at::IntArrayRef split_sizes,
     int64_t dim,
     at::TensorList out) {
+  static const bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   if (is_fused_op_optim(self, split_sizes) ||
-      (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&
-       op_plugin::utils::is_gte_cann_version_920())) {
+      (isRegBaseSoc && op_plugin::utils::is_gte_cann_version_920())) {
     if (dim < 0) {
       dim = at::maybe_wrap_dim(dim, self.dim());
     }
