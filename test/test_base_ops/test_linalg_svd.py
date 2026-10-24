@@ -80,6 +80,7 @@ class TestLinalgSvd(TestCase):
         cases = [(torch.complex64, torch.float32), (torch.complex128, torch.float64)]
         for in_dtype, expected_s_dtype in cases:
             for full_matrices in [True, False]:
+                ctx = f"in_dtype={in_dtype} full_matrices={full_matrices}"
                 # Build a genuinely complex input: pick a non-zero imaginary part
                 # (create_common_tensor / astype would leave the imaginary part zero).
                 real = torch.randn(3, 4, 2)
@@ -107,8 +108,8 @@ class TestLinalgSvd(TestCase):
                 cpu_reconstructed = (cpu_U[..., :k] @ cpu_S.diag_embed().to(cpu_U.dtype)[..., :k, :k]) @ cpu_Vh[..., :k, :]
                 npu_reconstructed = (npu_U[..., :k] @ npu_S.diag_embed().to(npu_U.dtype)[..., :k, :k]) @ npu_Vh[..., :k, :]
                 torch.testing.assert_close(cpu_reconstructed, cpu_input, rtol=1e-2, atol=1e-3)
-                torch.testing.assert_close(npu_reconstructed, npu_input.cpu(), rtol=1e-2, atol=1e-3)
-                torch.testing.assert_close(cpu_reconstructed, npu_reconstructed, rtol=1e-2, atol=1e-3)
+                torch.testing.assert_close(npu_reconstructed, npu_input.cpu(), rtol=1e-2, atol=1e-3, msg=f"NPU reconstruction failed ({ctx})")
+                torch.testing.assert_close(cpu_reconstructed, npu_reconstructed, rtol=1e-2, atol=1e-3, msg=f"NPU vs CPU reconstruction mismatch ({ctx})")
 
                 # empty input: S must still come back as the real dtype
                 real_e = torch.randn(3, 0, 2)
