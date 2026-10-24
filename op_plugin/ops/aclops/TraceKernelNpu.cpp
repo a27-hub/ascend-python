@@ -24,15 +24,11 @@ at::Tensor trace(const at::Tensor &self)
 {
     TORCH_CHECK(self.dim() == 2, "trace: expected a matrix, but got tensor with dim ",
         self.dim(), OPS_ERROR(ErrCode::PARAM));
-    c10::SmallVector<int64_t, N> outputSize = {};
-    auto outDtype = (isIntegralType(self.scalar_type(), true)) ? at::kLong : self.scalar_type();
-    at::Tensor result = npu_preparation::apply_tensor(outputSize, self.options().dtype(outDtype), self);
-    at_npu::native::OpCommand cmd;
-    cmd.Name("Trace")
-        .Input(self)
-        .Output(result)
-        .Run();
-    return result;
+    // aclnnTrace is not implemented on some SoCs (e.g. Ascend950PR raises error 561103),
+    // and the DO_COMPATIBILITY weak-symbol guard cannot cover SoC-level kernel absence.
+    // Compose trace with diagonal + sum, which are universally available and consistent
+    // with CPU semantics.
+    return self.diagonal(0, -2, -1).sum();
 }
 #endif
 

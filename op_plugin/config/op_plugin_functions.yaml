@@ -5717,12 +5717,6 @@ official:
 
   - func: trace(Tensor self) -> Tensor
     acl_op: all_version
-    op_api: all_version
-    gen_opapi:
-      out:
-        size: 'c10::SmallVector<int64_t, op_infer::N>{}'
-        dtype: '(isIntegralType(self.scalar_type(), true)) ? at::kLong : self.scalar_type()'
-      exec: aclnnTrace
 
   - func: triangular_solve(Tensor self, Tensor A, bool upper=True, bool transpose=False, bool unitriangular=False) -> (Tensor solution, Tensor cloned_coefficient)
     acl_op: v2.0
