@@ -127,7 +127,8 @@ static at::Tensor grouped_mm_3d_x_2d(const at::Tensor& mat_a, const at::Tensor& 
 
 // Scenario 3: 2D x 2D — mat_a(M, K) x mat_b(K, N), offs(G,) -> out(G, M, N)
 // Maps to V5 groupType=2 (K-axis split), splitItem=2
-// x must be transposed: (K, M), weight not transposed: (K, N)
+// x = mat_a as-is (M, K), weight = mat_b as-is (K, N)
+// V5 splits x along dim 1 (K) and weight along dim 0 (K) using group_list
 static at::Tensor grouped_mm_2d_x_2d(const at::Tensor& mat_a, const at::Tensor& mat_b,
                                       const at::Tensor& offs, c10::ScalarType out_dtype)
 {
@@ -139,10 +140,8 @@ static at::Tensor grouped_mm_2d_x_2d(const at::Tensor& mat_a, const at::Tensor& 
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
 
     auto group_list = prepare_group_list(offs);
-    // x must be transposed: mat_a(M, K) -> mat_a^T(K, M), V5 requires contiguous
-    at::Tensor x_tensor = mat_a.transpose(-2, -1).contiguous();
-    // weight not transposed: mat_b(K, N)
-    std::vector<at::Tensor> x_vec = {x_tensor};
+    // x = mat_a (M, K) as-is; weight = mat_b (K, N) as-is
+    std::vector<at::Tensor> x_vec = {mat_a};
     std::vector<at::Tensor> weight_vec = {mat_b};
     std::vector<at::Tensor> result_vec = {out};
 
