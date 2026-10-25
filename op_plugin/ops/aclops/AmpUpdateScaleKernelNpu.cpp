@@ -33,7 +33,7 @@ at::Tensor &_amp_update_scale_(
     //   found_inf == 1            : scale *= backoff_factor, tracker = 0
     //   tracker + 1 == interval   : scale *= growth_factor,  tracker = 0
     //   otherwise                 : tracker += 1
-    at::Tensor found = found_inf.eq(1);
+    at::Tensor found = found_inf.ne(0);
     at::Tensor tracker_next = growth_tracker.add(1);
     at::Tensor reached = tracker_next.eq(growth_interval);
     at::Tensor scale_new = at::where(found, current_scale.mul(backoff_factor),
