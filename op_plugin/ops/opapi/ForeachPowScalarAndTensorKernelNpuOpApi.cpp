@@ -69,7 +69,7 @@ std::vector<at::Tensor> _foreach_pow(const at::Scalar& scalar, const at::TensorL
     }
 
     at::native::check_foreach_api_restrictions(exponent);
-    if (!at::native::can_use_fast_route(exponent, scalar, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(exponent, scalar, true)) {
         return at::native::foreach_scalar_pow_list_kernel_slow(scalar, exponent);
     }
 

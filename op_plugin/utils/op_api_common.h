@@ -24,6 +24,7 @@
 #include <type_traits>
 #include <ATen/Tensor.h>
 #include <ATen/NamedTensorUtils.h>
+#include <ATen/native/ForeachUtils.h>
 #include <acl/acl_base.h>
 #include "op_plugin/utils/KernelNpuOutputSize.h"
 #include "op_plugin/utils/KernelNpuOutputDtype.h"
@@ -83,6 +84,53 @@ constexpr int64_t NCL_DIM_NUM = 3;
 constexpr int64_t NCHW_DIM_NUM = 4;
 constexpr int64_t NCDHW_DIM_NUM = 5;
 }
+
+namespace op_plugin {
+
+// [Fixes #640] Contiguity gate for the aclnnForeach* fast route.
+//
+// The fused aclnnForeach* kernels silently mis-write non-contiguous (esp.
+// transposed) tensor views -- values land at wrong in-view offsets and
+// zero_()-style ops can be silently dropped -- even though op-plugin passes
+// complete sizes+strides down to aclCreateTensor (op_api_common.h ConvertType
+// of at::Tensor). Until the kernel-side stride handling is fixed, the fused
+// fast route must only be taken for contiguous inputs; every non-contiguous
+// view has to fall back to the upstream per-tensor slow kernels
+// (at::native::foreach_tensor_*_kernel_slow), which are stride-correct.
+//
+// The two npu_foreach_can_use_fast_route overloads below mirror the upstream
+// at::native::can_use_fast_route overloads one-to-one, so existing call sites
+// keep identical argument resolution; the only delta is the additional
+// all-inputs-contiguous requirement.
+inline bool foreach_tensorlists_all_contiguous(at::ArrayRef<at::TensorList> tensorLists)
+{
+    for (const at::TensorList &tensorList : tensorLists) {
+        for (const at::Tensor &tensor : tensorList) {
+            if (!tensor.is_contiguous()) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+inline bool npu_foreach_can_use_fast_route(at::ArrayRef<at::TensorList> tensorLists,
+                                           at::ArrayRef<at::Scalar> scalarList = {},
+                                           bool does_op_promote_integer_inputs_to_float = false)
+{
+    return at::native::can_use_fast_route(tensorLists, scalarList, does_op_promote_integer_inputs_to_float) &&
+        foreach_tensorlists_all_contiguous(tensorLists);
+}
+
+inline bool npu_foreach_can_use_fast_route(at::TensorList tensors1,
+                                           at::TensorList tensors2,
+                                           bool does_op_promote_integer_inputs_to_float = false)
+{
+    return at::native::can_use_fast_route(tensors1, tensors2, does_op_promote_integer_inputs_to_float) &&
+        foreach_tensorlists_all_contiguous({tensors1, tensors2});
+}
+
+}  // namespace op_plugin
 
 std::string real_path(const std::string &path);
 bool checkOwner(string cusLibPath);

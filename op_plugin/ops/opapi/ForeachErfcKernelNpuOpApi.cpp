@@ -61,7 +61,7 @@ void _foreach_erfc_(const at::TensorList self)
     }
 
     at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_erfc_slow_(self);
     }
 
@@ -85,7 +85,7 @@ std::vector<at::Tensor> _foreach_erfc(const at::TensorList self)
     }
 
     at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_erfc_slow(self);
     }
     auto scalar_type = self[0].scalar_type();

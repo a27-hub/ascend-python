@@ -58,7 +58,7 @@ void _foreach_reciprocal_(const at::TensorList self)
     }
 
     at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_reciprocal_slow_(self);
     }
 
@@ -85,7 +85,7 @@ std::vector<at::Tensor> _foreach_reciprocal(const at::TensorList tensors)
     }
 
     at::native::check_foreach_api_restrictions(tensors);
-    if (!at::native::can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
         return at::native::foreach_tensor_reciprocal_slow(tensors);
     }
 

@@ -55,7 +55,7 @@ void _foreach_exp_(const at::TensorList tensors)
     }
 
     at::native::check_foreach_api_restrictions(tensors);
-    if (!at::native::can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
         return at::native::foreach_tensor_exp_slow_(tensors);
     }
 
@@ -79,7 +79,7 @@ std::vector<at::Tensor> _foreach_exp(const at::TensorList tensors)
     }
     
     at::native::check_foreach_api_restrictions(tensors);
-    if (!at::native::can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
         return at::native::foreach_tensor_exp_slow(tensors);
     }
 

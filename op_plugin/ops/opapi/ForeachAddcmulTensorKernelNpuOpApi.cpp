@@ -72,7 +72,7 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars_);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}) ||
+        !op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}) ||
         at::native::has_integral_tensor(input, true)) {
             return at::native::foreach_tensor_addcmul_scalarlist_slow(input, tensors1, tensors2, scalars_);
     }
@@ -111,7 +111,7 @@ void _foreach_addcmul_(const at::TensorList input,
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars_);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}) ||
+        !op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}) ||
         at::native::has_integral_tensor(input, true)) {
             return at::native::foreach_tensor_addcmul_scalarlist_slow_(input, tensors1, tensors2, scalars_);
     }

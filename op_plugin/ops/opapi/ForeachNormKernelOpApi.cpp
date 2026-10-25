@@ -37,7 +37,7 @@ bool checkData(const at::TensorList self, const at::Scalar& scalar)
         const auto scalar_type = t.scalar_type();
         return at::isIntegralType(scalar_type, true) || at::isComplexType(scalar_type);
     });
-    return !at::native::can_use_fast_route(self) || has_int_or_complex ||
+    return !op_plugin::npu_foreach_can_use_fast_route(self) || has_int_or_complex ||
            !(p == static_cast<double>(1) || p == static_cast<double>(2));
 }
 

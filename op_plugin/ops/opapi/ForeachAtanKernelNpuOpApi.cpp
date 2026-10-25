@@ -65,7 +65,7 @@ void _foreach_atan_(const at::TensorList self_atan)
     }
 
     at::native::check_foreach_api_restrictions(self_atan);
-    if (!at::native::can_use_fast_route(self_atan) || at::native::has_integral_tensor(self_atan, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self_atan) || at::native::has_integral_tensor(self_atan, true)) {
         return at::native::foreach_tensor_atan_slow_(self_atan);
     }
 
@@ -96,7 +96,7 @@ std::vector<at::Tensor> _foreach_atan(const at::TensorList self_atan)
     }
 
     at::native::check_foreach_api_restrictions(self_atan);
-    if (!at::native::can_use_fast_route(self_atan) || at::native::has_integral_tensor(self_atan, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self_atan) || at::native::has_integral_tensor(self_atan, true)) {
         return at::native::foreach_tensor_atan_slow(self_atan);
     }
 

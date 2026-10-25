@@ -24,7 +24,7 @@ void _foreach_add_v1_(const at::TensorList self, const at::Scalar& scalar)
 {
     at::native::check_foreach_api_restrictions(self);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, false)) {
+        !op_plugin::npu_foreach_can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_add_scalar_kernel_slow_(self, scalar);
     }
     auto scalar_type = self[0].scalar_type();
@@ -41,7 +41,7 @@ std::vector<at::Tensor> _foreach_add_v1(const at::TensorList self, const at::Sca
 {
     at::native::check_foreach_api_restrictions(self);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, false)) {
+        !op_plugin::npu_foreach_can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_add_scalar_kernel_slow(self, scalar);
     }
     auto scalar_type = self[0].scalar_type();
@@ -101,7 +101,7 @@ std::vector<at::Tensor> _foreach_add(const at::TensorList self, const at::Scalar
     }
     DO_COMPATIBILITY(aclnnForeachAddScalarV2, _foreach_add_v1(self, scalar));
     at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_add_scalar_kernel_slow(self, scalar);
     }
     auto scalar_type = self[0].scalar_type();
@@ -129,7 +129,7 @@ void _foreach_add_(const at::TensorList self, const at::Scalar& scalar)
     }
     DO_COMPATIBILITY(aclnnForeachAddScalarV2, _foreach_add_v1_(self, scalar));
     at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_add_scalar_kernel_slow_(self, scalar);
     }
 

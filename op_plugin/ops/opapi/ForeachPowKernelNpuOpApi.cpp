@@ -87,7 +87,7 @@ std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::TensorList exponen
     }
 
     at::native::check_foreach_api_restrictions(self, exponent);
-    if (!at::native::can_use_fast_route(self, exponent, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, exponent, true)) {
         return at::native::foreach_tensor_pow_list_kernel_slow(self, exponent);
     }
 
@@ -117,7 +117,7 @@ void _foreach_pow_(at::TensorList self, at::TensorList exponent)
     }
 
     at::native::check_foreach_api_restrictions(self, exponent);
-    if (!at::native::can_use_fast_route(self, exponent, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, exponent, true)) {
         return at::native::foreach_tensor_pow_list_kernel_slow_(self, exponent);
     }
 
@@ -136,7 +136,7 @@ std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::ArrayRef<at::Scala
     }
 
     at::native::check_foreach_api_restrictions(self, exponent);
-    if (!at::native::can_use_fast_route(self, exponent, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, exponent, true)) {
         return at::native::foreach_tensor_pow_scalarlist_kernel_slow(self, exponent);
     }
 
@@ -163,7 +163,7 @@ void _foreach_pow_(at::TensorList self, at::ArrayRef<at::Scalar> exponent)
     }
 
     at::native::check_foreach_api_restrictions(self, exponent);
-    if (!at::native::can_use_fast_route(self, exponent, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, exponent, true)) {
         at::native::foreach_tensor_pow_scalarlist_kernel_slow_(self, exponent);
         return;
     }

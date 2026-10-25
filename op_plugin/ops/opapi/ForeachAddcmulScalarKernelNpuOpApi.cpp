@@ -27,7 +27,7 @@ std::vector<at::Tensor> _foreach_addcmul_v1(const at::TensorList input,
 {
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
+        !op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}, scalar) ||
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcmul_scalar_slow(input, tensors1, tensors2, scalar);
     }
@@ -58,7 +58,7 @@ void _foreach_addcmul_v1_(const at::TensorList input,
 {
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
+        !op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}, scalar) ||
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcmul_scalar_slow_(input, tensors1, tensors2, scalar);
     }
@@ -120,7 +120,7 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
     }
     DO_COMPATIBILITY(aclnnForeachAddcmulScalarV2, _foreach_addcmul_v1(input, tensors1, tensors2, scalar));
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
-    if (!at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
+    if (!op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}, scalar) ||
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcmul_scalar_slow(input, tensors1, tensors2, scalar);
     }
@@ -150,7 +150,7 @@ void _foreach_addcmul_(const at::TensorList input, const at::TensorList tensors1
     }
     DO_COMPATIBILITY(aclnnForeachAddcmulScalarV2, _foreach_addcmul_v1_(input, tensors1, tensors2, scalar));
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
-    if (!at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
+    if (!op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}, scalar) ||
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcmul_scalar_slow_(input, tensors1, tensors2, scalar);
     }
