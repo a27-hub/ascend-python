@@ -161,6 +161,13 @@ at::Tensor npu_quant_matmul(
   }
   bool is_a8W4_int = x1.dtype() == at::kChar && x2.dtype() == at::kInt;
   bool is_a8W4_float = x1.dtype() == at::kFloat8_e4m3fn && x2.dtype() == at::kFloat;
+#if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
+  // torch 2.8+ 原生 float4_e2m1fn_x2 与 uint8 载体等价；显式传 torch dtype 对象时 pybind 转为
+  // ScalarType 枚举值，与 c10_npu::DType::FLOAT4_E2M1 数值不同，归一化后走同一套判断
+  if (x2_dtype.has_value() && x2_dtype.value() == static_cast<int64_t>(at::ScalarType::Float4_e2m1fn_x2)) {
+    x2_dtype = static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+  }
+#endif
   bool is_a8W4_float_u8 = x1.dtype() == at::kFloat8_e4m3fn && x2.dtype() == at::kByte && x2_dtype.has_value() &&
                           x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
 #if VERSION_BETWEEN(V2R8, VERSION_NEWEST)

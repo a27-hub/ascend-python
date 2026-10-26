@@ -3094,6 +3094,13 @@ class TestQuantMatmul(TestCase):
                 self.assertTrue(expect_ret.shape == res.shape)
                 self.assertTrue(expect_ret.dtype == res.dtype)
 
+                # x2_dtype 显式传 torch 原生 dtype 对象(pybind 转为 ScalarType 枚举值 45)
+                res = torch_npu.npu_quant_matmul(x1, x2_nz_f4, scale, x2_dtype=torch.float4_e2m1fn_x2,
+                                                 y_scale=y_scale, output_dtype=torch.float16,
+                                                 group_sizes=[0, 0, gs])
+                self.assertTrue(expect_ret.shape == res.shape)
+                self.assertTrue(expect_ret.dtype == res.dtype)
+
 
 class TestQuantMatmulReduceSum(TestCase):
     def test_quant_matmul_reduce_sum(self):

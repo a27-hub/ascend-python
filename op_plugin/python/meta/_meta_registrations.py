@@ -4539,12 +4539,15 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                           group_sizes=None, y_scale=None):
     BIT4_PER_BIT32 = 8
     BIT4_PER_BIT8 = 2
+    # 显式传 torch 原生 float4_e2m1fn_x2(dtype 对象)时, pybind 转为 ScalarType 枚举值 45,
+    # 与 torch_npu.float4_e2m1fn_x2(ACL 自定义枚举 296) 数值不同, 两种传入都需识别
+    TORCH_NATIVE_FP4_SCALAR = 45
 
     def get_x2_unpack_factor(x2, x2_dtype):
         # x2 是打包后的权重张量，x2_dtype 是逻辑上的 int4/float4 格式
         if x2.dtype in (torch.int32, torch.float32):
             return BIT4_PER_BIT32
-        if x2_dtype in (torch_npu.int4, torch_npu.float4_e2m1fn_x2):
+        if x2_dtype in (torch_npu.int4, torch_npu.float4_e2m1fn_x2, TORCH_NATIVE_FP4_SCALAR):
             return BIT4_PER_BIT8
         if hasattr(torch, 'float4_e2m1fn_x2') and x2.dtype == torch.float4_e2m1fn_x2:
             return BIT4_PER_BIT8
@@ -4573,7 +4576,8 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     is_mxfp4_valid = x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2
     is_a8w4_int = x1.dtype == torch.int8 and x2.dtype == torch.int32
     is_a8w4_float = x1.dtype == torch.float8_e4m3fn and (
-        x2_dtype == torch_npu.float4_e2m1fn_x2 or x2.dtype == torch.float32 or
+        x2_dtype == torch_npu.float4_e2m1fn_x2 or x2_dtype == TORCH_NATIVE_FP4_SCALAR or
+        x2.dtype == torch.float32 or
         (hasattr(torch, 'float4_e2m1fn_x2') and x2.dtype == torch.float4_e2m1fn_x2))
     is_a8w4 = x1.dtype == torch.int8 and x2_dtype == torch_npu.int4
     dim_list = []

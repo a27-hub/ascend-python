@@ -922,7 +922,7 @@ class TestQuantMatmul(TestCase):
             torch.from_numpy(scale_np).npu(),
             x_dtype=torch.float8_e4m3fn, weight_dtype=torch_npu.float4_e2m1fn_x2,
             weight_scale_dtype=torch.float16, x_scale_dtype=None, k_group_size=gs)
-        for x2_dtype in (torch_npu.float4_e2m1fn_x2, None):
+        for x2_dtype in (torch_npu.float4_e2m1fn_x2, torch.float4_e2m1fn_x2, None):
             custom_output = torch_npu.npu_quant_matmul(
                 x1_fp8.npu(), out_weight, out_scale,
                 x2_dtype=x2_dtype, y_scale=yscale_u64,
@@ -941,7 +941,7 @@ class TestQuantMatmul(TestCase):
             torch.from_numpy(scale_phys).npu().transpose(0, 1),
             x_dtype=torch.float8_e4m3fn, weight_dtype=torch_npu.float4_e2m1fn_x2,
             weight_scale_dtype=torch.float16, x_scale_dtype=None, k_group_size=gs)
-        for x2_dtype in (torch_npu.float4_e2m1fn_x2, None):
+        for x2_dtype in (torch_npu.float4_e2m1fn_x2, torch.float4_e2m1fn_x2, None):
             custom_output_nd = torch_npu.npu_quant_matmul(
                 x1_fp8.npu(), out_weight_nd, out_scale_nd.transpose(0, 1),
                 x2_dtype=x2_dtype, y_scale=yscale_u64,
