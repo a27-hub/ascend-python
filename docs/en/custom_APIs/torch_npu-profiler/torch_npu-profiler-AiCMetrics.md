@@ -20,7 +20,7 @@
 
 ## Function
 
-AI Core performance metric collection items. They are used as the aic\_metrics parameter of the _ExperimentalConfig class.
+AI Core performance metric collection items. They are used as the aic_metrics parameter of the _ExperimentalConfig class.
 
 ## Class Signature
 

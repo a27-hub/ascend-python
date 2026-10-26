@@ -663,7 +663,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             - `query_quant_mode`, `key_quant_mode`, and `value_quant_mode` are 6, 6, and 8, respectively.
             - The data types of `dequant_scale_query`, `dequant_scale_key`, and `dequant_scale_value` are fixed to `torch.float8_e8m0fnu`.
             - `input_layout` supports only TND, and both PageAttention and non-PageAttention scenarios are supported. The shape of `query` is (Q_T, Q_N, D). `key` and `value` are passed in according to the shape of the PageAttention scenario. The kv cache layout supports (blocknum, KV_N, blocksize, D) or (blocknum, KV_N, D/D0, blocksize, D0), where blocksize is fixed at 512.
-            - When Q_S \* G > 80, the shape of `dequant_scale_query` is recommended to be (Q_T, Q_N, D/64, 2); when Q_S * G <= 80, the shape of the input parameter `dequant_scale_query` is recommended to be (KV_N, Q_T, G, D/64, 2). In non-PagedAttention scenarios, the shape of `dequant_scale_key` is (KV_T, KV_N, D/64, 2), and the shape of `dequant_scale_value` is (KV_T/64, KV_N, D, 2). In PagedAttention scenarios where the kv cache layout is BnNBsD, the shape of `dequant_scale_key` is (Bn, KV_N, Bs, D/64, 2), and the shape of `dequant_scale_value` is (Bn, KV_N, Bs/64, D, 2). When the kv cache layout is $NZ$, the shape of `dequant_scale_key` is (Bn, KV_N, Bs/16, D/64, 16, 2), and the shape of `dequant_scale_value` is (Bn, KV_N, D/16, Bs/64, 16, 2).
+            - When Q_S * G > 80, the shape of `dequant_scale_query` is recommended to be (Q_T, Q_N, D/64, 2); when Q_S * G <= 80, the shape of the input parameter `dequant_scale_query` is recommended to be (KV_N, Q_T, G, D/64, 2). In non-PagedAttention scenarios, the shape of `dequant_scale_key` is (KV_T, KV_N, D/64, 2), and the shape of `dequant_scale_value` is (KV_T/64, KV_N, D, 2). In PagedAttention scenarios where the kv cache layout is BnNBsD, the shape of `dequant_scale_key` is (Bn, KV_N, Bs, D/64, 2), and the shape of `dequant_scale_value` is (Bn, KV_N, Bs/64, D, 2). When the kv cache layout is $NZ$, the shape of `dequant_scale_key` is (Bn, KV_N, Bs/16, D/64, 16, 2), and the shape of `dequant_scale_value` is (Bn, KV_N, D/16, Bs/64, 16, 2).
             - `sparse_mode` 0 and 3 are supported, and when `sparse_mode` is 0, the mask matrix must not be passed.
             - `inner_precise` 0 and 1 are supported.
             - softmax_lse is supported.
@@ -853,7 +853,7 @@ tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 - `key, value`: Required. The type is `torch.int8`, and the NZ format is [blockNum, KV_N, D/32, blockSize, 32].
 - `inner_precise=1`: Required. Under the KV NZ format constraint, only the high-performance mode is supported.
 
-**Related constraints**: [GQA fake-quantization + KV NZ format constraints](#gqa-fake-quantization--kv-nz-format-constraints), [incremental inference constraints](#en-us_topic_0000001832267082_section_qs_eq1_constraint)
+**Related constraints**: [GQA fake-quantization + KV NZ format constraints](#en-us_topic_0000001832267082_section_gqa_nz_constraint), [incremental inference constraints](#en-us_topic_0000001832267082_section_qs_eq1_constraint)
 
 ```python
 import torch
