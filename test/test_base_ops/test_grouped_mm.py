@@ -71,16 +71,17 @@ class TestGroupedMm(TestCase):
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
     def test_2d_x_3d_bf16(self, device="npu"):
-        """2D x 3D, bf16, 4 experts"""
+        """2D x 3D, bf16, 4 experts. K and rtol aligned with native
+        test_grouped_gemm_cublaslt (jagged_size=32, bf16 default rtol=0.016)."""
         torch.manual_seed(0)
-        M, K, N, G = 1024, 256, 256, 4
+        M, K, N, G = 1024, 32, 256, 4
         mat_a = torch.normal(mean=0., std=0.1, size=(M, K), dtype=torch.bfloat16)
         mat_b = torch.normal(mean=0., std=0.1, size=(G, K, N), dtype=torch.bfloat16)
         offs = self.generate_group_list(M, G)
 
         cpu_out = self.cpu_ref_2d_x_3d(mat_a, mat_b, offs)
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
-        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
+        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.016)
 
     def test_2d_x_3d_single_group(self, device="npu"):
         """2D x 3D, fp16, single group (G=1)"""
