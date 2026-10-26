@@ -4152,8 +4152,10 @@ def quant_matmul_shape_check(*args):
         or (is_a8w4 and not transpose_x2)
     )
     x2_n_dim = x2_n_raw * x2_unpack_factor if should_unpack_weight else x2_n_raw
-    # A8W4(F8F4) T-CG NZ 视图: 逻辑 shape 为 (K, N/2), K 维不打包, N 维按 2 解包
-    is_a8w4_float_nz = is_a8w4_float and x2.dtype != torch.float32 and transpose_x2
+    # A8W4(F8F4) T-CG x2 两种视图: ND 转置视图 (K/2, N) 沿 K 打包、N 不解包;
+    # NZ 视图 (K, N/2) K 不打包、N 按 2 解包。fake 下拿不到 format, 按 K 维关系区分:
+    # x1_k == x2_k 即 NZ, x1_k == 2*x2_k 即 ND
+    is_a8w4_float_nz = is_a8w4_float and x2.dtype != torch.float32 and x1_k_dim == x2_k_dim
     if is_a8w4_float_nz:
         x2_n_dim = x2_n_raw * x2_unpack_factor
     if is_mxfp4_valid:
@@ -4624,7 +4626,8 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
             elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
             elif (is_a8w4_float and x2.dtype != torch.float32 and transpose_x2):
-                # A8W4(F8F4) T-CG NZ 视图 (K, N/2): N 维按 2 解包
+                # 此时 transpose_x2 命中的是 NZ 视图 (K, N/2): K 未打包故 x1_k == x2.size(-2),
+                # N 沿 N 打包, 按 2 解包; ND 转置视图 (K/2, N) 的 N 不打包, 走默认分支
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
 
             dim_list.append(dimm)
