@@ -409,7 +409,13 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - ""：默认值，不开启fullmesh\_v2模板。
         - "fullmesh\_v1"：不开启fullmesh\_v2模板。
         - "fullmesh\_v2"：开启fullmesh\_v2模板，其中`comm_alg`仅在`tp_world_size`取值为1时生效，且不支持在各卡BS不一致、输入`x_active_mask`和特殊专家场景下开启。
-        - "fullmesh\_v2模板": 模板的K与BS上限和产品相关<term>Atlas A3系列产品</term>支持0<K≤12、0<BS≤256；<term>Ascend 950DT系列产品</term>支持0<K≤16、0<BS≤512。
+        - "fullmesh\_v2模板": 模板中的K与BS上限和产品相关
+            <!-- npu="A3" id76 -->
+            - <term>Atlas A3系列产品</term>: 支持0<K≤12、0<BS≤256
+            <!-- end id76 -->
+            <!-- npu="950" id77 -->
+            - <term>Ascend 950DT系列产品</term>: 支持0<K≤16、0<BS≤512。
+            <!-- end id77 -->
     <!-- end id34 -->
 
 - **zero\_expert\_num**（`int`）：**可选参数**，表示零专家的数量。
@@ -685,7 +691,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     moe_expert_num = 32  # moe专家数
     bs = 8  # token数量
     h = 7168  # 每个token的长度
-    k = 16
+    k = 8
     random_seed = 0
     tp_world_size = 1
     ep_world_size = int(world_size / tp_world_size)
@@ -785,14 +791,14 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
         # 创建输入tensor
         x = torch.randn(bs, h, dtype=input_dtype).npu()
-        expert_ids = torch.tensor([[5, 7, 17, 4, 2, 6, 11, 16, 0, 1, 3, 8, 9, 10, 12, 13],
-                                [10, 12, 13, 15, 19, 4, 18, 1, 0, 2, 3, 5, 6, 7, 8, 9],
-                                [19, 33, 1, 17, 9, 5, 0, 32, 2, 3, 4, 6, 7, 8, 10, 11],
-                                [19, 11, 17, 0, 10, 5, 7, 9, 1, 2, 3, 4, 6, 8, 12, 13],
-                                [10, 16, 11, 17, 33, 8, 9, 3, 0, 1, 2, 4, 5, 6, 7, 12],
-                                [12, 19, 5, 7, 1, 3, 18, 16, 0, 2, 4, 6, 8, 9, 10, 11],
-                                [11, 9, 13, 16, 12, 33, 17, 14, 0, 1, 2, 3, 4, 5, 6, 7],
-                                [16, 4, 9, 5, 0, 10, 11, 17, 1, 2, 3, 6, 7, 8, 12, 13]], dtype=torch.int32).npu()
+        expert_ids = torch.tensor([[5, 7, 17, 4, 2, 6, 11, 16],
+                                [10, 12, 13, 15, 19, 4, 18, 1],
+                                [19, 33, 1, 17, 9, 5, 0, 32],
+                                [19, 11, 17, 0, 10, 5, 7, 9],
+                                [10, 16, 11, 17, 33, 8, 9, 3],
+                                [12, 19, 5, 7, 1, 3, 18, 16],
+                                [11, 9, 13, 16, 12, 33, 17, 14],
+                                [16, 4, 9, 5, 0, 10, 11, 17]], dtype=torch.int32).npu()
         expert_scales = torch.randn(bs, k, dtype=torch.float32).npu()
 
         scales_shape = (1 + moe_expert_num, h) if shared_expert_rank_num else (moe_expert_num, h)
@@ -920,7 +926,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     moe_expert_num = 32  # moe专家数
     bs = 8  # token数量
     h = 7168  # 每个token的长度
-    k = 16
+    k = 8
     random_seed = 0
     tp_world_size = 1
     ep_world_size = int(world_size / tp_world_size)
@@ -1089,14 +1095,14 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         # 创建输入tensor
         x = torch.randn(bs, h, dtype=input_dtype).npu()
         expert_ids = torch.tensor([
-            [0, 8, 4, 1, 6, 12, 14, 17, 2, 3, 5, 7, 9, 10, 11, 13],
-            [14, 10, 7, 3, 0, 12, 11, 17, 1, 2, 4, 5, 6, 8, 9, 13],
-            [12, 0, 5, 11, 19, 4, 6, 18, 1, 2, 3, 7, 8, 9, 10, 13],
-            [17, 3, 4, 10, 18, 0, 1, 2, 5, 6, 7, 8, 9, 11, 12, 13],
-            [13, 16, 9, 10, 15, 6, 7, 14, 0, 1, 2, 3, 4, 5, 8, 11],
-            [17, 15, 14, 8, 16, 18, 3, 12, 0, 1, 2, 4, 5, 6, 9, 10],
-            [4, 12, 2, 17, 15, 3, 9, 10, 0, 1, 5, 6, 7, 8, 11, 13],
-            [16, 7, 12, 9, 18, 3, 19, 17, 0, 1, 2, 4, 5, 6, 8, 10]
+            [0, 8, 4, 1, 6, 12, 14, 17],
+            [14, 10, 7, 3, 0, 12, 11, 17],
+            [12, 0, 5, 11, 19, 4, 6, 18],
+            [17, 3, 4, 10, 18, 0, 1, 2],
+            [13, 16, 9, 10, 15, 6, 7, 14],
+            [17, 15, 14, 8, 16, 18, 3, 12],
+            [4, 12, 2, 17, 15, 3, 9, 10],
+            [16, 7, 12, 9, 18, 3, 19, 17]
         ], dtype=torch.int32).npu()
 
         expert_scales = torch.randn(bs, k, dtype=torch.float32).npu()
