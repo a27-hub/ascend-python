@@ -182,6 +182,33 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
         return (self_grad, other_grad)
 
 
+@impl(m_aten, "_grouped_mm")
+def _grouped_mm_meta(mat_a, mat_b, offs=None, bias=None, out_dtype=None):
+    """Meta implementation for aten._grouped_mm.
+    Only derives output shape/dtype; never reads real data from offs.
+    Mirrors compute_grouped_gemm_output_size_stride in native GroupedMMUtils.h.
+    """
+    a_is_2d = mat_a.dim() == 2
+    b_is_2d = mat_b.dim() == 2
+    if a_is_2d and b_is_2d:
+        # 2D x 2D: (M, K) x (K, N), offs(G,) -> (G, M, N)
+        out_size = [offs.size(0), mat_a.size(0), mat_b.size(1)]
+    elif a_is_2d and not b_is_2d:
+        # 2D x 3D: (M, K) x (G, K, N), offs(G,) -> (M, N)
+        out_size = [mat_a.size(0), mat_b.size(-1)]
+    elif (not a_is_2d) and b_is_2d:
+        # 3D x 2D: (G, M, K) x (K, N), offs(G,) -> (M, N)
+        out_size = [mat_a.size(1), mat_b.size(1)]
+    else:
+        # 3D x 3D: (G, M, K) x (G, K, N) -> (G, M, N)  (regular bmm)
+        out_size = [mat_a.size(0), mat_a.size(1), mat_b.size(-1)]
+
+    # Resolve output dtype: same as mat_a if out_dtype not specified
+    out_dtype_ = mat_a.dtype if out_dtype is None else out_dtype
+
+    return torch.empty(out_size, dtype=out_dtype_, device="meta")
+
+
 @impl(m, "npu_mhc_pre")
 def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0, inner_precise=0):
     torch._check(
