@@ -4538,6 +4538,8 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
             return BIT4_PER_BIT32
         if x2_dtype in (torch_npu.int4, torch_npu.float4_e2m1fn_x2):
             return BIT4_PER_BIT8
+        if hasattr(torch, 'float4_e2m1fn_x2') and x2.dtype == torch.float4_e2m1fn_x2:
+            return BIT4_PER_BIT8
         # 其他情况默认不做 unpack
         return 1
 
@@ -4562,7 +4564,9 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     is_a4w4 = x1.dtype == torch.int32 and x2.dtype == torch.int32
     is_mxfp4_valid = x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2
     is_a8w4_int = x1.dtype == torch.int8 and x2.dtype == torch.int32
-    is_a8w4_float = x1.dtype == torch.float8_e4m3fn and (x2_dtype == torch_npu.float4_e2m1fn_x2 or x2.dtype == torch.float32)
+    is_a8w4_float = x1.dtype == torch.float8_e4m3fn and (
+        x2_dtype == torch_npu.float4_e2m1fn_x2 or x2.dtype == torch.float32 or
+        (hasattr(torch, 'float4_e2m1fn_x2') and x2.dtype == torch.float4_e2m1fn_x2))
     is_a8w4 = x1.dtype == torch.int8 and x2_dtype == torch_npu.int4
     dim_list = []
     transpose_x1 = False

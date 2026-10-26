@@ -163,6 +163,13 @@ at::Tensor npu_quant_matmul(
   bool is_a8W4_float = x1.dtype() == at::kFloat8_e4m3fn && x2.dtype() == at::kFloat;
   bool is_a8W4_float_u8 = x1.dtype() == at::kFloat8_e4m3fn && x2.dtype() == at::kByte && x2_dtype.has_value() &&
                           x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+#if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
+  // torch 2.8+ 原生 float4_e2m1fn_x2 与 uint8 载体等价，未显式传 x2_dtype 时按 FLOAT4_E2M1 识别
+  is_a8W4_float_u8 = is_a8W4_float_u8 ||
+                     (x1.dtype() == at::kFloat8_e4m3fn && x2.scalar_type() == at::ScalarType::Float4_e2m1fn_x2 &&
+                      (!x2_dtype.has_value() ||
+                       x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)));
+#endif
   at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
   int64_t group_size = check_and_get_groups(group_size_list, x1, x2, scale, pertoken_scale);
   bool is_a4w4 = x1.dtype() == at::kInt && x2.dtype() == at::kInt;
