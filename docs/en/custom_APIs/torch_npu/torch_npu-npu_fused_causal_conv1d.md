@@ -802,3 +802,4 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
                         cache_indices, num_computed_tokens, num_accepted_tokens)
     print(f"output shape: {out.shape}")
     ```
+    

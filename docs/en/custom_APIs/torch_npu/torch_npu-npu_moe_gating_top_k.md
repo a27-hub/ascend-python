@@ -21,29 +21,29 @@
 - Formulas:
 
     Apply sigmoid to the input (`bias` optional):
-    - When `norm_type` is 1:
+    - When `norm_type` is 1
 
       ![](../../figures/en-us_formulaimage_0000002258672873.png)
 
-    - When `norm_type` is 0:
+    - When `norm_type` is 0
 
       ![](../../figures/en-us_formulaimage_0000002313785750.png)
 
     Group the computation results by `group_count`:
     
-    - If `group_select_mode` is 1, the groups are sorted by the sum of topk2, and the first `k_group` groups are selected:
+    - If `group_select_mode` is 1, the groups are sorted by the sum of topk2, and the first `k_group` groups are selected.
 
       ![](../../figures/en-us_formulaimage_0000002219010398.png)
 
-    - If `group_select_mode` is 0, the groups are sorted by the maximum value in each group, and the first `k_group` groups are selected:
+    - If `group_select_mode` is 0, the groups are sorted by the maximum value in each group, and the first `k_group` groups are selected.
 
       ![](../../figures/en-us_formulaimage_0000002347834049.png)
 
-    Obtain the corresponding elements in `normOut` according to the groupId obtained in the previous step, and perform TopK again on the data to obtain the result of `expertIdxOut`:
+    Obtain the corresponding elements in `normOut` according to the groupId obtained in the previous step, and perform TopK again on the data to obtain the result of `expertIdxOut`.
 
     ![](../../figures/en-us_formulaimage_0000002219172722.png)
 
-    Compute y according to the input `routed_scaling_factor` and `eps` parameters to obtain the result of yOut:
+    Compute y according to the input `routed_scaling_factor` and `eps` parameters to obtain the result of yOut
 
     ![](../../figures/en-us_formulaimage_0000002219173660.png)
 
@@ -246,3 +246,4 @@ npu_moe_gating_top_k(x, k, *, bias=None, input_ids=None, tid2eid=None, k_group=1
     # Call the MoeGatingTopK operator
     y_npu, expert_idx_npu, out_npu = model(x_tensor, bias_tensor)
     ```
+    

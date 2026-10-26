@@ -172,3 +172,4 @@ The result of updating `input`.
             [0.2910, 0.2468, 0.5488, 0.9761, 0.9785]], 
             device='npu:0',dtype=torch.float16)
     ```
+    
