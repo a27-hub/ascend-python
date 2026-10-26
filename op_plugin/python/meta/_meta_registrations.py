@@ -4625,9 +4625,10 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
             elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
-            elif (is_a8w4_float and x2.dtype != torch.float32 and transpose_x2):
-                # 此时 transpose_x2 命中的是 NZ 视图 (K, N/2): K 未打包故 x1_k == x2.size(-2),
-                # N 沿 N 打包, 按 2 解包; ND 转置视图 (K/2, N) 的 N 不打包, 走默认分支
+            elif (is_a8w4_float and x2.dtype != torch.float32 and
+                  x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)):
+                # T-CG NZ 视图 (K, N/2): K 未打包故 x1_k == x2.size(-2), N 按 2 打包需解包;
+                # ND 转置视图 (K/2, N) 的 N 不打包, 走默认分支
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
 
             dim_list.append(dimm)
