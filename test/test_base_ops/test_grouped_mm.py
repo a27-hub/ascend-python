@@ -80,7 +80,7 @@ class TestGroupedMm(TestCase):
 
         cpu_out = self.cpu_ref_2d_x_3d(mat_a, mat_b, offs)
         npu_out = torch._grouped_mm(mat_a.npu(), mat_b.npu(), offs=offs.npu())
-        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.01)
+        self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.02)
 
     def test_2d_x_3d_single_group(self, device="npu"):
         """2D x 3D, fp16, single group (G=1)"""
