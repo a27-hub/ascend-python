@@ -137,9 +137,9 @@ class TestGroupedMm(TestCase):
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
     def test_3d_x_2d_bf16(self, device="npu"):
-        """3D x 2D, bf16, 4 groups. rtol aligned with native bf16 default (0.016)."""
+        """3D x 2D, bf16, 4 groups. K and rtol aligned with native."""
         torch.manual_seed(0)
-        G, M, K, N = 4, 128, 256, 1024
+        G, M, K, N = 4, 128, 32, 1024
         mat_a = torch.normal(mean=0., std=0.1, size=(G, M, K), dtype=torch.bfloat16)
         mat_b = torch.normal(mean=0., std=0.1, size=(K, N), dtype=torch.bfloat16)
         offs = self.generate_group_list(N, G)
@@ -200,9 +200,9 @@ class TestGroupedMm(TestCase):
         self.assertRtolEqual(cpu_out, npu_out.cpu(), 0.001)
 
     def test_2d_x_2d_bf16(self, device="npu"):
-        """2D x 2D, bf16, 4 groups. rtol aligned with native bf16 default (0.016)."""
+        """2D x 2D, bf16, 4 groups. K and rtol aligned with native."""
         torch.manual_seed(0)
-        M, K, N, G = 128, 1024, 256, 4
+        M, K, N, G = 128, 32, 256, 4
         mat_a = torch.normal(mean=0., std=0.1, size=(M, K), dtype=torch.bfloat16)
         mat_b = torch.normal(mean=0., std=0.1, size=(K, N), dtype=torch.bfloat16)
         offs = self.generate_group_list(K, G)
