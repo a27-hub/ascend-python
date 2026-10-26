@@ -143,7 +143,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
     - `BS`: Number of tokens to be sent.
         - Atlas A3 training products/Atlas A3 inference products: The value range is 0 < `BS` <= 512.
 
-    - `K`: Number of top-K experts selected. The value range is 0 < `K` <= **16**, and the condition 0 < `K` <= `moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num` must be satisfied.
+    - `K`: Number of top-K experts selected. The value range is 0 < `K` <= 8, and the condition 0 < `K` <= `moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num` must be satisfied.
     - `local_expert_num`: Number of experts on the current rank.
         - For shared-expert ranks, `local_expert_num = 1`.
         - For MoE expert ranks, `local_expert_num = moe_expert_num / (ep_world_size - shared_expert_rank_num)`. When `local_expert_num > 1`, communication in the TP domain is not supported.
