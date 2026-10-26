@@ -2972,6 +2972,7 @@ class TestGroupedMatmul(TestCase):
             self.assertEqual(result[0].shape[1], n)
 
 
+@unittest.skipIf(not hasattr(torch, "_grouped_mm"), "_grouped_mm not available in this PyTorch version")
 class TestGroupedMm(TestCase):
     def test_grouped_mm_meta_2d_x_3d(self):
         """FakeTensor: 2D x 3D -> (M, N)"""
