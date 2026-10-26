@@ -409,7 +409,9 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - ""：默认值，不开启fullmesh\_v2模板。
         - "fullmesh\_v1"：不开启fullmesh\_v2模板。
         - "fullmesh\_v2"：开启fullmesh\_v2模板，其中`comm_alg`仅在`tp_world_size`取值为1时生效，且不支持在各卡BS不一致、输入`x_active_mask`和特殊专家场景下开启。
-        - "fullmesh\_v2模板": 模板的K与BS上限和产品相关<term>Atlas A3系列产品</term>支持0<K≤12、0<BS≤256；<term>Ascend 950DT系列产品</term>支持0<K≤16、0<BS≤512。
+        - "fullmesh\_v2模板": 模板中的K与BS上限和产品相关
+            - <term>Atlas A3系列产品</term>支持0<K≤12、0<BS≤256
+            - <term>Ascend 950DT系列产品</term>支持0<K≤16、0<BS≤512。
     <!-- end id34 -->
 
 - **zero\_expert\_num**（`int`）：**可选参数**，表示零专家的数量。

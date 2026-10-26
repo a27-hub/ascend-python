@@ -4,7 +4,6 @@
 
 | Product                                                        | Supported|
 | ------------------------------------------------------------ | :------: |
-|**<term>Ascend 950DT</term>**           |    √     |
 |<term>Atlas A3 training products/Atlas A3 inference products</term>           |    √     |
 |<term>Atlas A2 training products/Atlas A2 inference products</term> | √   |
 
@@ -160,13 +159,8 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     - Atlas A3 training products/Atlas A3 inference products: The current version supports `""`, `"fullmesh_v1"`, `"fullmesh_v2"`, or `"hierarchy"`.
         - `""`: (default value) enables the `fullmesh_v1` template.
         - `"fullmesh_v1"`: enables the `fullmesh_v1` template.
-        - `"fullmesh_v2"`: enables the `fullmesh_v2` template. In this configuration, the `fullmesh_v2` template takes effect only when `tp_world_size` is `1`. **The K and BS upper limits of this template are product-dependent: 0 < `K` <= 12 and 0 < `BS` <= 256 for Atlas A3 training products/Atlas A3 inference products, and 0 < `K` <= 16 and 0 < `BS` <= 512 for Ascend 950DT.**
+        - `"fullmesh_v2"`: enables the `fullmesh_v2` template. In this configuration, the `fullmesh_v2` template takes effect only when `tp_world_size` is `1`.
         - `"hierarchy"`: Token data is transmitted in two stages: intra-server and inter-server. The same token data is first aggregated and summed within a server, and then transmitted across servers to reduce the data volume of inter-server communication. This template supports only scenarios where `tp_world_size` is 1 and the number of shared experts is 0, and does not support 2D masks, special experts, dynamic scale-in, or performance profiling.
-
-    - **Ascend 950DT: The current version supports `""`, `"fullmesh_v1"`, and `"fullmesh_v2"`.**
-        - **`""`: (default value) does not enable the `fullmesh_v2` template.**
-        - **`"fullmesh_v1"`: does not enable the `fullmesh_v2` template.**
-        - **`"fullmesh_v2"`: enables the `fullmesh_v2` template. In this configuration, the `fullmesh_v2` template takes effect only when `tp_world_size` is `1`, and it is not supported when the `BS` values differ across ranks, when `x_active_mask` is passed, or in special expert scenarios.**
 
 - **`zero_expert_num`** (`int`): Optional. Number of zero experts.
     - Atlas A2 training products/Atlas A2 inference products:
@@ -229,9 +223,8 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - Atlas A3 training products/Atlas A3 inference products: The value range of `BS` is as follows.
             - When `comm_alg` is set to `""` or `"fullmesh_v1"`: 0 < `BS` <= 512.
             - When `comm_alg` is set to `"fullmesh_v2"` or `"hierarchy"`: 0 < `BS` <= 256.
-        - **Ascend 950DT: The value range of `BS` is 0 < `BS` <= 512.**
 
-    - **`K`: Number of top-K experts selected. When `comm_alg` is set to `""` or `"fullmesh_v1"`, the value range is 0 < `K` <= 16. When `comm_alg` is set to `"fullmesh_v2"`, the value range is 0 < `K` <= 12 for Atlas A3 training products/Atlas A3 inference products, and 0 < `K` <= 16 for Ascend 950DT. In all cases, the condition 0 < `K` <= `moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num` must be satisfied.**
+    - `K`: Number of top-K experts selected. The value range is 0 < `K` <= 16, and the condition 0 < `K` <= `moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num` must be satisfied. When `comm_alg` is set to `""` or `"fullmesh_v2"`, the value range is 0 < `K` <= 12.
 
     - `server_num`: Number of server nodes. Valid values are `2`, `4`, or `8`.
         - Atlas A2 training products/Atlas A2 inference products: This variable is used only in shapes for this scenario.
@@ -252,16 +245,11 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
     - Atlas A3 training products/Atlas A3 inference products:
         This scenario supports configuration through both the `HCCL_BUFFSIZE` environment variable and [`hccl_buffer_size`](https://gitcode.com/Ascend/ModelZoo-PyTorch/blob/master/PyTorch/docs/en/performance_tuning/performance_tuning_methods/communication_basics_overview.md#hccl_buffer_size).
-        - Within the EP communication domain, when `comm_alg` is set to `"fullmesh_v1"` or `""`: The configured size must be greater than or equal to **`2 * (local_expert_num * max_bs * ep_world_size * Align512(Align32(2 * H) + 44) + (K + shared_expert_num) * max_bs * Align512(2 * H))`**.
-        - Within the EP communication domain, when `comm_alg` is set to `"fullmesh_v2"`: The configured size must be greater than or equal to **`2 * (local_expert_num * max_bs * ep_world_size * 480Align512(Align32(2 * H) + 44) + (K + shared_expert_num) * max_bs * Align512(2 * H))`**.
+        - Within the EP communication domain, when `comm_alg` is set to `"fullmesh_v1"` or `""`: The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * Align512(Align32(2 * H) + 64) + (K + shared_expert_num) * max_bs * Align512(2 * H))`.
+        - Within the EP communication domain, when `comm_alg` is set to `"fullmesh_v2"`: The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * 480Align512(Align32(2 * H) + 64) + (K + shared_expert_num) * max_bs * Align512(2 * H))`.
         - When `comm_alg` is set to `"hierarchy"`, the configured size must be identical to `moe_expert_num * BS * (H * sizeof(dtype_x) + 4 * ((K + 7)/8 * 8) * sizeof(uint32)) + 4MB + 400MB`. 
         - Within the TP communication domain: The value must be greater than or equal to `(A * Align512(Align32(H * 2) + 44) + A * Align512(H * 2)) * 2`.
         - The alignment functions are defined as follows: $Align480(x) = ((x + 480 - 1)/480) * 512$, $Align512(x) = ((x + 512 - 1)/512) * 512$, $Align32(x) = ((x + 32 - 1)/32) * 32$.
-
-    - **Ascend 950DT: The value range is as follows.**
-        - **Within the EP communication domain, when `comm_alg` is set to `"fullmesh_v1"` or `""`: The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * Align512(Align32(2 * H) + 44) + (K + shared_expert_num) * max_bs * 480Align512(2 * H)) + 1024 * 1024 * 10`.**
-        - **Within the EP communication domain, when `comm_alg` is set to `"fullmesh_v2"`: The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * 480Align512(Align32(2 * H) + 44) + (K + shared_expert_num) * max_bs * 480Align512(2 * H)) + 1024 * 1024 * 10`.**
-        - **The alignment functions are defined as follows: `480Align512(x) = ((x + 480 - 1)/480) * 512`, `Align512(x) = ((x + 512 - 1)/512) * 512`, and `Align32(x) = ((x + 32 - 1)/32) * 32`.**
 
 - `HCCL_INTRA_PCIE_ENABLE` and `HCCL_INTRA_ROCE_ENABLE`:
     - Atlas A2 training products/Atlas A2 inference products: These environment variables are no longer recommended. You are advised to set `comm_alg` to `"hierarchy"`.
