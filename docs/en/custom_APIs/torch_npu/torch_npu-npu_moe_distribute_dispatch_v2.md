@@ -612,17 +612,17 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - When `comm_alg` is set to "hierarchy": The configured size must be equal to `moe_expert_num * BS * (H * sizeof(dtype_x) + 4 * ((K + 7)/8 * 8) * sizeof(`torch.uint32`)) + 4MB + 100MB`, and the condition `moe_expert_num/(ep_world_size - shared_expert_rank_num) <= 24` is not required.
     <!-- end id67 -->
     <!-- npu="A3" id68 -->
-    - <term>Atlas A3 products</term>: In this scenario, the parameter can be configured not only through the environment variable HCCL\_BUFFSIZE but also through hccl\_buffer\_size (see the hccl\_buffer\_size section under Performance Tuning > Performance Tuning Methods > Communication Optimization > Optimization Methods in [PyTorch Training Model Migration and Tuning](https://hiascend.com/document/redirect/canncommercial-ptmigr)).
+    - <term>Atlas A3 products</term>: In this scenario, the parameter can be configured not only through the environment variable HCCL_BUFFSIZE but also through hccl_buffer_size (see the hccl_buffer_size section under Performance Tuning > Performance Tuning Methods > Communication Optimization > Optimization Methods in *PyTorch Training Model Migration and Tuning* at https://hiascend.com/document/redirect/canncommercial-ptmigr).
         - Within the EP communication domain, when `comm_alg` is set to "fullmesh_v1" or "": The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * Align512(Align32(2 * H) + 64) + (K + shared_expert_num) * max_bs * Align512(2 * H))`.
         - Within the EP communication domain, when `comm_alg` is set to "fullmesh_v2": The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * 480Align512(Align32(2 * H) + 64) + (K + shared_expert_num) * max_bs * Align512(2 * H))`.
         - Within the TP communication domain: The configured size must be greater than or equal to `(A * Align512(Align32(H * 2) + 44) + A * Align512(H * 2)) * 2`.
-        - The alignment functions are defined as follows: 480Align512(x) = ((x+480-1)/480) \* 512, Align512(x) = ((x+512-1)/512) \* 512, and Align32(x) = ((x+32-1)/32) \* 32.
+        - The alignment functions are defined as follows: 480Align512(x) = ((x+480-1)/480) * 512, Align512(x) = ((x+512-1)/512) * 512, and Align32(x) = ((x+32-1)/32) * 32.
     <!-- end id68 -->
     <!-- npu="950" id69 -->
     - <term>Ascend 950DT products</term>: The value range is as follows:
         - Within the EP communication domain, when `comm_alg` is set to "fullmesh_v1" or "": The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * Align512(Align32(2 * H) + 64) + (K + shared_expert_num) * max_bs * Align512(2 * H)) + 1024 * 1024 * 10`.
         - Within the EP communication domain, when `comm_alg` is set to "fullmesh_v2": The configured size must be greater than or equal to `2 * (local_expert_num * max_bs * ep_world_size * 480Align512(Align32(2 * H) + 64) + (K + shared_expert_num) * max_bs * Align512(2 * H)) + 1024 * 1024 * 10`.
-        - The alignment functions are defined as follows: 480Align512(x) = ((x+480-1)/480) \* 512, Align512(x) = ((x+512-1)/512) \* 512, and Align32(x) = ((x+32-1)/32) \* 32.
+        - The alignment functions are defined as follows: 480Align512(x) = ((x+480-1)/480) * 512, Align512(x) = ((x+512-1)/512) * 512, and Align32(x) = ((x+32-1)/32) * 32.
     <!-- end id69 -->
 
 <!-- npu="910b" id70 -->

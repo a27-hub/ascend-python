@@ -91,7 +91,7 @@ _{code_path}_ indicates the path of the OpPlugin source code. Replace it accordi
 > - To run OpPlugin on the NPU environment in the container, ensure that the driver exists on the host (you can confirm this using the `npu-smi` command) and mount the driver when starting the container. For details, see the README in this directory (op-plugin/docker/devel).
 > - In container scenarios, images and source code are obtained from external networks. For network problems related to proxy configuration, see the [official Docker documentation](https://docs.docker.com/engine/cli/proxy/).
 
-In physical machine and virtual machine scenarios, you need to install the system dependencies and the official PyTorch framework yourself. For dependency installation guidance, see [TorchNPU](https://gitcode.com/Ascend/pytorch/tree/master#%E6%BA%90%E7%A0%81%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85).
+In physical machine and virtual machine scenarios, you need to install the system dependencies and the official PyTorch framework yourself. For dependency installation guidance, see [TorchNPU](https://gitcode.com/Ascend/pytorch/tree/master#from-source).
  
 ## Procedure
  

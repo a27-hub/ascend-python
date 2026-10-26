@@ -244,7 +244,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     - <term>Atlas A2 products</term>: This parameter is not supported currently. Use the default value 1.
     <!-- end id40 -->
     <!-- npu="950,A3" id41 -->
-    - <term>Atlas A3 products</term> and <term>Ascend 950DT products</term>: When the batch sizes differ across ranks, passing `max_bs * ep_world_size` is supported, where `max_bs` indicates the maximum batch size of a single rank. When the batch sizes are identical across ranks, passing `0` or `BS * ep_world_size` is supported.
+    - <term>Atlas A3 products</term> and <term>Ascend 950DT products</term>: Valid values are \[0, 4\], where `0` indicates no shared expert and the default value is `1`.
     <!-- end id41 -->
 
 - **`shared_expert_rank_num`** (`int`): Optional. Number of shared-expert ranks.
@@ -388,7 +388,7 @@ Processed tokens. This parameter must be 2D with shape `(BS, H)`. The data type 
         - The alignment functions are defined as follows: $Align480(x) = ((x + 480 - 1)/480) * 512$, $Align512(x) = ((x + 512 - 1)/512) * 512$, $Align32(x) = ((x + 32 - 1)/32) * 32$.
     <!-- end id64 -->
     <!-- npu="950" id65 -->
-    - <term>Ascend 950DT products</term>: The value must be >=2 and must satisfy >= 2\*(local_expert_num\*max_bs\*ep_world_size\*Align512(Align32(2\*H)+64)+(K+shared_expert_num)\*max_bs\*Align512(2\*H)) + 1024 \* 1024 \* 10, where 480Align512(x) = ((x+480-1)/480)\*512, Align512(x) = ((x+512-1)/512)\*512, and Align32(x) = ((x+32-1)/32)\*32.
+    - <term>Ascend 950DT products</term>: The value must be >=2 and must satisfy >= 2*(local_expert_num*max_bs*ep_world_size*Align512(Align32(2*H)+64)+(K+shared_expert_num)*max_bs*Align512(2*H)) + 1024 * 1024 * 10, where 480Align512(x) = ((x+480-1)/480)*512, Align512(x) = ((x+512-1)/512)*512, and Align32(x) = ((x+32-1)/32)*32.
     <!-- end id65 -->
 
 <!-- npu="910b" id66 -->

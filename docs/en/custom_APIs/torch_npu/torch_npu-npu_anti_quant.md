@@ -163,3 +163,4 @@ Represents the computation result of `npu_anti_quant`, $out$ in the formulas. No
     # Expected output of the preceding code sample:
     tensor([ 6.,  8., 10., 12.], device='npu:0', dtype=torch.float16)
     ```
+    

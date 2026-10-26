@@ -355,7 +355,7 @@ torch_npu.npu_fused_infer_attention_score(
 
 ### <a id="int8_constraints"></a>`torch.int8` quantization constraints
 
-Constraints on the combination of parameters and input/output data types:
+Constraints on the combination of parameters and input/output data types
 
 | Input dtype | Output dtype | Must be passed | Can be passed | Must not be passed |
 | ---------- | ---------- | -------- | -------- | -------- |
@@ -1153,7 +1153,7 @@ with torch.no_grad():
     single_out = model(q, k, v)
 
 match = torch.allclose(graph_out, single_out, atol=1e-2)
-print(f"\nGraph vs Eager match: {'Yes' if match else 'No'}")
+print(f"\nGraph vs Eager match: {'✓' if match else '✗'}")
 print(f"  graph output shape: {graph_out.shape}")
 print(f"  single op output shape: {single_out.shape}")
 ```

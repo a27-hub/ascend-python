@@ -19,7 +19,7 @@
   y = \operatorname{op}((x1 @ x2 + bias),\ x3)
   $$
 
-  The operation type is defined by the `fused_op_type` input and supports the following:
+  The operation type is defined by the `fused_op_type` input and supports the following.
 
   | fused_op_type | Formula |
   | :--- | :--- |
