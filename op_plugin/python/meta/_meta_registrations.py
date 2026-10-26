@@ -4152,6 +4152,10 @@ def quant_matmul_shape_check(*args):
         or (is_a8w4 and not transpose_x2)
     )
     x2_n_dim = x2_n_raw * x2_unpack_factor if should_unpack_weight else x2_n_raw
+    # A8W4(F8F4) T-CG NZ 视图: 逻辑 shape 为 (K, N/2), K 维不打包, N 维按 2 解包
+    is_a8w4_float_nz = is_a8w4_float and x2.dtype != torch.float32 and transpose_x2
+    if is_a8w4_float_nz:
+        x2_n_dim = x2_n_raw * x2_unpack_factor
     if is_mxfp4_valid:
         x1_m_dim = x1.size(x1_dim_num - 2) if not transpose_x1 else x1.size(x1_dim_num - 2) * x1_unpack_factor
         x1_k_dim = x1.size(x1_dim_num - 1) * x1_unpack_factor if not transpose_x1 else x1.size(x1_dim_num - 1)
@@ -4180,9 +4184,13 @@ def quant_matmul_shape_check(*args):
                     lambda: "a8w4 NZ t-cg quant only support x1 not transpose and x2 not transpose and k dim of x1 and x2 need be same." + ops_error(ErrCode.VALUE),
                 )
         else:
+            # ND 转置视图 (K/2, N): x1_k = 2 * x2_k; NZ 视图 (K, N/2): x1_k = x2_k
+            expected_x2_k_dim = x2_k_dim if is_a8w4_float_nz else x2_k_dim * x2_unpack_factor
             torch._check(
-                x1_k_dim == x2_k_dim * x2_unpack_factor,
-                lambda: "a8w4_float ND only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
+                x1_k_dim == expected_x2_k_dim,
+                lambda: "a8w4_float k dim mismatch: ND transposed view requires k dim of x1 to be 2 multiple of "
+                        "k dim of x2, NZ view requires k dim of x1 to be equal to k dim of x2, "
+                        "please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
             )
     elif is_a8w4 and transpose_x2:
         torch._check(
@@ -4610,6 +4618,9 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
             if (is_a4w4 and not transpose_x2):
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
             elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
+                dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
+            elif (is_a8w4_float and x2.dtype != torch.float32 and transpose_x2):
+                # A8W4(F8F4) T-CG NZ 视图 (K, N/2): N 维按 2 解包
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
 
             dim_list.append(dimm)
