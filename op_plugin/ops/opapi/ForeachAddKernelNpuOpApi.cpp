@@ -24,7 +24,7 @@ std::vector<at::Tensor> _foreach_add_v1(at::TensorList tensors1, at::TensorList 
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({tensors1, tensors2}, alpha)) {
+        !op_plugin::npu_foreach_can_use_fast_route({tensors1, tensors2}, alpha)) {
         return at::native::foreach_tensor_add_list_kernel_slow(tensors1, tensors2, alpha);
     }
     // construct the output tensorlist of the NPU
@@ -48,7 +48,7 @@ void _foreach_add_v1_(at::TensorList tensors1, at::TensorList tensors2, const at
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({tensors1, tensors2}, alpha)) {
+        !op_plugin::npu_foreach_can_use_fast_route({tensors1, tensors2}, alpha)) {
         return at::native::foreach_tensor_add_list_kernel_slow_(tensors1, tensors2, alpha);
     }
     // convert scalar to tensor in PTA for now，wait for ascendc aclnn framwork support scalar type
@@ -100,7 +100,7 @@ std::vector<at::Tensor> _foreach_add(at::TensorList tensors1,
     }
     DO_COMPATIBILITY(aclnnForeachAddListV2, _foreach_add_v1(tensors1, tensors2, alpha));
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route({tensors1, tensors2}, alpha)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route({tensors1, tensors2}, alpha)) {
         return at::native::foreach_tensor_add_list_kernel_slow(tensors1, tensors2, alpha);
     }
     // construct the output tensorlist of the NPU
@@ -127,7 +127,7 @@ void _foreach_add_(at::TensorList self, at::TensorList other, const at::Scalar& 
     }
     DO_COMPATIBILITY(aclnnForeachAddListV2, _foreach_add_v1_(self, other, alpha));
     at::native::check_foreach_api_restrictions(self, other);
-    if (!at::native::can_use_fast_route({self, other}, alpha)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route({self, other}, alpha)) {
         return at::native::foreach_tensor_add_list_kernel_slow_(self, other, alpha);
     }
 
@@ -176,7 +176,7 @@ std::vector<at::Tensor> _foreach_add(at::TensorList tensors, at::ArrayRef<at::Sc
 
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
-    if (!at::native::can_use_fast_route(tensors, scalars, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_add_scalarlist_kernel_slow(tensors, scalars);
     }
 
@@ -205,7 +205,7 @@ void _foreach_add_(at::TensorList self, at::ArrayRef<at::Scalar> scalars)
     
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(self, scalars);
-    if (!at::native::can_use_fast_route(self, scalars, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, scalars, true)) {
         at::native::foreach_tensor_add_scalarlist_kernel_slow_(self, scalars);
         return;
     }

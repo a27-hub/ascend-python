@@ -27,7 +27,7 @@ std::vector<at::Tensor> _foreach_addcdiv_v1(const at::TensorList input,
 {
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
+        !op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}, scalar) ||
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcdiv_scalar_slow(input, tensors1, tensors2, scalar);
     }
@@ -56,7 +56,7 @@ void _foreach_addcdiv_v1_(const at::TensorList input,
 {
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
+        !op_plugin::npu_foreach_can_use_fast_route({input, tensors1, tensors2}, scalar) ||
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcdiv_scalar_slow_(input, tensors1, tensors2, scalar);
     }
@@ -117,7 +117,7 @@ std::vector<at::Tensor> _foreach_addcdiv(at::TensorList input,
     }
     DO_COMPATIBILITY(aclnnForeachAddcdivScalarV2, _foreach_addcdiv_v1(input, tensor1, tensor2, value));
     at::native::check_foreach_api_restrictions(input, tensor1, tensor2);
-    if (!at::native::can_use_fast_route({input, tensor1, tensor2}, value) ||
+    if (!op_plugin::npu_foreach_can_use_fast_route({input, tensor1, tensor2}, value) ||
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcdiv_scalar_slow(input, tensor1, tensor2, value);
     }
@@ -148,7 +148,7 @@ void _foreach_addcdiv_(at::TensorList self,
     }
     DO_COMPATIBILITY(aclnnForeachAddcdivScalarV2, _foreach_addcdiv_v1_(self, tensor1, tensor2, value));
     at::native::check_foreach_api_restrictions(self, tensor1, tensor2);
-    if (!at::native::can_use_fast_route({self, tensor1, tensor2}, value) ||
+    if (!op_plugin::npu_foreach_can_use_fast_route({self, tensor1, tensor2}, value) ||
         at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_addcdiv_scalar_slow_(self, tensor1, tensor2, value);
     }

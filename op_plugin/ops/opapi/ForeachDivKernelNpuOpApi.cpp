@@ -24,7 +24,7 @@ void _foreach_div_v1_(const at::TensorList self, const at::Scalar &scalar)
 {
     at::native::check_foreach_api_restrictions(self);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, true)) {
+        !op_plugin::npu_foreach_can_use_fast_route(self, scalar, true)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
 
@@ -41,7 +41,7 @@ std::vector<at::Tensor> _foreach_div_v1(at::TensorList self, const at::Scalar &s
     // Fallback
     at::native::check_foreach_api_restrictions(self);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(self, scalar, true)) {
+        !op_plugin::npu_foreach_can_use_fast_route(self, scalar, true)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
     }
 
@@ -132,7 +132,7 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors1, at::TensorList ten
     }
 
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors1, tensors2, true)) {
         return at::native::foreach_tensor_div_list_kernel_slow(tensors1, tensors2);
     }
     // construct the output tensorlist of the NPU
@@ -161,7 +161,7 @@ void _foreach_div_(at::TensorList tensors1, at::TensorList tensors2)
     }
 
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors1, tensors2, true)) {
         return at::native::foreach_tensor_div_list_kernel_slow_(tensors1, tensors2);
     }
 
@@ -182,7 +182,7 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Sc
 
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
-    if (!at::native::can_use_fast_route(tensors, scalars, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_div_scalarlist_kernel_slow(tensors, scalars);
     }
 
@@ -222,7 +222,7 @@ void _foreach_div_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
-    if (!at::native::can_use_fast_route(tensors, scalars, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_div_scalarlist_kernel_slow_(tensors, scalars);
     }
 
@@ -273,7 +273,7 @@ void _foreach_div_(at::TensorList self, const at::Scalar& scalar)
     }
     DO_COMPATIBILITY(aclnnForeachDivScalarV2, _foreach_div_v1_(self, scalar));
     at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, scalar, true)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
     auto scalar_type = self[0].scalar_type();
@@ -296,7 +296,7 @@ std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scal
     DO_COMPATIBILITY(aclnnForeachDivScalarV2, _foreach_div_v1(self, scalar));
     // Fallback
     at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, true)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(self, scalar, true)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
     }
 

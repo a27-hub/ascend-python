@@ -90,7 +90,7 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
+    if (!is_support_nd_out || !op_plugin::npu_foreach_can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
     }
 

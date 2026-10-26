@@ -35,7 +35,7 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList
     }
 
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors1, tensors2, false)) {
         return at::native::foreach_tensor_minimum_slow(tensors1, tensors2);
     }
 
@@ -81,7 +81,7 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList
     }
 
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors1, tensors2, false)) {
         return at::native::foreach_tensor_clamp_min_list_kernel_slow(tensors1, tensors2);
     }
     // construct the output tensorlist of the NPU
@@ -104,7 +104,7 @@ std::vector<at::Tensor> _foreach_minimum_v1(at::TensorList tensors, const at::Sc
 {
     at::native::check_foreach_api_restrictions(tensors);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(tensors, scalar, false)) {
+        !op_plugin::npu_foreach_can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_max_scalar_kernel_slow(tensors, scalar);
     }
     // construct the output tensorlist of the NPU
@@ -125,7 +125,7 @@ void _foreach_minimum_v1_(at::TensorList tensors, const at::Scalar& scalar)
 {
     at::native::check_foreach_api_restrictions(tensors);
     if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route(tensors, scalar, false)) {
+        !op_plugin::npu_foreach_can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_max_scalar_kernel_slow_(tensors, scalar);
     }
     auto scalar_type = tensors[0].scalar_type();
@@ -179,7 +179,7 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList
     }
 
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors1, tensors2, false)) {
         return at::native::foreach_tensor_clamp_max_list_kernel_slow(tensors1, tensors2);
     }
     // construct the output tensorlist of the NPU
@@ -214,7 +214,7 @@ void _foreach_minimum_(at::TensorList tensors1, at::TensorList tensors2)
     }
 
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors1, tensors2, false)) {
         return at::native::foreach_tensor_clamp_max_list_kernel_slow_(tensors1, tensors2);
     }
 
@@ -294,7 +294,7 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors, const at::Scala
     }
 
     DO_COMPATIBILITY(aclnnForeachMinimumScalarV2, _foreach_minimum_v1(tensors, scalar));
-    if (!at::native::can_use_fast_route(tensors, scalar, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_max_scalar_kernel_slow(tensors, scalar);
     }
     // construct the output tensorlist of the NPU
@@ -329,7 +329,7 @@ void _foreach_minimum_(at::TensorList tensors, const at::Scalar& scalar)
     }
 
     DO_COMPATIBILITY(aclnnForeachMinimumScalarV2, _foreach_minimum_v1_(tensors, scalar));
-    if (!at::native::can_use_fast_route(tensors, scalar, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_max_scalar_kernel_slow_(tensors, scalar);
     }
 
@@ -357,7 +357,7 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors, at::ArrayRef<at
     }
 
     at::native::check_foreach_api_restrictions(tensors, scalars);
-    if (!at::native::can_use_fast_route(tensors, scalars, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors, scalars, false)) {
         return at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow(tensors, scalars);
     }
     // construct the output tensorlist of the NPU
@@ -393,7 +393,7 @@ void _foreach_minimum_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
     }
 
     at::native::check_foreach_api_restrictions(tensors, scalars);
-    if (!at::native::can_use_fast_route(tensors, scalars, false)) {
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors, scalars, false)) {
         return at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow_(tensors, scalars);
     }
 

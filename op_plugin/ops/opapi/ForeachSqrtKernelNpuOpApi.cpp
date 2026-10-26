@@ -53,7 +53,7 @@ std::vector<at::Tensor> _foreach_sqrt(at::TensorList tensors)
     }
 
     at::native::check_foreach_api_restrictions(tensors);
-    if (!at::native::can_use_fast_route(tensors) ||
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors) ||
         at::native::has_integral_tensor(tensors, true)) {
         return at::native::foreach_tensor_sqrt_slow(tensors);
     }
@@ -81,7 +81,7 @@ void _foreach_sqrt_(at::TensorList tensors)
     }
 
     at::native::check_foreach_api_restrictions(tensors);
-    if (!at::native::can_use_fast_route(tensors) ||
+    if (!op_plugin::npu_foreach_can_use_fast_route(tensors) ||
         at::native::has_integral_tensor(tensors, true)) {
         return at::native::foreach_tensor_sqrt_slow_(tensors);
     }
