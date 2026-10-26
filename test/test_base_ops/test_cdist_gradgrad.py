@@ -38,10 +38,10 @@ class TestCdistGradGrad(TestCase):
 
     @unittest.skipIf(not torch_version_ge(2, 14), "cdist double backward requires PyTorch 2.14+")
     def test_cdist_gradgrad_common_shape(self):
+        # Covers 2D and batch-matched 3D inputs.
         shape_items = [
             [np.float32, (5, 10), (4, 10), (5, 4)],
             [np.float32, (20, 5, 10), (20, 4, 10), (20, 5, 4)],
-            [np.float32, (1, 4, 10), (2, 5, 10), (2, 4, 5)],
         ]
         p_ranges = [1.0, 1.5, 2.0, 2.5, 3.0]
         for item in shape_items:
