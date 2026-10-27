@@ -137,7 +137,9 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool2d_with_indices(
     EXEC_NPU_CMD(aclnnMaxPool2dWithMask, self, kernel_sizes, strides, paddings, dilations, ceil_mode, output, indices);
   } else {
     indices_size = output_size;
-    indices = npu_preparation::apply_tensor_without_format(indices_size, self.options().dtype(at::kInt));
+    // indices is int64 on aclnn-only devices (Ascend950 and later), to align with PyTorch; int32 on other products
+    const at::ScalarType indices_dtype = c10_npu::IsAclnnOnly() ? at::kLong : at::kInt;
+    indices = npu_preparation::apply_tensor_without_format(indices_size, self.options().dtype(indices_dtype));
     EXEC_NPU_CMD(
         aclnnMaxPool2dWithIndices, self, kernel_sizes, strides, paddings, dilations, ceil_mode, output, indices);
   }
