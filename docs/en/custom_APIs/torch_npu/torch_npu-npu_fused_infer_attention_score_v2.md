@@ -853,7 +853,7 @@ tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 - `key, value`: Required. The type is `torch.int8`, and the NZ format is [blockNum, KV_N, D/32, blockSize, 32].
 - `inner_precise=1`: Required. Under the KV NZ format constraint, only the high-performance mode is supported.
 
-**Related constraints**: [GQA fake-quantization + KV NZ format constraints](#gqa-fake-quantization--kv-nz-format-constraints), [incremental inference constraints](#en-us_topic_0000001832267082_section_qs_eq1_constraint)
+**Related constraints**: [GQA fake-quantization + KV NZ format constraints](#en-us_topic_0000001832267082_section_gqa_nz_constraint), [incremental inference constraints](#en-us_topic_0000001832267082_section_qs_eq1_constraint)
 
 ```python
 import torch
@@ -1015,12 +1015,12 @@ print(out)
 
 **Scenario description**: The input is `torch.bfloat16` and the output is `torch.int8`. Except for the parameter names, this example is largely the same as the example of the same name for `torch_npu.npu_fused_infer_attention_score`.
 
-v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+**Key parameters**:
 
 - `quant_scale_out`: Required. For `torch.bfloat16` input, both `torch.float32` and `torch.bfloat16` are supported.
 - `quant_offset_out`: Optional. The type and shape are the same as those of scale. If not passed, the default is 0.
 
-softmax_scale = 1/math.sqrt(128.0)
+**Related constraints**: [General constraints](#general-constraints)
 
 ```python
 import torch

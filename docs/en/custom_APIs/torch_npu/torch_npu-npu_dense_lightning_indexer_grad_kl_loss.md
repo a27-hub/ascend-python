@@ -128,7 +128,7 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
 
 - The data types of the parameters query, key, query_index, and key_index must be the same.
 - When the parameter weights is not `torch.float32`, the data types of the parameters query, key, query_index, key_index, and weights must be the same.
-- Shape value constraints:
+- Shape value constraints
 
 | Item | Specification | Description |
 |-----------|------------|-----------------|
