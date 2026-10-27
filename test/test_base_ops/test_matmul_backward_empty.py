@@ -47,6 +47,22 @@ class TestMatmulBackwardEmpty(TestCase):
         self.assertEqual(actual, tuple(value.to(device) if enabled else None for value, enabled in zip(expected, mask)))
         self.assertEqual(tuple(value._version for value in inputs), versions)
 
+    @parametrize("jit_compile", [False, True])
+    @parametrize("mask", [(True, True), (True, False), (False, True), (False, False)])
+    def test_undefined_grad(self, device, jit_compile, mask):
+        self.assertNotEqual(os.environ.get("TORCH_NPU_USE_COMPATIBLE_IMPL"), "1")
+        self.assertNotIn("matmul_backward", os.environ.get("FORCE_ACLNN_OP_LIST", "").split(","))
+        previous_jit = not torch.npu.is_jit_compile_false()
+        option = torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT")
+        previous_format = option is not None and option.decode() == "enable"
+        self.addCleanup(torch.npu.set_compile_mode, jit_compile=previous_jit)
+        self.addCleanup(setattr, torch.npu.config, "allow_internal_format", previous_format)
+        torch.npu.set_compile_mode(jit_compile=jit_compile)
+        torch.npu.config.allow_internal_format = False
+        a = torch.randn((3, 5), device=device)
+        b = torch.randn((5, 7), device=device)
+        self.assertEqual(torch.ops.aten.matmul_backward.default(None, a, b, mask), (None, None))
+
 
 instantiate_device_type_tests(TestMatmulBackwardEmpty, globals(), only_for="npu")
 
