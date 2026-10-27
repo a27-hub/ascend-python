@@ -17,9 +17,18 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+
+namespace {
+// indices is int64 on Ascend950 (regbase), to align with PyTorch; int32 on other products
+bool is_regbase_soc() {
+  static const bool is_regbase = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+  return is_regbase;
+}
+} // namespace
 
 at::Tensor max_pool2d_with_indices_backward(
     const at::Tensor& grad_output,
@@ -33,7 +42,7 @@ at::Tensor max_pool2d_with_indices_backward(
 {
     at::Tensor grad_input;
     static auto maxpool2d_sc = at_npu::native::env::CheckCompatibleImpl();
-    if (!c10_npu::IsAclnnOnly() && !maxpool2d_sc) {
+    if (!is_regbase_soc() && !c10_npu::IsAclnnOnly() && !maxpool2d_sc) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward(grad_output, self, kernel_size,
                                                                   stride, padding, dilation, ceil_mode, indices));
@@ -66,7 +75,7 @@ at::Tensor& max_pool2d_with_indices_backward_out(
     at::Tensor& grad_input)
 {
     static auto maxpool2d_sc = at_npu::native::env::CheckCompatibleImpl();
-    if (!c10_npu::IsAclnnOnly() && !maxpool2d_sc) {
+    if (!is_regbase_soc() && !c10_npu::IsAclnnOnly() && !maxpool2d_sc) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward_out(grad_output, self, kernel_size, stride, padding,
                                                                       dilation, ceil_mode, indices, grad_input));
