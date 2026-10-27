@@ -594,7 +594,7 @@ This section describes common custom APIs, including tensor creation and computa
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_gating_top_k.md">torch_npu.npu_moe_gating_top_k</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Performs <code>sigmoid</code> computation on the input <code>x</code> during MoE computation, groups and sorts the computation results, and selects the top-k experts based on the group sorting results.</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Performs Sigmoid, Softmax, or SqrtSoftplus computation on the input <code>x</code> during MoE computation, groups and sorts the computation results, and selects the top-K experts based on the group sorting results. Both TopK mode and Hash mode are supported.</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_init_routing_v2.md">torch_npu.npu_moe_init_routing_v2</a></p>
