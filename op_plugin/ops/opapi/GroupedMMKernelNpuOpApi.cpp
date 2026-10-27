@@ -15,6 +15,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "ATen/native/GroupedMMUtils.h"
 
 namespace op_api {
 const static int64_t IN_NOT_SPLIT_OUT_SPLIT = 2;
@@ -25,9 +26,12 @@ const static int64_t ACT_TYPE_NONE = 0;
 const static int64_t GROUP_LIST_TYPE_CUMSUM = 0;
 using npu_preparation = at_npu::native::OpPreparation;
 
-// Execute aclnnGroupedMatmulV5 (with fallback to V4 if V5 is not available).
+// Execute aclnnGroupedMatmulV5.
 // All optional quantization/activation parameters are passed as empty TensorLists.
 // This mirrors how npu_grouped_matmul calls V5 — pure data forwarding, no scenario logic.
+// V5 availability is checked at the _grouped_mm entry point (with fallback to the native
+// at::mm_out loop). The TORCH_CHECK below is defensive — it should never trigger because
+// the entry point already handles the unavailable case before calling this function.
 static void exec_grouped_matmul_v5(
     const std::vector<at::Tensor>& x_vec,
     const std::vector<at::Tensor>& weight_vec,
@@ -55,19 +59,14 @@ static void exec_grouped_matmul_v5(
     auto tuning_config_real = at::IntArrayRef{};
 
     static const bool is_v5_available = check_aclnn_kernel_available("aclnnGroupedMatmulV5");
-    if (is_v5_available) {
-        EXEC_NPU_CMD(aclnnGroupedMatmulV5, x, weight, bias_real, scale_real, offset_real,
-            antiquant_scale_real, antiquant_offset_real, per_token_scale_real, group_list,
-            activation_input_real, activation_quant_scale_real, activation_quant_offset_real,
-            split_item, group_type, group_list_type_value, act_type_value, tuning_config_real,
-            result, act_out, dynamic_quant_scale_out);
-    } else {
-        EXEC_NPU_CMD(aclnnGroupedMatmulV4, x, weight, bias_real, scale_real, offset_real,
-            antiquant_scale_real, antiquant_offset_real, per_token_scale_real, group_list,
-            activation_input_real, activation_quant_scale_real, activation_quant_offset_real,
-            split_item, group_type, group_list_type_value, act_type_value,
-            result, act_out, dynamic_quant_scale_out);
-    }
+    TORCH_CHECK(is_v5_available,
+                "aclnnGroupedMatmulV5 is not available, please update CANN to a newer version.",
+                OPS_ERROR(ErrCode::INTERNAL));
+    EXEC_NPU_CMD(aclnnGroupedMatmulV5, x, weight, bias_real, scale_real, offset_real,
+        antiquant_scale_real, antiquant_offset_real, per_token_scale_real, group_list,
+        activation_input_real, activation_quant_scale_real, activation_quant_offset_real,
+        split_item, group_type, group_list_type_value, act_type_value, tuning_config_real,
+        result, act_out, dynamic_quant_scale_out);
 }
 
 // Convert offs from int32 to int64, ensure contiguous.
@@ -130,6 +129,28 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
                 OPS_ERROR(ErrCode::TYPE));
 
     auto options = mat_a.options().dtype(out_dtype_);
+
+    // Fallback: if aclnnGroupedMatmulV5 is unavailable (old CANN without V5),
+    // use the native small-operator tiling path (at::mm_out loop). This has D2H sync
+    // (offs.cpu()) and G kernel launches, so performance is poor, but it guarantees
+    // correctness instead of crashing. Pass the ORIGINAL mat_a/mat_b/offs (not the
+    // transposed x_vec/weight_vec) because the fallback handles all 4 scenarios itself.
+    static const bool is_v5_available_fallback = check_aclnn_kernel_available("aclnnGroupedMatmulV5");
+    if (!is_v5_available_fallback) {
+        std::vector<int64_t> out_shape;
+        if (a_is_2d && !b_is_2d) {
+            out_shape = {mat_a.size(0), mat_b.size(-1)};           // (M, N)
+        } else if (!a_is_2d && b_is_2d) {
+            out_shape = {mat_a.size(1), mat_b.size(-1)};           // (M, N)
+        } else if (a_is_2d && b_is_2d) {
+            out_shape = {offs->size(0), mat_a.size(0), mat_b.size(1)};  // (G, M, N)
+        } else {
+            out_shape = {mat_a.size(0), mat_a.size(1), mat_b.size(-1)}; // (G, M, N)
+        }
+        at::Tensor out = npu_preparation::apply_tensor_without_format(out_shape, options);
+        at::native::_grouped_mm_fallback(mat_a, mat_b, offs, bias, out_dtype, out);
+        return out;
+    }
 
     // 3D x 3D -> aclnnBatchMatMul (via at::bmm_out, NPU auto-dispatches)
     if (!a_is_2d && !b_is_2d) {
