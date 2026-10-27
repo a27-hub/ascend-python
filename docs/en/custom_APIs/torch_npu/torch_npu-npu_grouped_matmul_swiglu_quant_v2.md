@@ -208,7 +208,7 @@
          Q_i = quantize\_to\_element\_format(S_i/Q\_scale), \space i\space from\space 1\space to\space blocksize
          $$
 
-         where $emax$ denotes the exponent of the maximum normal value for the corresponding data type:
+         where $emax$ denotes the exponent of the maximum normal value for the corresponding data type.
 
          |   DataType    | emax |
          | :-----------: | :--: |
@@ -322,7 +322,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **`*`**: Variables before `*` are position-dependent and must be passed in order; variables after it are optional keyword arguments and can be passed in any order using key-value pairs. If not specified, their default values are used.
 
-- **`group_list`** (`Tensor`): Required. Number of tokens in each group involved in the computation, $groupList$ in the formulas. This parameter must be 1D with shape `[e]`, and its length must be identical to the first axis dimension of `weight`. The data type can be `torch.int64`. The data layout can be ND. Non-contiguous tensors are supported.
+- **`group_list`** (`Tensor`): **Required.** Number of tokens in each group involved in the computation. The `shape` can be 1D `[e]`. The data type can be `torch.int64`, and the data layout can be ND. Non-contiguous tensors are supported. When `group_list_type` is `0`, the last value must not be greater than the first dimension of `x`. When `group_list_type` is `1`, the sum of all values must not be greater than the first dimension of `x`. The values in `group_list` constrain the valid part of the output data. Parts not specified in `group_list` are not updated.
 
 - **`smooth_scale`** (`Tensor`): Optional. Smooth scaling factor, $smoothScale$ in the formulas. The data type can be `torch.float32`. The data layout can be ND. This parameter must be provided only in A4W4 scenarios, and its first axis length must be identical to the first axis dimension of `weight`. The shape of this parameter is `(E, N/2)` or `(E,)`. When shape `(E,)` is used, broadcast multiplication is applied. In other scenarios, the default value is `None`.
 
