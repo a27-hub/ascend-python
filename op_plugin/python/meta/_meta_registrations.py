@@ -182,6 +182,33 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
         return (self_grad, other_grad)
 
 
+def _torch_version_at_least(major, minor):
+    version = torch.__version__.split("+")[0].split("a")[0].split("b")[0].split("rc")[0]
+    parts = version.split(".")
+    try:
+        return (int(parts[0]), int(parts[1])) >= (major, minor)
+    except (ValueError, IndexError):
+        return False
+
+
+# aten::_fused_rms_norm was introduced in torch 2.9, skip meta registration on
+# older versions where the op does not exist.
+if _torch_version_at_least(2, 9):
+    @impl(m_aten, "_fused_rms_norm_backward")
+    def _fused_rms_norm_backward_meta(grad_out, input, normalized_shape, rstd, weight, output_mask):
+        dx = torch.empty_like(input) if output_mask[0] else None
+        dgamma = None
+        if output_mask[1]:
+            if weight is not None:
+                dgamma = torch.empty_like(weight)
+            else:
+                norm_size = 1
+                for size in normalized_shape:
+                    norm_size *= size
+                dgamma = torch.empty([norm_size], dtype=input.dtype, device=input.device)
+        return dx, dgamma
+
+
 @impl(m, "npu_mhc_pre")
 def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0, inner_precise=0):
     torch._check(
