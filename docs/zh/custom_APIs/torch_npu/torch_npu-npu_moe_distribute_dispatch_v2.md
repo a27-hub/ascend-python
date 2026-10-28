@@ -276,8 +276,11 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     <!-- end id7 -->
 
 - **ep\_rank\_id**（`int`）：**必选参数**，EP通信域本卡ID，取值范围\[0, ep\_world\_size\)，同一个EP通信域中各卡的`ep_rank_id`不重复。
-- **moe\_expert\_num**（`int`）：**必选参数**，MoE专家数量，取值范围\[1, 1024\]，并且满足条件moe\_expert\_num\%\(ep\_world\_size - shared\_expert\_rank\_num\)=0。
+- **moe\_expert\_num**（`int`）：**必选参数**，MoE专家数量，并且满足条件moe\_expert\_num\%\(ep\_world\_size - shared\_expert\_rank\_num\)=0。
 
+    <!-- npu="910b,A3" id76 -->
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：取值范围为\[1, 1024\]。
+    <!-- end id76 -->
     <!-- npu="A3" id8 -->
     - <term>Atlas A3系列产品</term>：`comm_alg`设置为"hierarchy"时，取值范围为\[1, 512\]。
     <!-- end id8 -->
