@@ -168,7 +168,7 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
     if (!a_is_2d && !b_is_2d) {
         auto output_size = op_infer::array_to_small_vector({mat_a.size(0), mat_a.size(1), mat_b.size(-1)});
         at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
-        at::bmm_out(out, mat_a, mat_b);
+        at::bmm_out(mat_a, mat_b, out);
         return out;
     }
 
