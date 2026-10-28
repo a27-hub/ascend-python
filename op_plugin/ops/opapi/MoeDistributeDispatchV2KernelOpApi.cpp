@@ -53,33 +53,6 @@ static bool check_v3_param(
   return false;
 }
 
-static int64_t get_assist_info_numel(
-    int64_t a,
-    int64_t bs,
-    int64_t k,
-    int64_t global_bs,
-    int64_t ep_world_size,
-    bool is_roce) {
-  if (!is_roce) {
-    return std::max(bs * k, a * 128);
-  }
-  constexpr int64_t triple_elements_per_row = 3;
-  constexpr int64_t bitmap_token_alignment = 16;
-  constexpr int64_t uint16_elements_per_int32 = sizeof(int32_t) / sizeof(uint16_t);
-  constexpr int64_t shared_count_elements_per_server = 1;
-  const int64_t tokens_per_rank = global_bs / ep_world_size;
-  const int64_t aligned_tokens_per_rank =
-      (tokens_per_rank + bitmap_token_alignment - 1) /
-      bitmap_token_alignment * bitmap_token_alignment;
-  const int64_t server_info_uint16_elements =
-      ep_world_size *
-      (aligned_tokens_per_rank + shared_count_elements_per_server);
-  const int64_t server_info_int32_elements =
-      (server_info_uint16_elements + uint16_elements_per_int32 - 1) /
-      uint16_elements_per_int32;
-  return a * triple_elements_per_row + server_info_int32_elements;
-}
-
 tensor_list npu_moe_distribute_dispatch_v2(
     const at::Tensor& x,
     const at::Tensor& expert_ids,
@@ -265,14 +238,9 @@ tensor_list npu_moe_distribute_dispatch_v2(
       {ep_recv_cnt_num}, x.options().dtype(at::kInt));
   at::Tensor tp_recv_counts = npu_preparation::apply_tensor_without_format(
       {tp_world_size}, x.options().dtype(at::kInt));
-  const bool is_roce =
-      c10_npu::GetSocVersion() == c10_npu::SocVersion::Ascend950 &&
-      std::string(comm_alg) == "hierarchy";
-  const int64_t assist_info_numel = get_assist_info_numel(
-      a, bs, k, global_bs_real, ep_world_size, is_roce);
   at::Tensor assist_info_forcombine =
       npu_preparation::apply_tensor_without_format(
-          {assist_info_numel}, x.options().dtype(at::kInt));
+          {std::max(bs * k, a * 128)}, x.options().dtype(at::kInt));
 
   // a2分层方案
   at::Tensor expand_scales = npu_preparation::apply_tensor_without_format(
