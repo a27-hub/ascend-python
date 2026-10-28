@@ -32,7 +32,7 @@
 
 TorchNPU 通过 `third_party/op-plugin` 子模块集成本仓，将算子适配代码编译到 `torch_npu` 软件包中。OpPlugin 的编译和运行依赖 TorchNPU；使用算子时，安装配套的 TorchNPU 即可，无需单独安装 OpPlugin 软件包。
 
-> <sub>关于昇腾NPU：昇腾NPU（Neural Processing Unit，神经网络处理器）是华为开发的系列AI加速器。</sub>
+<p style="color: #6b7280;"><sub>关于昇腾NPU：昇腾NPU（Neural Processing Unit，神经网络处理器）是华为开发的系列AI加速器。</sub></p>
 
 ## 核心功能
 
