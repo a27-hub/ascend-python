@@ -139,13 +139,7 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
 
     auto options = mat_a.options().dtype(out_dtype_);
 
-    // Fallback: if aclnnGroupedMatmulV5 is unavailable (old CANN without V5),
-    // use the native small-operator tiling path (at::mm_out loop). This has D2H sync
-    // (offs.cpu()) and G kernel launches, so performance is poor, but it guarantees
-    // correctness instead of crashing. Pass the ORIGINAL mat_a/mat_b/offs (not the
-    // transposed x_vec/weight_vec) because the fallback handles all 4 scenarios itself.
-    // NOTE: ATen/native/GroupedMMUtils.h only exists in PyTorch 2.8+.
-    //       On 2.7.x, fallback is unavailable — V5 must be present to run.
+    // Fallback: if aclnnGroupedMatmulV5 is unavailable
     static const bool is_v5_available_fallback = check_aclnn_kernel_available("aclnnGroupedMatmulV5");
     if (!is_v5_available_fallback) {
 #if HAS_GROUPED_MM_FALLBACK
