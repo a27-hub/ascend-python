@@ -4152,11 +4152,10 @@ def quant_matmul_shape_check(*args):
         or (is_a8w4 and not transpose_x2)
     )
     x2_n_dim = x2_n_raw * x2_unpack_factor if should_unpack_weight else x2_n_raw
-    # A8W4(F8F4) T-CG x2 两种视图: ND 转置视图 (K/2, N) 沿 K 打包、N 不解包;
-    # NZ 视图 (K, N/2) K 不打包、N 按 2 解包。fake 下拿不到 format, 按 K 维关系区分:
-    # x1_k == x2_k 即 NZ, x1_k == 2*x2_k 即 ND
-    is_a8w4_float_nz = is_a8w4_float and x2.dtype != torch.float32 and x1_k_dim == x2_k_dim
-    if is_a8w4_float_nz:
+    # T-CG x2 按转置状态分流(对应 C++ 侧 trans_x2; fake 下拿不到 stride/format, 按 K 维关系判):
+    # 非转置 (K, N/2) 沿 N 打包 → x1_k == x2_k; 转置视图 (K/2, N) 沿 K 打包 → x1_k == 2*x2_k
+    is_tcg_non_trans = is_a8w4_float and x2.dtype != torch.float32 and x1_k_dim == x2_k_dim
+    if is_tcg_non_trans:
         x2_n_dim = x2_n_raw * x2_unpack_factor
     if is_mxfp4_valid:
         x1_m_dim = x1.size(x1_dim_num - 2) if not transpose_x1 else x1.size(x1_dim_num - 2) * x1_unpack_factor
@@ -4186,8 +4185,8 @@ def quant_matmul_shape_check(*args):
                     lambda: "a8w4 NZ t-cg quant only support x1 not transpose and x2 not transpose and k dim of x1 and x2 need be same." + ops_error(ErrCode.VALUE),
                 )
         else:
-            # ND 转置视图 (K/2, N): x1_k = 2 * x2_k; NZ 视图 (K, N/2): x1_k = x2_k
-            expected_x2_k_dim = x2_k_dim if is_a8w4_float_nz else x2_k_dim * x2_unpack_factor
+            # 非转置 (K, N/2): x1_k == x2_k; 转置视图 (K/2, N): x1_k = 2 * x2_k
+            expected_x2_k_dim = x2_k_dim if is_tcg_non_trans else x2_k_dim * x2_unpack_factor
             torch._check(
                 x1_k_dim == expected_x2_k_dim,
                 lambda: "a8w4_float k dim mismatch: ND transposed view requires k dim of x1 to be 2 multiple of "
@@ -4619,16 +4618,17 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
         else:
             dimm = x1.size(x1.dim() - 2)
             transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
+            # T-CG 按转置状态分流: 非转置 (K, N/2) K 不打包故 x1_k == x2.size(-2), N 需解包;
+            # 转置视图 (K/2, N) 的 N 不打包, 走默认分支
+            tcg_non_trans = (is_a8w4_float and x2.dtype != torch.float32 and
+                             x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2))
 
             dimn = x2.size(x2.dim() - 1)
             if (is_a4w4 and not transpose_x2):
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
             elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
-            elif (is_a8w4_float and x2.dtype != torch.float32 and
-                  x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)):
-                # T-CG NZ 视图 (K, N/2): K 未打包故 x1_k == x2.size(-2), N 按 2 打包需解包;
-                # ND 转置视图 (K/2, N) 的 N 不打包, 走默认分支
+            elif tcg_non_trans:
                 dimn = x2.size(x2.dim() - 1) * x2_unpack_factor
 
             dim_list.append(dimm)
