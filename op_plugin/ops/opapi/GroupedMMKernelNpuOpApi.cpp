@@ -15,7 +15,16 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#if defined(__has_include)
+#if __has_include("ATen/native/GroupedMMUtils.h")
 #include "ATen/native/GroupedMMUtils.h"
+#define HAS_GROUPED_MM_FALLBACK 1
+#else
+#define HAS_GROUPED_MM_FALLBACK 0
+#endif
+#else
+#define HAS_GROUPED_MM_FALLBACK 0
+#endif
 
 namespace op_api {
 const static int64_t IN_NOT_SPLIT_OUT_SPLIT = 2;
@@ -135,8 +144,11 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
     // (offs.cpu()) and G kernel launches, so performance is poor, but it guarantees
     // correctness instead of crashing. Pass the ORIGINAL mat_a/mat_b/offs (not the
     // transposed x_vec/weight_vec) because the fallback handles all 4 scenarios itself.
+    // NOTE: ATen/native/GroupedMMUtils.h only exists in PyTorch 2.8+.
+    //       On 2.7.x, fallback is unavailable — V5 must be present to run.
     static const bool is_v5_available_fallback = check_aclnn_kernel_available("aclnnGroupedMatmulV5");
     if (!is_v5_available_fallback) {
+#if HAS_GROUPED_MM_FALLBACK
         std::vector<int64_t> out_shape;
         if (a_is_2d && !b_is_2d) {
             out_shape = {mat_a.size(0), mat_b.size(-1)};           // (M, N)
@@ -150,6 +162,12 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
         at::Tensor out = npu_preparation::apply_tensor_without_format(out_shape, options);
         at::native::_grouped_mm_fallback(mat_a, mat_b, offs, bias, out_dtype, out);
         return out;
+#else
+        TORCH_CHECK(false,
+            "aclnnGroupedMatmulV5 is not available, and native _grouped_mm_fallback "
+            "requires PyTorch >= 2.9. Please update CANN to support V5, or upgrade PyTorch.",
+            OPS_ERROR(ErrCode::INTERNAL));
+#endif
     }
 
     // 3D x 3D -> aclnnBatchMatMul (via at::bmm_out, NPU auto-dispatches)
