@@ -381,7 +381,8 @@ class TestConjPhysicalMemory(TestCase):
         x = complex_randn(16384, 16384)                        # 4GB
         y = torch.conj_physical(x)
         torch.npu.synchronize()
-        self.assertTrue(eq(y.cpu()[0, 0], torch.conj_physical(x.cpu()[0, 0])))
+        # 设备侧先取标量再落 host：整块 .cpu() 会把 4GB 大张量搬去 host，只为比较一个元素
+        self.assertTrue(eq(y[0, 0].cpu(), torch.conj_physical(x[0, 0].cpu())))
         del y, x
         torch.npu.empty_cache()
 
