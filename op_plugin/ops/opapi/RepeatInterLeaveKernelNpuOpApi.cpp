@@ -83,7 +83,10 @@ at::Tensor repeat_interleave_symint(
     c10::optional<int64_t> dim,
     c10::optional<int64_t> output_size) {
   int64_t repeats_int = repeats.expect_int();
-  if (dim.has_value()) {
+  static const bool is_with_dim_available = check_aclnn_kernel_available("aclnnRepeatInterleaveIntWithDim");
+  const bool use_with_dim = dim.has_value() || is_with_dim_available;
+
+  if (use_with_dim) {
     DO_COMPATIBILITY(
         aclnnRepeatInterleaveIntWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
   } else {
@@ -100,9 +103,10 @@ at::Tensor repeat_interleave_symint(
   int64_t output_size_expected = output_shape[cur_dim];
   at::Tensor result = apply_result_tensor(self, output_shape, dim, output_size);
 
-  if (dim.has_value()) {
+  if (use_with_dim) {
+    at::Tensor self_input = dim.has_value() ? self : self.reshape({-1});
     int64_t real_dim = dim.value_or(0);
-    EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self, repeats_int, real_dim, output_size_expected, result);
+    EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self_input, repeats_int, real_dim, output_size_expected, result);
   } else {
     EXEC_NPU_CMD(aclnnRepeatInterleaveInt, self, repeats_int, output_size_expected, result);
   }
@@ -149,7 +153,10 @@ at::Tensor repeat_interleave_symint(
     c10::optional<int64_t> dim,
     c10::optional<c10::SymInt> output_size) {
   int64_t repeats_int = repeats.expect_int();
-  if (dim.has_value()) {
+  static const bool is_with_dim_available = check_aclnn_kernel_available("aclnnRepeatInterleaveIntWithDim");
+  const bool use_with_dim = dim.has_value() || is_with_dim_available;
+
+  if (use_with_dim) {
     DO_COMPATIBILITY(
         aclnnRepeatInterleaveIntWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
   } else {
@@ -171,9 +178,10 @@ at::Tensor repeat_interleave_symint(
   int64_t output_size_expected = output_shape[cur_dim];
   at::Tensor result = apply_result_tensor(self, output_shape, dim, _output_size);
 
-  if (dim.has_value()) {
+  if (use_with_dim) {
+    at::Tensor self_input = dim.has_value() ? self : self.reshape({-1});
     int64_t real_dim = dim.value_or(0);
-    EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self, repeats_int, real_dim, output_size_expected, result);
+    EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self_input, repeats_int, real_dim, output_size_expected, result);
   } else {
     EXEC_NPU_CMD(aclnnRepeatInterleaveInt, self, repeats_int, output_size_expected, result);
   }
