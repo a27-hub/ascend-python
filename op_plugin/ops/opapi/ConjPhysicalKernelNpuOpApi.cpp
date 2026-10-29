@@ -48,8 +48,11 @@ using npu_preparation = at_npu::native::OpPreparation;
 // `_conj_physical`/`conj_physical_` 有 autograd 导数（grad.conj_physical()，
 // 自 torch 1.13 起）。若照常注册功能式 kernel，会绕过官方 composite→_conj_physical
 // 的 autograd 节点，使 NPU 功能式**不可微**（与 GPU/CPU 官方偏离）。因此功能式在
-// NPU 走官方 composite：实数别名、is_conj 物化由 composite 处理，复数经
-// `_conj_physical` 主体调用 `at::conj_physical_out` → 本文件的 .out kernel；
+// NPU 走官方 composite：实数别名；复数输入按 `_conj_physical` 的两分支处理——
+//   - is_conj 输入：`self.conj().clone()` 物化底层原值（profiler 实测 aclnnInplaceCopy，
+//     **不进本文件 kernel**）；
+//   - 非 is_conj 复数：`empty_like(self) + conj_physical_out(result, self)`
+//     → 本文件的 .out kernel（profiler 实测 aclnnMul，见 test_conj_physical_no_cpu_fallback）。
 // .out kernel 的 fake/meta 短路同样承接 composite 功能式的图模式推导。
 // 本文件仅实现 .out 与 in-place 两个入口。
 
@@ -62,9 +65,11 @@ namespace {
 // FakeTensorMode（"Please convert all Tensors to FakeTensors first"）。
 // 因此 fake/meta 输入直接返回 shape/dtype 正确的空张量，不落设备 kernel。
 bool is_fake_or_meta(const at::Tensor& t) {
-    auto ks = t.key_set();
-    return ks.has_all(c10::DispatchKeySet(c10::BackendComponent::MetaBit)) ||
-        ks.has_all(c10::DispatchKeySet(c10::DispatchKey::Python)) || t.is_meta();
+    // 只认 Meta/FakeTensor：FakeTensor 的 is_meta() 为 True（底层是 Meta 实现）。
+    // 不能用 DispatchKey::Python 作判据——Python 键是所有带 __torch_dispatch__ 的
+    // Python Tensor 子类（自定义 subclass、FunctionalTensor、DTensor 等）都携带的，
+    // 真实 NPU 复数子类会被误判为 fake 而“跳过计算直接返回未初始化缓冲”（静默错误）。
+    return t.is_meta();
 }
 
 at::Tensor imag_flip_mask(const at::Tensor& t) {
