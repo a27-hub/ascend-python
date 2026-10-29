@@ -4,7 +4,9 @@ import time
 import torch
 import torch_npu
 
+from torch._subclasses.fake_tensor import FakeTensor, FakeTensorMode
 from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import check_operators_in_prof
 
 
 def reset_mem():
@@ -174,28 +176,38 @@ class TestConjPhysicalNPU(TestCase):
             y.sum().backward()
 
     def test_conj_physical_no_cpu_fallback(self):
-        # 不触发 CPU fallback：结果设备仍为 npu，且与 GPU/CPU 参考一致
+        # 不触发 CPU fallback：断言走原生 aclnnMul 路径（未落到 real/imag/neg/complex
+        # composite 回退）。仅查 device.type 不足证——composite 结果也可贴 npu 设备；
+        # 用 profiler 命中 NPU kernel 事件才确凿（仓库既有 no-fallback 写法，test_viewcopy.py）。
         torch.manual_seed(7)
         x = complex_randn(256)
-        y = torch.conj_physical(x)
+        with torch.autograd.profiler.profile(use_device='npu') as prof:
+            y = torch.conj_physical(x)
+            torch.npu.synchronize()
         self.assertEqual(y.device.type, 'npu')
         self.assertTrue(eq(y.cpu(), torch.conj_physical(x.cpu())))
+        # 方案D kernel = view_as_real + aclnnMul（mask 广播乘），aclnnMul 即原生路径铁证；
+        # 若 CPU 回退（real/imag/neg/complex），profiler 不会出现 aclnnMul。
+        self.assertTrue(
+            check_operators_in_prof(['aclnnMul'], prof),
+            "conj_physical fell back to CPU composite: no aclnnMul kernel observed",
+        )
 
     def test_conj_physical_compile(self):
-        # 图模式：torch.compile / FX 可编译入图，Meta 推导正确，结果与 eager 一致
-        # （官方 _refs 已含 conj_physical 分解，分解后的 real/imag/neg/complex 链路在 NPU 已具备）
+        # 图模式：torch.compile（NPU 官方后端 torchair）可编译入图，结果与 eager 一致。
+        # 仅当 torchair 未安装时跳过——NPU 图模式在该环境属已知不支持；
+        # 其它任何异常（Meta/FX 推导、后端报错）都必须显式抛出，防止图模式失败被静默掩盖。
         if not hasattr(torch, 'compile'):
             return
+        try:
+            import torchair  # noqa: F401
+        except ImportError:
+            return  # 无 torchair：NPU 图模式不可用（已知不支持场景）
         torch.manual_seed(5)
         x = complex_randn(64)
         ref = torch.conj_physical(x)
-        try:
-            compiled = torch.compile(torch.conj_physical, fullgraph=True)
-            y = compiled(x)
-        except Exception:  # noqa: BLE001
-            # 图模式链路（torchair/GE 或 inductor 分解）在部分环境不可用/不支持时跳过，
-            # 不阻塞 eager 基本功能用例；编译可用性由 P3 阶段专项验证
-            return
+        compiled = torch.compile(torch.conj_physical, fullgraph=True)
+        y = compiled(x)
         self.assertTrue(eq(y, ref))
 
 
@@ -329,6 +341,70 @@ class TestConjPhysicalDeterministic(TestCase):
         self.assertTrue(eq(r2, ref))
 
 
+class TestConjPhysicalMeta(TestCase):
+    """Meta/FX 专项用例 —— 守护 pytorch-npu 的 Meta 注册与 kernel 的 fake-or-meta 短路：
+
+    torch_npu 的 opapi 算子在 FakeTensorMode / dynamo fake pass 下 dispatch 直达原生
+    kernel（Meta 注册不拦截 NPU fake，实测 py_impl(Meta) 不被调用），因此 kernel 自身
+    必须对 fake 输入短路、返回 shape/dtype 正确的空张量（对齐 OneHotKernelNpuOpApi 约定）。
+    本组用例在 NPU fake 张量上验证 functional/out/inplace 三态及非连续 stride，守护
+    图模式 shape 推导不回归（不落设备 kernel、不物化真实 mask）。"""
+
+    def _make_complex_fake(self, *size, device='npu', dtype=torch.complex64):
+        # FakeTensorMode 上下文内构造 NPU device 的 fake complex 张量
+        ctype = torch.float32 if dtype == torch.complex64 else torch.float64
+        return torch.complex(torch.randn(*size, dtype=ctype, device=device),
+                             torch.randn(*size, dtype=ctype, device=device))
+
+    def test_meta_functional(self):
+        with FakeTensorMode():
+            x = self._make_complex_fake(16)
+            y = torch.conj_physical(x)
+        self.assertIsInstance(y, FakeTensor)
+        self.assertEqual(y.shape, torch.Size([16]))
+        self.assertEqual(y.dtype, torch.complex64)
+        self.assertEqual(y.device.type, 'npu')
+        self.assertFalse(y.is_conj())
+
+    def test_meta_real_alias(self):
+        with FakeTensorMode():
+            x = torch.randn(16, device='npu')
+            y = torch.conj_physical(x)
+        self.assertTrue(y is x)                       # 实数功能式 = 别名（与真实路径一致）
+
+    def test_meta_out(self):
+        with FakeTensorMode():
+            x = self._make_complex_fake(8)
+            out = torch.empty_like(x)
+            y = torch.conj_physical(x, out=out)
+        self.assertTrue(y is out)                     # .out：结果复用 out 缓冲
+        self.assertEqual(y.shape, torch.Size([8]))
+
+    def test_meta_inplace(self):
+        with FakeTensorMode():
+            x = self._make_complex_fake(8)
+            r = x.conj_physical_()
+        self.assertTrue(r is x)                       # 原地：共享 storage
+
+    def test_meta_noncontiguous(self):
+        # 非连续（转置，stride 反序）输入：Meta 推导不依赖连续性
+        with FakeTensorMode():
+            x = self._make_complex_fake(4, 8)
+            xt = x.t()
+            self.assertFalse(xt.is_contiguous())
+            y = torch.conj_physical(xt)
+        self.assertEqual(y.shape, torch.Size([8, 4]))
+
+    def test_meta_is_conj_input(self):
+        # is_conj 输入：功能式输出非 conj（物化为底层原值，与真实路径一致）
+        with FakeTensorMode():
+            x = self._make_complex_fake(8)
+            xc = x.conj()
+            self.assertTrue(xc.is_conj())
+            y = torch.conj_physical(xc)
+        self.assertFalse(y.is_conj())
+
+
 @unittest.skipUnless(torch.cuda.is_available(), "CUDA is not available")
 class TestConjPhysicalGpuNpuCompare(TestCase):
     """与 GPU 基线对比 —— 精度逐位一致、吞吐/时延不低于阈值（“不恶化”）。"""
@@ -341,9 +417,11 @@ class TestConjPhysicalGpuNpuCompare(TestCase):
         self.assertTrue(eq(y_npu.cpu(), y_cuda.cpu()))
 
     def test_perf_gpu_npu_throughput(self):
+        # 吞吐/时延对比（实测记录，验收阈值见 Spec §8.4）：断言 NPU ≥ CUDA（不恶化）。
         # 有效带宽按“读+写”计：complex64 每元素 8B 读 + 8B 写 = 16B/元素。
-        # 方案C：copy（16B）+ 虚部原位取负（8B）= 24B/元素 → 理论 ≥66% GPU 吞吐
-        sizes = [(1024, 1024), (2048, 2048)]
+        # 方案D：mask 广播乘原位/直达输出，仅读+写 = 16B/元素 → 理论 100% GPU 吞吐
+        sizes = [(1024, 1024), (2048, 2048), (4096, 4096)]
+        throughput = {}
         for size in sizes:
             xc = complex_randn(*size, device='cuda')
             xn = complex_randn(*size, device='npu')
@@ -357,7 +435,13 @@ class TestConjPhysicalGpuNpuCompare(TestCase):
                 (torch.cuda.synchronize() if dev == 'cuda' else torch.npu.synchronize())
                 dt = time.perf_counter() - t0
                 gbps = (50 * size[0] * size[1] * 16) / dt / 1e9   # 16B = 读8B + 写8B
+                throughput[(dev, size)] = gbps
                 print(f"{dev} {size}: {gbps:.2f} GB/s")
+            self.assertGreaterEqual(
+                throughput[('npu', size)],
+                throughput[('cuda', size)],
+                msg=f"NPU throughput is below the GPU baseline for {size}",
+            )
 
 
 if __name__ == "__main__":

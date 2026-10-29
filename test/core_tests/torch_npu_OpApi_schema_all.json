@@ -2332,6 +2332,15 @@
   "func: complex.out(Tensor real, Tensor imag, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
   },
+  "func: conj_physical(Tensor self) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: conj_physical.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },
+  "func: conj_physical_(Tensor(a!) self) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },
   "func: channel_shuffle(Tensor self, int groups) -> Tensor": {
     "version": ["all_version"]
   },

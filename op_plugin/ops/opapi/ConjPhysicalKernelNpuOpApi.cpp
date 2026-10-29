@@ -43,6 +43,18 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 
+// FakeTensor/图模式 shape 推导短路（对齐 OneHotKernelNpuOpApi 约定）：
+// torch_npu 的 opapi 算子在 FakeTensorMode / dynamo fake pass 下，dispatch 会直达
+// 原生 kernel（Meta 注册并不走这条路径，实测 NPU fake 下 py_impl(Meta) 不被调用）。
+// 若 kernel 在此场景下照常运行，本实现会物化真实 mask（at::tensor）破坏
+// FakeTensorMode（"Please convert all Tensors to FakeTensors first"）。
+// 因此 fake/meta 输入直接返回 shape/dtype 正确的空张量，不落设备 kernel。
+bool is_fake_or_meta(const at::Tensor& t) {
+    auto ks = t.key_set();
+    return ks.has_all(c10::DispatchKeySet(c10::BackendComponent::MetaBit)) ||
+        ks.has_all(c10::DispatchKeySet(c10::DispatchKey::Python)) || t.is_meta();
+}
+
 at::Tensor imag_flip_mask(const at::Tensor& t) {
     // mask dtype 跟随 view_as_real 的实类型（complex64→float32、complex128→float64）
     at::Tensor sr = at::view_as_real(t);
@@ -68,6 +80,17 @@ void conj_flip_inplace(at::Tensor& physical) {
 }  // namespace
 
 at::Tensor& conj_physical_out(const at::Tensor& self, at::Tensor& result) {
+    // Fake/meta 输入：复用/resize out 缓冲返回，不落设备 kernel（见 is_fake_or_meta 注释）。
+    // 实数 .out 语义（拷贝）也在此表达：resize_as_ + copy_（fake-safe）。
+    if (is_fake_or_meta(self) || is_fake_or_meta(result)) {
+        if (!self.is_complex()) {
+            result.resize_as_(self);
+            result.copy_(self);
+            return result;
+        }
+        result.resize_as_(self);
+        return result;
+    }
     // 官方 conj_physical 无 autograd 公式（不可微）。no_grad 守卫保证内部
     // mul/copy 不因 self 带 requires_grad 触发 "out=... AD" 报错，且结果不带
     // grad_fn —— 与 GPU/CPU 一致：错误推迟到结果上的 backward() 才抛。
@@ -103,6 +126,14 @@ at::Tensor& conj_physical_out(const at::Tensor& self, at::Tensor& result) {
 }
 
 at::Tensor conj_physical(const at::Tensor& self) {
+    // Fake/meta 输入：返回 shape/dtype 正确的空张量（连续、非 conj、不落 kernel），
+    // 语义与真实路径一致：实数=别名、is_conj=底层原值、复数=连续输出。
+    if (is_fake_or_meta(self)) {
+        if (!self.is_complex()) {
+            return self;
+        }
+        return at::empty(self.sizes(), self.options());
+    }
     // 官方 conj_physical 不可微：no_grad 守卫（同 conj_physical_out 注释）。
     // 实数输入功能式仍为别名返回（对齐官方 composite conj_physical）。
     at::NoGradGuard guard;
@@ -119,6 +150,10 @@ at::Tensor conj_physical(const at::Tensor& self) {
 }
 
 at::Tensor& conj_physical_(at::Tensor& self) {
+    // Fake/meta 输入：原地无实际写入，返回 self 即可（shape/别名不变）。
+    if (is_fake_or_meta(self)) {
+        return self;
+    }
     // 原地实数：no-op（对齐官方 conj_physical_）
     if (!self.is_complex()) {
         return self;
