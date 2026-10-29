@@ -181,7 +181,7 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
   - 支持空Tensor场景：m和n可以为空，k不可为空，且需满足以下条件：m为空、k不为空、n不为空；m不为空、k不为空、n为空；m为空、k不为空、n为空。
   - 当x1、x2数据类型为`torch_npu.float4_e2m1fn_x2`时，x2矩阵支持转置/不转置场景，x1矩阵只支持不转置场景，k轴需要为偶数，且当x2矩阵非转置时，n轴也需要为偶数。
   - 当group_size取值为549764202624时，bias必须为`None`。
-  - comm_mode为`"ccu"`时仅支持单机UB域内互联，`"ai_cpu"`可支持跨机UB域内互联；单个通信域内allgather(x1)集合通信数据总量不能超过63*256MB，集合通信数据总量计算方式为：m \* k \* sizeof(x1_dtype) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
+  - comm_mode为`"ccu"`时仅支持单机UB域内互联，`"ai_cpu"`可支持跨机UB域内互联；使用`"ccu"`通信引擎时，单个通信域内allgather(x1)集合通信数据总量不能超过63*256MB，集合通信数据总量计算方式为：m \* k \* sizeof(x1_dtype) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 <!-- end id19 -->
 <!-- npu="A3,910b" id20 -->
 - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
@@ -253,6 +253,58 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
     torch.Size([128, 512]) torch.float16
     ```
 
+- 单算子模式调用（MX量化）
+
+    ```python
+    import torch
+    import torch_npu
+    import torch.distributed as dist
+    import torch.multiprocessing as mp
+    import math
+    def run_npu_all_gather_quant_mm(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype):
+        torch_npu.npu.set_device(rank)
+        init_method = 'tcp://' + master_ip + ':' + master_port
+        dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
+        from torch.distributed.distributed_c10d import _get_default_group
+        default_pg = _get_default_group()
+        if torch.__version__ > '2.0.1':
+            hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
+        else:
+            hcomm_info = default_pg.get_hccl_comm_name(rank)
+
+        single_shape = [x1_shape[0] // world_size, x1_shape[1]]
+        m_rank, k = single_shape
+        n = x2_shape[1]
+        self_t = torch.randn(single_shape).to(dtype).npu()
+        x2 = torch.randn(x2_shape).to(dtype).npu()
+        # mx场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceilDiv(k, 64), 2)、(ceilDiv(k, 64), n, 2)
+        x1_scale = torch.rand((m_rank, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
+        x2_scale = torch.rand((math.ceil(k / 64), n, 2)).to(torch.float8_e8m0fnu).npu()
+        y, gather_out, amax = torch_npu.npu_all_gather_quant_mm(
+            self_t, x2, hcomm_info, world_size, bias=None, x1_scale=x1_scale, x2_scale=x2_scale,
+            gather_output=True, y_dtype=torch.float16)
+        print(y.shape, y.dtype)
+        print(gather_out.shape, gather_out.dtype)
+
+    if __name__ == "__main__":
+        worksize = 2
+        master_ip = '127.0.0.1'
+        master_port = '50001'
+        x1_shape = [64, 256]
+        x2_shape = [256, 128]
+        dtype = torch.float8_e4m3fn
+        mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
+    ```
+
+    输出如下所示
+
+    ```text
+    torch.Size([64, 128]) torch.float16
+    torch.Size([64, 256]) torch.float8_e4m3fn
+    torch.Size([64, 128]) torch.float16
+    torch.Size([64, 256]) torch.float8_e4m3fn
+    ```
+
 - 图模式调用
 
     ```python
@@ -270,10 +322,10 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
             return y, gather_out
     def define_model(model, graph_type):
         import torchair
-        if graph_type == 1:  # 传统入图模式，静态shape+在线编译场景
+        if graph_type == 1:
             npu_backend = torchair.get_npu_backend(compiler_config=None)
             model = torch.compile(model, backend=npu_backend, dynamic=False)
-        elif graph_type == 2:  # ACLNN入图模式，动态shape+二进制
+        elif graph_type == 2:
             npu_backend = torchair.get_npu_backend(compiler_config=None)
             model = torch.compile(model, backend=npu_backend, dynamic=True)
         else:
@@ -301,7 +353,8 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
         x2 = torch.randn(x2_shape, dtype=dtype).npu()
         is_gather_out = True
         y, gather_out = get_graph(self_t, x2, hcomm_info, world_size, is_gather_out)
-        print("y:", y)
+        print(y.shape, y.dtype)
+        print(gather_out.shape, gather_out.dtype)
     if __name__ == "__main__":
         worksize = 8
         master_ip = '127.0.0.1'
@@ -310,4 +363,25 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
         x2_shape = [512, 256]
         dtype = torch.float16
         mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
+    ```
+
+    输出如下所示
+
+    ```text
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
     ```
