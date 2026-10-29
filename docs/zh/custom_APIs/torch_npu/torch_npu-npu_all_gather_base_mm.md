@@ -148,7 +148,7 @@ torch_npu.npu_all_gather_base_mm(input, x2, hcom, world_size, *, bias=None, x1_s
   - `comm_mode`为`aiv`时，训练和推理场景均可使用。
 
 <!-- npu="950" id21 -->
-- <term>Ascend 950PR&950DT系列产品</term>：allgather\(x1\)集合通信数据总量不能超过63\*256MB，集合通信数据总量计算方式为：m \* k \* sizeof\(x1\_dtype\) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
+- <term>Ascend 950PR&950DT系列产品</term>：使用`"ccu"`通信引擎时，allgather\(x1\)集合通信数据总量不能超过63\*256MB，集合通信数据总量计算方式为：m \* k \* sizeof\(x1\_dtype\) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 <!-- end id21 -->
 
 ## 调用示例
