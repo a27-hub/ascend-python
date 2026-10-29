@@ -83,7 +83,9 @@ at::Tensor repeat_interleave_symint(
     c10::optional<int64_t> dim,
     c10::optional<int64_t> output_size) {
   int64_t repeats_int = repeats.expect_int();
-  if (dim.has_value()) {
+  static const bool has_int_with_dim = check_aclnn_kernel_available("aclnnRepeatInterleaveIntWithDim");
+  bool use_int_with_dim = dim.has_value() || has_int_with_dim;
+  if (use_int_with_dim) {
     DO_COMPATIBILITY(
         aclnnRepeatInterleaveIntWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
   } else {
@@ -103,6 +105,10 @@ at::Tensor repeat_interleave_symint(
   if (dim.has_value()) {
     int64_t real_dim = dim.value_or(0);
     EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self, repeats_int, real_dim, output_size_expected, result);
+  } else if (use_int_with_dim) {
+    at::Tensor self_1d = self.reshape({-1});
+    int64_t real_dim = 0;
+    EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self_1d, repeats_int, real_dim, output_size_expected, result);
   } else {
     EXEC_NPU_CMD(aclnnRepeatInterleaveInt, self, repeats_int, output_size_expected, result);
   }
@@ -149,7 +155,9 @@ at::Tensor repeat_interleave_symint(
     c10::optional<int64_t> dim,
     c10::optional<c10::SymInt> output_size) {
   int64_t repeats_int = repeats.expect_int();
-  if (dim.has_value()) {
+  static const bool has_int_with_dim = check_aclnn_kernel_available("aclnnRepeatInterleaveIntWithDim");
+  bool use_int_with_dim = dim.has_value() || has_int_with_dim;
+  if (use_int_with_dim) {
     DO_COMPATIBILITY(
         aclnnRepeatInterleaveIntWithDim, acl_op::repeat_interleave_symint(self, repeats, dim, output_size));
   } else {
@@ -174,6 +182,10 @@ at::Tensor repeat_interleave_symint(
   if (dim.has_value()) {
     int64_t real_dim = dim.value_or(0);
     EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self, repeats_int, real_dim, output_size_expected, result);
+  } else if (use_int_with_dim) {
+    at::Tensor self_1d = self.reshape({-1});
+    int64_t real_dim = 0;
+    EXEC_NPU_CMD(aclnnRepeatInterleaveIntWithDim, self_1d, repeats_int, real_dim, output_size_expected, result);
   } else {
     EXEC_NPU_CMD(aclnnRepeatInterleaveInt, self, repeats_int, output_size_expected, result);
   }
