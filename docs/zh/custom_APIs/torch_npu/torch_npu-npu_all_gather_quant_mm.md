@@ -181,7 +181,7 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
   - 支持空Tensor场景：m和n可以为空，k不可为空，且需满足以下条件：m为空、k不为空、n不为空；m不为空、k不为空、n为空；m为空、k不为空、n为空。
   - 当x1、x2数据类型为`torch_npu.float4_e2m1fn_x2`时，x2矩阵支持转置/不转置场景，x1矩阵只支持不转置场景，k轴需要为偶数，且当x2矩阵非转置时，n轴也需要为偶数。
   - 当group_size取值为549764202624时，bias必须为`None`。
-  - comm_mode为`"ccu"`时仅支持单机UB域内互联，`"ai_cpu"`可支持跨机UB域内互联；单个通信域内allgather(x1)集合通信数据总量不能超过63*256MB，集合通信数据总量计算方式为：m \* k \* sizeof(x1_dtype) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
+  - comm_mode为`"ccu"`时仅支持单机UB域内互联，`"ai_cpu"`可支持跨机UB域内互联；使用`"ccu"`通信引擎时，单个通信域内allgather(x1)集合通信数据总量不能超过63*256MB，集合通信数据总量计算方式为：m \* k \* sizeof(x1_dtype) \* 卡数。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 <!-- end id19 -->
 <!-- npu="A3,910b" id20 -->
 - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
@@ -301,7 +301,8 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
         x2 = torch.randn(x2_shape, dtype=dtype).npu()
         is_gather_out = True
         y, gather_out = get_graph(self_t, x2, hcomm_info, world_size, is_gather_out)
-        print("y:", y)
+        print(y.shape, y.dtype)
+        print(gather_out.shape, gather_out.dtype)
     if __name__ == "__main__":
         worksize = 8
         master_ip = '127.0.0.1'
@@ -310,4 +311,25 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
         x2_shape = [512, 256]
         dtype = torch.float16
         mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
+    ```
+
+    输出如下所示
+
+    ```text
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
     ```
