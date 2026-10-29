@@ -195,18 +195,22 @@ class TestConjPhysicalNPU(TestCase):
 
     def test_conj_physical_compile(self):
         # 图模式：torch.compile（NPU 官方后端 torchair）可编译入图，结果与 eager 一致。
-        # 仅当 torchair 未安装时跳过——NPU 图模式在该环境属已知不支持；
-        # 其它任何异常（Meta/FX 推导、后端报错）都必须显式抛出，防止图模式失败被静默掩盖。
+        # 仅当 torchair 未安装时跳过（unittest.SkipTest，计为 skip 而非 ok）——NPU 图模式
+        # 在该环境属已知不支持；其它任何异常（Meta/FX 推导、后端报错）都必须显式抛出，
+        # 防止图模式失败被静默掩盖。
         if not hasattr(torch, 'compile'):
-            return
+            raise unittest.SkipTest("torch.compile 不可用")
         try:
             import torchair  # noqa: F401
         except ImportError:
-            return  # 无 torchair：NPU 图模式不可用（已知不支持场景）
+            raise unittest.SkipTest("torchair 未安装：NPU 图模式不可用")
         torch.manual_seed(5)
         x = complex_randn(64)
         ref = torch.conj_physical(x)
-        compiled = torch.compile(torch.conj_physical, fullgraph=True)
+        # 显式指定 torchair 后端：默认 backend 不保证走 torchair（torch_npu 的
+        # _global_npu_backend 注册才保证）；torchair.get_npu_backend() 即官方入图入口
+        compiled = torch.compile(torch.conj_physical, fullgraph=True,
+                                 backend=torchair.get_npu_backend())
         y = compiled(x)
         self.assertTrue(eq(y, ref))
 
