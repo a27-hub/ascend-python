@@ -59,7 +59,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     - <term>Atlas A3系列产品</term>：取值支持8、16、32、64、128。
     <!-- end id3 -->
     <!-- npu="950" id4 -->
-    - <term>Ascend 950DT系列产品</term>：取值支持2、4、8、16、32、64。
+    - <term>Ascend 950DT系列产品</term>：取值支持2、4、8、16、32、64、128、256。
     <!-- end id4 -->
 
 - **send\_counts**（`List[int]`）：**必选参数**，表示发送给其他卡的token数，数据类型支持int，取值大小为e\*`ep_world_size`，最大为256。输入类型需为list。
