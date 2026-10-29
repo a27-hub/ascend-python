@@ -132,7 +132,7 @@ npu_moe_gating_top_k(x, k, *, bias=None, input_ids=None, tid2eid=None, k_group=1
 
 - **`x`** (`Tensor`): Required. Input to be processed. This parameter must be a 2D tensor. The data type can be `torch.float16`, `torch.bfloat16`, or `torch.float32`. The data layout must be ND. Non-contiguous tensors are supported. The size of the last dimension (the expert count) must be less than or equal to `2048`.
 
-- **`k`** (`int`): Required. Number of experts finally selected for each token. The data type is `torch.int64`. The condition `1 <= k <= x_shape[-1] / group_count * k_group` must be satisfied.
+- **`k`** (`int`): Required. Number of experts finally selected for each token. The data type is `int64`. The condition `1 <= k <= x_shape[-1] / group_count * k_group` must be satisfied.
 
 - **`*`**: Position delimiter used to distinguish positional arguments from keyword arguments. Variables before it are position-dependent and must be passed in order; variables after it are optional keyword arguments and can be passed in any order using key-value pairs. If not specified, their default values are used.
  
@@ -142,9 +142,9 @@ npu_moe_gating_top_k(x, k, *, bias=None, input_ids=None, tid2eid=None, k_group=1
 
 - **`tid2eid`** (`Tensor`): Optional. Hash mapping table storing precomputed expert indices. It must be a 2D Tensor, and the last dimension of its shape must be equal to `k`. The data type can be `torch.int32` or `torch.int64`.
 
-- **`k_group`** (`int`): Optional. Number of expert groups selected during the expert group selection process for each token. The data type is `torch.int64`. The default value is `1`. The conditions `1 <= k_group <= group_count` and `k_group * x_shape[-1] / group_count >= k` must be satisfied.
+- **`k_group`** (`int`): Optional. Number of expert groups selected during the expert group selection process for each token. The data type is `int64`. The default value is `1`. The conditions `1 <= k_group <= group_count` and `k_group * x_shape[-1] / group_count >= k` must be satisfied.
 
-- **`group_count`** (`int`): Optional. Number of groups into which all experts are divided. The data type is `torch.int64`. The default value is `1`. `group_count` must be greater than `0`. `x_shape[-1]` must be divisible by `group_count`. The result of the division must be greater than `2`. After aligning the division result to a multiple of 32, the aligned value multiplied by `group_count` must be less than or equal to `2048`.
+- **`group_count`** (`int`): Optional. Number of groups into which all experts are divided. The data type is `int64`. The default value is `1`. `group_count` must be greater than `0`. `x_shape[-1]` must be divisible by `group_count`. The result of the division must be greater than `2`. After aligning the division result to a multiple of 32, the aligned value multiplied by `group_count` must be less than or equal to `2048`.
 
 - **`group_select_mode`** (`int`): Optional. Score calculation method for each expert group. Valid values: `0` (uses the maximum value within the group as the group score) or `1` (uses the sum of the scores of the top two experts within the group as the group score). The default value is `0`. 
 

@@ -128,18 +128,18 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - <term>Atlas A3 products</term>: The data type can be `torch.float32` or `torch.bfloat16`.
     <!-- end id16 -->
 
-- **`num_heads`** (`int`): Optional. Head count of `query`. The data type can be `torch.int64`.
+- **`num_heads`** (`int`): Optional. Head count of `query`. Pass this value as a Python `int`.
 - **`scale_value`** (`float`): Optional. Scaling factor serving as the scalar value of Muls in the computation flow, $scale$ in the formula. The value is typically the reciprocal of the square root of $d$. The data type can be `float`. Its data type and the data type of `query` must meet the type deduction rules. The default value is `1.0`.
-- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. The default value is `2147483647`. Only the default value `2147483647` is supported for Atlas inference accelerator cards.
+- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `int64`. The default value is `2147483647`. Only the default value `2147483647` is supported for Atlas inference accelerator cards.
     <!-- npu="310p" id29 -->
     - <term>Atlas inference products</term>: only the default value 2147483647 is supported.
     <!-- end id29 -->
-- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. The default value is `0`. Only `0` and `2147483647` are supported for Atlas inference accelerator cards.
+- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. The default value is `0`. Only `0` and `2147483647` are supported for Atlas inference accelerator cards.
     <!-- npu="310p" id30 -->
     - <term>Atlas inference products</term>: only 0 and 2147483647 are supported.
     <!-- end id30 -->
 - **`input_layout`** (`str`): Optional. Data layout configuration for the input `query`, `key`, and `value`. Supported values are `"BSH"`, `"BSND"`, `"BNSD"`, or `"BNSD_BSND"`. When the input layout is `"BNSD"`, the output layout is `"BSND"`. The default value is `"BSH"`.
-- **`num_key_value_heads`** (`int`): Optional. Number of heads for `key` and `value`, used to support Grouped-Query Attention (GQA) scenarios. GQA is a compromise between Multi-Head Attention (MHA) and Multi-Query Attention (MQA): multiple query heads share the same set of key/value heads, thereby significantly reducing KV Cache memory usage and memory access overhead while maintaining model performance close to that of MHA. The data type can be `torch.int64`. The default value is `0`, indicating that the head counts of `key`, `value`, and `query` are identical. Restrictions: `num_heads` must be divisible by `num_key_value_heads`. The ratio of `num_heads` to `num_key_value_heads` must be less than or equal to `64`. In `"BSND"`, `"BNSD"`, or `"BNSD_BSND"` layouts, this value must be identical to the shape value of the n-axis in `key`/`value`. If this condition is not satisfied, the system raises an error. Only the default value `0` is supported for Atlas inference accelerator cards.
+- **`num_key_value_heads`** (`int`): Optional. Number of heads for `key` and `value`, used to support Grouped-Query Attention (GQA) scenarios. GQA is a compromise between Multi-Head Attention (MHA) and Multi-Query Attention (MQA): multiple query heads share the same set of key/value heads, thereby significantly reducing KV Cache memory usage and memory access overhead while maintaining model performance close to that of MHA. Pass this value as a Python `int`. The default value is `0`, indicating that the head counts of `key`, `value`, and `query` are identical. Restrictions: `num_heads` must be divisible by `num_key_value_heads`. The ratio of `num_heads` to `num_key_value_heads` must be less than or equal to `64`. In `"BSND"`, `"BNSD"`, or `"BNSD_BSND"` layouts, this value must be identical to the shape value of the n-axis in `key`/`value`. If this condition is not satisfied, the system raises an error. Only the default value `0` is supported for Atlas inference accelerator cards.
     <!-- npu="310p" id32 -->
     - <term>Atlas inference products</term>: only the default value `0` is supported.
     <!-- end id32 -->
@@ -155,7 +155,7 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - <term>Atlas A3 products</term>: the TND layout is supported. When the input_layout of key/value is TND, this input parameter must be passed, and the number of its elements is used as the Batch value. The value of each element in this input parameter indicates the sum of the seqlens of the current batch and all preceding batches. Therefore, the value of the latter element must be greater than or equal to that of the former element, and no negative values are allowed.
     <!-- end id18 -->
 
-- **`sparse_mode`** (`int`): Optional. Sparsification mode. The data type can be `torch.int64`. The default value is `0`. For details about overall constraints, see [Constraints](#section12345537164214). Only the default value `0` is supported for Atlas inference accelerator cards.
+- **`sparse_mode`** (`int`): Optional. Sparsification mode. The data type can be `int64`. The default value is `0`. For details about overall constraints, see [Constraints](#section12345537164214). Only the default value `0` is supported for Atlas inference accelerator cards.
 
     <!-- npu="310p" id33 -->
     - <term>Atlas inference products</term>: only the default value `0` is supported.

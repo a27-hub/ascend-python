@@ -46,9 +46,9 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 
 - **`scale_value`** (`double`): Required. Reciprocal of the square root of $d_k$ in the formula, representing the scaling factor applied as a scalar value after the matrix multiplication of query and key. The data type must be `double`.
 
-- **`key_quant_mode`** (`int`): Required. Quantization mode for `key`. The data type can be `torch.int64`. Only the value `2` is supported, indicating the `per_tile` quantization mode.
+- **`key_quant_mode`** (`int`): Required. Quantization mode for `key`. The data type can be `int64`. Only the value `2` is supported, indicating the `per_tile` quantization mode.
 
-- **`value_quant_mode`** (`int`): Required. Quantization mode for `value`. The data type can be `torch.int64`. Only the value `2` is supported, indicating the `per_tile` quantization mode.
+- **`value_quant_mode`** (`int`): Required. Quantization mode for `value`. The data type can be `int64`. Only the value `2` is supported, indicating the `per_tile` quantization mode.
 
 - **`*`**: Position delimiter used to distinguish positional arguments from keyword arguments. Variables before it are position-dependent and must be passed in order; variables after it are optional keyword arguments and can be passed in any order using key-value pairs. If not specified, their default values are used.
 
@@ -62,27 +62,27 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 
 - **`actual_seq_lengths_kv`** (`Tensor`): Optional. Valid token count of `key` and `value` in different batches. The data type can be `torch.int32`. The default value is `None`, indicating that its length is identical to the size of the S dimension in the shape of `key`. The valid token count for each batch must not exceed the size of the S dimension in `key` and `value` and must be greater than or equal to `0`. This parameter must be a 1D tensor of length `B`.<br>When `layout_kv` is set to `TND` or `PA_BSND`, this parameter must be provided. When `layout_kv` is set to `TND`, each element indicates the prefix sum of token counts across batches, and the value of each element must be greater than or equal to that of the preceding element.
 
-- **`sparse_block_size`** (`int`): Optional. Block size used in the sparse phase during the importance score computation. The data type can be `torch.int64`. The value `1` indicates token-wise sparsification. Values greater than `1` and less than or equal to `128` indicate block-wise sparsification, where tokens in a block share the same sparsification decision.
+- **`sparse_block_size`** (`int`): Optional. Block size used in the sparse phase during the importance score computation. The data type can be `int64`. The value `1` indicates token-wise sparsification. Values greater than `1` and less than or equal to `128` indicate block-wise sparsification, where tokens in a block share the same sparsification decision.
 
 - **`layout_query`** (`str`): Optional. Data layout configuration of the input `query`. Valid values are `BSND` or `TND`. The default value: `"BSND"`.
 
 - **`layout_kv`** (`str`): Optional. Layout format for the data arrangement of the input `key`. Valid values are `BSND`, `TND`, or `PA_BSND`, where `PA_BSND` is used when PagedAttention is enabled. The default value: `"BSND"`.
 
-- **`sparse_mode`** (`int`): Optional. Sparse mode. The data type can be `torch.int64`.
+- **`sparse_mode`** (`int`): Optional. Sparse mode. The data type can be `int64`.
     - When sparse\_mode is 0, all computations are performed.
     - When sparse\_mode is 3, it indicates the mask of the rightDownCausal mode, corresponding to the lower-triangular scenario divided along the line from the bottom-right vertex to the top-left.
 
-- **`pre_tokens`** (`int`): Optional. Used for sparse computation, indicating the number of preceding tokens with which the attention is associated. The data type can be `torch.int64`. Only the default value `2^63 - 1` is supported.
+- **`pre_tokens`** (`int`): Optional. Used for sparse computation, indicating the number of preceding tokens with which the attention is associated. The data type can be `int64`. Only the default value `2^63 - 1` is supported.
 
-- **`next_tokens`** (`int`): Optional. Used for sparse computation, indicating the number of subsequent tokens with which the attention is associated. The data type can be `torch.int64`. Only the default value `2^63 - 1` is supported.
+- **`next_tokens`** (`int`): Optional. Used for sparse computation, indicating the number of subsequent tokens with which the attention is associated. The data type can be `int64`. Only the default value `2^63 - 1` is supported.
 
-- **`attention_mode`** (`int`): Optional. Attention mode. The data type can be `torch.int64`. Only the value `2` is supported, indicating `MLA-absorb` mode, where the D dimension of `query` and `key` contains both the RoPE and non-RoPE components, and `key` and `value` shares the same data segment. The default value is `0`.
+- **`attention_mode`** (`int`): Optional. Attention mode. The data type can be `int64`. Only the value `2` is supported, indicating `MLA-absorb` mode, where the D dimension of `query` and `key` contains both the RoPE and non-RoPE components, and `key` and `value` shares the same data segment. The default value is `0`.
 
-- **`quant_scale_repo_mode`** (`int`): Optional. Storage arrangement mode of quantization parameters. The data type can be `torch.int64`. Only the default value `1` is supported. It indicates `combine` mode, where quantization parameters and data are stored together in a mixed arrangement.
+- **`quant_scale_repo_mode`** (`int`): Optional. Storage arrangement mode of quantization parameters. The data type can be `int64`. Only the default value `1` is supported. It indicates `combine` mode, where quantization parameters and data are stored together in a mixed arrangement.
 
-- **`tile_size`** (`int`): Optional. Data block size corresponding to each parameter during `per_tile` quantization, which is valid only in `per_tile` mode. The data type can be `torch.int64`. Only the default value `128` is supported.
+- **`tile_size`** (`int`): Optional. Data block size corresponding to each parameter during `per_tile` quantization, which is valid only in `per_tile` mode. The data type can be `int64`. Only the default value `128` is supported.
 
-- **`rope_head_dim`** (`int`): Optional. Structural configuration parameter representing the size of `rope_head_dim` under the MLA architecture, which is valid only when `attention_mode` is set to `2`. The data type can be `torch.int64`. Only the default value `64` is supported.
+- **`rope_head_dim`** (`int`): Optional. Structural configuration parameter representing the size of `rope_head_dim` under the MLA architecture, which is valid only when `attention_mode` is set to `2`. The data type can be `int64`. Only the default value `64` is supported.
 
 - **`key_dtype`** (`int`): Optional. Data type of key. Passing `torch_npu.hifloat8` or passing nothing is supported. When `torch_npu.hifloat8` is passed, the data type of key is `torch_npu.hifloat8`. When nothing is passed, the data type of key is `torch.int8` or `torch.float8_e4m3fn`, which is inferred according to key.
 
