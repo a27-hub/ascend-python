@@ -16,6 +16,29 @@ def fp64_expected(scalar_value, tensor_value, out_dtype):
 
 
 class TestMulPrecision(TestCase):
+    def test_mul_half_scalar_opmath_precision(self):
+        # These scalars expose early Half rounding, including scalar underflow
+        # and overflow. Compare exactly: a tolerance can hide a one-ULP error.
+        cpu = torch.tensor([0.125, 0.33325, 0.7, 1.0, 1.5, -1.5, 10.0], dtype=torch.float16)
+        for scalar in [0.1, 0.1234567, 1.0 / 3.0, 1e-8, 65536.0]:
+            with self.subTest(scalar=scalar):
+                expected = cpu * scalar
+                actual = cpu.npu() * scalar
+                torch.testing.assert_close(actual.cpu(), expected, atol=0, rtol=0)
+
+    def test_mul_half_cpu_scalar_and_out_precision(self):
+        # The Tensor overload and out= must preserve the same scalar precision
+        # as mul.Scalar when the right operand is a CPU zero-dimensional tensor.
+        cpu = torch.tensor([1.5, -1.5, 0.7], dtype=torch.float16)
+        scalar = torch.tensor(0.1, dtype=torch.float32)
+        expected = cpu * scalar
+        actual = torch.mul(cpu.npu(), scalar)
+        torch.testing.assert_close(actual.cpu(), expected, atol=0, rtol=0)
+        out = torch.empty_like(cpu, device="npu")
+        returned = torch.mul(cpu.npu(), scalar, out=out)
+        self.assertIs(returned, out)
+        torch.testing.assert_close(out.cpu(), expected, atol=0, rtol=0)
+
     def test_mul_cpu0dim_fp32_scalar_bf16(self):
         # issue #5392: CPU 0-dim fp32 scalar times bf16 tensor on NPU
         a = torch.tensor(0.22401839494705)

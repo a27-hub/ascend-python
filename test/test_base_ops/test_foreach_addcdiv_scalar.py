@@ -10,6 +10,31 @@ from torch_npu.testing.common_utils import SupportedDevices
 
 class TestForeachAddcdivScalar(TestCase):
 
+    def test_foreach_addcdiv_scalar_backward_half_precision(self):
+        # Backward multiplies gradients by value through aten.mul.Scalar.
+        # For tensor2, value=0.1 produces -0.1500244140625 on CPU, but early
+        # Half rounding of value gives -0.14990234375. Check all input grads.
+        def backward(device, scalar):
+            a = torch.ones(2, 3, dtype=torch.float16, device=device, requires_grad=True)
+            b = torch.full_like(a, 1.5, requires_grad=True)
+            c = torch.ones_like(a, requires_grad=True)
+            result = torch._foreach_addcdiv([a], [b], [c], value=scalar)
+            return torch.autograd.grad(result, (a, b, c), [torch.ones_like(a)])
+
+        for scalar in [0.1, 0.1234567, 1.0 / 3.0]:
+            with self.subTest(scalar=scalar):
+                expected = backward("cpu", scalar)
+                actual = backward("npu", scalar)
+                for cpu_grad, npu_grad in zip(expected, actual):
+                    torch.testing.assert_close(npu_grad.cpu(), cpu_grad, atol=0, rtol=0)
+                # Accuracy and repeatability are separate checks. A stable but
+                # incorrectly rounded result must still fail the CPU comparison.
+                for _ in range(5):
+                    repeated = backward("npu", scalar)
+                    for first, current in zip(actual, repeated):
+                        torch.testing.assert_close(current, first, atol=0, rtol=0)
+
+
     torch_dtypes = {
         "float16" : torch.float16,
         "float32" : torch.float32,
