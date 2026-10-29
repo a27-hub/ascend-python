@@ -36,10 +36,22 @@ using npu_preparation = at_npu::native::OpPreparation;
 // 避免 aclnnMul 对非连续 out 的内部双份搬运（实测直 mul 达 2×）。
 //
 // is_conj 语义（Spec §4.5-3 实测结论）：
-//   - functional  is_conj：物化底层原值 P（self.conj().clone()，与 GPU _conj_physical 一致）；
+//   - functional  is_conj：物化底层原值 P（官方 composite→_conj_physical 的
+//                 self.conj().clone()，与 GPU _conj_physical 一致）；
 //   - .out       is_conj：copy_ 感知 conj 位读出逻辑值 conj(P)，翻转虚部 → P；
 //   - in-place   is_conj：经物理别名 self.conj() 翻转物理 storage → storage=conj(P)、
 //                 保留 conj 位、逻辑值=P（与 GPU/CPU 官方 conj_physical_ 一致）。
+//
+// 功能式注册说明（Spec §6.5，第二轮检视修复）：本文件**不注册** functional
+// `conj_physical` 的 PrivateUse1 kernel。官方 public `conj_physical` 是
+// CompositeImplicitAutograd（UnaryOps.cpp: conj_physical → _conj_physical），
+// `_conj_physical`/`conj_physical_` 有 autograd 导数（grad.conj_physical()，
+// 自 torch 1.13 起）。若照常注册功能式 kernel，会绕过官方 composite→_conj_physical
+// 的 autograd 节点，使 NPU 功能式**不可微**（与 GPU/CPU 官方偏离）。因此功能式在
+// NPU 走官方 composite：实数别名、is_conj 物化由 composite 处理，复数经
+// `_conj_physical` 主体调用 `at::conj_physical_out` → 本文件的 .out kernel；
+// .out kernel 的 fake/meta 短路同样承接 composite 功能式的图模式推导。
+// 本文件仅实现 .out 与 in-place 两个入口。
 
 namespace {
 
@@ -80,6 +92,10 @@ void conj_flip_inplace(at::Tensor& physical) {
 }  // namespace
 
 at::Tensor& conj_physical_out(const at::Tensor& self, at::Tensor& result) {
+    // 本入口同时承接两路调用：
+    //   1) 用户显式 `torch.conj_physical(x, out=o)`（.out 变体）；
+    //   2) 官方 composite `conj_physical → _conj_physical` 主体
+    //      `empty_like(self) + conj_physical_out(result, self)`（功能式，见文件头说明）。
     // Fake/meta 输入：复用/resize out 缓冲返回，不落设备 kernel（见 is_fake_or_meta 注释）。
     // 实数 .out 语义（拷贝）也在此表达：resize_as_ + copy_（fake-safe）。
     if (is_fake_or_meta(self) || is_fake_or_meta(result)) {
@@ -91,9 +107,9 @@ at::Tensor& conj_physical_out(const at::Tensor& self, at::Tensor& result) {
         result.resize_as_(self);
         return result;
     }
-    // 官方 conj_physical 无 autograd 公式（不可微）。no_grad 守卫保证内部
-    // mul/copy 不因 self 带 requires_grad 触发 "out=... AD" 报错，且结果不带
-    // grad_fn —— 与 GPU/CPU 一致：错误推迟到结果上的 backward() 才抛。
+    // .out 变体官方不可微（CPU 实测 out 被标记 requires_grad 但 grad_fn=NotImplemented）。
+    // no_grad 守卫保证内部 mul/copy 不因 result 带 requires_grad 触发 "out=... AD" 报错
+    // 或产生额外 grad_fn；功能式 composite 路径本就在 autograd 的 no_grad 前向内，守卫冗余无害。
     at::NoGradGuard guard;
     // 实数 .out：对齐 GPU —— 拷贝而非原样返回
     if (!self.is_complex()) {
@@ -123,30 +139,6 @@ at::Tensor& conj_physical_out(const at::Tensor& self, at::Tensor& result) {
         }
     }
     return result;
-}
-
-at::Tensor conj_physical(const at::Tensor& self) {
-    // Fake/meta 输入：返回 shape/dtype 正确的空张量（连续、非 conj、不落 kernel），
-    // 语义与真实路径一致：实数=别名、is_conj=底层原值、复数=连续输出。
-    if (is_fake_or_meta(self)) {
-        if (!self.is_complex()) {
-            return self;
-        }
-        return at::empty(self.sizes(), self.options());
-    }
-    // 官方 conj_physical 不可微：no_grad 守卫（同 conj_physical_out 注释）。
-    // 实数输入功能式仍为别名返回（对齐官方 composite conj_physical）。
-    at::NoGradGuard guard;
-    // 功能式实数：别名返回（对齐官方 composite conj_physical）
-    if (!self.is_complex()) {
-        return self;
-    }
-    // is_conj：物化底层原值（对齐官方 _conj_physical，不落设备 kernel）
-    if (self.is_conj()) {
-        return self.conj().clone();
-    }
-    at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options());
-    return op_api::conj_physical_out(self, result);
 }
 
 at::Tensor& conj_physical_(at::Tensor& self) {
