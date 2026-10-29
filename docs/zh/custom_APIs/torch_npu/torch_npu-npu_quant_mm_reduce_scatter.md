@@ -67,7 +67,7 @@
 > <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>默认值为"aiv"。
 > <!-- end id24 -->
 > <!-- npu="950" id25 -->
-> <term>Ascend 950DT系列产品</term>默认值为"ai_cpu"。
+> <term>Ascend 950DT系列产品</term>可选参数，表示通信模式。默认值为None。支持"ai_cpu"、"ccu"和None。当为None时，默认使用"ai_cpu"通信。
 > <!-- end id25 -->
 
 ## 函数原型
@@ -205,15 +205,77 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
 - `group_sizes`必须传长度为3的列表，每个元素取值范围[0, 65535]。
 - mx量化场景（MXFP4）下，`x1_dtype`、`x2_dtype`、`x1_scale_dtype`、`x2_scale_dtype`为必传参数，且x1\_dtype与x2\_dtype必须为`torch_npu.float4_e2m1fn_x2`，x1\_scale\_dtype与x2\_scale\_dtype必须为`torch_npu.float8_e8m0fnu`。
 
+- **各量化场景下的参数组合约束**：
+
+  量化方式（pertensor、perblock、mx、pertoken、perchannel）由`x1_scale`、`x2_scale`的shape和数据类型隐式确定，接口不提供显式的量化方式参数。`x1`、`x2`、`x1_scale`、`x2_scale`、`bias`、`y_dtype`与`group_sizes`的取值相互影响，不同量化场景下的参数组合要求如下。
+
+  <!-- npu="A3,910b" id26 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
+
+    **表1** 非量化与int8量化场景参数组合
+
+    | 量化场景 | x1 | x2 | x1_scale | x2_scale | bias | y_dtype | output |
+    | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 非量化 | `torch.float16` | `torch.float16` | None | None | None/`torch.float16`/`torch.float32` | None或`torch.float16` | `torch.float16` |
+    | 非量化 | `torch.bfloat16` | `torch.bfloat16` | None | None | None/`torch.bfloat16`/`torch.float32` | None或`torch.bfloat16` | `torch.bfloat16` |
+    | pertoken量化 | `torch.int8` | `torch.int8` | `torch.float32` | None | None/`torch.float16`/`torch.bfloat16`/`torch.float32` | 必传：`torch.float16`/`torch.bfloat16`/`torch.float32` | 与`y_dtype`一致 |
+    | perchannel量化 | `torch.int8` | `torch.int8` | None | `torch.float32`/`torch.int64`（`torch.int64`仅在输出为`torch.float16`时支持） | None/`torch.float16`/`torch.bfloat16`/`torch.float32` | 必传：`torch.float16`/`torch.bfloat16`/`torch.float32` | 与`y_dtype`一致 |
+
+    **表2** 非量化与int8量化场景参数shape
+
+    | 量化场景 | x1 shape | x2转置 shape | x2不转置 shape | x1_scale shape | x2_scale shape | output shape |
+    | --- | --- | --- | --- | --- | --- | --- |
+    | 非量化 | (m, k) | (n, k) | (k, n) | None | None | (m / world_size, n) |
+    | pertoken量化 | (m, k) | (n, k) | (k, n) | (m, 1) | None | (m / world_size, n) |
+    | perchannel量化 | (m, k) | (n, k) | (k, n) | None | (1, n) | (m / world_size, n) |
+
+    > **说明**：
+    > - `x1_scale`与`x2_scale`不可同时传入，二者按传入的scale隐式选择pertoken或perchannel量化方式。
+    > - 非量化场景下`x1_scale`、`x2_scale`仅支持传入None；int8量化场景下`amax_output`仅支持False。
+    > - `x1`仅支持不转置，`x2`的转置/不转置仅影响shape，不改变数据类型组合。
+  <!-- end id26 -->
+  <!-- npu="950" id27 -->
+  - <term>Ascend 950DT系列产品</term>：
+
+    **表3** 各量化场景参数组合
+
+    | 量化场景 | x1 | x2 | x1_scale | x2_scale | bias | group_sizes | 附加参数 | output |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 非量化 | `torch.float16`/`torch.bfloat16` | 与`x1`一致 | None | None | None/`torch.float16`/`torch.bfloat16` | None/全0 | 无 | 与`x1`一致 |
+    | pertensor量化 | `torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8` | 与`x1`一致 | `torch.float32` | `torch.float32` | None/`torch.float32` | None/全0 | 无 | 由`y_dtype`指定 |
+    | perblock量化 | `torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8` | 与`x1`一致 | `torch.float32` | `torch.float32` | 仅支持None | [128, 128, 128]/全0 | 无 | 由`y_dtype`指定 |
+    | mx量化（MXFP8） | `torch.float8_e4m3fn`/`torch.float8_e5m2` | `torch.float8_e4m3fn`/`torch.float8_e5m2`（可与`x1`混用） | `torch.float8_e8m0fnu` | `torch.float8_e8m0fnu` | None/`torch.float32` | [1, 1, 32]/全0 | 无 | 由`y_dtype`指定 |
+    | mx量化（MXFP4） | `torch_npu.float4_e2m1fn_x2` | 与`x1`一致 | `torch.float8_e8m0fnu` | `torch.float8_e8m0fnu` | None/`torch.float32` | [1, 1, 32]/全0 | `x1_dtype`、`x2_dtype`、`x1_scale_dtype`、`x2_scale_dtype`必传 | 由`y_dtype`指定 |
+
+    **表4** 各量化场景参数shape
+
+    | 量化场景 | x1 shape | x2转置 shape | x2不转置 shape | x1_scale shape | x2_scale shape | output shape |
+    | --- | --- | --- | --- | --- | --- | --- |
+    | 非量化 | (m, k) | (n, k) | (k, n) | None | None | (m / world_size, n) |
+    | pertensor量化 | (m, k) | (n, k) | (k, n) | [1] | [1] | (m / world_size, n) |
+    | perblock量化 | (m, k) | (n, k) | (k, n) | (ceildiv(m, 128), ceildiv(k, 128)) | (ceildiv(k, 128), ceildiv(n, 128)) | (m / world_size, n) |
+    | mx量化（MXFP8） | (m, k) | (n, k) | (k, n) | (m, ceildiv(k, 64), 2) | x2转置：(n, ceildiv(k, 64), 2)；x2不转置：(ceildiv(k, 64), n, 2) | (m / world_size, n) |
+    | mx量化（MXFP4） | (m, k) | (n, k) | (k, n) | (m, ceildiv(k, 64), 2) | x2转置：(n, ceildiv(k, 64), 2)；x2不转置：(ceildiv(k, 64), n, 2) | (m / world_size, n) |
+
+    > **说明**：
+    > - 非量化场景下`x1_scale`、`x2_scale`仅支持传入None，`amax_output`可传True或False；pertensor、perblock、mx量化场景下`x1_scale`、`x2_scale`均为必传参数，且`amax_output`仅支持False。
+    > - pertensor场景要求`x1_scale`、`x2_scale`均为1维且shape为[1]；perblock场景要求二者均为2维；mx量化场景要求二者均为3维，且`x1_scale`固定为3维。perblock场景下`bias`仅支持None。
+    > - `group_sizes`取全0时由`x1`、`x2`、`x1_scale`、`x2_scale`的shape自动推导：pertensor、非量化场景需传None或全0；perblock场景推导为[128, 128, 128]；mx量化场景推导为[1, 1, 32]。
+    > - mx量化场景下`x1_dtype`、`x2_dtype`、`x1_scale_dtype`、`x2_scale_dtype`：MXFP8场景可不传（直接使用`x1`、`x2`、`x1_scale`、`x2_scale`本身的dtype）；MXFP4场景必须传，且`x1_dtype`、`x2_dtype`取值为`torch_npu.float4_e2m1fn_x2`，`x1_scale_dtype`、`x2_scale_dtype`取值为`torch_npu.float8_e8m0fnu`。
+    > - MXFP4场景下`k`必须为偶数，且当`x2`不转置时`n`也必须为偶数。
+    > - 非量化以外的量化场景均需传入`y_dtype`，取值支持`torch.float16`、`torch.bfloat16`、`torch.float32`；非量化场景`y_dtype`可不传（默认与`x1`一致），传入时须与`x1`一致。
+  <!-- end id27 -->
+
 ## 调用示例
 
-### 场景1：`x1，x2`均为`torch.float16`或`torch.bfloat16`
+- 单算子模式调用
 
 ```python
 import torch
 import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
+
 def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
     torch_npu.npu.set_device(rank)
     init_method = 'tcp://' + master_ip + ':' + master_port
@@ -241,8 +303,6 @@ if __name__ == "__main__":
     dtype = torch.float16
     amax_output = False  # amax_output为False时返回空Tensor
     mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-    amax_output = True  # amax_output为True时返回[1]的float32最大值结果
-    mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
 ```
 
 输出如下所示
@@ -252,25 +312,42 @@ torch.Size([64, 64]) torch.float16
 None
 torch.Size([64, 64]) torch.float16
 None
-
-torch.Size([64, 64]) torch.float16
-torch.Size([64, 64]) torch.float16
-tensor([0.], device='npu:0')
-tensor([0.], device='npu:1')
 ```
 
-### 场景2：`x1，x2`数据类型为`torch.int8`的perchannel、pertoken场景（不输出amax）
-
-> [!NOTE]
->
-> 场景2中`torch.int8`的perchannel、pertoken场景（<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>）与此类似：x1、x2数据类型为`torch.int8`，pertoken时`x1_scale`的shape为(m, 1)、`x2_scale`不传；perchannel时`x2_scale`的shape为(1, n)、`x1_scale`不传，scale数据类型支持`torch.float32`（perchannel的`x2_scale`还支持`torch.int64`）。
+- 图模式调用
 
 ```python
 import torch
 import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
-def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
+
+class MM_REDUCESCATTER_GRAPH_Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, input, weight, hcomm_info, world_size, reduce_op):
+        output, amax_out = torch_npu.npu_quant_mm_reduce_scatter(input, weight, hcomm_info, world_size,reduce_op=reduce_op)
+        return output
+
+def define_model(model, graph_type):
+    import torchair
+    if graph_type == 1:  # 传统入图模式，静态shape+在线编译场景
+        npu_backend = torchair.get_npu_backend(compiler_config=None)
+        model = torch.compile(model, backend=npu_backend, dynamic=False)
+    elif graph_type == 2:  # ACLNN入图模式，动态shape+二进制
+        npu_backend = torchair.get_npu_backend(compiler_config=None)
+        model = torch.compile(model, backend=npu_backend, dynamic=True)
+    else:
+        print("Error type")
+    return model
+
+def get_graph(input, weight, hcomm_info, world_size):
+    model = MM_REDUCESCATTER_GRAPH_Model()
+    model = define_model(model, 2)
+    model_output = model(input, weight, hcomm_info, world_size, reduce_op="sum")
+    return model_output
+
+def run_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype):
     torch_npu.npu.set_device(rank)
     init_method = 'tcp://' + master_ip + ':' + master_port
     dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
@@ -280,136 +357,19 @@ def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1
         hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
     else:
         hcomm_info = default_pg.get_hccl_comm_name(rank)
-
-    self_t = torch.randint(-128, 127, x1_shape, dtype=dtype).npu()
-    x2 = torch.randint(-128, 127, x2_shape, dtype=dtype).npu()
-    # pertoken场景：x1_scale的shape为(m, 1)；perchannel场景：x2_scale的shape为(1, n)
-    x1_scale = torch.rand((x1_shape[0], 1), dtype=torch.float32).npu()
-    x2_scale = torch.rand((1, x2_shape[1]), dtype=torch.float32).npu()
-    output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size,
-                                                         bias=None, x1_scale=x1_scale, x2_scale=x2_scale,
-                                                         amax_output=amax_output, y_dtype=torch.float16)
-    print(output.shape, output.dtype) # (torch.Size([64, 64]), torch.float16)
-
+    input = torch.randn(x1_shape, dtype=dtype).npu()
+    weight = torch.randn(x2_shape, dtype=dtype).npu()
+    output = get_graph(input, weight, hcomm_info, world_size)
+    print("output:", output)
 
 if __name__ == "__main__":
     worksize = 2
     master_ip = '127.0.0.1'
-    master_port = '50002'
+    master_port = '50001'
     x1_shape = [128, 512]
     x2_shape = [512, 64]
-    dtype = torch.int8
-    amax_output = False  # 场景2不输出amax
-    mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-```
-
-输出如下所示
-
-```text
-torch.Size([64, 64]) torch.float16
-torch.Size([64, 64]) torch.float16
-```
-
-### 场景3：`x1，x2`数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`的perblock场景（不输出amax）
-
-```python
-import torch
-import torch_npu
-import torch.distributed as dist
-import torch.multiprocessing as mp
-import math
-def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
-    torch_npu.npu.set_device(rank)
-    init_method = 'tcp://' + master_ip + ':' + master_port
-    dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
-    from torch.distributed.distributed_c10d import _get_default_group
-    default_pg = _get_default_group()
-    if torch.__version__ > '2.0.1':
-        hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
-    else:
-        hcomm_info = default_pg.get_hccl_comm_name(rank)
-
-    m, k = x1_shape
-    n = x2_shape[1]
-    self_t = torch.randn(x1_shape).to(dtype).npu()
-    x2 = torch.randn(x2_shape).to(dtype).npu()
-    # perblock场景：blockSize为128，scale的shape分别为(ceildiv(m, 128), ceildiv(k, 128))、(ceildiv(k, 128), ceildiv(n, 128))
-    x1_scale = torch.rand((math.ceil(m / 128), math.ceil(k / 128)), dtype=torch.float32).npu()
-    x2_scale = torch.rand((math.ceil(k / 128), math.ceil(n / 128)), dtype=torch.float32).npu()
-    output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None,
-                                                          x1_scale=x1_scale, x2_scale=x2_scale,
-                                                          amax_output=amax_output, y_dtype=torch.float16)
-    print(output.shape, output.dtype) # (torch.Size([64, 64]), torch.float16)
-    # amax_output为False时返回空Tensor
-    print(amax)  # torch.Size([0])
-
-if __name__ == "__main__":
-    worksize = 2
-    master_ip = '127.0.0.1'
-    master_port = '50001'
-    x1_shape = [128, 512]
-    x2_shape = [512, 128]
-    dtype = torch.float8_e4m3fn
-    amax_output = False  # 场景3不输出amax
-    mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-
-```
-
-输出如下所示
-
-```text
-torch.Size([64, 128]) torch.float16
-None
-torch.Size([64, 128]) torch.float16
-None
-```
-
-### 场景4：`x1，x2`数据类型为`torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.float4_e2m1fn_x2`的mx量化场景（不输出amax，以MXFP8为例）
-
-> [!NOTE]
->
-> 场景4的MXFP4场景（x1、x2数据类型为`torch_npu.float4_e2m1fn_x2`）还需额外传入`x1_dtype`、`x2_dtype`（取值为`torch_npu.float4_e2m1fn_x2`）以及`x1_scale_dtype`、`x2_scale_dtype`（取值为`torch_npu.float8_e8m0fnu`），且k须为偶数。
-
-```python
-import torch
-import torch_npu
-import torch.distributed as dist
-import torch.multiprocessing as mp
-import math
-def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
-    torch_npu.npu.set_device(rank)
-    init_method = 'tcp://' + master_ip + ':' + master_port
-    dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
-    from torch.distributed.distributed_c10d import _get_default_group
-    default_pg = _get_default_group()
-    if torch.__version__ > '2.0.1':
-        hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
-    else:
-        hcomm_info = default_pg.get_hccl_comm_name(rank)
-
-    m, k = x1_shape   # x1_shape为(m, k)
-    n = x2_shape[1]   # mx量化仅支持x2、x2_scale转置输入，x2转置后shape为(k, n)
-    self_t = torch.randn(x1_shape).to(dtype).npu()
-    x2 = torch.randn(x2_shape).to(dtype).npu()
-    # mx量化场景：scale数据类型为float8_e8m0fnu，shape分别为(m, ceildiv(k, 64), 2)、(ceildiv(k, 64), n, 2)
-    x1_scale = torch.rand((m, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
-    x2_scale = torch.rand((math.ceil(k / 64), n, 2)).to(torch.float8_e8m0fnu).npu()
-    output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None,
-                                                          x1_scale=x1_scale, x2_scale=x2_scale,
-                                                          amax_output=amax_output, y_dtype=torch.float16)
-    print(output.shape, output.dtype) # (torch.Size([64, 64]), torch.float16)
-    # amax_output为False时返回空Tensor
-    print(amax)  # torch.Size([0])
-
-if __name__ == "__main__":
-    worksize = 2
-    master_ip = '127.0.0.1'
-    master_port = '50001'
-    x1_shape = [128, 256]
-    x2_shape = [256, 64] 
-    dtype = torch.float8_e4m3fn
-    amax_output = False  # 场景4不输出amax
-    mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
+    dtype = torch.float16
+    mp.spawn(run_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize
 ```
 
 输出如下所示
