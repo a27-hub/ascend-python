@@ -168,12 +168,20 @@ class TestConjPhysicalNPU(TestCase):
         y = torch.conj_physical(torch.conj_physical(x))
         self.assertTrue(eq(y, x))
 
-    def test_conj_physical_gradient_not_implemented(self):
-        # 官方不可微（无 derivatives.yaml 公式）：backward 应报错
-        x = torch.tensor([1 + 2j], device='npu', requires_grad=True)
+    def test_conj_physical_gradient(self):
+        # 官方可微：torch 自 1.13 起注册 _conj_physical/conj_physical_ 导数
+        # （grad.conj_physical()，conj 自反）。NPU 功能式经官方 composite
+        # （conj_physical -> _conj_physical）走 .out kernel，autograd 正常反向，
+        # 与 GPU/CPU 官方一致（第二轮检视修复：此前直接注册功能式 kernel 绕过
+        # 可微路径，导致 NPU 功能式不可微）。
+        x = torch.tensor([1 + 2j, 3 - 4j], device='npu', requires_grad=True)
         y = torch.conj_physical(x)
-        with self.assertRaises(RuntimeError):
-            y.sum().backward()
+        self.assertTrue(y.requires_grad)
+        self.assertTrue(eq(y, torch.tensor([1 - 2j, 3 + 4j], device='npu')))
+        # L = ΣRe(y) + ΣIm(y) → dL/dy = (1+1j, 1+1j)；dx = conj_physical(dL/dy) = (1-1j, 1-1j)
+        loss = y.real.sum() + y.imag.sum()
+        loss.backward()
+        self.assertTrue(eq(x.grad, torch.tensor([1 - 1j, 1 - 1j], device='npu')))
 
     def test_conj_physical_no_cpu_fallback(self):
         # 不触发 CPU fallback：断言走原生 aclnnMul 路径（未落到 real/imag/neg/complex

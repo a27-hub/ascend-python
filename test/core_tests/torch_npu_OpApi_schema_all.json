@@ -2332,9 +2332,6 @@
   "func: complex.out(Tensor real, Tensor imag, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
   },
-  "func: conj_physical(Tensor self) -> Tensor": {
-    "version": ["all_version"]
-  },
   "func: conj_physical.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
   },
