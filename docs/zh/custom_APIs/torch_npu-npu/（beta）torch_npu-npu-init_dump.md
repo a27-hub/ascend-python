@@ -29,3 +29,13 @@
 ```python
 torch_npu.npu.init_dump()
 ```
+
+## 调用示例
+
+```python
+>>> import torch
+>>> import torch_npu
+>>>
+>>> # 初始化Dump
+>>> torch_npu.npu.init_dump()
+```

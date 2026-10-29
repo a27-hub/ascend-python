@@ -24,3 +24,13 @@ The correct call sequence is: `init_dump()` → `set_dump(cfg_file)` → execute
 ```python
 torch_npu.npu.init_dump()
 ```
+
+## Example
+
+```python
+>>> import torch
+>>> import torch_npu
+>>>
+>>> # Initialize the dump process
+>>> torch_npu.npu.init_dump()
+```
