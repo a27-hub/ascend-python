@@ -183,6 +183,66 @@ class TestConjPhysicalNPU(TestCase):
         loss.backward()
         self.assertTrue(eq(x.grad, torch.tensor([1 - 1j, 1 - 1j], device='npu')))
 
+    def test_conj_physical_inplace_nonleaf_gradient(self):
+        # 原地 conj_physical_ 作用于非 leaf（y = x*2，requires_grad）允许就地：
+        # 翻转后反向正确（CPU 官方基准实测 x.grad = 2*conj_physical(dL/dy) = (2-2j,2-2j)）。
+        x = torch.tensor([1 + 2j, 3 - 4j], device='npu', requires_grad=True)
+        y = x * 2                                        # 非 leaf、非视图
+        y.conj_physical_()
+        self.assertTrue(eq(y, torch.tensor([2 - 4j, 6 + 8j], device='npu')))
+        loss = y.real.sum() + y.imag.sum()
+        loss.backward()
+        self.assertTrue(eq(x.grad, torch.tensor([2 - 2j, 2 - 2j], device='npu')))
+
+    def test_conj_physical_inplace_leaf_grad_rejected(self):
+        # 原地作用于 requires_grad leaf：官方就地拒绝（kernel 不加 NoGradGuard，
+        # 报错与 CPU 官方逐字一致，Spec §6.5）。
+        x = torch.tensor([1 + 2j], device='npu', requires_grad=True)
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r"leaf Variable that requires grad is being used in an in-place operation"):
+            x.conj_physical_()
+
+    def test_conj_physical_inplace_view_grad_rejected(self):
+        # 原地作用于非 leaf 但为 leaf 的视图：官方就地拒绝（view-of-leaf 语义）。
+        x = torch.tensor([1 + 2j, 3 - 4j], device='npu', requires_grad=True)
+        y = x[:]
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r"view of a leaf Variable that requires grad is being used in an in-place operation"):
+            y.conj_physical_()
+
+    def test_conj_physical_out_not_differentiable(self):
+        # .out 官方不可微：requires_grad 随输入传播但 grad_fn=NotImplemented，
+        # 对实标量 loss 反向时报 "derivative ... not implemented"（CPU 官方基准一致）。
+        x = torch.tensor([1 + 2j, 3 - 4j], device='npu', requires_grad=True)
+        o = torch.empty_like(x)
+        out = torch.conj_physical(x, out=o)
+        self.assertTrue(out.requires_grad)
+        self.assertTrue(not out.is_leaf)                 # .out 结果不可能是 leaf
+        self.assertTrue(out.grad_fn is not None and out.grad_fn.__class__.__name__ == "NotImplemented")
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r"derivative for aten::conj_physical is not implemented"):
+            (out.real.sum() + out.imag.sum()).backward()
+
+    def test_conj_physical_out_call_error_out_requires_grad(self):
+        # .out 调用报错：out 张量显式 requires_grad 时，官方抛 "functions with out=...
+        # arguments don't support automatic differentiation"（仅 out 带梯度、输入不带亦同）。
+        x = torch.tensor([1 + 2j, 3 - 4j], device='npu', requires_grad=True)
+        o = torch.empty_like(x).requires_grad_()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r"functions with out=\.\.\. arguments don't support automatic differentiation"):
+            torch.conj_physical(x, out=o)
+        # 仅 out 带梯度（输入 requires_grad=False）同样报错
+        x2 = torch.tensor([1 + 2j, 3 - 4j], device='npu')
+        o2 = torch.empty_like(x2).requires_grad_()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r"functions with out=\.\.\. arguments don't support automatic differentiation"):
+            torch.conj_physical(x2, out=o2)
+
     def test_conj_physical_no_cpu_fallback(self):
         # 不触发 CPU fallback：断言走原生 aclnnMul 路径（未落到 real/imag/neg/complex
         # composite 回退）。仅查 device.type 不足证——composite 结果也可贴 npu 设备；
