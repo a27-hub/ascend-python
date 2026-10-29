@@ -301,7 +301,8 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
         x2 = torch.randn(x2_shape, dtype=dtype).npu()
         is_gather_out = True
         y, gather_out = get_graph(self_t, x2, hcomm_info, world_size, is_gather_out)
-        print("y:", y)
+        print(y.shape, y.dtype)
+        print(gather_out.shape, gather_out.dtype)
     if __name__ == "__main__":
         worksize = 8
         master_ip = '127.0.0.1'
@@ -310,4 +311,25 @@ torch_npu.npu_all_gather_quant_mm(self, x2, hcom, world_size, *, bias=None, x1_s
         x2_shape = [512, 256]
         dtype = torch.float16
         mp.spawn(run_npu_all_gather_quant_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
+    ```
+
+    输出如下所示
+
+    ```text
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
+    torch.Size([128, 256]) torch.float16
+    torch.Size([128, 512]) torch.float16
     ```
