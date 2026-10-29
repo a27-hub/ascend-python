@@ -29,3 +29,22 @@ The correct call sequence is: `init_dump()` → `set_dump(cfg_file)` → execute
 ```python
 torch_npu.npu.init_dump()
 ```
+
+## Example
+
+```python
+>>> import torch
+>>> import torch_npu
+>>>
+>>> # 1. Initialize the dump process
+>>> torch_npu.npu.init_dump()
+>>>
+>>> # 2. Specify the dump configuration file path; the dump.json path is user-defined
+>>> torch_npu.npu.set_dump("/home/HwHiAiUser/dump.json")
+>>>
+>>> # 3. Run model inference (example)
+>>> # output = model(input_data)
+>>>
+>>> # 4. Finalize the dump process
+>>> torch_npu.npu.finalize_dump()
+```

@@ -27,3 +27,22 @@ Ends the dump process and triggers a write of the dump data to the drive.
 ```python
 torch_npu.npu.finalize_dump()
 ```
+
+## Example
+
+```python
+>>> import torch
+>>> import torch_npu
+>>>
+>>> # 1. Initialize the dump process
+>>> torch_npu.npu.init_dump()
+>>>
+>>> # 2. Specify the dump configuration file path; the dump.json path is user-defined
+>>> torch_npu.npu.set_dump("/home/HwHiAiUser/dump.json")
+>>>
+>>> # 3. Run model inference (example)
+>>> # output = model(input_data)
+>>>
+>>> # 4. Finalize the dump process
+>>> torch_npu.npu.finalize_dump()
+```
