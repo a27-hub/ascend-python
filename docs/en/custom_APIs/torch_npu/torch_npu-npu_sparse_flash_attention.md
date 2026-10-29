@@ -95,7 +95,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **`key_rope`** (`Tensor`): Optional. RoPE information for the key in the MLA structure. Non-contiguous tensors are not supported. The data layout can be ND. The data type can be `torch.bfloat16` or `torch.float16`.
 
-- **`sparse_block_size`** (`int`): Optional. Block size used in the sparse phase during the importance score computation. The data type can be `torch.int64`. The value must be a power of 2 in the range of [1, 128].
+- **`sparse_block_size`** (`int`): Optional. Block size used in the sparse phase during the importance score computation. The data type can be `int64`. The value must be a power of 2 in the range of [1, 128].
     - When sparse_block_size is 1, it is the token-wise sparsification scenario, in which each token is treated as an independent unit, and the independent correlation between each query token and each key-value token is evaluated when computing the importance score.
     - When sparse_block_size is greater than 1 and less than or equal to 128, it is the block-wise sparsification scenario, in which the token sequence is divided into consecutive blocks of a fixed size, the importance is evaluated in units of blocks, and tokens in a block share the same sparsification decision.
 
@@ -103,15 +103,15 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **`layout_kv`** (`str`): Optional. Data layout of the input `key`. Valid values are `TND`, `BSND`, or `PA_BSND`. If omitted, the default value `BSND` is used. `PA_BSND` is used when PagedAttention is enabled.
 
-- **`sparse_mode`** (`int`): Optional. Sparse mode. The data type can be `torch.int64`.
+- **`sparse_mode`** (`int`): Optional. Sparse mode. The data type can be `int64`.
     - When sparse\_mode is 0, all computations are performed.
     - When sparse\_mode is 3, it indicates the mask of the rightDownCausal mode, corresponding to the lower-triangular scenario divided along the line from the bottom-right vertex to the top-left.
 
-- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. Only the default value `9223372036854775807` is supported.
+- **`pre_tokens`** (`int`): Optional. Number of preceding tokens to associate in attention computation for sparse computation. The data type can be `int64`. Only the default value `9223372036854775807` is supported.
 
-- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `torch.int64`. Only the default value `9223372036854775807` is supported.
+- **`next_tokens`** (`int`): Optional. Number of subsequent tokens to associate in attention computation for sparse computation. The data type can be `int64`. Only the default value `9223372036854775807` is supported.
 
-- **`attention_mode`** (`int`): Optional. Indicates the attention mode. The data type can be `torch.int64`. Only the value `2` is supported, indicating the MLA-absorb mode. In this mode, computations concatenate the `nope` portion of the query or key with the rope portion of `query_rope` or `key_rope` along the head dimension `D`. This merges them to form the final query or key for subsequent computations. The key or value shares the identical underlying tensor data.
+- **`attention_mode`** (`int`): Optional. Indicates the attention mode, passed as a Python `int`. Only the value `2` is supported, indicating the MLA-absorb mode. In this mode, computations concatenate the `nope` portion of the query or key with the rope portion of `query_rope` or `key_rope` along the head dimension `D`. This merges them to form the final query or key for subsequent computations. The key or value shares the identical underlying tensor data.
 
 - **`return_softmax_lse`** (`bool`): Optional. Specifies whether to return `softmax_max` or `softmax_sum`. Valid values are `True` (enables the return but does not support graph capture mode) or `False` (disables the return). The default value is `False`. This parameter is supported only during training when `layout_kv` is not `PA_BSND`.
 
