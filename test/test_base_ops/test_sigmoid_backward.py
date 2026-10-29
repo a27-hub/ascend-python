@@ -22,6 +22,34 @@ def npu_input_grad_hook(grad):
 
 
 class TestSigmoidBackward(TestCase):
+    def test_sigmoid_backward_half_intermediate_rounding(self):
+        # Fix the saved forward output to isolate backward rounding. The first
+        # value distinguishes Half intermediates from a single fused rounding.
+        output = torch.tensor(
+            [0.00024437904357910156, 0.00015115737915039062,
+             0.25, 0.5, 0.75, 0.99951171875], dtype=torch.float16)
+        for value in [1.0, 0.1, 0.001, 1000.0]:
+            with self.subTest(grad=value):
+                grad = torch.full_like(output, value)
+                expected = torch.ops.aten.sigmoid_backward(grad, output)
+                actual = torch.ops.aten.sigmoid_backward(grad.npu(), output.npu())
+                torch.testing.assert_close(actual.cpu(), expected, atol=0, rtol=0)
+                out = torch.empty_like(output, device="npu")
+                returned = torch.ops.aten.sigmoid_backward.grad_input(
+                    grad.npu(), output.npu(), grad_input=out)
+                self.assertIs(returned, out)
+                torch.testing.assert_close(out.cpu(), expected, atol=0, rtol=0)
+
+    def test_sigmoid_inplace_backward_half_precision(self):
+        # Exercise the public inplace API as well as the direct backward kernel.
+        # Clone the leaf because autograd disallows modifying a leaf inplace.
+        cpu = torch.tensor([-8.3125, -2.0, -0.5, 0.5, 2.0, 8.0],
+                           dtype=torch.float16, requires_grad=True)
+        npu = cpu.detach().npu().requires_grad_(True)
+        cpu_grad, = torch.autograd.grad(cpu.clone().sigmoid_().sum(), cpu)
+        npu_grad, = torch.autograd.grad(npu.clone().sigmoid_().sum(), npu)
+        torch.testing.assert_close(npu_grad.cpu(), cpu_grad, atol=0, rtol=0)
+
     def cpu_op_exec(self, input1, is_contiguous=True):
         if is_contiguous is False:
             input1 = input1.as_strided([2, 2], [1, 2], 1)

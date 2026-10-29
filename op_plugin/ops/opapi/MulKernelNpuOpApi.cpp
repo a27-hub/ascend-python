@@ -40,6 +40,27 @@ static at::Tensor self_tensor_to_device(
   return tensor;
 }
 
+static at::Tensor& mul_scalar_out_with_opmath(
+    const at::Tensor& self,
+    const at::Scalar& other,
+    at::Tensor& result) {
+  if (self.scalar_type() == at::kHalf && result.scalar_type() == at::kHalf && !other.isComplex()) {
+    // Native CPU/CUDA multiplication keeps a wrapped scalar in float opmath
+    // precision for a Half tensor, then rounds the product to Half. Passing
+    // the scalar directly to aclnnMuls can instead round it to Half first:
+    // Half(1.5) * 0.1 becomes 0.14990234375 instead of 0.1500244140625.
+    // Materialize a float scalar on the same NPU so mixed-input aclnnMul
+    // preserves the scalar until multiplication, while keeping a Half output.
+    // This also fixes the mul.Scalar used by foreach_addcdiv backward; the
+    // error is in scalar conversion, so no autograd formula change is needed.
+    at::Tensor scalar_tensor = npu_preparation::copy_scalar_to_device(other, at::kFloat, self.device());
+    EXEC_NPU_CMD(aclnnMul, self, scalar_tensor, result);
+  } else {
+    EXEC_NPU_CMD(aclnnMuls, self, other, result);
+  }
+  return result;
+}
+
 at::Tensor& inplace_mul_out_npu_no_check(at::Tensor& self, const at::Tensor& other) {
   // check if other scalar tensor
   if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
@@ -55,7 +76,7 @@ at::Tensor& mul_out_npu_no_check(const at::Tensor& self, const at::Tensor& other
   // check if other scalar tensor
   if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
     c10::Scalar other_scalar = other.item();
-    EXEC_NPU_CMD(aclnnMuls, self, other_scalar, result);
+    mul_scalar_out_with_opmath(self, other_scalar, result);
   } else {
     EXEC_NPU_CMD(aclnnMul, self, other, result);
   }
@@ -101,13 +122,14 @@ at::Tensor mul(const at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor mul(const at::Tensor& self, const at::Scalar& other) {
+  DO_COMPATIBILITY(aclnnMul, acl_op::mul(self, other));
   DO_COMPATIBILITY(aclnnMuls, acl_op::mul(self, other));
   auto output_size = op_infer::input_same_output_size(self);
   at::ScalarType result_type = at::native::result_type(self, other);
   // construct the output tensor of the Npu
   at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(result_type));
   // calculate the output result of the NPU
-  EXEC_NPU_CMD(aclnnMuls, self, other, result);
+  mul_scalar_out_with_opmath(self, other, result);
   return result;
 }
 
