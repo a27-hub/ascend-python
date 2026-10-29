@@ -164,11 +164,11 @@ at::Tensor _grouped_mm(const at::Tensor& mat_a, const at::Tensor& mat_b,
 #endif
     }
 
-    // 3D x 3D -> aclnnBatchMatMul (via at::bmm_out, NPU auto-dispatches)
+    // 3D x 3D -> aclnnBatchMatMul (via at::bmm, NPU auto-dispatches)
+    // Use at::bmm instead of at::bmm_out to avoid parameter order differences
+    // across PyTorch versions (old: out first, new: out last)
     if (!a_is_2d && !b_is_2d) {
-        auto output_size = op_infer::array_to_small_vector({mat_a.size(0), mat_a.size(1), mat_b.size(-1)});
-        at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, options);
-        at::bmm_out(mat_a, mat_b, out);
+        at::Tensor out = at::bmm(mat_a, mat_b);
         return out;
     }
 
