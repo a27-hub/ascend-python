@@ -67,6 +67,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(const at
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
     const at::Tensor& input, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias, bool training, double momentum, double eps) {
+    TORCH_CHECK(training, "_native_batch_norm_legit.no_stats requires training=True", OPS_ERROR(ErrCode::PARAM));
     return at::native_batch_norm(
         input, weight, bias, c10::nullopt, c10::nullopt, training, momentum, eps);
 }

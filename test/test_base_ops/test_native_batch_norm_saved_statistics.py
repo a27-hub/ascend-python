@@ -31,7 +31,18 @@ class TestNativeBatchNormSavedStatistics(TestCase):
             torch.npu.set_compile_mode(jit_compile=not previous_jit)
 
     @parametrize("jit", [False, True])
-    @parametrize("dtype", [torch.float16, torch.float32])
+    def test_no_stats_requires_training(self, device, jit):
+        previous_jit = torch.npu.is_jit_compile_false()
+        try:
+            torch.npu.set_compile_mode(jit_compile=jit)
+            x = torch.ones((4, 3, 8), device=device)
+            with self.assertRaisesRegex(RuntimeError, "no_stats requires training=True"):
+                torch.ops.aten._native_batch_norm_legit.no_stats(x, None, None, False, 0.3, 0.01)
+        finally:
+            torch.npu.set_compile_mode(jit_compile=not previous_jit)
+
+    @parametrize("jit", [False, True])
+    @parametrize("dtype", [torch.float16, torch.bfloat16, torch.float32])
     @parametrize("use_out", [False, True])
     def test_inference_saved_statistics(self, device, jit, dtype, use_out):
         previous_jit = torch.npu.is_jit_compile_false()
@@ -61,7 +72,8 @@ class TestNativeBatchNormSavedStatistics(TestCase):
             expected = ((x.cpu().float() - mean.cpu().float()[None, :, None])
                         * (variance.cpu().float() + 0.01).rsqrt()[None, :, None]
                         * weight.cpu().float()[None, :, None] + bias.cpu().float()[None, :, None]).to(dtype)
-            atol, rtol = (1e-3, 1e-3) if dtype == torch.float16 else (1.5e-5, 1.3e-5)
+            atol, rtol = {torch.float16: (1e-3, 1e-3), torch.bfloat16: (1e-5, 1.6e-2),
+                          torch.float32: (1.5e-5, 1.3e-5)}[dtype]
             self.assertEqual(result[0].cpu(), expected, atol=atol, rtol=rtol)
             self.assertEqual(result[1].cpu(), mean.cpu(), atol=0, rtol=0)
             self.assertEqual(result[2].cpu(), reference_rstd, atol=atol, rtol=rtol)
