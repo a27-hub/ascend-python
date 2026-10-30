@@ -33,6 +33,14 @@ static inline void matmul_implement_npu(at::Tensor& out, const at::Tensor& self,
   return;
 }
 
+static inline int64_t folded_leading_dim(const at::Tensor& tensor, int64_t start_dim, int64_t end_dim) {
+  int64_t folded = 1;
+  for (int64_t i = start_dim; i < end_dim; ++i) {
+    folded *= tensor.size(i);
+  }
+  return folded;
+}
+
 static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tensor& tensor1, const at::Tensor& tensor2) {
   c10::SmallVector<int64_t, op_infer::SIZE> output_size;
   auto dim_tensor1 = tensor1.dim();
@@ -113,7 +121,7 @@ at::Tensor matmul_mat1_backward(const at::Tensor self, const at::Tensor other, c
   if (mat1.dim() == 2 && mat2.dim() > 2) { // mm
     output = at_npu::native::OpPreparation::apply_tensor_without_format(mat1.sizes(), grad.options());
     mat2 = mat2.transpose(-2, -1);
-    mat2 = mat2.reshape({-1, mat2.size(-1)});
+    mat2 = mat2.reshape({folded_leading_dim(mat2, 0, mat2.dim() - 1), mat2.size(-1)});
 
     int64_t dim = grad.dim(); // dim for length of grad dimention
     c10::SmallVector<int64_t, op_infer::SIZE> permute_order;
@@ -123,7 +131,8 @@ at::Tensor matmul_mat1_backward(const at::Tensor self, const at::Tensor other, c
       permute_order.push_back(i);
     }
     permute_order.push_back(dim - 1);
-    grad = grad.permute(permute_order).contiguous().reshape({grad.size(-2), -1}); // 2 for matmul specific dimension
+    grad = grad.permute(permute_order).contiguous();
+    grad = grad.reshape({grad.size(0), folded_leading_dim(grad, 1, grad.dim())}); // 2 for matmul specific dimension
     matmul_implement_npu(output, grad, mat2);
     output = output.reshape(self.sizes());
   } else { // bmm
@@ -155,8 +164,8 @@ at::Tensor matmul_mat2_backward(const at::Tensor self, const at::Tensor other, c
   at::Tensor output;
   if (mat2.dim() == 2 && mat1.dim() > 2) { // mm
     output = at_npu::native::OpPreparation::apply_tensor_without_format(mat2.sizes(), mat1.options());
-    mat1 = mat1.reshape({-1, mat1.size(-1)});
-    grad = grad.reshape({-1, grad.size(-1)});
+    mat1 = mat1.reshape({folded_leading_dim(mat1, 0, mat1.dim() - 1), mat1.size(-1)});
+    grad = grad.reshape({folded_leading_dim(grad, 0, grad.dim() - 1), grad.size(-1)});
     mat1 = mat1.transpose(-2, -1);
     matmul_implement_npu(output, mat1, grad);
     output = output.reshape(other.sizes());

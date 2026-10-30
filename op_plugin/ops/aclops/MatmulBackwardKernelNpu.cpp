@@ -24,6 +24,15 @@ namespace {
 // c = a @ b, then
 // a_grad = c_grad @ b^H
 // b_grad = a^H @ c_grad
+
+int64_t folded_leading_dim(const at::Tensor& tensor, int64_t start_dim, int64_t end_dim) {
+  int64_t folded = 1;
+  for (int64_t i = start_dim; i < end_dim; ++i) {
+    folded *= tensor.size(i);
+  }
+  return folded;
+}
+
 std::tuple<at::Tensor, at::Tensor> npu_matmul_backward(
     const at::Tensor& grad,
     const at::Tensor& self,
@@ -51,24 +60,29 @@ std::tuple<at::Tensor, at::Tensor> npu_matmul_backward(
   } else if (dim_self >= 3 && (dim_other == 1 || dim_other == 2)) {
     // create a 2D-matrix from grad
     const int64_t view_size = dim_other == 1 ? 1 : size_grad[size_grad.size() - 1];
-    auto unfolded_grad = (dim_other == 1 ? grad.unsqueeze(-1) : grad).contiguous().view({-1, view_size});
+    auto grad_fold = (dim_other == 1 ? grad.unsqueeze(-1) : grad).contiguous();
+    auto unfolded_grad = grad_fold.view({folded_leading_dim(grad_fold, 0, grad_fold.dim() - 1), view_size});
     if (mask[0]) {
       grad_self = unfolded_grad.mm(dim_other == 1 ? other.unsqueeze(0) : other.transpose(-1, -2)).view(size_self);
     }
     if (mask[1]) {
       // create a 2D-matrix from self
-      auto unfolded_self = self.contiguous().view({-1, size_self[dim_self - 1]});
+      auto self_fold = self.contiguous();
+      auto unfolded_self =
+          self_fold.view({folded_leading_dim(self_fold, 0, self_fold.dim() - 1), size_self[dim_self - 1]});
       grad_other = unfolded_self.transpose(-1, -2).mm(unfolded_grad).view(size_other);
     }
   } else if ((dim_self == 1 || dim_self == 2) && dim_other >= 3) {
     // create a 2D-matrix from grad
     const int64_t view_size = dim_self == 1 ? 1 : size_grad[size_grad.size() - 2];
     auto unfolded_grad_T =
-        dim_self == 1 ? grad.view({-1, view_size}) : grad.transpose(-1, -2).contiguous().view({-1, view_size});
+        dim_self == 1 ? grad.view({grad.numel(), view_size})
+                      : grad.transpose(-1, -2).contiguous().view({folded_leading_dim(grad, 0, grad.dim() - 1), view_size});
     if (mask[0]) {
       // create a 2D-matrix from other
+      auto other_fold = other.transpose(-1, -2).contiguous();
       auto unfolded_other_T =
-          other.transpose(-1, -2).contiguous().view({-1, size_other[dim_other - 2]}).transpose(-1, -2);
+          other_fold.view({folded_leading_dim(other_fold, 0, other_fold.dim() - 1), size_other[dim_other - 2]}).transpose(-1, -2);
       grad_self = unfolded_other_T.mm(unfolded_grad_T).transpose(-1, -2).view(size_self);
     }
     if (mask[1]) {
