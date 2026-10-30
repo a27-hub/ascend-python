@@ -11,17 +11,17 @@ class TestKlDivTargetBackwardMeta(TestCase):
     @parametrize("reduction", [0, 1, 2])
     @parametrize("log_target", [False, True])
     @parametrize("layout", ["scalar", "contiguous", "transpose"])
-    def test_meta_matches_native(self, device, dtype, reduction, log_target, layout):
+    @parametrize("backward", ["input", "target"])
+    def test_meta_matches_native(self, device, dtype, reduction, log_target, layout, backward):
         target = torch.full(() if layout == "scalar" else (2, 3), 0.5, device=device, dtype=dtype)
         if layout == "transpose":
             target = target.t()
         input = torch.full_like(target, -0.5)
         grad = torch.ones_like(target) if reduction == 0 else target.new_ones(())
-        actual = torch.ops.npu.kl_div_target_backward(
-            grad, input, target, reduction, log_target=log_target
-        )
+        op = torch.ops.npu.kl_div_backward if backward == "input" else torch.ops.npu.kl_div_target_backward
+        actual = op(grad, input, target, reduction, log_target=log_target)
         with FakeTensorMode() as mode:
-            fake = torch.ops.npu.kl_div_target_backward(
+            fake = op(
                 mode.from_tensor(grad), mode.from_tensor(input), mode.from_tensor(target),
                 reduction, log_target=log_target,
             )
