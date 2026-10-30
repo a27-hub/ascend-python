@@ -184,7 +184,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：shape支持2维（perchannel）或3维（pergroup），首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴（N）相同。数据类型支持`torch.float32`、`torch.float16`、`torch.bfloat16`、`torch.int64`（perchannel）。
   <!-- end id11 -->
   <!-- npu="950" id12 -->
-  - <term>Ascend 950PR&950DT系列产品</term>：仅支持二维perchannel量化因子，shape为[E, N]。数据类型支持`torch.float32`、`torch.float16`、`torch.bfloat16`。
+  - <term>Ascend 950PR&950DT系列产品</term>：shape仅支持2维（perchannel）[E, N]。数据类型支持`torch.float32`、`torch.float16`、`torch.bfloat16`。
   <!-- end id12 -->
 
 - **x\_scale**（`Tensor`）：必选参数，左矩阵的量化因子，公式中的$x\_scale$。shape支持1维，长度需与x的首轴维度（M）相等。数据类型支持`torch.float32`，数据格式支持ND，支持非连续Tensor。
