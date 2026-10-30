@@ -6984,6 +6984,11 @@ def kl_div_backward_meta(grad_out, x, target, reduction="mean", log_target=False
     return result
 
 
+@impl(m, "kl_div_target_backward")
+def kl_div_target_backward_meta(grad_output, self, target, reduction=1, log_target=False):
+    return target.new_empty(target.shape)
+
+
 @impl(m, "npu_dropout_with_add_softmax")
 def npu_dropout_with_add_softmax_meta(x1, x2, alpha, prod, axis):
     add = x1 + x2
