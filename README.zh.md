@@ -13,6 +13,7 @@
   <a href="#安装">安装</a> ·
   <a href="#算子开发">算子开发</a> ·
   <a href="#api-参考">API 参考</a> ·
+  <a href="#算子支持度">算子支持度</a> ·
   <a href="#贡献与交流">贡献与交流</a> ·
   <a href="https://gitcode.com/Ascend/pytorch">TorchNPU 主仓</a>
 </p>
@@ -76,6 +77,22 @@ OpPlugin 随对应版本的 TorchNPU 集成和发布，环境配套和支持策�
 ## API 参考
 
 [TorchNPU 自定义 API](docs/zh/custom_APIs/menu_Pytorch_API.md)提供接口功能、函数原型、参数说明、支持约束和调用示例。具体接口的版本和硬件支持范围以对应 API 文档为准。
+
+## 算子支持度
+
+OpPlugin 为 PyTorch 原生算子和 TorchNPU 自定义算子提供昇腾 NPU 适配。下表列出标准 PyTorch 算子在昇腾 NPU 上的支持度；完整算子清单与版本支持状态请参考 [TorchNPU 支持说明](https://gitcode.com/Ascend/pytorch/blob/master/SUPPORT.md)。
+
+**表1** 标准算子支持度
+
+| API | 支持度 | 支持数据类型 | 约束与说明 |
+| --- | --- | --- | --- |
+| `torch.conj_physical(Tensor self)` | 支持 | complex64、complex128 | 共轭物理值（实际翻转虚部符号，非共轭视图），输出与 CPU/GPU 官方语义一致；实数/整数/布尔输入原样返回（别名）。 |
+| `torch.conj_physical(Tensor self, *, Tensor out)` | 支持 | complex64、complex128 | `.out` 变体；实数输入为拷贝语义（对齐 GPU，非原样返回）。官方 `.out` 变体不可微。 |
+| `Tensor.conj_physical_()` | 支持 | complex64、complex128 | in-place 变体，直接写回输入 storage；实数输入为 no-op；作用于需梯度的 leaf 时按官方语义报错。 |
+
+确定性：`conj_physical` 为纯逐元素算子，无归约/原子/随机源，开启确定性计算开关前后结果一致，多 stream 下结果一致（见 `test/test_base_ops/test_conj_physical.py` 确定性用例）。
+
+内存：与 GPU 持平——功能式仅额外分配 1× 输出，in-place/.out 无同规模额外分配，无泄漏（见同一测试文件内存用例）。
 
 ## 目录结构
 
