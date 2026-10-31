@@ -33,8 +33,8 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
 ## Parameters
 
 - **`self`** (`Tensor`): Required. Matrix to which accumulation is applied. The data type can be `torch.float32`. This parameter must be a 2D tensor with shape `[M, N]`. The data layout can be `ND`.
-- **`x1`** (`Tensor`): Required. Left matrix in matrix multiplication. The data type can be `torch.float8_e5m2`, `torch.float8_e4m3fn`, `torch_npu.hifloat8`, or `torch.float4_e2m1fn_x2`. This parameter must be a 2D tensor. For the specific shape requirements, see Constraints. The data layout can be `ND`.
-- **`x2`** (`Tensor`): Required. Right matrix in matrix multiplication. The data type can be `torch.float8_e5m2`, `torch.float8_e4m3fn`, `torch_npu.hifloat8`, or `torch.float4_e2m1fn_x2`. This parameter must be a 2D tensor. For the specific shape requirements, see Constraints. The data layout can be `ND`.
+- **`x1`** (`Tensor`): Required. Left matrix in matrix multiplication. The data type can be `torch.float8_e5m2`, `torch.float8_e4m3fn`, `torch_npu.hifloat8`, or `torch_npu.float4_e2m1fn_x2`. This parameter must be a 2D tensor. For the specific shape requirements, see Constraints. The data layout can be `ND`.
+- **`x2`** (`Tensor`): Required. Right matrix in matrix multiplication. The data type can be `torch.float8_e5m2`, `torch.float8_e4m3fn`, `torch_npu.hifloat8`, or `torch_npu.float4_e2m1fn_x2`. This parameter must be a 2D tensor. For the specific shape requirements, see Constraints. The data layout can be `ND`.
 - **`x2_scale`** (`Tensor`): Required. Scaling factor of the right matrix in the matrix multiplication. The data type can be `torch.float8_e8m0fnu` or `torch.float32`, and the shape must be 3D. When `torch.float8_e8m0fnu` is used, the optional parameter `x2_scale_dtype` must be set to the corresponding type. In this case, the dtype of `x2_scale` itself no longer takes effect, but the dtype of `x2_scale` itself must still be an 8-bit data type so that the shape is correct. The data layout can be ND.
 - **`*`**: Position delimiter used to distinguish positional arguments from keyword arguments. Variables before it are position-dependent and must be passed in order; variables after it are optional keyword arguments and can be passed in any order using key-value pairs. If not specified, their default values are used.
 - **`x1_scale`** (`Tensor`): Optional. Scaling factor of the left matrix in the matrix multiplication. The data type can be `torch.float8_e8m0fnu` or `torch.float32`, and the shape must be 3D. When `torch.float8_e8m0fnu` is used, the optional parameter `x1_scale_dtype` must be set to the corresponding type. In this case, the dtype of `x1_scale` itself no longer takes effect, but the dtype of `x1_scale` itself must still be an 8-bit data type so that the shape is correct. The data layout can be ND.
@@ -43,13 +43,18 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
   - When one or more of [group\_m, group\_n, group\_k] are 0, the API resets the value according to the input shapes of `x1`, `x2`, `x1_scale`, and `x2_scale`. Computation principle: If group\_m=0, the quantization grouping value in the m direction is inferred by the API. The inference formula is group\_m=m/scale\_m (m must be divisible by scale\_m), where m is the same as m in the x1 shape and scale\_m is the same as m in the x1\_scale shape.
   - Currently, the only value supported for [group\_m, group\_n, group\_k] in the mx quantization scenario is [1,1,32]. The T-T quantization scenario supports only [0,0,0].
 
-- **`x1_dtype`** (`int`): Optional. Used to explicitly specify the logical data type of `x1`. None: default value, indicating that the actual input data type is the same as the dtype of the input `x1`. Currently, `torch.float8_e4m3fn`, `torch.float8_e5m2`, `torch_npu.hifloat8`, and `torch.float4_e2m1fn_x2` are supported.
+- **`x1_dtype`** (`int`): Optional. Used to explicitly specify the logical data type of `x1`. None: default value, indicating that the actual input data type is the same as the dtype of the input `x1`. Currently, `torch.float8_e4m3fn`, `torch.float8_e5m2`, `torch_npu.hifloat8`, and `torch_npu.float4_e2m1fn_x2` are supported.
 
-- **`x2_dtype`** (`int`): Optional. Used to explicitly specify the logical data type of `x2`. None: default value, indicating that the actual input data type is the same as the dtype of the input `x2`. Currently, `torch.float8_e4m3fn`, `torch.float8_e5m2`, `torch_npu.hifloat8`, and `torch.float4_e2m1fn_x2` are supported.
+- **`x2_dtype`** (`int`): Optional. Used to explicitly specify the logical data type of `x2`. None: default value, indicating that the actual input data type is the same as the dtype of the input `x2`. Currently, `torch.float8_e4m3fn`, `torch.float8_e5m2`, `torch_npu.hifloat8`, and `torch_npu.float4_e2m1fn_x2` are supported.
 
 - **`x1_scale_dtype`** (`int`): Optional. Used to explicitly specify the logical data type of `x1_scale`. None: default value, indicating that the actual input data type is the same as the dtype of the input `x1_scale`. Currently, only `torch.float8_e8m0fnu` is supported.
 
 - **`x2_scale_dtype`** (`int`): Optional. Used to explicitly specify the logical data type of `x2_scale`. None: default value, indicating that the actual input data type is the same as the dtype of the input `x2_scale`. Currently, only `torch.float8_e8m0fnu` is supported.
+
+> [!NOTE]
+>
+> - PyTorch 2.7 and earlier: Store packed FP4 data in an 8-bit Tensor and set `x1_dtype` and `x2_dtype` to `torch_npu.float4_e2m1fn_x2` to specify the logical data type.
+> - PyTorch 2.8 and later: You can also construct input Tensors using the native `torch.float4_e2m1fn_x2` data type. In this case, `x1_dtype` and `x2_dtype` can retain their default value of `None`.
 
 ## Return Values
 
@@ -63,7 +68,7 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
 
     | Scenario | x1 | x2 | x2_scale | x1_scale | self |
     | --- | --- | --- | --- | --- | --- |
-    | mx quantization | `torch.float8_e4m3fn`/`torch.float8_e5m2` | `torch.float8_e4m3fn`/`torch.float8_e5m2` | `torch.float8_e8m0fnu` | `torch.float8_e8m0fnu` | `torch.float32` |
+    | MXFP8 quantization | `torch.float8_e4m3fn`/`torch.float8_e5m2` | `torch.float8_e4m3fn`/`torch.float8_e5m2` | `torch.float8_e8m0fnu` | `torch.float8_e8m0fnu` | `torch.float32` |
     | MXFP4 quantization | `torch.float4_e2m1fn_x2` | `torch.float4_e2m1fn_x2` | `torch.float8_e8m0fnu` | `torch.float8_e8m0fnu` | `torch.float32` |
     | T-T quantization | `torch_npu.hifloat8` | `torch_npu.hifloat8` | `torch.float32` | `torch.float32` | `torch.float32` |
 
@@ -71,13 +76,11 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
 
     | Scenario | x1 | x2 | x2_scale | x1_scale | self |
     | --- | --- | --- | --- | --- | --- |
-    | mx quantization | (K,M) | (K,N) | (ceil(K/64),N,2) | (ceil(K/64),M, 2) | (M,N) |
+    | MXFP8 quantization | (K,M) | (K,N) | (ceil(K/64),N,2) | (ceil(K/64),M, 2) | (M,N) |
     | MXFP4 quantization (packed original storage) | (K,M/2) | (K,N/2) | (ceil(K/64),N,2) | (ceil(K/64),M,2) | (M,N) |
     | T-T quantization | (K,M) | (K,N) | (1) | (1) | (M,N) |
 
 - MXFP4 quantization constraints:
-  - The logical data types of `x1` and `x2` must both be `torch.float4_e2m1fn_x2`. Mixed FP4 and FP8 inputs are not supported. `x1_scale` must be provided, and both scaling factors must have the E8M0 logical data type.
-  - Only 2D inputs in ND layout are supported. Pass `x1` as a transposed view of its original storage and pass `x2` without transposition. For `x1`, the mathematical shape is `[M, K]`, the packed original storage shape is `[K, M/2]`, and the input tensor shape is `[M/2, K]`. For `x2`, the mathematical shape is `[K, N]` and the input tensor shape is `[K, N/2]`.
   - Each byte holds two FP4 encodings. The low 4 bits correspond to an even-indexed element along the last axis of the original storage, and the high 4 bits correspond to the following odd-indexed element. M and N must be even.
   - When M, N, and K are all greater than 0, both M × K > 2 and N × K > 2 must hold.
   - Provided that all other parameter constraints are satisfied, an empty tensor is returned when M or N is 0. When K is 0, `self` remains unchanged. The preceding product constraints do not apply when M, N, or K is 0.
@@ -85,7 +88,7 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
 ## Example
 
 - Single-operator call
-  - Single-operator call for mx quantization
+  - Single-operator call for MXFP8 quantization
 
     ```python
     import math
@@ -104,7 +107,7 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
 
   - Single-operator call for MXFP4 quantization
 
-    In this example, `0x22` contains two FP4 encodings of 1.0, and the E8M0 encoding 127 represents a scaling factor of 1.0. `view` reinterprets existing encodings without performing numerical quantization.
+    This example uses the native `torch.float4_e2m1fn_x2` data type and requires PyTorch 2.8 or later and a matching torch_npu version that supports this data type.
 
     ```python
     import torch
@@ -130,6 +133,7 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
         x1_scale_dtype=torch_npu.float8_e8m0fnu,
         x2_scale_dtype=torch_npu.float8_e8m0fnu,
     )
+    torch.testing.assert_close(y, torch.full_like(y, K + 1), rtol=0, atol=0)
     print(y.cpu())
     ```
 
@@ -151,7 +155,7 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
     ```
 
 - Graph mode call
-  - Graph mode call for mx quantization
+  - Graph mode call for MXFP8 quantization
 
     ```python
     import math
