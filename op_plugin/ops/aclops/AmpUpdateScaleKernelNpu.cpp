@@ -30,7 +30,7 @@ at::Tensor &_amp_update_scale_(
     // aclnnAmpUpdateScale is not reliably available on some SoCs (e.g. Ascend950PR,
     // intermittent 561002/561103 at process start). Compose the scale state machine
     // with universally available basic ops, matching the CPU/CUDA reference:
-    //   found_inf == 1            : scale *= backoff_factor, tracker = 0
+    //   found_inf != 0            : scale *= backoff_factor, tracker = 0
     //   tracker + 1 == interval   : scale *= growth_factor,  tracker = 0
     //   otherwise                 : tracker += 1
     at::Tensor found = found_inf.ne(0);
