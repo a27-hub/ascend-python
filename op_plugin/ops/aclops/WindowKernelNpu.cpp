@@ -26,6 +26,7 @@ namespace acl_op {
 //   blackman: 0.42 - 0.5*cos(2*pi*k/N) + 0.08*cos(4*pi*k/N)
 // 计算统一在 float32 上进行（NPU 无 double 逐点算子），请求 double 时结果由 float32 转换，
 // 与 CPU 的偏差为 ULP 级（真机验证：n={8,64,1024} 三窗 maxdiff 0.0~1.2e-07，n=8 位等）。
+// dtype 未指定时遵循 torch.get_default_dtype()；基础与 .periodic 两个重载均已注册。
 
 namespace {
 constexpr double kPi = 3.14159265358979323846;
@@ -37,21 +38,24 @@ at::Tensor combine_window(int64_t window_length, double a0, double a1, double a2
     c10::TensorOptions options = c10::TensorOptions().dtype(at::kFloat)
                                      .device(device)
                                      .pinned_memory(pin_memory);
-    at::Tensor result = at::empty({window_length}, options);
     if (window_length <= 1) {
         // 与 aten 一致：长度 0 返回空张量，长度 1 返回全 1
-        result.fill_(1);
-        return result.to(dtype);
+        return at::ones({window_length}, options).to(dtype);
     }
     const double denom = periodic ? static_cast<double>(window_length)
                                   : static_cast<double>(window_length - 1);
     at::Tensor k = at::arange(window_length, options);
     at::Tensor inner = k * (2.0 * kPi / denom);
-    result = a0 - a1 * at::cos(inner);
+    at::Tensor result = a0 - a1 * at::cos(inner);
     if (has_a2) {
         result = result + a2 * at::cos(inner * 2);
     }
     return result.to(dtype);
+}
+
+at::ScalarType window_dtype(const c10::optional<at::ScalarType> &dtype)
+{
+    return dtype.has_value() ? dtype.value() : at::get_default_dtype();
 }
 } // namespace
 
@@ -63,13 +67,23 @@ at::Tensor hann_window(int64_t window_length, bool periodic,
 {
     TORCH_CHECK(window_length >= 0, "hann_window: expected window_length >= 0, but got ",
                 window_length, OPS_ERROR(ErrCode::PARAM));
-    at::ScalarType dtype_value = dtype.has_value() ? dtype.value() : at::kFloat;
+    TORCH_CHECK(!layout.has_value() || layout.value() == at::kStrided,
+                "hann_window: only strided layout is supported", OPS_ERROR(ErrCode::PARAM));
+    at::ScalarType dtype_value = window_dtype(dtype);
     TORCH_CHECK(at::isFloatingType(dtype_value),
                 "hann_window: expected a floating point dtype, but got ", dtype_value,
                 OPS_ERROR(ErrCode::TYPE));
-    (void)layout;
     return combine_window(window_length, 0.5, 0.5, 0.0, periodic, false, dtype_value,
                           device, pin_memory);
+}
+
+at::Tensor hann_window(int64_t window_length,
+                       c10::optional<at::ScalarType> dtype,
+                       c10::optional<at::Layout> layout,
+                       c10::optional<at::Device> device,
+                       c10::optional<bool> pin_memory)
+{
+    return hann_window(window_length, true, dtype, layout, device, pin_memory);
 }
 
 at::Tensor hamming_window(int64_t window_length, bool periodic,
@@ -80,13 +94,23 @@ at::Tensor hamming_window(int64_t window_length, bool periodic,
 {
     TORCH_CHECK(window_length >= 0, "hamming_window: expected window_length >= 0, but got ",
                 window_length, OPS_ERROR(ErrCode::PARAM));
-    at::ScalarType dtype_value = dtype.has_value() ? dtype.value() : at::kFloat;
+    TORCH_CHECK(!layout.has_value() || layout.value() == at::kStrided,
+                "hamming_window: only strided layout is supported", OPS_ERROR(ErrCode::PARAM));
+    at::ScalarType dtype_value = window_dtype(dtype);
     TORCH_CHECK(at::isFloatingType(dtype_value),
                 "hamming_window: expected a floating point dtype, but got ", dtype_value,
                 OPS_ERROR(ErrCode::TYPE));
-    (void)layout;
     return combine_window(window_length, 0.54, 0.46, 0.0, periodic, false, dtype_value,
                           device, pin_memory);
+}
+
+at::Tensor hamming_window(int64_t window_length,
+                          c10::optional<at::ScalarType> dtype,
+                          c10::optional<at::Layout> layout,
+                          c10::optional<at::Device> device,
+                          c10::optional<bool> pin_memory)
+{
+    return hamming_window(window_length, true, dtype, layout, device, pin_memory);
 }
 
 at::Tensor blackman_window(int64_t window_length, bool periodic,
@@ -97,12 +121,22 @@ at::Tensor blackman_window(int64_t window_length, bool periodic,
 {
     TORCH_CHECK(window_length >= 0, "blackman_window: expected window_length >= 0, but got ",
                 window_length, OPS_ERROR(ErrCode::PARAM));
-    at::ScalarType dtype_value = dtype.has_value() ? dtype.value() : at::kFloat;
+    TORCH_CHECK(!layout.has_value() || layout.value() == at::kStrided,
+                "blackman_window: only strided layout is supported", OPS_ERROR(ErrCode::PARAM));
+    at::ScalarType dtype_value = window_dtype(dtype);
     TORCH_CHECK(at::isFloatingType(dtype_value),
                 "blackman_window: expected a floating point dtype, but got ", dtype_value,
                 OPS_ERROR(ErrCode::TYPE));
-    (void)layout;
     return combine_window(window_length, 0.42, 0.5, 0.08, periodic, true, dtype_value,
                           device, pin_memory);
+}
+
+at::Tensor blackman_window(int64_t window_length,
+                           c10::optional<at::ScalarType> dtype,
+                           c10::optional<at::Layout> layout,
+                           c10::optional<at::Device> device,
+                           c10::optional<bool> pin_memory)
+{
+    return blackman_window(window_length, true, dtype, layout, device, pin_memory);
 }
 } // namespace acl_op
