@@ -76,12 +76,12 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
 
     | 场景 | x1 | x2 | x2_scale | x1_scale | self |
     | --- | --- | --- | --- | --- | --- |
-    | MXFP8量化 | (K,M) | (K,N) | (ceil(K/64),N,2) | (ceil(K/64),M, 2) | (M,N) |
-    | MXFP4量化（打包后原始存储） | (K,M/2) | (K,N/2) | (ceil(K/64),N,2) | (ceil(K/64),M,2) | (M,N) |
+    | MX量化 | (K,M) | (K,N) | (ceil(K/64),N,2) | (ceil(K/64),M, 2) | (M,N) |
     | T-T量化 | (K,M) | (K,N) | (1) | (1) | (M,N) |
 
 - MXFP4量化约束：
-  - 每个字节存放两个FP4编码，低4 bit对应原始存储最后一轴的偶数索引元素，高4 bit对应奇数索引元素。M、N必须为偶数。
+  - MXFP4量化场景下，每个字节存放两个FP4编码，`x1`、`x2`打包后的原始存储shape会变为(K,M/2)、(K,N/2)。
+  - 每个字节的低4 bit对应原始存储最后一轴的偶数索引元素，高4 bit对应奇数索引元素。M、N必须为偶数。
   - 当M、N、K均大于0时，必须同时满足M × K > 2、N × K > 2。
   - 在满足其他参数约束的前提下，M或N为0时返回空Tensor；K为0时，`self`保持原值。上述乘积约束不适用于M、N或K为0的场景。
 
