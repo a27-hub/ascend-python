@@ -121,6 +121,12 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> batch_norm_impl(
     double eps) {
   if (!train) {
     batch_norm_infer_nocheck(result, self, weight, bias, running_mean, running_var, train, momentum, eps);
+    save_mean.copy_(running_mean);
+    auto variance = running_var;
+    if (variance.scalar_type() == at::kHalf || variance.scalar_type() == at::kBFloat16) {
+      variance = variance.to(at::kFloat);
+    }
+    save_invstd.copy_(at::rsqrt(variance + eps));
     return std::tie(result, save_mean, save_invstd);
   }
 
@@ -269,16 +275,20 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
       self_npu_format,
       ") is not supported in BatchNorm." + OPS_ERROR(ErrCode::TYPE));
 
+  // Never rebind `result`: when it is the caller's out tensor, the returned reference must keep
+  // pointing at it. Compute into `output` and copy back at the end if needed.
+  at::Tensor output;
   if (self.dim() <= 4) {
     c10::SmallVector<int64_t, N> nchw_shape(self_shape);
     nchw_shape.resize(4, 1);
     self_reshape = self.reshape(nchw_shape);
     if (result.defined()) {
-      result = result.reshape(nchw_shape);
+      output = result.reshape(nchw_shape);
     }
   } else if (train && self.dim() == 5) {
     // Use 3D BN ops for training, merging axes is not required.
     self_reshape = self;
+    output = result;
   } else {
     // Infering uses 2dInfer Op, case no matched 3DInfer Op
     // ncdhw -> ndchw
@@ -288,9 +298,6 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
         self_shape[0] * self_shape[2], self_shape[1], self_shape[3], self_shape[4]};
     // ndchw -> nchw
     self_reshape = self_reshape.reshape(nchw_shape);
-    if (result.defined()) {
-      result = npu_preparation::apply_tensor(self_reshape);
-    }
   }
 
   // process when affine=Flase and track_running_stats=False
@@ -308,12 +315,12 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
   at::Tensor weight_tensor = weight.defined() ? weight_cp : at::ones({dim_c}, options);
   at::Tensor bias_tensor = bias.defined() ? bias_cp : at::zeros({dim_c}, options);
 
-  if (!result.defined()) {
-    result = npu_preparation::apply_tensor(self_reshape);
+  if (!output.defined()) {
+    output = npu_preparation::apply_tensor(self_reshape);
   }
 
   batch_norm_impl(
-      result,
+      output,
       save_mean,
       save_invstd,
       self_reshape,
@@ -329,12 +336,19 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
   if (!train && self.dim() == 5) {
     // NCHW -> NDCHW -> NCDHW
     std::swap(self_shape[1], self_shape[2]);
-    result = result.view(self_shape);
-    result = npu_utils::format_contiguous(result);
-    result = result.permute({0, 2, 1, 3, 4}).clone();
+    output = output.view(self_shape);
+    output = npu_utils::format_contiguous(output);
+    output = output.permute({0, 2, 1, 3, 4}).clone();
   } else if (self.dim() < 5) {
-    result = result.view(self_shape);
-    result = npu_utils::format_contiguous(result);
+    output = output.view(self_shape);
+    output = npu_utils::format_contiguous(output);
+  }
+
+  if (!result.defined()) {
+    result = output;
+  } else if (!(output.data_ptr() == result.data_ptr() && output.sizes().equals(result.sizes()) &&
+               output.strides().equals(result.strides()))) {
+    result.copy_(output);
   }
 
   return std::tie(result, save_mean, save_invstd);
@@ -351,4 +365,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
     double eps) {
   return acl_op::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps);
 }
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
+    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias, bool training, double momentum, double eps) {
+  TORCH_CHECK(training, "_native_batch_norm_legit.no_stats requires training=True", OPS_ERROR(ErrCode::PARAM));
+    return acl_op::native_batch_norm(
+        input, weight, bias, c10::nullopt, c10::nullopt, training, momentum, eps);
+}
+
 } // namespace acl_op
