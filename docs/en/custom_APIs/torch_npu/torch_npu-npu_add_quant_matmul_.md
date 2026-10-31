@@ -122,7 +122,7 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
     x1 = x1.view(torch.float4_e2m1fn_x2).npu().transpose(0, 1)
     x2 = torch.full((K, N // 2), 0x22, dtype=torch.uint8)
     x2 = x2.view(torch.float4_e2m1fn_x2).npu()
-    x1_scale = torch.full((R, M, 2), 127, dtype=torch.uint8).npu()
+    x1_scale = torch.full((R, M, 2), 127, dtype=torch.uint8).npu().transpose(0, 1)
     x2_scale = torch.full((R, N, 2), 127, dtype=torch.uint8).npu()
     y = torch_npu.npu_add_quant_matmul_(
         y, x1, x2, x2_scale,
