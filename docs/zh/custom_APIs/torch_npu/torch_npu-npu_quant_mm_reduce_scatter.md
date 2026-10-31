@@ -67,7 +67,7 @@
 > <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>默认值为"aiv"。
 > <!-- end id24 -->
 > <!-- npu="950" id25 -->
-> <term>Ascend 950DT系列产品</term>可选参数，表示通信模式。默认值为None。支持"ai_cpu"、"ccu"和None。当为None时，默认使用"ai_cpu"通信。
+> <term>Ascend 950DT系列产品</term>默认值为None。输入支持"ai_cpu"、"ccu"和None。当为None时，默认使用"ai_cpu"通信。
 > <!-- end id25 -->
 
 ## 函数原型
@@ -191,7 +191,7 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
   - 输入x2\_scale在mx量化场景时为3维，其shape跟随x2转置/不转置，x2转置时x2\_scale的shape为(n, ceildiv(k, 64), 2)，x2不转置时x2\_scale的shape为(ceildiv(k, 64), n, 2)。
   - mx量化场景下，x1和x2输入为`torch_npu.float4_e2m1fn_x2`（MXFP4量化）时，k必须是偶数，当x2不转置时，n也必须是偶数。
   - 支持2、4、8、16、32、64卡。
-  - ReduceScatter集合通信数据总量不能超过16 \* 256MB，集合通信数据总量计算方式为：m \* n \* sizeof(output\_dtype)。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
+  - ReduceScatter集合通信数据总量不能超过63 \* 256MB，集合通信数据总量计算方式为：m \* n \* sizeof(output\_dtype)。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 <!-- end id21 -->
 <!-- npu="A3,910b" id22 -->
 - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>约束：
@@ -307,7 +307,7 @@ if __name__ == "__main__":
     x1_shape = [128, 512]
     x2_shape = [512, 64]
     dtype = torch.float16
-    mp.spawn(run_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize
+    mp.spawn(run_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
 ```
 
 输出如下所示
