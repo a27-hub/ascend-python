@@ -22,6 +22,14 @@ using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 using namespace op_plugin::utils;
 using namespace op_infer;
 
+namespace {
+bool is_add_rms_norm_quant_v2_available() {
+  static const bool is_available =
+      check_aclnn_kernel_available("aclnnAddRmsNormQuantV2");
+  return is_available;
+}
+} // namespace
+
 tensor_list npu_add_rms_norm_quant(
     const at::Tensor& x1,
     const at::Tensor& x2,
@@ -59,7 +67,7 @@ tensor_list npu_add_rms_norm_quant(
   TensorWrapper y2_wrapper = {y2, y_acltype};
   if ((c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 ||
        beta.has_value()) &&
-      check_aclnn_kernel_available("aclnnAddRmsNormQuantV2")) {
+      is_add_rms_norm_quant_v2_available()) {
     // 在有V2的情况下，A2/A3优先走V2, A5在使用beta的时候走V2。
     EXEC_NPU_CMD(
         aclnnAddRmsNormQuantV2,
