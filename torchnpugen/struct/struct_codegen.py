@@ -481,7 +481,6 @@ def gen_op_api(fm: FileManager, struct_functions: Sequence[StructInfo], env_acln
     if env_aclnn_extension_switch:
         includes = """#include <torch/library.h>
 #include <torch/csrc/autograd/custom_function.h>
-#include <torch/extension.h>
 #include <ATen/native/TypeProperties.h>
 #include "op_plugin/include/npu_cpp_extension.h" """
     else:
