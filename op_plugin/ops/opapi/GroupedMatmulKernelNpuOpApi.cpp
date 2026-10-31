@@ -91,6 +91,18 @@ bool is_weight_trans(const at::Tensor &tensor)
     return tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2);
 }
 
+// k=0 全空组：无法按 stride 识别打包轴
+// 这里按 ST executor 的构造顺序重建为非退化 view：先按字节 shape 分配、再 view 成 FP4，
+// 最后做纯 view 转置。空张量无数据(numel==0)，重建无损。
+at::Tensor RestoreEmptyFp4Stride(const at::Tensor &tensor, bool transpose)
+{
+     std::vector<int64_t> baseSizes = transpose
+          ? std::vector<int64_t>{tensor.size(1), tensor.size(0)}
+          : std::vector<int64_t>{tensor.size(0), tensor.size(1)};
+     auto base = at::empty(baseSizes, tensor.options().dtype(at::kByte)).view(tensor.scalar_type());
+     return transpose ? base.transpose(0, 1) : base;
+}
+
 size_t restore_k_split_dim_m(size_t dim_m, const at::Tensor &x_tensor, bool mxfp4_valid)
 {
     return (mxfp4_valid && is_weight_trans(x_tensor)) ? dim_m * FP4_IN_INT8 : dim_m;
@@ -229,17 +241,38 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         mxfp4_valid = mxfp4_valid && weight[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
     }
 #endif
+
+    std::vector<at::Tensor> x_rebuilt(x.begin(), x.end());
+    std::vector<at::Tensor> weight_rebuilt(weight.begin(), weight.end());
+    if (mxfp4_valid && group_type_value == K_SPLIT) {
+        for (auto &x_tensor : x_rebuilt) {
+            if (x_tensor.dim() == 2 && x_tensor.size(1) == 0 && x_tensor.size(0) > 0 &&
+                !is_weight_trans(x_tensor)) {
+                x_tensor = RestoreEmptyFp4Stride(x_tensor, true);
+            }
+        }
+        for (auto &weight_tensor : weight_rebuilt) {
+            if (weight_tensor.dim() == 2 && weight_tensor.size(0) == 0 && weight_tensor.size(1) > 0 &&
+                !(weight_tensor.stride(1) == 1 && weight_tensor.stride(0) == weight_tensor.size(1))) {
+                weight_tensor = RestoreEmptyFp4Stride(weight_tensor, false);
+            }
+        }
+    }
+    at::TensorList x_real(x_rebuilt);
+    at::TensorList weight_real(weight_rebuilt);
+
+    weight_trans = is_weight_trans(weight_real[0]);
     size_t n_new = (mxfp4_valid && !weight_trans) ? (n0 * FP4_IN_INT8) : n0;
     if (mxfp4_valid) {
-        if (!is_weight_trans(x[0])) {
-            TORCH_CHECK(x[0].size(1) != 1, "In mxfp4, dim K should not be 2.", OPS_ERROR(ErrCode::VALUE));
+        if (!is_weight_trans(x_real[0])) {
+            TORCH_CHECK(x_real[0].size(1) != 1, "In mxfp4, dim K should not be 2.", OPS_ERROR(ErrCode::VALUE));
         }
     }
     if (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) {
         if (group_type_value == K_SPLIT) {
             // In K-split, x is laid out as [K, M], and K is reduced instead of becoming an output dimension.
             y.reserve(num_weight);
-            size_t dim_m = restore_k_split_dim_m(static_cast<size_t>(x[0].size(0)), x[0], mxfp4_valid);
+            size_t dim_m = restore_k_split_dim_m(static_cast<size_t>(x_real[0].size(0)), x_real[0], mxfp4_valid);
             for (size_t i = 0; i < num_weight; i++) {
                 size_t ni = singleWeight ? n0 : weight[i].size(dim_num_w - 1);
                 create_new_tensor(y, dim_m, ni, options);
@@ -265,31 +298,31 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             y.reserve(num_x);
             for (size_t i = 0; i < num_x; i++) {
                 size_t ni = singleWeight ? n0 : weight[i].size(dim_num_w - 1);
-                create_new_tensor_multi_dim(y, x[i], ni, options);
+                create_new_tensor_multi_dim(y, x_real[i], ni, options);
             }
         }  // 校验NO_SPLIT时为特殊场景（groupList为空）或num_x > 1
     } else if (split_item_value == IN_NOT_SPLIT_OUT_SPLIT || split_item_value == IN_SPLIT_OUT_SPLIT) {
         if (num_x > 1) {
             size_t dim_m = 0;
             for (size_t i = 0; i < num_x; i++) {
-                dim_m += restore_k_split_dim_m(static_cast<size_t>(x[i].size(0)), x[i], mxfp4_valid);
+                dim_m += restore_k_split_dim_m(static_cast<size_t>(x_real[i].size(0)), x_real[i], mxfp4_valid);
             }
-            weight[0].dtype() == at::ScalarType::Int ?
+            weight_real[0].dtype() == at::ScalarType::Int ?
                 create_new_tensor(y, dim_m, n0 * INT4_NUMS_IN_INT32, options) :
                 create_new_tensor(y, dim_m, n_new, options);
         } else if (num_x == 1) {
             if (group_type_value == K_SPLIT) {
                 TORCH_CHECK(num_weight == 1,
                             "When group_list is 2(K_SPLIT) and split_item is 2/3, the length of weight must equal x.");
-                size_t dim_m = restore_k_split_dim_m(static_cast<size_t>(x[0].size(0)), x[0], mxfp4_valid);
-                weight[0].dtype() == at::ScalarType::Int ?
+                size_t dim_m = restore_k_split_dim_m(static_cast<size_t>(x_real[0].size(0)), x_real[0], mxfp4_valid);
+                weight_real[0].dtype() == at::ScalarType::Int ?
                     create_new_tensor_batch(y, num_group_list, dim_m, n0 * INT4_NUMS_IN_INT32, options) :
                     create_new_tensor_batch(y, num_group_list, dim_m, n_new, options);
             } else {
                 (weight[0].dtype() == at::ScalarType::Int ||
                  (weight[0].dtype() == at::ScalarType::Float && weight[0].dtype() != x[0].dtype())) && (!weight_trans)
-                    ? create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options)
-                    : create_new_tensor(y, x[0].size(0), n_new, options);
+                    ? create_new_tensor(y, x_real[0].size(0), n0 * INT4_NUMS_IN_INT32, options)
+                    : create_new_tensor(y, x_real[0].size(0), n_new, options);
             }
         }
     }
@@ -310,10 +343,10 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     int64_t act_type_value = act_type.value_or(0);
     auto tuning_config_real = tuning_config.value_or(at::IntArrayRef{});
 
-    TensorListWrapper x_wrapper = {x,
+    TensorListWrapper x_wrapper = {x_real,
         x_dtype.has_value() ? c10_npu::GetAclDataType(x_dtype.value())
                             : npu_preparation::convert_to_acl_data_type(x[0].scalar_type())};
-    TensorListWrapper weight_wrapper = {weight,
+    TensorListWrapper weight_wrapper = {weight_real,
         weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
                                  : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
     TensorListWrapper scale_wrapper = {scale_real,
@@ -331,7 +364,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             : (antiquant_scale_real[0].scalar_type() == at::ScalarType::Byte ? aclDataType::ACL_FLOAT8_E8M0
             : npu_preparation::convert_to_acl_data_type(antiquant_scale_real[0].scalar_type()))};
 
-    int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight[0]);
+    int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight_real[0]);
     const bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) ||
                               (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_2) ||
                               (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_4) ||
@@ -358,8 +391,8 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                    !x_dtype.has_value() && !weight_dtype.has_value();
     const bool is_mxfp4_k_split = mxfp4_valid && group_type_value == K_SPLIT;
     if (is_mxfp4_k_split) {
-        const at::Tensor& xt = x[0];
-        const at::Tensor& wt = weight[0];
+        const at::Tensor& xt = x_real[0];
+        const at::Tensor& wt = weight_real[0];
         int64_t k = xt.size(1);
         int64_t m = xt.size(0) * 2;
         int64_t n = wt.dim() == 3 ? wt.size(2) * 2 : wt.size(1) * 2;
