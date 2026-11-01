@@ -6,6 +6,43 @@ from torch.testing._internal.common_utils import TestCase, parametrize, run_test
 
 
 class TestNativeBatchNormSavedStatistics(TestCase):
+    def test_inference_5d_out(self, device):
+        previous_jit = torch.npu.is_jit_compile_false()
+        option = torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT")
+        previous_format = option is not None and option.decode() == "enable"
+        try:
+            torch.npu.set_compile_mode(jit_compile=True)
+            torch.npu.config.allow_internal_format = False
+            x = torch.arange(96, device=device, dtype=torch.float32).reshape(2, 3, 4, 2, 2) / 7
+            weight = torch.tensor([0.75, 1.25, 0.5], device=device)
+            bias = torch.tensor([-0.25, 0.5, 0.75], device=device)
+            mean = torch.tensor([-0.5, 0.75, 1.25], device=device)
+            variance = torch.tensor([0.5, 1.5, 2.0], device=device)
+            out = torch.full_like(x, float("nan"))
+            saved_mean = torch.full_like(mean, float("nan"))
+            saved_rstd = torch.full_like(variance, float("nan"))
+            out_ptr = out.data_ptr()
+            mean_ptr, rstd_ptr = saved_mean.data_ptr(), saved_rstd.data_ptr()
+            result = torch.ops.aten.native_batch_norm.out(
+                x, weight, bias, mean, variance, False, 0.1, 0.01,
+                out=out, save_mean=saved_mean, save_invstd=saved_rstd)
+            expected = torch.nn.functional.batch_norm(
+                x.cpu(), mean.cpu(), variance.cpu(), weight.cpu(), bias.cpu(), training=False, eps=0.01)
+            self.assertEqual(out.data_ptr(), out_ptr)
+            self.assertEqual(result[0].data_ptr(), out_ptr)
+            self.assertEqual(out.shape, x.shape)
+            self.assertEqual(result[0].shape, x.shape)
+            self.assertEqual(out.cpu(), expected, atol=1.5e-5, rtol=1.3e-5)
+            self.assertEqual(saved_mean.data_ptr(), mean_ptr)
+            self.assertEqual(saved_rstd.data_ptr(), rstd_ptr)
+            self.assertEqual(result[1].data_ptr(), mean_ptr)
+            self.assertEqual(result[2].data_ptr(), rstd_ptr)
+            self.assertEqual(saved_mean.cpu(), mean.cpu(), atol=0, rtol=0)
+            self.assertEqual(saved_rstd.cpu(), (variance.cpu() + 0.01).rsqrt(), atol=1.5e-5, rtol=1.3e-5)
+        finally:
+            torch.npu.config.allow_internal_format = previous_format
+            torch.npu.set_compile_mode(jit_compile=not previous_jit)
+
     @parametrize("dtype", [torch.float16, torch.bfloat16, torch.float32])
     @parametrize("jit", [False, True])
     def test_no_stats_training(self, device, dtype, jit):
