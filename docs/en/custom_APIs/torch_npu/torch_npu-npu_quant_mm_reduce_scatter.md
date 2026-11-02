@@ -208,49 +208,96 @@ torch_npu.npu_quant_mm_reduce_scatter(self, x2, hcom, world_size, *, reduce_op='
 ## Examples
 
 - Single-operator call
+  - Non-quantization scenario
+    ```python
+    import torch
+    import torch_npu
+    import torch.distributed as dist
+    import torch.multiprocessing as mp
 
-```python
-import torch
-import torch_npu
-import torch.distributed as dist
-import torch.multiprocessing as mp
+    def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
+        torch_npu.npu.set_device(rank)
+        init_method = 'tcp://' + master_ip + ':' + master_port
+        dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
+        from torch.distributed.distributed_c10d import _get_default_group
+        default_pg = _get_default_group()
+        if torch.__version__ > '2.0.1':
+            hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
+        else:
+            hcomm_info = default_pg.get_hccl_comm_name(rank)
 
-def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
-    torch_npu.npu.set_device(rank)
-    init_method = 'tcp://' + master_ip + ':' + master_port
-    dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
-    from torch.distributed.distributed_c10d import _get_default_group
-    default_pg = _get_default_group()
-    if torch.__version__ > '2.0.1':
-        hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
-    else:
-        hcomm_info = default_pg.get_hccl_comm_name(rank)
+        self_t = torch.randn(x1_shape, dtype=dtype).npu()
+        x2 = torch.randn(x2_shape, dtype=dtype).npu()
+        output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None, x1_scale=None, x2_scale=None, amax_output=amax_output)
+        print(output.shape, output.dtype)
 
-    self_t = torch.randn(x1_shape, dtype=dtype).npu()
-    x2 = torch.randn(x2_shape, dtype=dtype).npu()
-    output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None, x1_scale=None, x2_scale=None, amax_output=amax_output)
-    print(output.shape, output.dtype)
-    print(amax)  # torch.Size([0])
+    if __name__ == "__main__":
+        worksize = 2
+        master_ip = '127.0.0.1'
+        master_port = '50001'
+        x1_shape = [128, 512]
+        x2_shape = [512, 64]
+        dtype = torch.float16
+        amax_output = False
+        mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
+    ```
 
-if __name__ == "__main__":
-    worksize = 2
-    master_ip = '127.0.0.1'
-    master_port = '50001'
-    x1_shape = [128, 512]
-    x2_shape = [512, 64]
-    dtype = torch.float16
-    amax_output = False
-    mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
-```
+    The output is as follows:
 
-The output is as follows:
+    ```text
+    torch.Size([64, 64]) torch.float16
+    None
+    torch.Size([64, 64]) torch.float16
+    None
+    ```
+  
+  - Mx quantization scenario: `torch.float8_e8m0fnu` input dtype
+    ```python
+    import torch
+    import torch_npu
+    import torch.distributed as dist
+    import torch.multiprocessing as mp
+    import math
 
-```text
-torch.Size([64, 64]) torch.float16
-None
-torch.Size([64, 64]) torch.float16
-None
-```
+    def run_npu_quant_mm_reduce_scatter(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output):
+        torch_npu.npu.set_device(rank)
+        init_method = 'tcp://' + master_ip + ':' + master_port
+        dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
+        from torch.distributed.distributed_c10d import _get_default_group
+        default_pg = _get_default_group()
+        if torch.__version__ > '2.0.1':
+            hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
+        else:
+            hcomm_info = default_pg.get_hccl_comm_name(rank)
+
+        m, k = x1_shape
+        n = x2_shape[1]
+        self_t = torch.randn(x1_shape).to(dtype).npu()
+        x2 = torch.randn(x2_shape).to(dtype).npu()
+        x1_scale = torch.rand((m, math.ceil(k / 64), 2)).to(torch.float8_e8m0fnu).npu()
+        x2_scale = torch.rand((math.ceil(k / 64), n, 2)).to(torch.float8_e8m0fnu).npu()
+        output, amax = torch_npu.npu_quant_mm_reduce_scatter(self_t, x2, hcomm_info, world_size, bias=None,
+                                                             x1_scale=x1_scale, x2_scale=x2_scale,
+                                                             amax_output=amax_output, y_dtype=torch.float16)
+        print(output.shape, output.dtype)
+
+    if __name__ == "__main__":
+        worksize = 2
+        master_ip = '127.0.0.1'
+        master_port = '50001'
+        x1_shape = [128, 256]
+        x2_shape = [256, 64]
+        dtype = torch.float8_e4m3fn
+        amax_output = False
+        mp.spawn(run_npu_quant_mm_reduce_scatter, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype, amax_output), nprocs=worksize)
+    ```
+
+    The output is as follows:
+
+    ```text
+    torch.Size([64, 64]) torch.float16
+    torch.Size([64, 64]) torch.float16
+    ```
 
 - Graph mode call
 
