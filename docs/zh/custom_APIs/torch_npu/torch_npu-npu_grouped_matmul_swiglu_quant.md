@@ -238,7 +238,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x
 
       | 支持场景 | 量化模式 | x | weight | weight_scale | x_scale | output | output_scale |
       | --- | --- | --- | --- | --- | --- | --- | --- |
-      | 单单单 | Pertoken量化 | (M, K) | <li>非转置shape形如{(E, K, N)}</li><li>转置shape形如{(E, N, K)}</li> | shape形如{(E, N)} | (M, ) | (M, N / 2) | (M, ) |
+      | 单单单 | Pertoken量化 | (M, K) | shape形如{(E, K, N)} | shape形如{(E, N)} | (M, ) | (M, N / 2) | (M, ) |
 
     - `x`仅支持非转置；`weight`支持非转置和转置。
     - N必须大于0且为64的整数倍。所有输入必须位于同一设备，bias和offset必须为None。
