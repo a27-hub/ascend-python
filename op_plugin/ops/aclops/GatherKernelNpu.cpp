@@ -17,6 +17,7 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include <ATen/WrapDimUtils.h>
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -52,12 +53,18 @@ at::Tensor& gather_out(
     bool sparse_grad,
     at::Tensor& out)
 {
+    dim = at::maybe_wrap_dim(dim, self.dim());
     auto output_size = index.sizes();
     npu_preparation::CheckOut(
         {self},
         out,
         self,
         output_size);
+
+    // Match PyTorch's empty-index behavior before dispatching GatherElements.
+    if (index.numel() == 0) {
+        return out;
+    }
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_out = npu_utils::format_contiguous(out);
@@ -87,7 +94,11 @@ at::Tensor gather(
     const at::Tensor& index,
     bool sparse_grad)
 {
+    dim = at::maybe_wrap_dim(dim, self.dim());
     at::Tensor result = npu_preparation::apply_tensor(self, index.sizes());
+    if (index.numel() == 0) {
+        return result;
+    }
     gather_out_npu_nocheck(result, self, dim, index);
     return result;
 }
