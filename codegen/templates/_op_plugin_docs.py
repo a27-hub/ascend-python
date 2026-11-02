@@ -17048,8 +17048,8 @@ group_list(torch.Tensor)：必选输入，输入和输出分组轴方向的matmu
 x1_scale(torch.Tensor, optional)：可选输入，默认值为None，表示由x1量化引入的缩放因子，数据类型支持float32、float8_e8m0fnu，数据格式支持ND。float8_e8m0fnu需配置可选参数x1_scale_dtype为对应类型。
 group_list_type(int, optional)：可选输入，默认值为0，表示group_list中数值的含义，只支持0和1两个取值。0：group_list中数值为分组轴大小的cumsum结果（累积和）；1：group_list中数值为分组轴上每组大小。
 group_sizes(int[], optional)：可选输入，默认值为None，表示m、n、k方向上的量化分组大小。当前仅支持None。
-x1_dtype(int, optional)：可选输入，默认值为None，表示输入真实数据类型与输入x1的dtype相同。用于在x1无法用torch原生数据类型表示时显式指定x1的数据类型，当前仅支持torch_npu.hifloat8、torch_npu.float4_e2m1fn_x2。
-x2_dtype(int, optional)：可选输入，默认值为None，表示输入真实数据类型与输入x2的dtype相同。用于在x2无法用torch原生数据类型表示时显式指定x2的数据类型，当前仅支持torch_npu.hifloat8、torch_npu.float4_e2m1fn_x2。
+x1_dtype(int, optional)：可选输入，默认值为None，表示输入真实数据类型与输入x1的dtype相同。用于在x1无法用torch原生数据类型表示时显式指定x1的数据类型，当前仅支持torch_npu.hifloat8、torch.float4_e2m1fn_x2。
+x2_dtype(int, optional)：可选输入，默认值为None，表示输入真实数据类型与输入x2的dtype相同。用于在x2无法用torch原生数据类型表示时显式指定x2的数据类型，当前仅支持torch_npu.hifloat8、torch.float4_e2m1fn_x2。
 x1_scale_dtype(int, optional)：可选输入，默认值为None，表示输入真实数据类型与输入x1_scale的dtype相同。用于在x1_scale无法用torch原生数据类型表示时显式指定x1_scale的数据类型，当前仅支持torch_npu.float8_e8m0fnu。
 x2_scale_dtype(int, optional)：可选输入，默认值为None，表示输入真实数据类型与输入x2_scale的dtype相同。用于在x2_scale无法用torch原生数据类型表示时显式指定x2_scale的数据类型，当前仅支持torch_npu.float8_e8m0fnu。
 
