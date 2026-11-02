@@ -91,9 +91,6 @@ bool is_weight_trans(const at::Tensor &tensor)
     return tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2);
 }
 
-// k=0 全空组：无法按 stride 识别打包轴
-// 这里按 ST executor 的构造顺序重建为非退化 view：先按字节 shape 分配、再 view 成 FP4，
-// 最后做纯 view 转置。空张量无数据(numel==0)，重建无损。
 at::Tensor RestoreEmptyFp4Stride(const at::Tensor &tensor, bool transpose)
 {
      std::vector<int64_t> baseSizes = transpose
@@ -272,10 +269,9 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         if (group_type_value == K_SPLIT) {
             // In K-split, x is laid out as [K, M], and K is reduced instead of becoming an output dimension.
             y.reserve(num_weight);
-            size_t dim_m = restore_k_split_dim_m(static_cast<size_t>(x_real[0].size(0)), x_real[0], mxfp4_valid);
             for (size_t i = 0; i < num_weight; i++) {
                 size_t ni = singleWeight ? n0 : weight[i].size(dim_num_w - 1);
-                create_new_tensor(y, dim_m, ni, options);
+                create_new_tensor(y, x[0].size(0), ni, options);
             }
         } else if (num_group_list > 0) {
             y.reserve(num_group_list);
@@ -298,7 +294,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             y.reserve(num_x);
             for (size_t i = 0; i < num_x; i++) {
                 size_t ni = singleWeight ? n0 : weight[i].size(dim_num_w - 1);
-                create_new_tensor_multi_dim(y, x_real[i], ni, options);
+                create_new_tensor_multi_dim(y, x[i], ni, options);
             }
         }  // 校验NO_SPLIT时为特殊场景（groupList为空）或num_x > 1
     } else if (split_item_value == IN_NOT_SPLIT_OUT_SPLIT || split_item_value == IN_SPLIT_OUT_SPLIT) {
