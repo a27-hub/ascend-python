@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include <ATen/WrapDimUtils.h>
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -28,12 +29,17 @@ at::Tensor& gather_out(
     at::Tensor& out)
 {
     DO_COMPATIBILITY(aclnnGather, acl_op::gather_out(self, dim, index, sparse_grad, out));
+    dim = at::maybe_wrap_dim(dim, self.dim());
     auto output_size = index.sizes();
     npu_preparation::check_tensor(
         {self},
         out,
         self.scalar_type(),
         output_size);
+    // Empty indices do not require the input and index ranks to match.
+    if (index.numel() == 0) {
+        return out;
+    }
     EXEC_NPU_CMD(aclnnGather, self, dim, index, out);
     return out;
 }
@@ -54,6 +60,9 @@ at::Tensor& gather_out(
         self.scalar_type(),
         output_size);
     const int64_t real_dim = dimname_to_position(self, dim);
+    if (index.numel() == 0) {
+        return out;
+    }
     EXEC_NPU_CMD(aclnnGather, self, real_dim, index, out);
     return out;
 }
@@ -66,8 +75,12 @@ at::Tensor gather(
     bool sparse_grad)
 {
     DO_COMPATIBILITY(aclnnGather, acl_op::gather(self, dim, index, sparse_grad));
+    dim = at::maybe_wrap_dim(dim, self.dim());
     auto outputSize = index.sizes();
     at::Tensor result = npu_preparation::apply_tensor_without_format(self, outputSize);
+    if (index.numel() == 0) {
+        return result;
+    }
     EXEC_NPU_CMD(aclnnGather, self, dim, index, result);
     return result;
 }
@@ -83,6 +96,9 @@ at::Tensor gather(
     auto outputSize = index.sizes();
     at::Tensor result = npu_preparation::apply_tensor_without_format(self, outputSize);
     const int64_t real_dim = dimname_to_position(self, dim);
+    if (index.numel() == 0) {
+        return result;
+    }
     EXEC_NPU_CMD(aclnnGather, self, real_dim, index, result);
     return result;
 }
