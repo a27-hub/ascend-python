@@ -24,9 +24,11 @@ using npu_preparation = at_npu::native::OpPreparation;
 namespace {
 inline bool is_support_group_norm_swish()
 {
-    if ((c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
+    static const bool is_support_nd_out =
+        (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4)) {
+        (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+    if (is_support_nd_out) {
         return true;
     }
 
