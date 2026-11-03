@@ -2280,6 +2280,12 @@ official:
         dtype: self
       exec: aclnnFlip
 
+  - func: fmax(Tensor self, Tensor other) -> Tensor
+    op_api: all_version
+
+  - func: fmax.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: all_version
+
   - func: floor(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
