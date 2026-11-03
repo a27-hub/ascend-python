@@ -7363,3 +7363,17 @@ def _npu_matmul_abft_verify_meta(a, b, c, checksum_weight, *, e_max=0.001):
     row_bytes = (a.size(0) + 7) // 8
     split_n = (b.size(1) + 255) // 256
     return torch.empty([row_bytes * split_n], dtype=torch.uint8, device='meta')
+
+
+# torch.linalg.polar was introduced in torch 2.14. The custom ops below only exist on builds
+# that declare them, so guard the registration for the older version branches.
+if hasattr(torch.ops.npu, "npu_linalg_polar_backward"):
+    @impl(m, "npu_linalg_polar_backward")
+    def npu_linalg_polar_backward_meta(grad_U, grad_H, A, U, H):
+        # The backward returns the gradient w.r.t. A, so it has the shape of A.
+        return torch.empty_like(A, memory_format=torch.contiguous_format)
+
+    @impl(m, "npu_linalg_polar_jvp")
+    def npu_linalg_polar_jvp_meta(A, dA, U, H):
+        # Forward-mode tangents of the two outputs (U, H).
+        return torch.empty_like(U), torch.empty_like(H)
