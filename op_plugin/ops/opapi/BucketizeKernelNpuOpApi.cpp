@@ -26,7 +26,7 @@ at::Tensor bucketize(const at::Tensor& self, const at::Tensor& boundaries, bool 
       boundaries.dim(),
       ")" + OPS_ERROR(ErrCode::PARAM));
 
-  static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+  static const bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   bool typeSupport = self.dtype() != at::kDouble && boundaries.dtype() != at::kDouble;
   static const bool is_bucketize_available = check_aclnn_kernel_available("aclnnBucketize");
   if (isRegBaseSoc && typeSupport && is_bucketize_available) {
@@ -61,7 +61,7 @@ at::Tensor& bucketize_out(
       boundaries.dim(),
       ")" + OPS_ERROR(ErrCode::PARAM));
 
-  static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+  static const bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   bool typeSupport = self.dtype() != at::kDouble && boundaries.dtype() != at::kDouble;
   static const bool is_bucketize_available = check_aclnn_kernel_available("aclnnBucketize");
   if (isRegBaseSoc && typeSupport && is_bucketize_available) {

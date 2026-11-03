@@ -54,7 +54,7 @@ at::Tensor npu_mm_reduce_scatter_base(
       "The M-axis in input of Matmul should be be divisible by world_size." + OPS_ERROR(ErrCode::PARAM));
   std::string hcom_str = std::string(hcom);
   std::string reduce_op_str = std::string(reduce_op);
-  bool isSocBelowAscend950 = (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950);
+  static const bool isSocBelowAscend950 = (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950);
   c10::string_view comm_mode_value = comm_mode.value_or("ai_cpu");
   std::string comm_mode_str = std::string(comm_mode_value);
   auto output_size = {self.size(0) / world_size, x2.size(1)};
