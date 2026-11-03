@@ -83,7 +83,6 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
   - In the MXFP4 quantization scenario, each byte holds two FP4 encodings, and the packed original storage shapes of `x1` and `x2` become (K,M/2) and (K,N/2), respectively.
   - The low 4 bits of each byte correspond to an even-indexed element along the last axis of the original storage, and the high 4 bits correspond to the following odd-indexed element. M and N must be even.
   - When M, N, and K are all greater than 0, both M × K > 2 and N × K > 2 must hold.
-  - Provided that all other parameter constraints are satisfied, an empty tensor is returned when M or N is 0. When K is 0, `self` remains unchanged. The preceding product constraints do not apply when M, N, or K is 0.
 
 ## Example
 
