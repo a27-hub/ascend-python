@@ -2993,6 +2993,18 @@
   "func: linalg_matrix_sqrth.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["v2.14", "newest"]
   },
+  "func: linalg_polar(Tensor A) -> (Tensor U, Tensor H)": {
+    "version": ["v2.14", "newest"]
+  },
+  "func: linalg_polar.out(Tensor A, *, Tensor(a!) U, Tensor(b!) H) -> (Tensor(a!) U, Tensor(b!) H)": {
+    "version": ["v2.14", "newest"]
+  },
+  "func: npu_linalg_polar_backward(Tensor? grad_U, Tensor? grad_H, Tensor A, Tensor U, Tensor H) -> Tensor": {
+    "version": ["v2.14", "newest"]
+  },
+  "func: npu_linalg_polar_jvp(Tensor A, Tensor dA, Tensor U, Tensor H) -> (Tensor, Tensor)": {
+    "version": ["v2.14", "newest"]
+  },
   "func: linalg_qr(Tensor self, str mode='reduced') -> (Tensor Q, Tensor R)": {
     "version": ["all_version"]
   },
