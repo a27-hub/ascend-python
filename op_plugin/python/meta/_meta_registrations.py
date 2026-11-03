@@ -1368,6 +1368,18 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
     if world_size <= 0:
         raise RuntimeError("world_size must be bigger than zero")
 
+    # HiF4 overrides describe packed uint8 storage, not a native torch dtype.
+    is_hif4 = x1_dtype == 298 or x2_dtype == 298
+    if is_hif4:
+        torch._check(x1_dtype == 298 and x2_dtype == 298,
+                     lambda: "HiF4 requires x1_dtype and x2_dtype to both be 298")
+        torch._check(self.dim() == 2 and x2.dim() == 2,
+                     lambda: "HiF4 requires two-dimensional x1 and x2")
+        torch._check(self.dtype == torch.uint8 and x2.dtype == torch.uint8,
+                     lambda: "HiF4 requires packed uint8 x1 and x2")
+        torch._check(self.size(1) == x2.size(0) or self.size(1) == x2.size(1),
+                     lambda: "HiF4 x2 must contain the packed K dimension of x1")
+
     is_mxfp4 = (x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2)
     if is_mxfp4:
         _mxfp4_dim_checks = [(self, "x1", 2), (x2, "x2", 2), (x1_scale, "x1_scale", 3), (x2_scale, "x2_scale", 3)]
@@ -1387,6 +1399,10 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
         out_x = self.size(0) * world_size
     x2_trans = (x2.stride(0) == 1 and x2.stride(1) == x2.size(0))
     out_y = x2.size(1)
+    if is_hif4:
+        # Match TorchAir: (K/2, N) takes precedence, including square x2;
+        # the other supported layout is (N, K/2). Strides do not select it.
+        out_y = x2.size(1) if self.size(1) == x2.size(0) else x2.size(0)
     if is_mxfp4 and x2_trans is not True:
         out_y = x2.size(1) * 2
     # out_gather
