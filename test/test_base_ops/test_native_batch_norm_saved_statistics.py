@@ -6,6 +6,52 @@ from torch.testing._internal.common_utils import TestCase, parametrize, run_test
 
 
 class TestNativeBatchNormSavedStatistics(TestCase):
+    @parametrize("jit", [False, True])
+    @parametrize("wrong_size", [False, True])
+    @parametrize("internal_format", [False, True])
+    def test_inference_saved_statistics_edges(self, device, jit, wrong_size, internal_format):
+        # internal_format only guards against a configuration regression here: the saved statistics
+        # are 1D, so they stay ND under both settings and do not cover non-ND storage.
+        previous_jit = torch.npu.is_jit_compile_false()
+        option = torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT")
+        previous_format = option is not None and option.decode() == "enable"
+        try:
+            torch.npu.set_compile_mode(jit_compile=jit)
+            torch.npu.config.allow_internal_format = internal_format
+            x = torch.arange(24, device=device, dtype=torch.float32).reshape(2, 3, 4) / 7
+            mean = torch.tensor([-0.5, 0.75, 1.25], device=device)
+            variance = torch.tensor([0.0, 1e-8, 1.0], device=device)
+            original_mean, original_variance = mean.clone(), variance.clone()
+            saved_mean = torch.full((3,), float("nan"), device=device)
+            saved_rstd = torch.full((4 if wrong_size else 3,), float("nan"), device=device)
+            mean_ptr, rstd_ptr = saved_mean.data_ptr(), saved_rstd.data_ptr()
+            out = torch.empty_like(x)
+            if wrong_size:
+                with self.assertRaisesRegex(RuntimeError, "(?i)size|shape|broadcast|expand|dimension"):
+                    torch.ops.aten.native_batch_norm.out(
+                        x, None, None, mean, variance, False, 0.1, 1e-8,
+                        out=out, save_mean=saved_mean, save_invstd=saved_rstd)
+                torch.npu.synchronize()
+                self.assertEqual(saved_rstd.shape, (4,))
+                self.assertEqual(saved_rstd.data_ptr(), rstd_ptr)
+                return
+            result = torch.ops.aten.native_batch_norm.out(
+                x, None, None, mean, variance, False, 0.1, 1e-8,
+                out=out, save_mean=saved_mean, save_invstd=saved_rstd)
+            reference_rstd = (variance.cpu() + 1e-8).rsqrt()
+            self.assertEqual(result[0].data_ptr(), out.data_ptr())
+            self.assertEqual(result[1].data_ptr(), mean_ptr)
+            self.assertEqual(result[2].data_ptr(), rstd_ptr)
+            self.assertEqual(saved_mean.cpu(), mean.cpu(), atol=0, rtol=0)
+            self.assertEqual(saved_rstd.cpu(), reference_rstd, atol=1.5e-5, rtol=1.3e-5)
+            expected = torch.nn.functional.batch_norm(x.cpu(), mean.cpu(), variance.cpu(), training=False, eps=1e-8)
+            self.assertEqual(out.cpu(), expected, atol=1.5e-5, rtol=1.3e-5)
+            self.assertEqual(mean, original_mean, atol=0, rtol=0)
+            self.assertEqual(variance, original_variance, atol=0, rtol=0)
+        finally:
+            torch.npu.config.allow_internal_format = previous_format
+            torch.npu.set_compile_mode(jit_compile=not previous_jit)
+
     def test_inference_5d_out(self, device):
         previous_jit = torch.npu.is_jit_compile_false()
         option = torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT")
@@ -51,7 +97,8 @@ class TestNativeBatchNormSavedStatistics(TestCase):
         previous_jit = torch.npu.is_jit_compile_false()
         try:
             torch.npu.set_compile_mode(jit_compile=jit)
-            x = (torch.sin(torch.arange(96, dtype=torch.float32)).reshape(4, 3, 8) * 2).to(device=device, dtype=dtype).requires_grad_()
+            values = torch.sin(torch.arange(96, dtype=torch.float32)).reshape(4, 3, 8) * 2
+            x = values.to(device=device, dtype=dtype).requires_grad_()
             reference = x.detach().cpu().float().requires_grad_()
             result = torch.ops.aten._native_batch_norm_legit.no_stats(x, None, None, True, 0.5, 1e-5)
             expected = torch.nn.functional.batch_norm(reference, None, None, training=True)

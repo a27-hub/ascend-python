@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include "op_plugin/AclOpsInterface.h"
+#include "op_plugin/utils/AdvancedIndex.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
@@ -126,7 +127,18 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> batch_norm_impl(
     if (variance.scalar_type() == at::kHalf || variance.scalar_type() == at::kBFloat16) {
       variance = variance.to(at::kFloat);
     }
-    save_invstd.copy_(at::rsqrt(variance + eps));
+    TORCH_CHECK(op_plugin::AdvanceIndex::is_expandable_to(variance.sizes(), save_invstd.sizes()),
+        "shape mismatch: running_var of shape ", variance.sizes(),
+        " cannot be broadcast to save_invstd of shape ", save_invstd.sizes(),
+        OPS_ERROR(ErrCode::PARAM));
+    if (save_invstd.scalar_type() == variance.scalar_type() && save_invstd.sizes().equals(variance.sizes()) &&
+        npu_preparation::get_tensor_npu_format(save_invstd) == ACL_FORMAT_ND &&
+        npu_preparation::get_tensor_npu_format(variance) == ACL_FORMAT_ND &&
+        npu_utils::check_match(&save_invstd)) {
+      at::rsqrt_out(save_invstd, variance + eps);
+    } else {
+      save_invstd.copy_(at::rsqrt(variance + eps));
+    }
     return std::tie(result, save_mean, save_invstd);
   }
 
@@ -290,7 +302,7 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
     self_reshape = self;
     output = result;
   } else {
-    // Infering uses 2dInfer Op, case no matched 3DInfer Op
+    // Inferring uses 2dInfer Op, case no matched 3DInfer Op
     // ncdhw -> ndchw
     self_reshape = self.permute({0, 2, 1, 3, 4});
     // nchw=(n*d, c, h, w)
@@ -300,7 +312,7 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
     self_reshape = self_reshape.reshape(nchw_shape);
   }
 
-  // process when affine=Flase and track_running_stats=False
+  // process when affine=False and track_running_stats=False
   int64_t dim_c = self_reshape.size(1);
   at::TensorOptions options = self.options().dtype(at::ScalarType::Float);
 
