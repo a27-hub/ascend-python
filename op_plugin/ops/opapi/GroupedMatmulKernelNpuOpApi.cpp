@@ -261,7 +261,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     weight_trans = is_weight_trans(weight_real[0]);
     size_t n_new = (mxfp4_valid && !weight_trans) ? (n0 * FP4_IN_INT8) : n0;
     if (mxfp4_valid) {
-        if (!is_weight_trans(x_real[0])) {
+        if (!(group_type_value == K_SPLIT && is_weight_trans(x_real[0]))) {
             TORCH_CHECK(x_real[0].size(1) != 1, "In mxfp4, dim K should not be 2.", OPS_ERROR(ErrCode::VALUE));
         }
     }
@@ -390,8 +390,9 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         const at::Tensor& xt = x_real[0];
         const at::Tensor& wt = weight_real[0];
         int64_t k = xt.size(1);
-        int64_t m = xt.size(0) * 2;
-        int64_t n = wt.dim() == 3 ? wt.size(2) * 2 : wt.size(1) * 2;
+        int64_t m = static_cast<int64_t>(restore_k_split_dim_m(static_cast<size_t>(xt.size(0)), xt, mxfp4_valid));
+        int64_t n = weight_trans ? (wt.dim() == 3 ? wt.size(wt.dim() - 1) : wt.size(0))
+                                 : wt.size(wt.dim() - 1) * FP4_IN_INT8;
         TORCH_CHECK(!(k == 1 && (m == 2 || n == 2)),
                     "In mxfp4 groupType=2 (split K), when k==1, m and n must not be 2 "
                     + OPS_ERROR(ErrCode::VALUE));

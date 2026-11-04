@@ -19,7 +19,7 @@
 
 - Provides an efficient method to perform grouped computation of multiple matrix multiplication (MatMul) operations. This API implements batch processing of multiple MatMul operations by grouping MatMul operations with identical or similar shapes, reducing memory access overhead and saving computational resources to improve computational efficiency. For example:
 
-    > [!NOTE]  
+    > [!NOTE]
     > This operator currently supports non-quantization, full quantization, and fake-quantization scenarios. The full quantization and non-quantization scenarios are applicable to training or inference scenarios, and the fake-quantization scenario is applicable only to inference scenarios.
 
 - Formulas:
@@ -125,7 +125,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     - <term>Atlas inference products</term>: `torch.float16`.
     <!-- end id9 -->
     <!-- npu="950" id10 -->
-    - <term>Ascend 950PR&950DT products</term>: `torch.float8_e4m3fn`, `torch.float8_e5m2`, `torch.float16`, `torch.bfloat16`, `torch.float32`, `torch.int8`, `torch_npu.hifloat8`, `torch_npu.float4_e2m1fn_x2`, `torch_npu.float4_e1m2fn_x2`, `torch.int8`, or `torch_npu.int4`. In practice, `torch_npu.int4` is carried by `torch.int8` or `torch.int32`, and the value range [-8,7] is retained. For `torch_npu.hifloat8` and the float4 series, the optional parameter `x_dtype` must be set to the corresponding type; in this case, the `dtype` of `x` itself no longer takes effect, but the `dtype` of `x` itself must still be an 8-bit data type to ensure the shape is correct. For the float4 series, the inner axis `K` must be an even number to ensure that 8 bits can be converted into two float4 values. In addition, the `torch_npu.float4_e1m2fn_x2` data type is supported only when `weight` is in NZ format.
+    - <term>Ascend 950PR&950DT products</term>: `torch.float8_e4m3fn`, `torch.float8_e5m2`, `torch.float16`, `torch.bfloat16`, `torch.float32`, `torch.int8`, `torch_npu.hifloat8`, `torch_npu.float4_e2m1fn_x2`, `torch_npu.float4_e1m2fn_x2`, `torch.int8`, or `torch_npu.int4`. In practice, `torch_npu.int4` is carried by `torch.int8` or `torch.int32`, and the value range [-8,7] is retained. For `torch_npu.hifloat8` and the float4 series, the optional parameter `x_dtype` must be set to the corresponding type; in this case, the `dtype` of `x` itself no longer takes effect, but the `dtype` of `x` itself must still be an 8-bit data type to ensure the shape is correct. For the float4 series, the inner axis is `K` for M-axis grouping and is `M` for K-axis grouping when `x` is transposed. The float4 inner axis must be an even number to ensure that 8 bits can be converted into two float4 values. In addition, the `torch_npu.float4_e1m2fn_x2` data type is supported only when `weight` is in NZ format.
     <!-- end id10 -->
 
   - The maximum list length is `128`.
@@ -149,7 +149,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     <!-- end id13 -->
     <!-- npu="950" id14 -->
     - <term>Ascend 950PR&950DT products</term>: `torch.float8_e4m3fn`, `torch.float8_e5m2`, `torch.int8`, `torch_npu.hifloat8`, `torch.bfloat16`, `torch.float16`, `torch.float32`, `torch_npu.float4_e2m1fn_x2`, `torch_npu.float4_e1m2fn_x2`, `torch.int32`, or `torch_npu.int4`. In practice, `torch_npu.int4` is carried by `torch.int8` or `torch.int32`, and the value range [-8,7] is retained. For `torch_npu.hifloat8` and the float4 series, the optional parameter `weight_dtype` must be set to the corresponding type; in this case, the `dtype` of `weight` itself no longer takes effect, but the `dtype` of `weight` itself must still be an 8-bit data type to ensure the shape is correct. In addition, the `torch_npu.float4_e1m2fn_x2` data type is supported only when `weight` is in NZ format.
-      - In full quantization scenarios, when `x` is of the float4 series and `weight` is a float4 series input, only inference scenarios are supported. In this case, the `K` of the input `x` must be an even number, and when `weight` is not transposed, the inner axis `N` must be an even number to ensure that 8 bits can be converted into two float4 values. When the data type of the input `x`/`weight` is `torch.int8` or `torch.float8_e4m3fn` (with `scale_dtype` and `per_token_scale_dtype` being `torch.float8_e8m0fnu`) or `torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2` (with `scale_dtype` and `per_token_scale_dtype` being `torch.float8_e8m0fnu`), the `weight` data format supports `FRACTAL_NZ`, and the `torch_npu.npu_format_cast` API can be used to convert ND to the `FRACTAL_NZ` format. When `x` is `torch_npu.int4` and `weight` is `torch_npu.int4`, the `K` of the input `x` must also be an even number, and when `weight` is not transposed, the inner axis `N` must be an even number. The `weight` data format supports `FRACTAL_NZ`, and the `torch_npu.npu_format_cast` API can be used to convert ND to the `FRACTAL_NZ` format.
+      - In full quantization scenarios, when `x` is of the float4 series and `weight` is a float4 series input, M-axis grouping with `group_type` set to 0 supports only inference scenarios, and the `K` of the input `x` must be an even number. K-axis grouping with `group_type` set to 2 supports training scenarios (`x` and `weight` must both be `torch_npu.float4_e2m1fn_x2`, and `scale_dtype` and `per_token_scale_dtype` must be `torch.float8_e8m0fnu`). In this case, the `M` of the input `x` must be an even number, and when `weight` is not transposed, the inner axis `N` must be an even number to ensure that 8 bits can be converted into two float4 values. In addition, when `K` is 1, neither `M` nor `N` can be 2. When the data type of the input `x`/`weight` is `torch.int8` or `torch.float8_e4m3fn` (with `scale_dtype` and `per_token_scale_dtype` being `torch.float8_e8m0fnu`) or `torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2` (with `scale_dtype` and `per_token_scale_dtype` being `torch.float8_e8m0fnu`), the `weight` data format supports `FRACTAL_NZ`, and the `torch_npu.npu_format_cast` API can be used to convert ND to the `FRACTAL_NZ` format. When `x` is `torch_npu.int4` and `weight` is `torch_npu.int4`, the `K` of the input `x` must also be an even number, and when `weight` is not transposed, the inner axis `N` must be an even number. The `weight` data format supports `FRACTAL_NZ`, and the `torch_npu.npu_format_cast` API can be used to convert ND to the `FRACTAL_NZ` format.
       - In fake-quantization scenarios, when `weight` is of the `torch.float32`/`torch.int32` type, because PyTorch does not natively support some data types, [torch_npu.npu_convert_weight_to_int4pack](torch_npu-npu_convert_weight_to_int4pack.md) can be used to implement **one `torch.float32` value carrying eight `torch_npu.float4_e2m1fn_x2` inputs and one `torch.int32` value carrying eight `torch_npu.int4` inputs**. In this case, `weight_dtype` is not passed. Similarly, when `weight` is `torch_npu.int4`, a pack operation is also required.
       - In fake-quantization scenarios, the MxA8W4 data flow supports `weight` using `torch.uint8` to carry `torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2` (one `torch.uint8` value carries two `torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2` values). In this scenario, static graph mode and dynamic graph mode do not support E=1 or K=64, where E indicates the Group size.
       - In non-quantization scenarios, when the `weight` input is `torch.float16` or `torch.bfloat16` and the last two dimensions of the `weight` shape are aligned to 32B, the data format also supports `FRACTAL_NZ`, and the `torch_npu.npu_format_cast` API can be used to convert ND to the `FRACTAL_NZ` format.
@@ -553,7 +553,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   <!-- npu="A3,910b" id67 -->
   - **Scenarios supported when the `group_list` input type is Tensor** (for <term>Atlas A2 products</term> and <term>Atlas A3 products</term>)
 
-    > [!NOTE]   
+    > [!NOTE]
     >
     > - Quantization and fake-quantization are supported only when `group_type` is set to `-1` or `0`.
     > - Activation function computation is supported only in `pertoken` quantization scenarios.
@@ -580,7 +580,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
 
     > [!NOTE]
     >
-    > - Full quantization supports only single-single-single scenarios with group_type of 0 and 2. Training scenarios, that is, group_type of 2, are supported only in full quantization where the input x and weight are `torch_npu.hifloat8`, `torch.float8_e4m3fn`, or `torch.float8_e5m2`.
+    > - Full quantization supports only single-single-single scenarios with group_type of 0 and 2. Training scenarios, that is, group_type of 2, are supported only in full quantization where the input x and weight are `torch_npu.hifloat8`, `torch.float8_e4m3fn`, `torch.float8_e5m2`, or `torch_npu.float4_e2m1fn_x2`.
     > - Fake-quantization scenarios support multi-multi-multi scenarios with `group_type` of -1, and single-single-single and single-multi-single scenarios with `group_type` of 0. Single-multi-single indicates that `x` is a single tensor, `weight` is multiple tensors, and `y` is a single tensor.
     >   - perchannel fake-quantization scenarios where the input `x` is `torch.float16`/`torch.bfloat16` and `weight` is `torch.int8`/`torch.int32` (`torch_npu.int4`).
     >   - pergroup fake-quantization scenarios where the input `x` is `torch.float16`/`torch.bfloat16` and `weight` is `torch.int32` (`torch_npu.int4`).
@@ -593,7 +593,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     | 0 | single-single-single | `x`, `weight`, and `y` are all single tensors. | 1. Only `split_item` of 2 or 3 is supported.<br>  2. `group_list` must be passed. When `group_list_type` is 0, the last value must not be greater than the first dimension of the tensor in `x`; when `group_list_type` is 1, the sum of the values must not be greater than the first dimension of the tensor in `x`. When `group_list_type` is 2, the sum of the values in the second column must be less than or equal to the first dimension of the tensor in `x`.<br>  3. The maximum length of the first dimension of `group_list` is 1024, that is, a maximum of 1024 groups is supported.<br>  4. In quantization scenarios, `bias` is supported only when the input `dtype` of `x` is `torch.int8`/`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`; both non-quantization and fake-quantization scenarios support `bias`.<br>  5. `x` supports only non-transposed input, and `weight` supports transposed or non-transposed input. However, when both `x` and `weight` are `torch_npu.int4` and the `weight` format is ND, only non-transposed input is supported.<br>  6. A single tensor in `weight` must be 3D, and a single tensor in `x` and `y` must be 2D.<br>  7. The K axis must not be 0.<br>  8. In mx fake-quantization scenarios where the input `dtype` of `x` is `torch.float16`/`torch.bfloat16` and `weight` is `torch.float32` (`torch_npu.float4_e2m1fn_x2`), only non-transposed `x` and non-transposed `weight` are supported. In perchannel fake-quantization scenarios where the input `dtype` of `x` is `torch.float16`/`torch.bfloat16` and `weight` is `torch.float8_e4m3fn`/`torch.float8_e5m2`/`torch_npu.hifloat8`, and in mx fake-quantization scenarios where the input `dtype` of `x` is `torch.float8_e4m3fn` and `weight` is `torch.float32` (`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`), only non-transposed `x` and transposed `weight` are supported.<br>  9. In mx fake-quantization and K-CG fake-quantization scenarios, the last two dimensions of `weight` must be aligned to 32B.<br>  10. In mx fake-quantization scenarios where the input `dtype` of `x` is `torch.float8_e4m3fn` and `weight` is `torch.float32` (`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`), the type of `bias` must be the same as the `output_dtype` data type, and the optional parameter `output_dtype` must be passed.<br>  11. `bias` is optional and the shape supports only the 2D (g,n), where g is the number of groups of M. |
     | 0 | single-multi-single | `x` is a single tensor, `weight` is multiple tensors, and `y` is a single tensor. | 1. Only `split_item` of 2 or 3 is supported.<br>  2. `group_list` must be passed. When `group_list_type` is 0, the last value must be equal to the first dimension of the tensor in `x`; when `group_list_type` is 1, the sum of the values must correspond one-to-one to the first dimension of the tensor in `x`, and the maximum length is 128 (1024 in non-quantization scenarios).<br>  3. The tensors in `x` and `y` must be 2D, with shapes (M, K) and (M, N), respectively.<br>  4. The tensors in `weight` must be 2D, with shapes (N, K) or (K, N), respectively.<br>  5. The N axis of each tensor in `weight` must be equal.<br>  6. `weight` transposition is supported, but whether each tensor in `weight` is transposed must be uniform.<br>  7. `x` does not support transposition.<br>  8. Non-quantization and fake-quantization scenarios support `bias`. `bias` is optional and the shape supports only the 1D tensorList[(n),(n),...,(n)], and the list length is the same as the `weight` list length.<br>  9. In full quantization MX scenarios where the input `w` is in the `FRACTAL_NZ` format, single-multi-single scenarios are supported, and `bias` is not supported in this case. |
     | 0 | multi-multi-single | x and weight are multiple tensors, and y is a single tensor. The result of each group of matrix multiplication is stored contiguously in the same tensor. | 1. Only split_item of 2 or 3 is supported.<br>  2. The tensors in x, weight, and y must be 2D.<br>  3. The N axis of each tensor in weight must be equal.<br>  4. If group_list is passed, when group_list_type is 0, the differences in group_list must correspond one-to-one to the first dimension of the tensor in x; when group_list_type is 1, the values in group_list must correspond one-to-one to the first dimension of the tensor in x, and the maximum length is 128 (1024 in non-quantization scenarios).<br>  5. weight transposition is supported, but whether each tensor in weight is transposed must be uniform.<br>  6. x does not support transposition.<br>  7. In non-quantization scenarios, bias is optional and the shape supports only the 1D tensorList[(n),(n),...,(n)], and the list length is the same as the weight length. |
-    | 2 | single-single-single | x, weight, and y are all single tensors. | 1. Only split_item of 2 or 3 is supported.<br>  2. group_list must be passed. When group_list_type is 0, the last value must not be greater than the first dimension of the tensor in x; when group_list_type is 1, the sum of the values must not be greater than the first dimension of the tensor in x.<br>  3. The maximum length of the first dimension of group_list is 1024, that is, a maximum of 1024 groups is supported.<br>  4. In full quantization scenarios, scale of `torch.int64` is not supported.<br>  5. Only transposed x and non-transposed weight are supported.<br>  6. A single tensor in y must be 3D, and a single tensor in x and weight must be 2D.<br>  7. In graph mode scenarios, the K axis must not be 0.<br>  8. Only ND input and ND output are supported. |
+    | 2 | single-single-single | x, weight, and y are all single tensors. | 1. Only split_item of 2 or 3 is supported.<br>  2. group_list must be passed. When group_list_type is 0, the last value must not be greater than the K axis size of the tensor in x; when group_list_type is 1, the sum of the values must not be greater than the K axis size of the tensor in x.<br>  3. The maximum length of the first dimension of group_list is 1024, that is, a maximum of 1024 groups is supported.<br>  4. In full quantization scenarios, scale of `torch.int64` is not supported.<br>  5. Only transposed x and non-transposed weight are supported.<br>  6. A single tensor in y must be 3D, and a single tensor in x and weight must be 2D.<br>  7. bias is not supported and must be passed as None.<br>  8. In single-operator mode, total `K`=0 is supported. In graph mode scenarios, the K axis must not be 0.<br>  9. Only ND input and ND output are supported. |
     | 2 | single-multi-multi | x is a single tensor, weight is multiple tensors, and y is multiple tensors. | 1. Only split_item of 0 or 1 is supported.<br>  2. The tensors in x, weight, and y must be 2D.<br>  3. If grouplist is passed, when group_list_type is 0, the differences in group_list must correspond one-to-one to the first dimension of the tensor in x; when group_list_type is 1, the values in group_list must correspond one-to-one to the first dimension of the tensor in x, and the maximum length is 1024.<br>  4. Only transposed x and non-transposed weight are supported.<br>  5. The shape of the non-grouping axis must not be 0.<br>  6. Only ND input and ND output are supported.<br>  7. bias is not supported.<br>  8. Only non-quantization is supported. |
 
     - **Single-single-single full quantization scenarios**: The shape restrictions on scale and per_token_scale in each scenario are as follows (where g is the shape size of `group_list`, M is the same as the shape m of x, K is the same as the shape k of x, and N is the same as the shape n of weight).
@@ -786,6 +786,31 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     scale_dtype=torch_npu.float8_e8m0fnu, per_token_scale_dtype=torch_npu.float8_e8m0fnu, group_list_type=0)
     ```
   <!-- end id75 -->
+  <!-- npu="950" id89 -->
+  - <term>Ascend 950PR&950DT products</term>: mx (A4W4) full quantization K-axis grouping scenario example - mxfp4 (`group_type`=2, TN, the physical layout of `x` is a transposed view of \[K, M/2\], and the physical layout of `per_token_scale` is a transposed view of \[K//64+g, M, 2\])
+
+    ```python
+    import torch
+    import torch_npu
+    M = 128
+    N = 256
+    K = 160            # Sum of the K lengths of all groups. The two groups have K lengths of 64 and 96.
+    g = 2
+    S = K // 64 + g    # Number of K-axis rows of scale/per_token_scale
+    # Use uint8 to carry mxfp4 (one byte carries two float4 values). The physical layout is [K, M/2] and the transposed view is [M/2, K].
+    x = torch.randint(1, 3, (K, M // 2), dtype=torch.uint8).npu().view(torch.float4_e2m1fn_x2).t()
+    weight = torch.randint(1, 3, (K, N // 2), dtype=torch.uint8).npu().view(torch.float4_e2m1fn_x2)
+    scale = torch.randint(124, 130, (S, N, 2), dtype=torch.uint8).npu().view(torch.float8_e8m0fnu)
+    # The physical layout of per_token_scale is [S, M, 2] and its transposed view is [M, S, 2].
+    per_token_scale = torch.randint(124, 130, (S, M, 2), dtype=torch.uint8).npu().view(torch.float8_e8m0fnu).transpose(0, 1)
+
+    group_list = torch.Tensor([64, 160]).to(torch.int64).npu()
+    split_item = 3
+    npu_out = torch_npu.npu_grouped_matmul([x], [weight], scale=[scale], per_token_scale = [per_token_scale], group_list=group_list,
+    split_item=split_item, group_type=2, output_dtype=torch.bfloat16, x_dtype=torch_npu.float4_e2m1fn_x2, weight_dtype=torch_npu.float4_e2m1fn_x2,
+    scale_dtype=torch_npu.float8_e8m0fnu, per_token_scale_dtype=torch_npu.float8_e8m0fnu, group_list_type=0)
+    ```
+  <!-- end id89 -->
   <!-- npu="950" id76 -->
   - <term>Ascend 950PR&950DT products</term>: (A16W4) fake-quantization scenario example
 
@@ -984,23 +1009,23 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
     import numpy as np
     import torch
     import torch_npu
-    
+
     # The internal format (allow_internal_format) must be enabled when npu_quantize packs int4.
     torch_npu.npu.config.allow_internal_format = True
-    
-    
-    def main(): 
+
+
+    def main():
         m, k, n, e = 2048, 1024, 1024, 16
         out_dtype = torch.bfloat16
         npu = "npu"
         print(f"[run] perchannel  shape M={m} K={k} N={n} E={e}  out={out_dtype}")
-    
+
         x_int = torch.full((m, k), 1, dtype=torch.int8)
         w_int = torch.full((e, k, n), 1, dtype=torch.int8)
         scale_ref = torch.full((e, 1, n), 0.1, dtype=torch.float32).to(torch.bfloat16).to(torch.float32)
         pt_scale = torch.full((m,), 1.0, dtype=torch.float32)
         group_list = torch.arange(1, e + 1) * (m // e)
-    
+
         # ---- NPU side: int4 quantization packing (ND, non-transposed) ----
         x_quant = torch_npu.npu_quantize(
             x_int.to(torch.float32).to(npu),
@@ -1008,7 +1033,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
         weight_quant = torch_npu.npu_quantize(
             w_int.to(torch.float32).to(npu),
             torch.tensor([1.], device=npu), None, torch.quint4x2, -1, False)
-    
+
         # ---- scale packing: the bits of (E,1,N) fp32 are placed into the lower 32 bits of int64, with the upper 32 bits = 0 ----
         scale_arr = scale_ref.cpu().numpy().astype(np.float32)
         scale_arr.dtype = np.uint32                               # bit reinterpretation, values unchanged
@@ -1016,7 +1041,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
         packed[..., ::2] = scale_arr
         packed.dtype = np.int64
         scale_i64 = torch.from_numpy(packed).to(npu)
-    
+
         y = torch_npu.npu_grouped_matmul(
             [x_quant], [weight_quant],
             bias=None,
@@ -1032,8 +1057,8 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
             act_type=0,
             output_dtype=out_dtype,
         )[0]
-        torch_npu.npu.synchronize()    
-    
+        torch_npu.npu.synchronize()
+
     if __name__ == "__main__":
         main()
     ```

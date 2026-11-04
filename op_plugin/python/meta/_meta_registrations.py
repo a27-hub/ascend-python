@@ -3616,6 +3616,7 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     is_hifloat8 = x_dtype == torch_npu.hifloat8 and weight_dtype == torch_npu.hifloat8
     is_fp8 = (x[0].dtype == torch.float8_e4m3fn or x[0].dtype == torch.float8_e5m2) and (weight[0].dtype == torch.float8_e4m3fn or weight[0].dtype == torch.float8_e5m2)
     if is_a8w8 or is_a4w4_mxfp or is_fp8 or is_hifloat8:
+
         torch._check(
             (m <= 0) | (n <= 0) | (k > 0) | (is_a4w4_mxfp and group_type == 2),
             lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),
