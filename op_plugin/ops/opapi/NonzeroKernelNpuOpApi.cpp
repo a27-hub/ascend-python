@@ -19,6 +19,23 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+namespace {
+
+bool is_compatible_impl_enabled() {
+  static auto compatible_env = std::getenv("TORCH_NPU_USE_COMPATIBLE_IMPL");
+  return compatible_env != nullptr && std::string(compatible_env) == "1";
+}
+
+// In compatibility mode, compute the exact number of non-zero elements first so
+// that the output can be allocated at real size {num_nonzero, dim} instead of the
+// conservative max size {numel, dim}, reducing memory usage compared with the
+// GPU-side implementation.
+int64_t count_nonzero_num(const at::Tensor& self) {
+  auto count_tensor = op_api::count_nonzero(self, c10::IntArrayRef{});
+  return count_tensor.item<int64_t>();
+}
+
+} // namespace
 
 at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out) {
   static auto opApiFuncAddr = []() {
@@ -35,7 +52,12 @@ at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out) {
   auto ret = aclGetViewShape(npuAclParams.Get<1>(), &view_dims, &view_dim_num);
   TORCH_CHECK(ret == 0, "aclGetViewShape failed.", OPS_ERROR(ErrCode::ACL));
   c10::SmallVector<int64_t, op_infer::SIZE> output_size(view_dims, view_dims + view_dim_num);
+  auto print_stride = [](const at::Tensor& t, const char* tag) {
+    std::cout << tag << " sizes=" << t.sizes() << " strides=" << t.strides() << std::endl;
+  };
+  print_stride(out, "[debug] before resize_");
   out = out.resize_(output_size);
+  print_stride(out, "[debug] after resize_");
   // Need to use delete[] to release memory to avoid memory leakage!
   delete[] view_dims;
   view_dims = nullptr;
@@ -44,6 +66,18 @@ at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out) {
 
 at::Tensor& nonzero_out(const at::Tensor& self, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero_out(self, result));
+  if (is_compatible_impl_enabled()) {
+    auto num_nonzero = count_nonzero_num(self);
+    auto out_size = c10::SmallVector<int64_t, op_infer::SIZE>{num_nonzero, self.dim()};
+    at_npu::native::OpPreparation::check_tensor({self}, result, at::ScalarType::Long, out_size);
+    auto out = result.is_contiguous() ? result : result.contiguous();
+    EXEC_NPU_CMD(aclnnNonzero, self, out);
+    if (!result.is_contiguous()) {
+      result.copy_(out);
+    }
+    return result;
+  }
+
   auto out_size = op_infer::nonzero_npu_max_output_size(self);
   at_npu::native::OpPreparation::check_tensor({self}, result, at::ScalarType::Long, out_size);
   auto out = result.is_contiguous() ? result : result.contiguous();
@@ -56,6 +90,15 @@ at::Tensor& nonzero_out(const at::Tensor& self, at::Tensor& result) {
 
 at::Tensor nonzero(const at::Tensor& self) {
   DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero(self));
+  if (is_compatible_impl_enabled()) {
+    auto num_nonzero = count_nonzero_num(self);
+    auto out_size = c10::SmallVector<int64_t, op_infer::SIZE>{num_nonzero, self.dim()};
+    at::Tensor out = at_npu::native::OpPreparation::apply_tensor_without_format(
+        out_size, self.options().dtype(at::kLong));
+    EXEC_NPU_CMD(aclnnNonzero, self, out);
+    return out;
+  }
+
   auto out_size = op_infer::nonzero_npu_max_output_size(self);
   at::Tensor out =
       at_npu::native::OpPreparation::apply_tensor_without_format(out_size, self.options().dtype(at::kLong));
