@@ -378,3 +378,14 @@ backward:
 - name: renorm(Tensor self, Scalar p, int dim, Scalar maxnorm) -> Tensor
   self: npu_renorm_backward(grad, self, p, dim, maxnorm)
   version: [v2.7, newest]
+
+- name: copysign.Tensor(Tensor self, Tensor other) -> Tensor
+  self: copysign_tensor_self_backward(grad, self, result)
+  other: non_differentiable
+  result: copysign_tensor_self_backward(self_t, self_p, result)
+  version: all_version
+
+- name: copysign.Scalar(Tensor self, Scalar other) -> Tensor
+  self: copysign_tensor_self_backward(grad, self, result)
+  result: auto_element_wise
+  version: all_version

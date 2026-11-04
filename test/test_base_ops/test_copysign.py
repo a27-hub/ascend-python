@@ -319,6 +319,55 @@ class TestCopysign(TestCase):
         with self.assertRaises(RuntimeError):
             torch.copysign(npu32, npu32, out=torch.empty(5, 6, dtype=torch.int32, device="npu"))
 
+    def test_copysign_backward_tensor(self):
+        # 反向：self 可微、other 不可微；含 self==0 边界（该处梯度被 mask 为 0）
+        cpu_self = torch.randn(5, 6, dtype=torch.float32)
+        cpu_self[cpu_self.abs() < 0.5] = 0.0
+        cpu_self = cpu_self.requires_grad_(True)
+        cpu_other = torch.randn(5, 6, dtype=torch.float32)
+        cpu_out = torch.copysign(cpu_self, cpu_other)
+        cpu_out.sum().backward()
+
+        npu_self = cpu_self.detach().clone().npu().requires_grad_(True)
+        npu_other = cpu_other.npu()
+        npu_out = torch.copysign(npu_self, npu_other)
+        npu_out.sum().backward()
+
+        self.assertEqual(npu_self.grad.cpu(), cpu_self.grad)
+
+    def test_copysign_backward_scalar(self):
+        # 反向：Scalar 变体，self 可微
+        cpu_self = torch.randn(5, 6, dtype=torch.float32, requires_grad=True)
+        cpu_out = torch.copysign(cpu_self, -2.5)
+        cpu_out.sum().backward()
+
+        npu_self = cpu_self.detach().clone().npu().requires_grad_(True)
+        npu_out = torch.copysign(npu_self, -2.5)
+        npu_out.sum().backward()
+
+        self.assertEqual(npu_self.grad.cpu(), cpu_self.grad)
+
+    def test_copysign_backward_inplace(self):
+        # 反向：inplace Tensor 变体，self 梯度由 functional 派生
+        # self 经 +0.0 变为非 leaf，才能对参与求导的中间结果做 inplace
+        # （注意不可用 init.requires_grad_(True) 直接污染共享的 init，否则 .npu() 会退化成非 leaf）
+        init = torch.randn(5, 6, dtype=torch.float32)
+        cpu_other = torch.randn(5, 6, dtype=torch.float32)
+
+        cpu_base = init.clone().requires_grad_(True)
+        cpu_self = cpu_base + 0.0
+        cpu_self.copysign_(cpu_other)
+        cpu_self.sum().backward()
+        cpu_grad = cpu_base.grad
+
+        npu_base = init.npu().requires_grad_(True)
+        npu_self = npu_base + 0.0
+        npu_self.copysign_(cpu_other.npu())
+        npu_self.sum().backward()
+        npu_grad = npu_base.grad.cpu()
+
+        self.assertEqual(npu_grad, cpu_grad)
+
 
 if __name__ == "__main__":
     run_tests()
