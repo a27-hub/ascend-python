@@ -51,9 +51,10 @@ void check_linalg_matrix_sqrth_inputs(const at::Tensor& self)
         "linalg.matrix_sqrth: Low precision dtypes not supported. Got ",
         dtype,
         OPS_ERROR(ErrCode::TYPE));
-    // NPU restriction: CANN only provides a float32 factorization path (the NPU _linalg_svd also
-    // supports float32 only), so float64/complex fail explicitly instead of silently falling back
-    // to the CPU.
+    // Only float32 is enabled here. aclnnSvd itself accepts FLOAT/DOUBLE/COMPLEX64/COMPLEX128,
+    // but the reconstruction below calls matmul, and aclnnMatmul only supports
+    // FLOAT16/BFLOAT16/FLOAT32, so float64/complex cannot be assembled on device yet. They fail
+    // explicitly instead of silently falling back to the CPU.
     TORCH_CHECK(
         dtype == at::kFloat,
         "linalg.matrix_sqrth: float64/complex inputs are not supported on the NPU backend yet, got ",
@@ -114,8 +115,8 @@ at::Tensor linalg_matrix_sqrth(const at::Tensor& self)
 at::Tensor& linalg_matrix_sqrth_out(const at::Tensor& self, at::Tensor& out)
 {
     check_linalg_matrix_sqrth_inputs(self);
+    at_npu::native::OpPreparation::check_tensor({self}, out, self.scalar_type(), self.sizes());
     auto result = linalg_matrix_sqrth_impl(self);
-    at_npu::native::OpPreparation::check_tensor({self}, out, result.scalar_type(), result.sizes());
     out.copy_(result);
     return out;
 }

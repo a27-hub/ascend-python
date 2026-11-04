@@ -91,8 +91,9 @@ class TestLinalgMatrixSqrth(TestCase):
         # Half precision: same as CPU/CUDA, identical error message.
         with self.assertRaisesRegex(RuntimeError, "Low precision dtypes not supported. Got Half"):
             torch.linalg.matrix_sqrth(torch.randn(3, 3).half().npu())
-        # float64: supported upstream but no NPU path yet, so fail explicitly instead of silently
-        # falling back to the CPU.
+        # float64: supported upstream, but the NPU reconstruction goes through matmul and
+        # aclnnMatmul only supports fp16/bf16/fp32, so fail explicitly instead of silently falling
+        # back to the CPU.
         with self.assertRaisesRegex(RuntimeError, "not supported on the NPU backend yet"):
             torch.linalg.matrix_sqrth(torch.randn(3, 3).double().npu())
 
