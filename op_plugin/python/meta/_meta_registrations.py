@@ -1377,8 +1377,32 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
                      lambda: "HiF4 requires two-dimensional x1 and x2")
         torch._check(self.dtype == torch.uint8 and x2.dtype == torch.uint8,
                      lambda: "HiF4 requires packed uint8 x1 and x2")
+        torch._check(bias is None and gather_index == 0 and not amax_output,
+                     lambda: "HiF4 requires no bias, gather_index=0 and amax_output=False")
+        torch._check(y_dtype in (5, 15), lambda: "HiF4 requires float16 or bfloat16 output")
+        torch._check(x1_scale_dtype == 299 and x2_scale_dtype == 299,
+                     lambda: "HiF4 requires HIFLOAT4_SCALE overrides")
+        # Same contract as TorchAir: only M is dynamic. Square packed x2 uses
+        # (K/2, N), independently of strides; scale orientation follows it.
+        torch._check(all(isinstance(d, int) and d > 0 for d in (self.size(1), *x2.shape)),
+                     lambda: "HiF4 requires static positive K/N; only M may be dynamic")
+        torch._check(self.size(0) > 0, lambda: "HiF4 requires positive M")
         torch._check(self.size(1) == x2.size(0) or self.size(1) == x2.size(1),
                      lambda: "HiF4 x2 must contain the packed K dimension of x1")
+        for scale in (x1_scale, x2_scale):
+            torch._check(scale is not None, lambda: "HiF4 requires both scales")
+            torch._check(scale.dim() == 3 and scale.dtype in (torch.int32, torch.float32),
+                         lambda: "HiF4 scales require rank 3 and int32/float32 storage")
+        scale_k = (self.size(1) * 2 + 63) // 64
+        hif4_k_first = self.size(1) == x2.size(0)
+        scale2_shape = ((scale_k, x2.size(1), 1) if hif4_k_first
+                        else (x2.size(0), scale_k, 1))
+        # _check preserves a symbolic equality instead of specializing M.
+        torch._check(x1_scale.size(0) == self.size(0), lambda: "HiF4 x1_scale M must match x1")
+        for actual, expected in zip(x1_scale.shape[1:], (scale_k, 1)):
+            torch._check(actual == expected, lambda: "HiF4 x1_scale must match ceil(K/64)")
+        for actual, expected in zip(x2_scale.shape, scale2_shape):
+            torch._check(actual == expected, lambda: "HiF4 x2_scale must match the packed layout")
 
     is_mxfp4 = (x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2)
     if is_mxfp4:
@@ -1402,7 +1426,7 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
     if is_hif4:
         # Match TorchAir: (K/2, N) takes precedence, including square x2;
         # the other supported layout is (N, K/2). Strides do not select it.
-        out_y = x2.size(1) if self.size(1) == x2.size(0) else x2.size(0)
+        out_y = x2.size(1) if hif4_k_first else x2.size(0)
     if is_mxfp4 and x2_trans is not True:
         out_y = x2.size(1) * 2
     # out_gather
