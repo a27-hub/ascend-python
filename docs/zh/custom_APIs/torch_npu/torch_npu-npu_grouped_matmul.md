@@ -158,7 +158,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   - 列表最大长度为128。
 
     <!-- npu="950" id15 -->
-    - <term>Ascend 950PR&950DT系列产品</term>：非量化场景支持列表最大长度为1024。全量化在mx量化且输入且`w`为`FRACTAL_NZ`格式时，支持多`weight`多tensor输入，支持tensorlist最大长度为128。
+    - <term>Ascend 950PR&950DT系列产品</term>：非量化场景支持列表最大长度为1024。全量化在mx量化且输入`w`为`FRACTAL_NZ`格式时，支持多`weight`多tensor输入，支持tensorlist最大长度为128。
     <!-- end id15 -->
 
   - 每个张量支持2维或3维输入。
@@ -333,7 +333,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
 
 - **`act_type`**（`int`）：**可选参数**，代表激活函数类型。数据类型支持`int64`。
   - `group_list`输入类型为`List[int]`时仅支持传入None。
-  - `group_list`输入类型为`Tensor`时，支持的枚举值包括：0代表NONE，不启用激活；1代表RELU激活；2代表GELU\_TANH激活；3代表GELU\_ERR\_FUNC激活，目前暂不支持；4代表FAST\_GELU激活；5代表SILU激活。
+  - `group_list`输入类型为`Tensor`时，支持的枚举值包括：0代表NONE，不启用激活；1代表RELU激活；2代表GELU\_TANH激活；3代表GELU\_ERF\_FUNC激活，目前暂不支持；4代表FAST\_GELU激活；5代表SILU激活。
 
     <!-- npu="A3,910b" id44 -->
     - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：取值范围为0-5。
@@ -414,12 +414,12 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
   - 伪量化场景下，`x_dtype`为`torch.float16`/`torch.bfloat16`、`weight_dtype`为`torch_npu.int4`的PerGroup量化场景下，不支持图模式运行。
   - 非量化场景下，`x_dtype`只支持传入None，`weight_dtype`只支持传入None。
   - 非量化场景下，`x`输入多tensor且`y`输出多tensor场景下，`split_item`参数仅支持输入0。`x`输入单tensor且`y`输出多tensor场景下，`split_item`参数仅支持输入1。`y`输出单tensor场景下，`split_item`参数支持输入2/3。
-  - 全量化场景下，若输出数据类型`y`为`torch.int8`，则不支持图模式运行。全量化MX量化且`weight`输入格式为FRACTAL\_NZ格式，若weight多tensor输入，则不支持图模式运行。若`x`和`weight`输入类型都为`torch_npu.int4`，则暂不支持图模式。
+  - 全量化场景下，若输出数据类型`y`为`torch.int8`，则不支持图模式运行。全量化MX量化且`weight`输入格式为FRACTAL_NZ格式，若weight多tensor输入，则不支持图模式运行。若`x`和`weight`输入类型都为`torch_npu.int4`，则暂不支持图模式。
 <!-- end id57 -->
 <!-- npu="950" id58 -->
 - WeightNZ场景说明（仅适用于<term>Ascend 950PR&950DT系列产品</term>）：
-  - 仅伪量化与全量化（输入`x`/`weight`数据类型为`torch.int8`、`x`/`weight`数据类型为`torch.float8_e4m3fn`/`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`且scale\_dtype与per\_token\_scale\_dtype为`torch.float8_e8m0fnu`）weight支持FRATCAL\_NZ数据格式。
-  - 全量化场景下，`weight`输入为FRATCAL\_NZ数据格式时，K轴和N轴均不能为1。MXFP4场景，K必须大于2，weight不转置时N必须大于2。MXFP4场景支持静态图模式，不支持动态图模式。MXFP4静态图模式场景E必须大于1且K必须大于64。x和weight均为`torch_npu.int4`时，不支持图模式运行，K必须保持8对齐。
+  - 仅伪量化与全量化（输入`x`/`weight`数据类型为`torch.int8`、`x`/`weight`数据类型为`torch.float8_e4m3fn`/`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`且scale\_dtype与per\_token\_scale\_dtype为`torch.float8_e8m0fnu`）weight支持FRACTAL_NZ数据格式。
+  - 全量化场景下，`weight`输入为FRACTAL_NZ数据格式时，K轴和N轴均不能为1。MXFP4场景，K必须大于2，weight不转置时N必须大于2。MXFP4场景支持静态图模式，不支持动态图模式。MXFP4静态图模式场景E必须大于1且K必须大于64。x和weight均为`torch_npu.int4`时，不支持图模式运行，K必须保持8对齐。
 <!-- end id58 -->
 <!-- npu="950" id59 -->
 - scale NZ亲和格式使用约束（仅适用于<term>Ascend 950PR&950DT系列产品</term>）：
@@ -628,7 +628,7 @@ torch_npu.npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, a
         | -1 | pergroup | <li>group_size支持32/64/128/256，pergroup数G=k/gs，要求K可以被gs整除。</li><li>antiquant_scale/antiquant_offset为多tensor，每个tensor为2维，shape为 (Gi, ni)，固定为非转置。</li> |
         | 0 | pergroup | <li>group_size支持32/64/128/256，pergroup数G=k/gs，要求K可以被gs整除。</li><li>antiquant_scale/antiquant_offset为单tensor，每个tensor为3维，shape为 (g, G, N)，固定为非转置。</li> |
          | 0 | mx | pergroup数G=K/32，要求K可以被32整除。<br><ul><li>`x`为`torch.float16`、`torch.bfloat16`输入，`weight`为`torch.float32`（`torch_npu.float4_e2m1fn_x2`）输入场景：`antiquant_scale`为单tensor，每个tensor为3维，shape为（g, K/32, N）。</li><li>`x`为`torch.float8_e4m3fn`输入，`weight`为`torch.uint8`/`torch.int8`（`torch_npu.float4_e2m1fn_x2`/`torch_npu.float4_e1m2fn_x2`）输入场景：<ul><li>G需要为偶数。</li><li>单单单：`antiquant_scale`为单tensor，每个tensor为4维，shape为（g, N, K/64, 2）。</li><li>单单单：`per_token_scale`为单tensor，每个tensor为3维，shape为（M, K/64, 2）。</li><li>单多单：`antiquant_scale`为单tensor，每个tensor为3维，shape为（N, K/64, 2）。</li><li>单多单：`per_token_scale`为单tensor，每个tensor为3维，shape为（M, K/64, 2）。</li></ul></li></ul> |
-        | 0 | K-CG | <li>仅支持`group_list_type`为1，此时`group_list`中的数值表示分组轴上每组大小。</li><li>antiquant_scale为单tensor，每个tensor为3维，shape为（g, G, N），其中pergroup数G=K/gs，gs支持取值为128、192、256、512，要求K可以被gs整除。</li><li>per_token_scale为单tensor，每个tensor为1维，shape为（M）。</li><li>scale为单tensor，每个tensor为2维，shape为，shape为（g, N）。</li> |
+        | 0 | K-CG | <li>仅支持`group_list_type`为1，此时`group_list`中的数值表示分组轴上每组大小。</li><li>antiquant_scale为单tensor，每个tensor为3维，shape为（g, G, N），其中pergroup数G=K/gs，gs支持取值为128、192、256、512，要求K可以被gs整除。</li><li>per_token_scale为单tensor，每个tensor为1维，shape为（M）。</li><li>scale为单tensor，每个tensor为2维，shape为（g, N）。</li> |
         | 0 | S8S4 K-CG | scale为单tensor，shape为（g, K/256, N）；per_token_scale为单tensor，shape为（M）。 |
         | 0 | S8S4 K-C | scale和offset均为单tensor，shape为（g, 1, N）；per_token_scale为单tensor，shape为（M）。 |
   <!-- end id69 -->

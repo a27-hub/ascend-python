@@ -2972,6 +2972,68 @@ class TestGroupedMatmul(TestCase):
             self.assertEqual(result[0].shape[1], n)
 
 
+@unittest.skipIf(not hasattr(torch, "_grouped_mm"), "_grouped_mm not available in this PyTorch version")
+class TestGroupedMm(TestCase):
+    def test_grouped_mm_meta_2d_x_3d(self):
+        """FakeTensor: 2D x 3D -> (M, N)"""
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            M, K, N, G = 768, 256, 128, 3
+            mat_a = torch.randn(M, K, dtype=torch.bfloat16).npu()
+            mat_b = torch.randn(G, K, N, dtype=torch.bfloat16).npu()
+            offs = torch.tensor([256, 512, 768], dtype=torch.int32).npu()
+            out = torch._grouped_mm(mat_a, mat_b, offs=offs)
+            self.assertTrue(out.shape == torch.Size([M, N]))
+            self.assertTrue(out.dtype == torch.bfloat16)
+
+    def test_grouped_mm_meta_3d_x_2d(self):
+        """FakeTensor: 3D x 2D -> (M, N)"""
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            G, M, K, N = 3, 256, 128, 768
+            mat_a = torch.randn(G, M, K, dtype=torch.bfloat16).npu()
+            mat_b = torch.randn(K, N, dtype=torch.bfloat16).npu()
+            offs = torch.tensor([256, 512, 768], dtype=torch.int32).npu()
+            out = torch._grouped_mm(mat_a, mat_b, offs=offs)
+            self.assertTrue(out.shape == torch.Size([M, N]))
+            self.assertTrue(out.dtype == torch.bfloat16)
+
+    def test_grouped_mm_meta_2d_x_2d(self):
+        """FakeTensor: 2D x 2D -> (G, M, N)"""
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            M, K, N, G = 256, 768, 128, 3
+            mat_a = torch.randn(M, K, dtype=torch.bfloat16).npu()
+            mat_b = torch.randn(K, N, dtype=torch.bfloat16).npu()
+            offs = torch.tensor([256, 512, 768], dtype=torch.int32).npu()
+            out = torch._grouped_mm(mat_a, mat_b, offs=offs)
+            self.assertTrue(out.shape == torch.Size([G, M, N]))
+            self.assertTrue(out.dtype == torch.bfloat16)
+
+    def test_grouped_mm_meta_3d_x_3d(self):
+        """FakeTensor: 3D x 3D -> (G, M, N)"""
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            G, M, K, N = 4, 128, 256, 64
+            mat_a = torch.randn(G, M, K, dtype=torch.bfloat16).npu()
+            mat_b = torch.randn(G, K, N, dtype=torch.bfloat16).npu()
+            out = torch._grouped_mm(mat_a, mat_b)
+            self.assertTrue(out.shape == torch.Size([G, M, N]))
+            self.assertTrue(out.dtype == torch.bfloat16)
+
+    def test_grouped_mm_meta_bf16(self):
+        """FakeTensor: bf16 dtype"""
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            M, K, N, G = 512, 256, 128, 2
+            mat_a = torch.randn(M, K, dtype=torch.bfloat16).npu()
+            mat_b = torch.randn(G, K, N, dtype=torch.bfloat16).npu()
+            offs = torch.tensor([256, 512], dtype=torch.int32).npu()
+            out = torch._grouped_mm(mat_a, mat_b, offs=offs)
+            self.assertTrue(out.shape == torch.Size([M, N]))
+            self.assertTrue(out.dtype == torch.bfloat16)
+
+
 class TestQuantMatmul(TestCase):
     def test_npu_quant_matmul_meta(self):
         with FakeTensorMode():
@@ -3055,6 +3117,51 @@ class TestQuantMatmul(TestCase):
                                              bias=None, output_dtype=torch_npu.hifloat8, x1_dtype=torch_npu.hifloat8,
                                              x2_dtype=torch_npu.hifloat8)
             self.assertTrue(expect_ret.shape == res.shape)
+
+    def test_npu_quant_matmul_a8w4_tcg_meta(self):
+        m, k, n, gs = 16, 64, 64, 32
+        with FakeTensorMode():
+            x1 = torch.empty((m, k), dtype=torch.float8_e4m3fn).npu()
+            scale = torch.empty((k // gs, n), dtype=torch.float16).npu()
+            y_scale = torch.empty((1, n), dtype=torch.int64).npu()
+            expect_ret = torch.empty((m, n), dtype=torch.float16).npu()
+
+            # NZ 视图 (K, N/2): uint8 载体与原生 fp4 载体
+            x2_nz_u8 = torch.empty((k, n // 2), dtype=torch.uint8).npu()
+            res = torch_npu.npu_quant_matmul(x1, x2_nz_u8, scale, x2_dtype=torch_npu.float4_e2m1fn_x2,
+                                             y_scale=y_scale, output_dtype=torch.float16,
+                                             group_sizes=[0, 0, gs])
+            self.assertTrue(expect_ret.shape == res.shape)
+            self.assertTrue(expect_ret.dtype == res.dtype)
+
+            # ND 转置视图 (K/2, N)
+            x2_nd_u8 = torch.empty((n, k // 2), dtype=torch.uint8).npu().transpose(0, 1)
+            res = torch_npu.npu_quant_matmul(x1, x2_nd_u8, scale, x2_dtype=torch_npu.float4_e2m1fn_x2,
+                                             y_scale=y_scale, output_dtype=torch.float16,
+                                             group_sizes=[0, 0, gs])
+            self.assertTrue(expect_ret.shape == res.shape)
+            self.assertTrue(expect_ret.dtype == res.dtype)
+
+            if hasattr(torch, 'float4_e2m1fn_x2'):
+                # 原生 fp4 载体: NZ 视图与 ND 转置视图, 不传 x2_dtype
+                x2_nz_f4 = torch.empty((k, n // 2), dtype=torch.float4_e2m1fn_x2).npu()
+                res = torch_npu.npu_quant_matmul(x1, x2_nz_f4, scale, y_scale=y_scale,
+                                                 output_dtype=torch.float16, group_sizes=[0, 0, gs])
+                self.assertTrue(expect_ret.shape == res.shape)
+                self.assertTrue(expect_ret.dtype == res.dtype)
+
+                x2_nd_f4 = torch.empty((n, k // 2), dtype=torch.float4_e2m1fn_x2).npu().transpose(0, 1)
+                res = torch_npu.npu_quant_matmul(x1, x2_nd_f4, scale, y_scale=y_scale,
+                                                 output_dtype=torch.float16, group_sizes=[0, 0, gs])
+                self.assertTrue(expect_ret.shape == res.shape)
+                self.assertTrue(expect_ret.dtype == res.dtype)
+
+                # x2_dtype 显式传 torch 原生 dtype 对象(pybind 转为 ScalarType 枚举值 45)
+                res = torch_npu.npu_quant_matmul(x1, x2_nz_f4, scale, x2_dtype=torch.float4_e2m1fn_x2,
+                                                 y_scale=y_scale, output_dtype=torch.float16,
+                                                 group_sizes=[0, 0, gs])
+                self.assertTrue(expect_ret.shape == res.shape)
+                self.assertTrue(expect_ret.dtype == res.dtype)
 
 
 class TestQuantMatmulReduceSum(TestCase):
