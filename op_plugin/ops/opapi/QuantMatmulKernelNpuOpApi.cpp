@@ -79,10 +79,7 @@ static bool is_nz_format(const at::Tensor& x2) {
 
 static bool is_mx_scale_nz_format(const at::Tensor& scale) {
   const torch_npu::NPUStorageDesc& tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(scale)->npu_desc_;
-  return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ ||
-      tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_2 ||
-      tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_4 ||
-      tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_16;
+  return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_2;
 }
 
 static bool is_mx_scale_nz_storage(const at::Tensor& scale) {
@@ -201,6 +198,11 @@ at::Tensor npu_quant_matmul(
   }
   at::Tensor scaleNzView;
   const at::Tensor* scaleRealPtr = &scale;
+  TORCH_CHECK(
+      is_nz_format(x2) || !is_mx_scale_nz_storage(scale),
+      "MX ScaleB NZ requires Weight NZ input, but Weight format is ",
+      npu_preparation::get_tensor_npu_format(x2),
+      OPS_ERROR(ErrCode::PARAM));
   if (is_nz_format(x2) && is_mx_scale_nz_storage(scale)) {
     const int64_t realN = x2.size(x2.dim() - 1);
     const int64_t realK = x1.size(x1.dim() - 1);
