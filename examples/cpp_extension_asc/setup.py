@@ -16,7 +16,6 @@ setup(
                 os.path.join(BASE_DIR, "csrc", "add_custom.asc"),
                 os.path.join(BASE_DIR, "csrc", "trig_inplace_custom.asc"),
             ],
-            npu_arch="dav-2201",
         ),
     ],
     packages=find_packages(),
