@@ -4490,12 +4490,6 @@ fmin:
   - float64
   test_non_standard_bool_values:
   - bool
-  test_out:
-  - float32
-  test_variant_consistency_eager:
-  - float32
-  test_backward:
-  - float32
 full_like:
   test_conj_view:
   - complex64
