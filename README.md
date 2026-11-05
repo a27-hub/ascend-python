@@ -13,6 +13,7 @@
   <a href="#installation">Installation</a> ·
   <a href="#operator-development">Operator Development</a> ·
   <a href="#api-reference">API Reference</a> ·
+  <a href="#operator-support">Operator Support</a> ·
   <a href="#contributing-and-community">Contributing</a> ·
   <a href="https://gitcode.com/Ascend/pytorch">TorchNPU Repository</a>
 </p>
@@ -76,6 +77,22 @@ The build script in this repository obtains the TorchNPU source, integrates the 
 ## API Reference
 
 The [TorchNPU custom API reference (Chinese)](docs/zh/custom_APIs/menu_Pytorch_API.md) describes API functionality, signatures, parameters, constraints, and usage examples. Refer to each API document for its supported versions and hardware.
+
+## Operator Support
+
+OpPlugin provides Ascend NPU adaptation for native PyTorch operators and TorchNPU custom operators. The table below lists the support level of standard PyTorch operators on Ascend NPU; see the [TorchNPU support statement](https://gitcode.com/Ascend/pytorch/blob/master/SUPPORT.en.md) for the full operator list and version support status.
+
+**Table 1** Standard operator support
+
+| API | Support | Supported data types | Constraints and notes |
+| --- | --- | --- | --- |
+| `torch.conj_physical(Tensor self)` | Supported | complex64, complex128 | Computes the physical conjugate (actually flips the imaginary sign, not a conjugate view); output is consistent with the official CPU/GPU semantics. Real/integer/bool inputs are returned as-is (aliased). |
+| `torch.conj_physical(Tensor self, *, Tensor out)` | Supported | complex64, complex128 | `.out` variant; real inputs use copy semantics (matching GPU, not returned as-is). The official `.out` variant is not differentiable. |
+| `Tensor.conj_physical_()` | Supported | complex64, complex128 | In-place variant that writes back to the input storage; real inputs are a no-op; raises on a leaf that requires grad, matching official semantics. |
+
+Determinism: `conj_physical` is a pure element-wise operator with no reduction/atomic/random sources. Results are identical before and after enabling the deterministic-algorithms switch, and across streams (see the determinism cases in `test/test_base_ops/test_conj_physical.py`).
+
+Memory: on par with GPU — the functional form allocates only 1× the output, the in-place/.out forms add no same-size allocation, and there is no leak (see the memory cases in the same test file).
 
 ## Directory Structure
 

@@ -1793,6 +1793,15 @@ official:
     acl_op: all_version
     op_api: all_version
 
+  # 功能式 conj_physical 不注册 PrivateUse1 kernel：官方 public 为 CompositeImplicitAutograd
+  # （conj_physical -> _conj_physical，后者有 autograd 导数），注册会绕过可微路径使 NPU
+  # 不可微（Spec §6.5）。复数功能式经官方 composite -> _conj_physical 主体调用 .out kernel。
+  - func: conj_physical.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: all_version
+
+  - func: conj_physical_(Tensor(a!) self) -> Tensor(a!)
+    op_api: all_version
+
   - func: constant_pad_nd(Tensor self, SymInt[] pad, Scalar value=0) -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
