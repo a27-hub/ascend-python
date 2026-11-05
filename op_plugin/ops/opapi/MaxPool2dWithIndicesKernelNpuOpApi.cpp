@@ -143,6 +143,11 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool2d_with_indices(
     indices = npu_preparation::apply_tensor_without_format(indices_size, self.options().dtype(indices_dtype));
     EXEC_NPU_CMD(
         aclnnMaxPool2dWithIndices, self, kernel_sizes, strides, paddings, dilations, ceil_mode, output, indices);
+    if (!is_aclnn_only) {
+      // Keep the int32 CANN contract inside the kernel, but aten::max_pool2d_with_indices reports
+      // Long, so widen the real indices before they leave this entry.
+      indices = indices.to(at::kLong);
+    }
   }
   at::namedinference::propagate_names_if_nonempty(output, maybe_names);
   at::namedinference::propagate_names_if_nonempty(indices, maybe_names);
@@ -180,7 +185,8 @@ std::tuple<at::Tensor&, at::Tensor&> max_pool2d_with_indices_out(
     at::Tensor& output,
     at::Tensor& indices) {
   static auto maxpool2d_sc = at_npu::native::env::CheckCompatibleImpl();
-  if (!c10_npu::IsAclnnOnly() && !maxpool2d_sc) {
+  static const bool is_aclnn_only = c10_npu::IsAclnnOnly();
+  if (!is_aclnn_only && !maxpool2d_sc) {
     DO_COMPATIBILITY(
         aclnnMaxPool2dWithMask,
         acl_op::max_pool2d_with_indices_out(self, kernel_size, stride, padding, dilation, ceil_mode, output, indices));
@@ -190,7 +196,17 @@ std::tuple<at::Tensor&, at::Tensor&> max_pool2d_with_indices_out(
     DO_COMPATIBILITY(
         aclnnMaxPool2dWithIndices,
         acl_op::max_pool2d_with_indices_out(self, kernel_size, stride, padding, dilation, ceil_mode, output, indices));
-    EXEC_NPU_CMD(aclnnMaxPool2dWithIndices, self, kernel_size, stride, padding, dilation, ceil_mode, output, indices);
+    if (!is_aclnn_only && indices.scalar_type() == at::kLong) {
+      // The ATen out variant hands us a Long buffer. Run CANN on an int32 buffer so products that
+      // still use the int32 index contract are unaffected, then write the result back in place.
+      at::Tensor cann_indices =
+          npu_preparation::apply_tensor_without_format(indices.sizes(), indices.options().dtype(at::kInt));
+      EXEC_NPU_CMD(
+          aclnnMaxPool2dWithIndices, self, kernel_size, stride, padding, dilation, ceil_mode, output, cann_indices);
+      indices.copy_(cann_indices);
+    } else {
+      EXEC_NPU_CMD(aclnnMaxPool2dWithIndices, self, kernel_size, stride, padding, dilation, ceil_mode, output, indices);
+    }
   }
   return std::tuple<at::Tensor&, at::Tensor&>(output, indices);
 }
