@@ -30,19 +30,26 @@ std::pair<at::Scalar, at::Scalar> histc_check_and_get_min_max(const at::Tensor &
     double leftmost_edge = min.to<double>();
     double rightmost_edge = max.to<double>();
     if (leftmost_edge == rightmost_edge && self.numel() > 0) {
-        leftmost_edge = self.min().item<double>();
-        rightmost_edge = self.max().item<double>();
+        // aminmax 仅用于有限性校验（对齐 CPU/CUDA：数据含 NaN/±inf 且自动 range 时响亮报错），
+        // 重算值不回传、也不再自带 double ±1 展开——展开值经 x dtype 的 tensor 舍入会在
+        // |m| >= 2^24（fp32）时坍缩成不等宽 range 导致静默错 bin；aclnn 会自行重算数据范围，
+        // HistogramV2 kernel 对 min==max 按 CPU #163506 语义做位级 nextafter 展开。
+        double data_min = self.min().item<double>();
+        double data_max = self.max().item<double>();
+        TORCH_CHECK(
+            !(std::isinf(data_min) || std::isinf(data_max) || std::isnan(data_min) || std::isnan(data_max)),
+            "range of [", data_min, ", ", data_max, "] is not finite",
+            OPS_ERROR(ErrCode::VALUE));
+    } else {
+        TORCH_CHECK(
+            !(std::isinf(leftmost_edge) || std::isinf(rightmost_edge) || std::isnan(leftmost_edge) || std::isnan(rightmost_edge)),
+            "range of [", leftmost_edge, ", ", rightmost_edge, "] is not finite",
+            OPS_ERROR(ErrCode::VALUE));
+        // min == max 是自动 range 的合法触发条件（空输入或下层重算），仅拦截 min > max
+        TORCH_CHECK(leftmost_edge <= rightmost_edge, "max must be larger than min", OPS_ERROR(ErrCode::VALUE));
     }
-    if (leftmost_edge == rightmost_edge) {
-        leftmost_edge -= 1.0;
-        rightmost_edge += 1.0;
-    }
-    TORCH_CHECK(
-        !(std::isinf(leftmost_edge) || std::isinf(rightmost_edge) || std::isnan(leftmost_edge) || std::isnan(rightmost_edge)),
-        "range of [", leftmost_edge, ", ", rightmost_edge, "] is not finite",
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(leftmost_edge < rightmost_edge, "max must be larger than min", OPS_ERROR(ErrCode::VALUE));
-    return std::make_pair(at::Scalar(leftmost_edge), at::Scalar(rightmost_edge));
+    // 原样透传标量（保留 int64 payload 精度，>2^53 的 int 标量不再经 double 中转丢精度）
+    return std::make_pair(min, max);
 }
 } // namespace
 
