@@ -16,6 +16,7 @@
 #ifndef __TORCH_NPU_OP_PLUGIN_UTILS_FFT_COMMON_OP_API__
 #define __TORCH_NPU_OP_PLUGIN_UTILS_FFT_COMMON_OP_API__
 
+#include <memory>
 #include <mutex>
 #include "op_plugin/utils/op_api_common.h"
 #include "fft_plan_op_api.h"
@@ -31,22 +32,49 @@ void clearFFTPlanCache();
 // For FFTc2cKernelNpuOpApi.cpp
 FFTPlanItem get_plan(int64_t prb_size, bool is_forward, PlanMode plan_mode, at::ScalarType scalar_dtype);
 
-// For EXEC_ASDSIP_FFT_NPU_CMD
-asdFftHandle getHandle(FFTParam param);
+class FFTHandle {
+ public:
+  FFTHandle(const FFTParam& param, c10::DeviceIndex device, aclrtStream stream);
+  ~FFTHandle() noexcept;
+  FFTHandle(const FFTHandle&) = delete;
+  FFTHandle& operator=(const FFTHandle&) = delete;
+
+  size_t workspaceSize() const {
+    return workspaceSize_;
+  }
+  int execute(FftExecApiFunc exec, const aclTensor* input, const aclTensor* output, void* workspace);
+
+ private:
+  void release(bool synchronize) noexcept;
+
+  asdFftHandle handle_ = nullptr;
+  c10::DeviceIndex device_;
+  aclrtStream stream_;
+  size_t workspaceSize_ = 0;
+  std::mutex executionMutex_;
+};
+
+// The caller and its queued task retain ownership independently of the LRU cache.
+std::shared_ptr<FFTHandle> getHandle(const FFTParam& param, const c10_npu::NPUStream& stream);
 
 struct FFTCacheKey {
-  bool isAsdSip;
+  bool isAsdSip = false;
+  c10::DeviceIndex device = -1;
+  aclrtStream stream = nullptr;
   FFTParam fftParam;
   PlanKey planKey;
 };
 struct FFTCacheValue {
-  asdFftHandle handle = nullptr;
+  std::shared_ptr<FFTHandle> handle;
   FFTPlanItem plan;
 };
 
 inline bool operator==(const FFTCacheKey& one, const FFTCacheKey& other) {
+  if (one.isAsdSip != other.isAsdSip || one.device != other.device) {
+    return false;
+  }
   if (one.isAsdSip) {
-    return one.fftParam == other.fftParam;
+    return one.stream == other.stream && one.fftParam == other.fftParam;
   } else {
     return one.planKey == other.planKey;
   }
@@ -87,34 +115,30 @@ class FFTMixCache {
 /**
  * 异步调用npu执行, 无返回值.
  */
-#define EXEC_ASDSIP_FFT_NPU_CMD(fftExecApi, inData, outData, fftParam)                          \
-  do {                                                                                          \
-    auto sip_stream = c10_npu::getCurrentNPUStream().stream(false);                             \
+#define EXEC_ASDSIP_FFT_NPU_CMD(fftExecApi, inData, outData, fftParam)                             \
+  do {                                                                                         \
+    auto sip_stream = c10_npu::getCurrentNPUStream();                                            \
     at_npu::native::SetDeterministic();                                                         \
-    asdFftHandle handle = op_api::getHandle(fftParam);                                          \
-    size_t workspace_size = 0;                                                                  \
-    asdSipFftGetWorkspaceSize(handle, workspace_size);                                          \
-    void* workspace_addr = nullptr;                                                             \
-    at::Tensor workspace_tensor;                                                                \
-    if (workspace_size != 0) {                                                                  \
+    static const auto asdFftExec = GetAsdSipApiFuncAddr("asdFftExec" #fftExecApi);                 \
+    TORCH_CHECK(asdFftExec != nullptr, "asdFftExec" #fftExecApi " not found");                   \
+    auto handle = op_api::getHandle(fftParam, sip_stream);                                      \
+    size_t workspace_size = handle->workspaceSize();                                           \
+    at::Tensor workspace_tensor;                                                               \
+    if (workspace_size != 0) {                                                                 \
       workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size); \
-      workspace_addr = const_cast<void*>(workspace_tensor.storage().data());                    \
-    }                                                                                           \
-    asdSipFftSetWorkspace(handle, workspace_addr);                                              \
-    asdSipFftSetStream(handle, sip_stream);                                                     \
-    auto input = ConvertType(inData);                                                           \
-    auto output = ConvertType(outData);                                                         \
-    static const auto asdFftExec = GetAsdSipApiFuncAddr("asdFftExec" #fftExecApi);              \
-    auto sip_call = [handle, input, output]() mutable -> int {                                  \
-      FftExecApiFunc fftExecApiFunc = reinterpret_cast<FftExecApiFunc>(asdFftExec);             \
-      auto api_ret = fftExecApiFunc(handle, input, output);                                     \
-      TORCH_CHECK(                                                                              \
-          api_ret == 0,                                                                         \
-          "call "                                                                               \
-          "asdFftExec" #fftExecApi " failed");                                                  \
-      return api_ret;                                                                           \
-    };                                                                                          \
-    at_npu::native::OpCommand::RunOpApiV2("asdFftExec" #fftExecApi, sip_call);                  \
+    }                                                                                         \
+    auto release_tensor = [](aclTensor* tensor) { Release(tensor); };                           \
+    auto input = std::shared_ptr<aclTensor>(ConvertType(inData), release_tensor);                \
+    auto output = std::shared_ptr<aclTensor>(ConvertType(outData), release_tensor);              \
+    auto sip_call = [handle, input, output, workspace_tensor]() -> int {                         \
+      void* workspace_addr = workspace_tensor.defined()                                        \
+          ? const_cast<void*>(workspace_tensor.storage().data()) : nullptr;                    \
+      FftExecApiFunc fftExecApiFunc = reinterpret_cast<FftExecApiFunc>(asdFftExec);               \
+      auto api_ret = handle->execute(fftExecApiFunc, input.get(), output.get(), workspace_addr); \
+      TORCH_CHECK(api_ret == 0, "call asdFftExec" #fftExecApi " failed");                       \
+      return api_ret;                                                                         \
+    };                                                                                        \
+    at_npu::native::OpCommand::RunOpApiV2("asdFftExec" #fftExecApi, sip_call);                    \
   } while (false)
 
 #endif //  __TORCH_NPU_OP_PLUGIN_UTILS_FFT_COMMON_OP_API__
