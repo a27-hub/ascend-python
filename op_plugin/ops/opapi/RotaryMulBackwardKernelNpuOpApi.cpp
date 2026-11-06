@@ -41,7 +41,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(
     const at::Tensor& r1,
     const at::Tensor& r2,
     c10::string_view rotary_mode) {
-  static bool notNeedCheck = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+  static const bool notNeedCheck = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   TORCH_CHECK(
       (notNeedCheck || (rotary_mode == "half" || rotary_mode == "interleave")),
       "The rotary_mode of npu_rotary_mul_backward should be half or interleave, but got ",
@@ -49,7 +49,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(
       OPS_ERROR(ErrCode::PARAM));
   DO_COMPATIBILITY(aclnnRotaryPositionEmbeddingGrad, acl_op::npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode));
   int64_t mode = op_plugin::utils::get_rotary_mode(rotary_mode);
-  if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+  static const bool isBelow910B1 = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1;
+  if (isBelow910B1) {
     return acl_op::npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode);
   }
   at::Tensor dx = npu_preparation::apply_tensor_without_format(grad.sizes(), self.options());

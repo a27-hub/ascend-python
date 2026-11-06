@@ -151,7 +151,8 @@ at::Tensor& avg_pool3d_out(
       aclnnAvgPool3d,
       acl_op::avg_pool3d_out(
           self, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override, result));
-  if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+  static const bool isBelow910B1 = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1;
+  if (isBelow910B1) {
     return acl_op::avg_pool3d_out(
         self, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override, result);
   }
@@ -177,7 +178,8 @@ at::Tensor avg_pool3d(
   DO_COMPATIBILITY(
       aclnnAvgPool3d,
       acl_op::avg_pool3d(self, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override));
-  if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+  static const bool isBelow910B1 = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1;
+  if (isBelow910B1) {
     return acl_op::avg_pool3d(self, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override);
   }
   avg_pool3d_parameter_check(self, kernel_size, stride, padding, divisor_override);

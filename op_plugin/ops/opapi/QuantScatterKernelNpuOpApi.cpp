@@ -35,7 +35,7 @@ at::Tensor npu_quant_scatter(
     c10::optional<c10::string_view> round_mode) {
   at::Tensor result = self.clone();
   int64_t reduction = 1;
-  bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2") &&
+  static const bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2") &&
       c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   if (isAclnnQuantScatterV2Available) {
     aclDataType self_acltype = dst_type.has_value() ? c10_npu::GetAclDataType(dst_type.value()) : aclDataType::ACL_INT8;
@@ -82,7 +82,7 @@ at::Tensor& npu_quant_scatter_(
     c10::optional<int64_t> dst_type,
     c10::optional<c10::string_view> round_mode) {
   int64_t reduction = 1;
-  bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2") &&
+  static const bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2") &&
       c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   if (isAclnnQuantScatterV2Available) {
     aclDataType self_acltype = dst_type.has_value() ? c10_npu::GetAclDataType(dst_type.value()) : aclDataType::ACL_INT8;

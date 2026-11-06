@@ -49,7 +49,8 @@ at::Tensor npu_get_float_status(const at::Tensor& self, int64_t mode) {
 
     npu_op_command cmd;
     if (mode == OVERFLOW_ORIGINAL_MODE) {
-        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
+        static const bool isAtLeast910B1 = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
+        if (isAtLeast910B1) {
             at::Tensor out_tensor = npu_preparation::apply_tensor_with_format(
                 output_size, self.options().dtype(at::kInt), npu_preparation::get_tensor_npu_format(self));
             cmd.Name("NPUGetFloatStatusV2")
@@ -82,7 +83,8 @@ at::Tensor npu_clear_float_status(const at::Tensor& self, int64_t mode) {
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
     npu_op_command cmd;
     if (mode == OVERFLOW_ORIGINAL_MODE) {
-        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
+        static const bool isAtLeast910B1 = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
+        if (isAtLeast910B1) {
             cmd.Name("NPUClearFloatStatusV2")
                 .Run();
         } else {

@@ -118,8 +118,9 @@ at::Tensor _scaled_grouped_mm(
     c10::optional<c10::ScalarType> out_dtype,
     bool use_fast_accum) {
   // check A5
+  static const bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   TORCH_CHECK(
-      c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
+      isRegBaseSoc,
       "This interface is supported only on the Ascend950 platform and after.",
       OPS_ERROR(ErrCode::PARAM));
 
