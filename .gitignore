@@ -193,3 +193,6 @@ TAGS
 
 # bazel symlinks
 bazel-*
+
+# gitleaks offline scan binary (downloaded locally by pre-commit/CI, must not be committed)
+/gitleaks
