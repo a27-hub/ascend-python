@@ -30,25 +30,44 @@ std::pair<at::Scalar, at::Scalar> histc_check_and_get_min_max(const at::Tensor &
     double leftmost_edge = min.to<double>();
     double rightmost_edge = max.to<double>();
     if (leftmost_edge == rightmost_edge && self.numel() > 0) {
-        leftmost_edge = self.min().item<double>();
-        rightmost_edge = self.max().item<double>();
+        // int64 payload 超过 2^53 时 double 相等可能是舍入坍缩(如 min=2^60+1, max=2^60
+        // 转 double 后都变为 2^60), 还原真实大小关系: 倒置区间必须响亮报错,
+        // 不能当作 min==max 透传给下层(对齐 CPU "max must be larger than min")
+        if (min.isIntegral(false) && max.isIntegral(false)) {
+            TORCH_CHECK(min.to<int64_t>() <= max.to<int64_t>(), "max must be larger than min",
+                OPS_ERROR(ErrCode::VALUE));
+        }
+        // aminmax 仅用于有限性校验（对齐 CPU/CUDA：数据含 NaN/±inf 且自动 range 时响亮报错），
+        // 重算值不回传、也不再自带 double ±1 展开——展开值经 x dtype 的 tensor 舍入会在
+        // |m| >= 2^24（fp32）时坍缩成不等宽 range 导致静默错 bin；aclnn 会自行重算数据范围，
+        // HistogramV2 kernel 对 min==max 按 CPU #163506 语义做位级 nextafter 展开。
+        double data_min = self.min().item<double>();
+        double data_max = self.max().item<double>();
+        TORCH_CHECK(
+            !(std::isinf(data_min) || std::isinf(data_max) || std::isnan(data_min) || std::isnan(data_max)),
+            "range of [", data_min, ", ", data_max, "] is not finite",
+            OPS_ERROR(ErrCode::VALUE));
+    } else {
+        TORCH_CHECK(
+            !(std::isinf(leftmost_edge) || std::isinf(rightmost_edge) || std::isnan(leftmost_edge) || std::isnan(rightmost_edge)),
+            "range of [", leftmost_edge, ", ", rightmost_edge, "] is not finite",
+            OPS_ERROR(ErrCode::VALUE));
+        // min == max 是自动 range 的合法触发条件（空输入或下层重算），仅拦截 min > max
+        TORCH_CHECK(leftmost_edge <= rightmost_edge, "max must be larger than min", OPS_ERROR(ErrCode::VALUE));
     }
-    if (leftmost_edge == rightmost_edge) {
-        leftmost_edge -= 1.0;
-        rightmost_edge += 1.0;
-    }
-    TORCH_CHECK(
-        !(std::isinf(leftmost_edge) || std::isinf(rightmost_edge) || std::isnan(leftmost_edge) || std::isnan(rightmost_edge)),
-        "range of [", leftmost_edge, ", ", rightmost_edge, "] is not finite",
-        OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(leftmost_edge < rightmost_edge, "max must be larger than min", OPS_ERROR(ErrCode::VALUE));
-    return std::make_pair(at::Scalar(leftmost_edge), at::Scalar(rightmost_edge));
+    // 原样透传标量（保留 int64 payload 精度，>2^53 的 int 标量不再经 double 中转丢精度）
+    return std::make_pair(min, max);
 }
 } // namespace
 
 at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max)
 {
     auto min_max = histc_check_and_get_min_max(self, bins, min, max);
+    // 空输入对齐 CPU: 直接返回 zeros, 不做任何归约(空张量 aminmax 会报错);
+    // 也避免把 min==max 的 0 宽区间透传给下层
+    if (self.numel() == 0) {
+        return at::zeros({bins}, self.options());
+    }
     auto min_arg = min_max.first;
     auto max_arg = min_max.second;
     DO_COMPATIBILITY(aclnnHistc, acl_op::histc(self, bins, min_arg, max_arg));
@@ -62,6 +81,10 @@ at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, co
 at::Tensor &histc_out(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max, at::Tensor &out)
 {
     auto min_max = histc_check_and_get_min_max(self, bins, min, max);
+    // 空输入对齐 CPU: 直接置零返回(同 histc)
+    if (self.numel() == 0) {
+        return out.zero_();
+    }
     auto min_arg = min_max.first;
     auto max_arg = min_max.second;
     DO_COMPATIBILITY(aclnnHistc, acl_op::histc_out(self, bins, min_arg, max_arg, out));
