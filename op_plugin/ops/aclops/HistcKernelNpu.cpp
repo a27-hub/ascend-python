@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cmath>
+
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 
@@ -25,13 +27,33 @@ namespace {
 at::Tensor &histc_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_t bins, const at::Scalar &min,
                               const at::Scalar &max)
 {
+    // 老 Histogram 图算子不做 min==max 数据范围重算, kernel 也没有展开逻辑, 0 宽/±inf 边界
+    // 会导致除零或静默错 bin。opapi 层自 histc_minmax_passthrough 起改为原样透传, 因此回退
+    // 路径在此自行补齐旧适配层语义: min==max 时 aminmax 重算 + double ±1 展开, 并对结果做
+    // 有限性与有序性校验。空输入已在 opapi 层直接返回 zeros, 到不了这里。
+    double leftmostEdge = min.to<double>();
+    double rightmostEdge = max.to<double>();
+    if (leftmostEdge == rightmostEdge && self.numel() > 0) {
+        leftmostEdge = self.min().item<double>();
+        rightmostEdge = self.max().item<double>();
+    }
+    if (leftmostEdge == rightmostEdge) {
+        leftmostEdge -= 1.0;
+        rightmostEdge += 1.0;
+    }
+    TORCH_CHECK(
+        !(std::isinf(leftmostEdge) || std::isinf(rightmostEdge) || std::isnan(leftmostEdge) || std::isnan(rightmostEdge)),
+        "range of [", leftmostEdge, ", ", rightmostEdge, "] is not finite",
+        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(leftmostEdge < rightmostEdge, "max must be larger than min", OPS_ERROR(ErrCode::VALUE));
+
     at_npu::native::OpCommand cmd;
     cmd.Name("Histogram")
         .Input(self)
         .Output(result)
         .Attr("bins", bins)
-        .Attr("min", min)
-        .Attr("max", max)
+        .Attr("min", at::Scalar(leftmostEdge))
+        .Attr("max", at::Scalar(rightmostEdge))
         .Run();
     return result;
 }
