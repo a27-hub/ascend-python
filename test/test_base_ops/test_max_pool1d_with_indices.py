@@ -11,8 +11,6 @@ DEVICE_NAME = torch_npu.npu.get_device_name(0)
 device_is_910A = False
 if "Ascend910A" in DEVICE_NAME or "Ascend910P" in DEVICE_NAME:
     device_is_910A = True
-# indices is int64 on Ascend950 (regbase), aligned with PyTorch; int32 on other products
-INDICES_IS_INT64 = "Ascend950" in DEVICE_NAME
 
 class TestMaxPool1dWithIndices(TestCase):
     # pylint:disable = huawei-too-many-arguments
@@ -87,8 +85,9 @@ class TestMaxPool1dWithIndices(TestCase):
             cpu_output, cpu_indices = self.cpu_op_exec(cpu_input, item[3], item[4], item[5], item[6], item[7])
             npu_output, npu_indices = self.npu_op_exec(npu_input, item[3], item[4], item[5], item[6], item[7])
             self.assertRtolEqual(cpu_output.numpy(), npu_output.numpy())
-            # indices is int64 on Ascend950 (regbase), aligned with PyTorch; int32 on other products
-            self.assertEqual(npu_indices.dtype, torch.int64 if INDICES_IS_INT64 else torch.int32)
+            # max_pool1d_with_indices delegates to max_pool2d_with_indices, whose ATen
+            # meta function declares indices as kLong on every device
+            self.assertEqual(npu_indices.dtype, torch.int64)
             self.assertEqual(cpu_indices.to(torch.int64).numpy(), npu_indices.to(torch.int64).numpy())
 
 
