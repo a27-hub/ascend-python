@@ -50,8 +50,8 @@ bool is_aicpu_valid(const at::Tensor &self, const std::vector<at::Tensor> &all_d
                     const at::SmallVector<int64_t, N> masks)
 {
     // using aicpu at non-binary scene
-    if (!at_npu::native::env::CheckJitDisable() &&
-        c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+    static const bool isBelow910B1 = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1;
+    if (!at_npu::native::env::CheckJitDisable() && isBelow910B1) {
         return true;
     }
     // using aicore when index is continous, otherwise aicpu

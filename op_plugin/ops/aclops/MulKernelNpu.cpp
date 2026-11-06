@@ -48,7 +48,8 @@ bool check_mul_out_result(const at::Tensor* result) {
     return false;
   }
   if (at_npu::native::FormatHelper::IsBaseFormatType(*result)) {
-    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
+    static const bool isAtLeast910B1 = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
+    if (isAtLeast910B1) {
       return true;
     } else if ((result->numel() * result->element_size()) % 32 == 0) {
       return true;

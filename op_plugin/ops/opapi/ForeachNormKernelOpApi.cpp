@@ -49,7 +49,7 @@ bool checkData(const at::TensorList self, const at::Scalar& scalar) {
 
 bool checkDataWithInfinit(const at::TensorList self, const at::Scalar& scalar) {
   double p = 0.0;
-  static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
+  static const bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   scalarProcess(scalar, &p);
 
   const bool has_int_or_complex = std::any_of(self.begin(), self.end(), [](const auto& t) {
