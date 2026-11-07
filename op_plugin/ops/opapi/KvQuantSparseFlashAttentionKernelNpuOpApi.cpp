@@ -59,7 +59,34 @@ at::Tensor construct_quant_sparse_infer_output_tensor(
     return output;
 }
 
-at::Tensor npu_kv_quant_sparse_flash_attention(
+// LSE(softmax_max / softmax_sum) 的输出张量构造。
+// 形状与 CANN 内置算子 infershape 完全一致：
+//   TND  -> [N2, T, G] ; BSND -> [B, N2, S1, G] ; G = N1 / N2
+// MLA(attention_mode==2) 下 N2 恒为 1、G 即 N1，可直接由 query 的第 1/2 维得到。
+at::Tensor construct_lse_output_tensor(
+    const at::Tensor& query, const std::string& layout_query_str,
+    const uint64_t& rope_head_dim, const int64_t attention_mode)
+{
+    (void)rope_head_dim;
+    TORCH_CHECK(attention_mode == 2,
+                "return_softmax_lse is only supported when attention_mode is 2 (MLA), but got ",
+                attention_mode, OPS_ERROR(ErrCode::PARAM));
+    constexpr int64_t kMlaKvHeadNum = 1;
+    at::SmallVector<int64_t, SIZE> lse_size;
+    if (layout_query_str == "BSND") {
+        // query [B, S1, N1, D] -> [B, N2, S1, G]
+        lse_size = {query.size(DIM_0), kMlaKvHeadNum, query.size(DIM_1),
+                    query.size(DIM_2) / kMlaKvHeadNum};
+    } else {
+        // query [T, N1, D] -> [N2, T, G]
+        lse_size = {kMlaKvHeadNum, query.size(DIM_0),
+                    query.size(DIM_1) / kMlaKvHeadNum};
+    }
+    return npu_preparation::apply_tensor_without_format(
+        lse_size, query.options().dtype(at::kFloat));
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_kv_quant_sparse_flash_attention(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const at::Tensor &sparse_indices, double scale_value,
     int64_t key_quant_mode, int64_t value_quant_mode,
@@ -70,7 +97,7 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     const c10::optional<at::Tensor> &actual_seq_lengths_kv,
     int64_t sparse_block_size, c10::string_view layout_query, c10::string_view layout_kv,
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode,
-    int64_t tile_size, int64_t rope_head_dim,
+    int64_t tile_size, int64_t rope_head_dim, bool return_softmax_lse,
     c10::optional<int64_t> key_dtype, c10::optional<int64_t> value_dtype)
 {
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
@@ -88,6 +115,23 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     // construct the output tensor
     at::Tensor output = op_api::construct_quant_sparse_infer_output_tensor(
         query, layout_query_str, layout_kv_str, rope_head_dim);
+    // LSE (softmax_max / softmax_sum) 的形状与 CANN 内置算子一致：
+    //   TND  -> [N2, T, G]    BSND -> [B, N2, S1, G]，G = N1 / N2
+    // return_softmax_lse=false 时传空 optional，aclnn 侧推导为 [0] 且不写入。
+    at::Tensor softmax_max;
+    at::Tensor softmax_sum;
+    // 具名 optional：EXEC_NPU 系列宏按 non-const 引用转发参数，
+    // 三目表达式会产生 rvalue，无法绑定，必须先落到左值。
+    c10::optional<at::Tensor> softmax_max_opt;
+    c10::optional<at::Tensor> softmax_sum_opt;
+    if (return_softmax_lse) {
+        softmax_max = op_api::construct_lse_output_tensor(
+            query, layout_query_str, rope_head_dim, attention_mode);
+        softmax_sum = op_api::construct_lse_output_tensor(
+            query, layout_query_str, rope_head_dim, attention_mode);
+        softmax_max_opt = softmax_max;
+        softmax_sum_opt = softmax_sum;
+    }
     // convert str
     char *layout_query_ptr = const_cast<char *>(layout_query_str.c_str());
     char *layout_kv_ptr = const_cast<char *>(layout_kv_str.c_str());
@@ -100,15 +144,19 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
             value_wrapper, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
             actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
             layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-            rope_head_dim, output);
+            rope_head_dim, return_softmax_lse, output, softmax_max_opt, softmax_sum_opt);
     } else {
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttention, query,
             key, value, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
             actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
             layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
-            rope_head_dim, output);
+            rope_head_dim, return_softmax_lse, output, softmax_max_opt, softmax_sum_opt);
     }
-    return output;
+    if (!return_softmax_lse) {
+        // 未请求 LSE 时返回空张量，保持与旧调用方的返回形态兼容
+        return std::make_tuple(output, at::Tensor(), at::Tensor());
+    }
+    return std::make_tuple(output, softmax_max, softmax_sum);
 }
 
 } // namespace op_api
