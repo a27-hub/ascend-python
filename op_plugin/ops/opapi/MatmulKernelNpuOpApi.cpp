@@ -25,6 +25,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 const int8_t ALLOW_FP32_DOWN_PRECISION = 1;
 const int8_t KEEP_DTYPE = 0;
+const int8_t USE_HF32 = 3;
+const int8_t USE_FP32_ADD = 4;
 
 static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tensor& tensor1, const at::Tensor& tensor2) {
   c10::SmallVector<int64_t, op_infer::SIZE> output_size;
@@ -87,6 +89,11 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tenso
 static inline void matmul_implement_npu(at::Tensor& out, const at::Tensor& self, const at::Tensor& mat2) {
   // allow dicrease precision
   int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
+  if (self.dim() == 2 && mat2.dim() == 2 && self.scalar_type() == at::kFloat &&
+      mat2.scalar_type() == at::kFloat && cube_math_type != USE_HF32 &&
+      op_plugin::utils::is_two_tensor_base_format(self, mat2)) {
+    cube_math_type = USE_FP32_ADD;
+  }
   // matmul & matmul_out have processed the aclop scenario
   if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
     EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);
