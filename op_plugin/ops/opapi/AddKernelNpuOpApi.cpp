@@ -43,11 +43,8 @@ static at::Tensor self_tensor_to_device(
   return tensor;
 }
 
-// Boolean add on the CPU reference is a logical or: True + True is True
-// (and alpha, which alpha_check_npu restricts to integral values for bool
-// tensors, acts as self OR (alpha AND other)).  The arithmetic aclnn
-// kernels instead write the integer sum into the bool bytes (True + True
-// becomes 2), so boolean results must route to the logical kernels.
+// Bool add is self OR (bool(alpha) AND other); arithmetic ACL kernels
+// can write non-canonical bool bytes, so use logical kernels.
 static inline bool add_bool_alpha_is_zero(const at::Scalar& alpha) {
   alpha_check_npu(at::kBool, alpha);
   return !alpha.to<bool>();
@@ -84,8 +81,7 @@ static at::Tensor& add_out_npu_nocheck(
   if (result.scalar_type() == at::kBool) {
     check_bool_add_inputs(self, other, result);
     if (add_bool_alpha_is_zero(alpha)) {
-      // self + 0 * other == self (a zero alpha turns the right operand
-      // into False and the or degenerates to a broadcast copy).
+      // alpha=0 still requires the validated broadcast copy.
       result.copy_(self);
       return result;
     }
@@ -133,8 +129,6 @@ static at::Tensor& inplace_add_out_npu_no_check(
     const at::Scalar& alpha) {
   if (self.scalar_type() == at::kBool) {
     check_bool_add_inputs(self, other, self);
-    // in-place boolean add is logical_or_ (True + True is True on the CPU
-    // reference); the arithmetic in-place kernels write the integer sum.
     if (!add_bool_alpha_is_zero(alpha)) {
       if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         auto cp_other = npu_preparation::copy_scalar_to_device(
@@ -205,8 +199,6 @@ at::Tensor add(
       output_size, self.options().dtype(result_type));
   // calculate the output result of the NPU
   if (result.scalar_type() == at::kBool) {
-    // boolean add is a logical or (True + True is True); a zero alpha
-    // reduces the sum to a copy of self
     if (add_bool_alpha_is_zero(alpha)) {
       result.copy_(self);
     } else {
@@ -271,7 +263,6 @@ at::Tensor& add_(
     DO_COMPATIBILITY(aclnnInplaceLogicalOr, acl_op::add_(self, other, alpha));
     TORCH_CHECK(at::canCast(at::native::result_type(self, other), at::kBool),
         "result type cannot be cast to Bool" + OPS_ERROR(ErrCode::TYPE));
-    // boolean in-place add is logical_or_ (True + True is True)
     if (!add_bool_alpha_is_zero(alpha)) {
       at::Tensor other_b = npu_preparation::copy_scalar_to_device(
           other, at::kBool, self.device());
