@@ -7,6 +7,53 @@ from torch_npu.testing.common_utils import create_common_tensor
 
 
 class TestAdd(TestCase):
+    def test_bool_add_alpha_and_validation(self):
+        for alpha in (0, 1, -2, False, True):
+            cpu = torch.tensor([True, False])
+            other = torch.tensor([True, True])
+            expected = torch.add(cpu, other, alpha=alpha)
+            self.assertEqual(cpu.npu().add(other.npu(), alpha=alpha).cpu(), expected)
+            self.assertEqual(cpu.npu().add_(other.npu(), alpha=alpha).cpu(), expected)
+            result = torch.empty_like(cpu, device="npu")
+            torch.add(cpu.npu(), other.npu(), alpha=alpha, out=result)
+            self.assertEqual(result.cpu(), expected)
+            self.assertEqual(cpu.npu().add_(True, alpha=alpha).cpu(), expected)
+        for dtype in (torch.float32, torch.int32):
+            for alpha in (0, 1):
+                cpu = torch.tensor([True, False])
+                expected = torch.empty(2, dtype=dtype)
+                torch.add(cpu, cpu, alpha=alpha, out=expected)
+                result = torch.empty(2, dtype=dtype, device="npu")
+                torch.add(cpu.npu(), cpu.npu(), alpha=alpha, out=result)
+                self.assertEqual(result.cpu(), expected)
+        for scalar in (1, 2.5):
+            with self.assertRaises(RuntimeError):
+                torch.tensor([True], device="npu").add_(scalar, alpha=0)
+        for alpha in (0.5, 1.0):
+            for kind in ("add", "out", "inplace", "scalar"):
+                with self.assertRaises(RuntimeError):
+                    self._bool_add_validation(kind, alpha=alpha)
+        for kind in ("add", "out", "inplace"):
+            with self.assertRaises(RuntimeError):
+                self._bool_add_validation(kind, cpu_other=True)
+        for kind in ("out", "inplace"):
+            for other in (torch.ones(3, dtype=torch.bool, device="npu"),
+                          torch.ones(2, dtype=torch.int32, device="npu")):
+                with self.assertRaises(RuntimeError):
+                    self._bool_add_validation(kind, other=other)
+
+    def _bool_add_validation(self, kind, alpha=0, other=None, cpu_other=False):
+        value = torch.tensor([True, False], device="npu")
+        if other is None:
+            other = torch.ones(2, dtype=torch.bool, device="cpu" if cpu_other else "npu")
+        if kind == "scalar":
+            return value.add_(True, alpha=alpha)
+        if kind == "inplace":
+            return value.add_(other, alpha=alpha)
+        if kind == "out":
+            return torch.add(value, other, alpha=alpha, out=torch.empty_like(value))
+        return torch.add(value, other, alpha=alpha)
+
     def cpu_op_out_exec(self, input1, input2, output):
         torch.add(input1, input2, alpha=1, out=output)
         output = output.numpy()

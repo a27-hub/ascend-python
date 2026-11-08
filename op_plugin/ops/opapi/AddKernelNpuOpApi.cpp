@@ -49,7 +49,23 @@ static at::Tensor self_tensor_to_device(
 // kernels instead write the integer sum into the bool bytes (True + True
 // becomes 2), so boolean results must route to the logical kernels.
 static inline bool add_bool_alpha_is_zero(const at::Scalar& alpha) {
-  return alpha.isBoolean() ? !alpha.to<bool>() : alpha.to<int64_t>() == 0;
+  alpha_check_npu(at::kBool, alpha);
+  return !alpha.to<bool>();
+}
+
+static void check_bool_add_inputs(
+    const at::Tensor& self,
+    const at::Tensor& other,
+    const at::Tensor& result) {
+  TORCH_CHECK(at::canCast(at::native::result_type(self, other), at::kBool),
+      "result type cannot be cast to Bool" + OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(
+      (self.device() == result.device() || npu_preparation::IsCPUScalar(self)) &&
+      (other.device() == result.device() || npu_preparation::IsCPUScalar(other)),
+      "Expected all tensors to be on the same device" + OPS_ERROR(ErrCode::PARAM));
+  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+  TORCH_CHECK(at::IntArrayRef(output_size) == result.sizes(),
+      "output shape does not match the broadcast shape" + OPS_ERROR(ErrCode::PARAM));
 }
 
 static at::Tensor& add_out_npu_nocheck(
@@ -57,7 +73,16 @@ static at::Tensor& add_out_npu_nocheck(
     const at::Tensor& other,
     const at::Scalar& alpha,
     at::Tensor& result) {
+  if (at::native::result_type(self, other) == at::kBool &&
+      result.scalar_type() != at::kBool) {
+    auto bool_result = npu_preparation::apply_tensor_without_format(
+        result.sizes(), result.options().dtype(at::kBool));
+    add_out_npu_nocheck(self, other, alpha, bool_result);
+    result.copy_(bool_result);
+    return result;
+  }
   if (result.scalar_type() == at::kBool) {
+    check_bool_add_inputs(self, other, result);
     if (add_bool_alpha_is_zero(alpha)) {
       // self + 0 * other == self (a zero alpha turns the right operand
       // into False and the or degenerates to a broadcast copy).
@@ -107,6 +132,7 @@ static at::Tensor& inplace_add_out_npu_no_check(
     const at::Tensor& other,
     const at::Scalar& alpha) {
   if (self.scalar_type() == at::kBool) {
+    check_bool_add_inputs(self, other, self);
     // in-place boolean add is logical_or_ (True + True is True on the CPU
     // reference); the arithmetic in-place kernels write the integer sum.
     if (!add_bool_alpha_is_zero(alpha)) {
@@ -143,7 +169,9 @@ at::Tensor add(
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnAdd, acl_op::add(self, other, alpha));
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
-  DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
+  if (at::native::result_type(self, other) == at::kBool) {
+    DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
+  }
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
   // calculate the output size
@@ -165,7 +193,9 @@ at::Tensor add(
     const at::Scalar& other,
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
-  DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
+  if (at::native::result_type(self, other) == at::kBool) {
+    DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
+  }
   // calculate the output size
   auto output_size = op_infer::input_same_output_size(self);
   at::ScalarType result_type = at::native::result_type(self, other);
@@ -198,7 +228,9 @@ at::Tensor& add_out(
     at::Tensor& result) {
   DO_COMPATIBILITY(aclnnAdd, acl_op::add_out(self, other, alpha, result));
   DO_COMPATIBILITY(aclnnAdds, acl_op::add_out(self, other, alpha, result));
-  DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add_out(self, other, alpha, result));
+  if (at::native::result_type(self, other) == at::kBool) {
+    DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add_out(self, other, alpha, result));
+  }
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
   bool isSelfWrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
@@ -219,7 +251,9 @@ at::Tensor& add_(
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnInplaceAdd, acl_op::add_(self, other, alpha));
   DO_COMPATIBILITY(aclnnInplaceAdds, acl_op::add_(self, other, alpha));
-  DO_COMPATIBILITY(aclnnInplaceLogicalOr, acl_op::add_(self, other, alpha));
+  if (self.scalar_type() == at::kBool) {
+    DO_COMPATIBILITY(aclnnInplaceLogicalOr, acl_op::add_(self, other, alpha));
+  }
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
   npu_preparation::check_memory({self, other}, {self});
@@ -234,6 +268,9 @@ at::Tensor& add_(
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnInplaceAdds, acl_op::add_(self, other, alpha));
   if (self.scalar_type() == at::kBool) {
+    DO_COMPATIBILITY(aclnnInplaceLogicalOr, acl_op::add_(self, other, alpha));
+    TORCH_CHECK(at::canCast(at::native::result_type(self, other), at::kBool),
+        "result type cannot be cast to Bool" + OPS_ERROR(ErrCode::TYPE));
     // boolean in-place add is logical_or_ (True + True is True)
     if (!add_bool_alpha_is_zero(alpha)) {
       at::Tensor other_b = npu_preparation::copy_scalar_to_device(
