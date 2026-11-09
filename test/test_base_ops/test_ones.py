@@ -92,6 +92,19 @@ class TestOnes(TestCase):
 
             self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_ones_complex(self):
+        for dtype in (torch.complex64, torch.complex128):
+            cpu_output = self.cpu_op_exec((2, 1), dtype)
+            npu_output = self.npu_op_exec((2, 1), dtype)
+            self.assertRtolEqual(cpu_output, npu_output)
+
+            cpu_out = torch.empty((2, 1), dtype=dtype)
+            npu_out = torch.empty((2, 1), device="npu", dtype=dtype)
+            self.assertRtolEqual(
+                self.cpu_op_out_exec((2, 1), cpu_out, dtype).numpy(),
+                self.npu_op_out_exec((2, 1), npu_out, dtype).numpy(),
+            )
+
 
 if __name__ == "__main__":
     run_tests()
