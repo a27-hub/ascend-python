@@ -15,7 +15,9 @@
 #include <unordered_set>
 #include "op_plugin/DvmOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
+#include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 
 namespace lazy_fusion {
@@ -1407,6 +1409,14 @@ at::Tensor tanh_backward(const at::Tensor& grad_output, const at::Tensor& output
 
 at::Tensor& gelu_out(const at::Tensor& self, c10::string_view approximate, at::Tensor& out) {
   static auto enable = IsEnabled("gelu");
+  if (enable && approximate != "tanh") {
+    // Legacy GELU APIs do not take approximate. Keep exact-mode dispatch
+    // local to no-graph fusion and use the mode-aware kernel.
+    LazyFusionFlush();
+    auto approximate_mode = op_infer::npu_gelu_approximate_mode(approximate);
+    EXEC_NPU_CMD(aclnnGeluV2, self, approximate_mode, out);
+    return out;
+  }
   if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) || !OutputCheck(out) ||
       approximate != "tanh" || out.sizes() != self.sizes() || out.scalar_type() != self.scalar_type()) {
     return op_api::gelu_out(self, approximate, out);
@@ -1436,6 +1446,18 @@ at::Tensor& gelu_out(const at::Tensor& self, c10::string_view approximate, at::T
 
 at::Tensor gelu_backward(const at::Tensor& grad_output, const at::Tensor& self, c10::string_view approximate) {
   static auto enable = IsEnabled("gelu_backward");
+  if (enable && approximate != "tanh") {
+    LazyFusionFlush();
+    auto output_size = op_infer::broadcast_ops_npu_output_size(grad_output, self);
+    auto output_dtype = at::native::result_type(grad_output, self);
+    auto grad_input = at_npu::native::OpPreparation::apply_tensor_without_format(
+        output_size, grad_output.options().dtype(output_dtype));
+    auto approximate_str = op_infer::npu_gelu_approximate_str(approximate);
+    auto approximate_ptr = const_cast<char*>(approximate_str.c_str());
+    EXEC_NPU_CMD(aclnnGeluBackwardV2, grad_output, self, approximate_ptr, grad_input);
+    return grad_input;
+  }
+  // The DVM formula below implements only the tanh approximation.
   if (!enable || !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) || grad_output.scalar_type() != self.scalar_type()) {
     return op_api::gelu_backward(grad_output, self, approximate);
@@ -1699,8 +1721,13 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor>& tensor, int64_t chann
       at::Tensor sum_dy = std::get<0>(reduce_res);
       at::Tensor sum_dy_xmu = std::get<1>(reduce_res);
       auto k = g_lazy_fusion_manager.Get();
-      auto rstd_obj = k->Unary<dvm::UnaryType::kReciprocal>(k->Unary<dvm::UnaryType::kSqrt>(
-          k->Binary<dvm::BinaryType::kAdd>(k->Input(save_invstd.value().contiguous()), static_cast<float>(eps))));
+      auto rstd_obj = k->Input(save_invstd.value().contiguous());
+      // aclnnBatchNorm saves invstd on Ascend950 and variance on older SoCs.
+      // Only variance needs conversion; applying rsqrt again corrupts A5 gradients.
+      if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+        rstd_obj = k->Unary<dvm::UnaryType::kReciprocal>(k->Unary<dvm::UnaryType::kSqrt>(
+            k->Binary<dvm::BinaryType::kAdd>(rstd_obj, static_cast<float>(eps))));
+      }
       at::Tensor rstd;
       if (output_mask[0]) {
         rstd = k->Output(rstd_obj, k->GetShape(rstd_obj), input.options().dtype(at::kFloat));

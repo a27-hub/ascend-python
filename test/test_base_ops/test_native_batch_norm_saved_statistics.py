@@ -1,8 +1,67 @@
+import itertools
+import os
+import subprocess
+import sys
+
 import torch
 import torch_npu
 import torch_npu.testing
 from torch.testing._internal.common_device_type import instantiate_device_type_tests
 from torch.testing._internal.common_utils import TestCase, parametrize, run_tests
+
+
+def _check_lazy_fusion_training_backward():
+    torch.manual_seed(42)
+    torch.set_num_threads(4)
+    torch.npu.set_device(0)
+    cases = [
+        ((8, 3), 0.4, 2.0),
+        ((2, 4, 6), 0.4, 2.0),
+        ((4, 3, 5, 5), 0.4, 2.0),
+        ((4, 3, 5, 5), 2.0, 0.0),
+    ]
+    checked = 0
+    for shape, scale, shift in cases:
+        for eps in (1e-5, 1e-2):
+            channels = shape[1]
+            x = (torch.randn(shape) * scale + shift).requires_grad_()
+            weight = (torch.randn(channels) + 1).requires_grad_()
+            bias = torch.randn(channels, requires_grad=True)
+            grad = torch.randn_like(x)
+            expected = torch.nn.functional.batch_norm(
+                x, torch.zeros(channels), torch.ones(channels),
+                weight, bias, True, 0.1, eps,
+            )
+            expected.backward(grad)
+            x_npu = x.detach().npu()
+            weight_npu = weight.detach().npu()
+            actual, mean, saved_stat = torch.ops.aten.native_batch_norm.default(
+                x_npu, weight_npu, bias.detach().npu(),
+                torch.zeros(channels).npu(), torch.ones(channels).npu(),
+                True, 0.1, eps,
+            )
+            torch.testing.assert_close(actual.cpu(), expected.detach(), rtol=1e-4, atol=1e-4)
+            # Consume the statistic produced by the real forward. Its meaning
+            # differs between BNTrainingUpdate (variance) and BatchNormV3 (invstd).
+            for mask in itertools.product((False, True), repeat=3):
+                if not any(mask):
+                    continue
+                actual_grads = torch.ops.aten.native_batch_norm_backward.default(
+                    grad.npu(), x_npu, weight_npu, None, None,
+                    mean, saved_stat, True, eps, list(mask),
+                )
+                for enabled, actual_grad, expected_grad in zip(
+                    mask, actual_grads, (x.grad, weight.grad, bias.grad)
+                ):
+                    if enabled:
+                        torch.testing.assert_close(
+                            actual_grad.cpu(), expected_grad, rtol=1e-4, atol=1e-4,
+                            msg=lambda msg: f"shape={shape}, eps={eps}, mask={mask}: {msg}",
+                        )
+                    else:
+                        assert actual_grad is None
+                checked += 1
+    print(f"BN_FORWARD_BACKWARD_PASS cases={checked}")
 
 
 class TestNativeBatchNormSavedStatistics(TestCase):
@@ -175,6 +234,20 @@ class TestNativeBatchNormSavedStatistics(TestCase):
         finally:
             torch.npu.config.allow_internal_format = previous_format
             torch.npu.set_compile_mode(jit_compile=not previous_jit)
+
+
+    def test_training_lazy_fusion_saved_statistics(self, device):
+        if not torch.npu.get_device_name(0).startswith(("Ascend910B", "Ascend910_93", "Ascend950")):
+            self.skipTest("No-graph fusion is not supported on this device")
+        env = os.environ.copy()
+        env["TORCH_NPU_LAZY_FUSION"] = (
+            "True enable_ops_only=native_batch_norm_backward,batch_norm_backward_elemt")
+        code = ("import runpy; module = runpy.run_path(" + repr(os.path.abspath(__file__))
+                + "); module['_check_lazy_fusion_training_backward']()")
+        result = subprocess.run([sys.executable, "-c", code], cwd="/tmp", env=env,
+                                capture_output=True, text=True, timeout=600)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("BN_FORWARD_BACKWARD_PASS cases=56", result.stdout)
 
 
 instantiate_device_type_tests(TestNativeBatchNormSavedStatistics, globals(), only_for=("npu",))
