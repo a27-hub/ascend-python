@@ -8,7 +8,6 @@ migrated:
   - name: npu_geglu
   - name: npu_geglu_grad
   - name: npu_nsa_compress
-  - name: npu_nsa_compress_with_cache
   - name: npu_nsa_compress_attention_infer
   - name: npu_nsa_compress_grad
   - name: npu_nsa_select_attention
