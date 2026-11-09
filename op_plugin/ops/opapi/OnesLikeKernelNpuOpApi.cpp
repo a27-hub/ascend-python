@@ -21,6 +21,13 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+namespace {
+// aclnnInplaceOne rejects complex dtypes. fill_ already writes 1+0j.
+bool complex_ones_use_fill(const at::Tensor& tensor) {
+  return at::isComplexType(tensor.scalar_type());
+}
+} // namespace
+
 at::Tensor ones_like(
     const at::Tensor& self,
     c10::optional<c10::ScalarType> dtype_opt,
@@ -40,13 +47,20 @@ at::Tensor ones_like(
       c10::TensorOptions().dtype(dtype_opt).device(device_opt).layout(layout_opt).pinned_memory(pin_memory_opt);
   c10::TensorOptions options = self.options().merge_in(options_).merge_memory_format(optional_memory_format);
   at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), options);
-  EXEC_NPU_CMD(aclnnInplaceOne, result);
+  if (complex_ones_use_fill(result)) {
+    result.fill_(1);
+  } else {
+    EXEC_NPU_CMD(aclnnInplaceOne, result);
+  }
   at::namedinference::propagate_names(result, self);
   return result;
 }
 
 at::Tensor& one_(at::Tensor& self) {
   DO_COMPATIBILITY(aclnnInplaceOne, acl_op::one_(self));
+  if (complex_ones_use_fill(self)) {
+    return self.fill_(1);
+  }
   EXEC_NPU_CMD(aclnnInplaceOne, self);
   return self;
 }

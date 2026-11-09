@@ -50,6 +50,10 @@ at::Tensor ones_like(
 }
 
 at::Tensor& one_(at::Tensor& self) {
+  // OnesLike has no complex dtype. fill_ writes 1+0j, same as the opapi path.
+  if (at::isComplexType(self.scalar_type())) {
+    return self.fill_(1);
+  }
   if (!npu_utils::check_match(&self)) {
     at::Tensor contiguous_self = npu_utils::format_contiguous(self);
     ones_like_npu_out_nocheck(contiguous_self);

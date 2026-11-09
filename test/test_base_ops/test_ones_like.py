@@ -85,6 +85,15 @@ class TestOnesLike(TestCase):
         npu_output = torch.ones_like(npu_input, **kwargs)
         self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_ones_like_complex(self):
+        for dtype in (torch.complex64, torch.complex128):
+            cpu_input = torch.empty((2, 1), dtype=dtype)
+            npu_input = torch.empty((2, 1), device="npu", dtype=dtype)
+            cpu_output, cpu_dtype = self.cpu_op_exec(cpu_input)
+            npu_output, npu_dtype = self.npu_op_exec(npu_input)
+            self.assertEqual(cpu_dtype, npu_dtype)
+            self.assertRtolEqual(cpu_output, npu_output)
+
 
 if __name__ == "__main__":
     run_tests()

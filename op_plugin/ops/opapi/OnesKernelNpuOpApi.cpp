@@ -21,9 +21,19 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+namespace {
+// aclnnInplaceOne rejects complex dtypes. fill_ already writes 1+0j.
+bool complex_ones_use_fill(const at::Tensor& tensor) {
+  return at::isComplexType(tensor.scalar_type());
+}
+} // namespace
+
 at::Tensor& ones_out(at::IntArrayRef size, at::Tensor& out) {
   DO_COMPATIBILITY(aclnnInplaceOne, acl_op::ones_out(size, out));
   out.resize_(size);
+  if (complex_ones_use_fill(out)) {
+    return out.fill_(1);
+  }
   EXEC_NPU_CMD(aclnnInplaceOne, out);
   return out;
 }
@@ -39,6 +49,9 @@ at::Tensor ones(
   at::TensorOptions option =
       c10::TensorOptions().dtype(dtype).layout(layout).device(real_device).pinned_memory(pin_memory);
   at::Tensor result = npu_preparation::apply_tensor_without_format(size, option);
+  if (complex_ones_use_fill(result)) {
+    return result.fill_(1);
+  }
   EXEC_NPU_CMD(aclnnInplaceOne, result);
   return result;
 }
@@ -56,7 +69,11 @@ at::Tensor ones(
   at::TensorOptions option =
       c10::TensorOptions().dtype(dtype).layout(layout).device(real_device).pinned_memory(pin_memory);
   at::Tensor result = npu_preparation::apply_tensor_without_format(size, option);
-  EXEC_NPU_CMD(aclnnInplaceOne, result);
+  if (complex_ones_use_fill(result)) {
+    result.fill_(1);
+  } else {
+    EXEC_NPU_CMD(aclnnInplaceOne, result);
+  }
   auto maybe_name = names.value_or(at::ArrayRef<at::Dimname>{});
   at::namedinference::propagate_names_if_nonempty(result, maybe_name);
   return result;
