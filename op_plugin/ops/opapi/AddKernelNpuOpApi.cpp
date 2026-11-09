@@ -43,11 +43,76 @@ static at::Tensor self_tensor_to_device(
   return tensor;
 }
 
+// Bool add is self OR (bool(alpha) AND other); arithmetic ACL kernels
+// can write non-canonical bool bytes, so use logical kernels.
+static inline bool add_bool_alpha_is_zero(const at::Scalar& alpha) {
+  alpha_check_npu(at::kBool, alpha);
+  return !alpha.to<bool>();
+}
+
+// Bool is the lowest promotion category, so the promoted type is Bool only
+// when every operand is Bool. Reading the dtypes keeps the promotion call off
+// the non-bool add hot path.
+static inline bool add_promotes_to_bool(
+    const at::Tensor& self,
+    const at::Tensor& other) {
+  return self.scalar_type() == at::kBool && other.scalar_type() == at::kBool;
+}
+
+static inline bool add_promotes_to_bool(
+    const at::Tensor& self,
+    const at::Scalar& other) {
+  return self.scalar_type() == at::kBool && other.isBoolean();
+}
+
+static void check_bool_add_inputs(
+    const at::Tensor& self,
+    const at::Tensor& other,
+    const at::Tensor& result) {
+  TORCH_CHECK(at::canCast(at::native::result_type(self, other), at::kBool),
+      "result type cannot be cast to Bool" + OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(
+      (self.device() == result.device() || npu_preparation::IsCPUScalar(self)) &&
+      (other.device() == result.device() || npu_preparation::IsCPUScalar(other)),
+      "Expected all tensors to be on the same device" + OPS_ERROR(ErrCode::PARAM));
+  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+  TORCH_CHECK(at::IntArrayRef(output_size) == result.sizes(),
+      "output shape does not match the broadcast shape" + OPS_ERROR(ErrCode::PARAM));
+}
+
 static at::Tensor& add_out_npu_nocheck(
     const at::Tensor& self,
     const at::Tensor& other,
     const at::Scalar& alpha,
     at::Tensor& result) {
+  if (add_promotes_to_bool(self, other) &&
+      result.scalar_type() != at::kBool) {
+    auto bool_result = npu_preparation::apply_tensor_without_format(
+        result.sizes(), result.options().dtype(at::kBool));
+    add_out_npu_nocheck(self, other, alpha, bool_result);
+    result.copy_(bool_result);
+    return result;
+  }
+  if (result.scalar_type() == at::kBool) {
+    check_bool_add_inputs(self, other, result);
+    if (add_bool_alpha_is_zero(alpha)) {
+      // alpha=0 still requires the validated broadcast copy.
+      result.copy_(self);
+      return result;
+    }
+    at::Tensor self_b =
+        (self.dim() == 0 && !torch_npu::utils::is_npu(self)) ?
+        npu_preparation::copy_scalar_to_device(
+            self.item(), at::kBool, result.device()) :
+        self;
+    at::Tensor other_b =
+        (other.dim() == 0 && !torch_npu::utils::is_npu(other)) ?
+        npu_preparation::copy_scalar_to_device(
+            other.item(), at::kBool, result.device()) :
+        other;
+    EXEC_NPU_CMD(aclnnLogicalOr, self_b, other_b, result);
+    return result;
+  }
   // executing the NPU operator
   if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
     c10::Scalar others = other.item();
@@ -77,6 +142,19 @@ static at::Tensor& inplace_add_out_npu_no_check(
     at::Tensor& self,
     const at::Tensor& other,
     const at::Scalar& alpha) {
+  if (self.scalar_type() == at::kBool) {
+    check_bool_add_inputs(self, other, self);
+    if (!add_bool_alpha_is_zero(alpha)) {
+      if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+        auto cp_other = npu_preparation::copy_scalar_to_device(
+            other.item(), at::kBool, self.device());
+        EXEC_NPU_CMD(aclnnInplaceLogicalOr, self, cp_other);
+      } else {
+        EXEC_NPU_CMD(aclnnInplaceLogicalOr, self, other);
+      }
+    }
+    return self;
+  }
   // check if other scalar tensor
   if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
     c10::Scalar other_scalar = other.item();
@@ -100,6 +178,9 @@ at::Tensor add(
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnAdd, acl_op::add(self, other, alpha));
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
+  if (add_promotes_to_bool(self, other)) {
+    DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
+  }
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
   // calculate the output size
@@ -121,6 +202,9 @@ at::Tensor add(
     const at::Scalar& other,
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
+  if (add_promotes_to_bool(self, other)) {
+    DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
+  }
   // calculate the output size
   auto output_size = op_infer::input_same_output_size(self);
   at::ScalarType result_type = at::native::result_type(self, other);
@@ -129,7 +213,17 @@ at::Tensor add(
   at::Tensor result = npu_preparation::apply_tensor_without_format(
       output_size, self.options().dtype(result_type));
   // calculate the output result of the NPU
-  EXEC_NPU_CMD(aclnnAdds, self, other, alpha, result);
+  if (result.scalar_type() == at::kBool) {
+    if (add_bool_alpha_is_zero(alpha)) {
+      result.copy_(self);
+    } else {
+      at::Tensor other_b = npu_preparation::copy_scalar_to_device(
+          other, at::kBool, result.device());
+      EXEC_NPU_CMD(aclnnLogicalOr, self, other_b, result);
+    }
+  } else {
+    EXEC_NPU_CMD(aclnnAdds, self, other, alpha, result);
+  }
   at::namedinference::propagate_names(result, self);
   return result;
 }
@@ -141,6 +235,9 @@ at::Tensor& add_out(
     at::Tensor& result) {
   DO_COMPATIBILITY(aclnnAdd, acl_op::add_out(self, other, alpha, result));
   DO_COMPATIBILITY(aclnnAdds, acl_op::add_out(self, other, alpha, result));
+  if (add_promotes_to_bool(self, other)) {
+    DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add_out(self, other, alpha, result));
+  }
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
   bool isSelfWrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
@@ -161,6 +258,9 @@ at::Tensor& add_(
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnInplaceAdd, acl_op::add_(self, other, alpha));
   DO_COMPATIBILITY(aclnnInplaceAdds, acl_op::add_(self, other, alpha));
+  if (self.scalar_type() == at::kBool) {
+    DO_COMPATIBILITY(aclnnInplaceLogicalOr, acl_op::add_(self, other, alpha));
+  }
   std::vector<at::Tensor> tensor_list = {self, other};
   auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
   npu_preparation::check_memory({self, other}, {self});
@@ -174,6 +274,17 @@ at::Tensor& add_(
     const at::Scalar& other,
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnInplaceAdds, acl_op::add_(self, other, alpha));
+  if (self.scalar_type() == at::kBool) {
+    DO_COMPATIBILITY(aclnnInplaceLogicalOr, acl_op::add_(self, other, alpha));
+    TORCH_CHECK(at::canCast(at::native::result_type(self, other), at::kBool),
+        "result type cannot be cast to Bool" + OPS_ERROR(ErrCode::TYPE));
+    if (!add_bool_alpha_is_zero(alpha)) {
+      at::Tensor other_b = npu_preparation::copy_scalar_to_device(
+          other, at::kBool, self.device());
+      EXEC_NPU_CMD(aclnnInplaceLogicalOr, self, other_b);
+    }
+    return self;
+  }
   EXEC_NPU_CMD(aclnnInplaceAdds, self, other, alpha);
   return self;
 }
