@@ -461,24 +461,45 @@ static void prepare_out_weight_scale_mx(QuantContext& ctx) {
       OPS_ERROR(ErrCode::PARAM));
 
   auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
-  ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
+  int64_t scale_dim = ctx.weight_scale.dim();
+  int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
+  int64_t n = scale_view_shape[scale_dim - IDX_2];
+  int64_t n_blocks = ceil_div(n, NZ_16);
+
+  c10::SmallVector<int64_t, DIMS_MAX> storage_shape;
+  c10::SmallVector<int64_t, DIMS_MAX> trans_stride;
+  if constexpr (IsGmm) {
+    storage_shape = {scale_view_shape[IDX_0], n_blocks, k_scale, NZ_16, MX_SCALE_LAST_DIM};
+    trans_stride = {
+        MX_SCALE_LAST_DIM * k_scale * n,
+        MX_SCALE_LAST_DIM,
+        MX_SCALE_LAST_DIM * k_scale,
+        1};
+  } else {
+    storage_shape = {n_blocks, k_scale, NZ_16, MX_SCALE_LAST_DIM};
+    trans_stride = {MX_SCALE_LAST_DIM, MX_SCALE_LAST_DIM * k_scale, 1};
+  }
+
+  int64_t storage_size = 1;
+  for (auto dim : storage_shape) {
+    storage_size *= dim;
+  }
+
+  ctx.out_weight_scale =
+      npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight_scale.options());
 
   if (ctx.is_weight_trans) {
-    int64_t scale_dim = ctx.weight_scale.dim();
-    int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
-    int64_t n = scale_view_shape[scale_dim - IDX_2];
-    c10::SmallVector<int64_t, DIMS_MAX> trans_stride; // 对应内存转置存储
-    if constexpr (IsGmm) {
-      trans_stride = {
-          MX_SCALE_LAST_DIM * k_scale * n,
-          MX_SCALE_LAST_DIM,
-          MX_SCALE_LAST_DIM * k_scale,
-          1}; // 对应内存中的 [group_num, n, k_scale, 2]
-    } else {
-      trans_stride = {MX_SCALE_LAST_DIM, MX_SCALE_LAST_DIM * k_scale, 1}; // 对应内存中的 [n, k_scale, 2]
-    }
     ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
+  } else {
+    ctx.out_weight_scale.unsafeGetTensorImpl()->set_sizes_contiguous(scale_view_shape);
   }
+
+  at_npu::native::StorageDescHelper::SetDesc(
+      ctx.out_weight_scale,
+      ctx.out_weight_scale.sizes(),
+      storage_shape,
+      ctx.out_weight_scale.strides(),
+      ACL_FORMAT_FRACTAL_NZ_C0_2);
 }
 
 static void prepare_out_weight_offset_direct(QuantContext& ctx) {

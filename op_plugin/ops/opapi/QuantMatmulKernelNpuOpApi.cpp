@@ -86,6 +86,12 @@ static bool is_mx_scale_nz_storage(const at::Tensor& scale) {
   return scale.dim() == 4 && scale.size(2) == 16 && scale.size(3) == 2;
 }
 
+static bool is_mx_scale_nd_format(const at::Tensor& scale) {
+  const torch_npu::NPUStorageDesc& tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(scale)->npu_desc_;
+  return tensor_desc.npu_format_ == ACL_FORMAT_ND || tensor_desc.npu_format_ == ACL_FORMAT_NCHW ||
+      tensor_desc.npu_format_ == ACL_FORMAT_NCL;
+}
+
 static at::Tensor make_mx_scale_nz_view(const at::Tensor& scale, int64_t n, int64_t k) {
   constexpr int64_t scaleGroupSize = 64;
   constexpr int64_t nzRowAlign = 16;
@@ -101,8 +107,8 @@ static at::Tensor make_mx_scale_nz_view(const at::Tensor& scale, int64_t n, int6
       k,
       OPS_ERROR(ErrCode::PARAM));
 
-  const std::vector<int64_t> viewShape{n, scaleKGroups, 2};
-  const std::vector<int64_t> viewStrides{scaleKGroups * 2, 2, 1};
+  const std::vector<int64_t> viewShape{scaleKGroups, n, 2};
+  const std::vector<int64_t> viewStrides{2, scaleKGroups * 2, 1};
   at::Tensor scaleView = scale.as_strided(viewShape, viewStrides);
   at_npu::native::StorageDescHelper::SetDesc(
       scaleView,
@@ -198,12 +204,19 @@ at::Tensor npu_quant_matmul(
   }
   at::Tensor scaleNzView;
   const at::Tensor* scaleRealPtr = &scale;
+  const bool isScaleNzStorage = is_mx_scale_nz_storage(scale);
+  const bool isScaleNz = isScaleNzStorage || is_mx_scale_nz_format(scale);
   TORCH_CHECK(
-      is_nz_format(x2) || !is_mx_scale_nz_storage(scale),
+      is_nz_format(x2) || !isScaleNz,
       "MX ScaleB NZ requires Weight NZ input, but Weight format is ",
       npu_preparation::get_tensor_npu_format(x2),
       OPS_ERROR(ErrCode::PARAM));
-  if (is_nz_format(x2) && is_mx_scale_nz_storage(scale)) {
+  TORCH_CHECK(
+      !isScaleNzStorage || is_mx_scale_nd_format(scale) || is_mx_scale_nz_format(scale),
+      "MX ScaleB private storage requires ND or FRACTAL_NZ_C0_2 format, but got ",
+      npu_preparation::get_tensor_npu_format(scale),
+      OPS_ERROR(ErrCode::PARAM));
+  if (is_nz_format(x2) && isScaleNzStorage) {
     const int64_t realN = x2.size(x2.dim() - 1);
     const int64_t realK = x1.size(x1.dim() - 1);
     scaleNzView = make_mx_scale_nz_view(scale, realN, realK);
