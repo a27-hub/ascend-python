@@ -76,9 +76,9 @@ torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_sca
 - **mm\_x\_quant\_mode** (`int`)：可选参数，表示共享专家左矩阵的量化模式。当前版本支持配置为1和6，分别表示pertensor量化和mx量化。
 - **mm\_weight\_quant\_mode** (`int`)：可选参数，表示共享专家右矩阵的量化模式。当前版本支持配置为1和6，分别表示pertensor量化和mx量化。
 - **permute\_out\_flag** (`bool`)：可选参数，默认False。是否返回通信后重排的路由专家矩阵（即`permute_out`）。若为True，则返回值中包含该张量。
-- **group\_size** (`List[int]`)：可选参数，默认为\[0, 0, 0\]。表示量化中`gmm_x_scale`、`gmm_weight_scale`、`mm_x_scale`、`mm_weight_scale`输入的一个数在其所在的对应维度方向上可以用于该方向`gmm_x`、`gmm_weight`、`mm_x`、`mm_weight`输入的多少个数的量化，`group_sizes`为\[groupSizeM，groupSizeN，groupSizeK\]。groupSizeM、groupSizeN、groupSizeK分别表示一个量化系数在各个维度对应的数的个数。
+- **group\_size** (`List[int]`)：可选参数，默认为\[0, 0, 0\]。表示量化中`gmm_x_scale`、`gmm_weight_scale`、`mm_x_scale`、`mm_weight_scale`输入的一个数在其所在的对应维度方向上可以用于该方向`gmm_x`、`gmm_weight`、`mm_x`、`mm_weight`输入的多少个数的量化，`group_size`为\[groupSizeM，groupSizeN，groupSizeK\]。groupSizeM、groupSizeN、groupSizeK分别表示一个量化系数在各个维度对应的数的个数。
 
-    仅mx量化场景时，`group_sizes`取值有效，其他场景需传入\[0, 0, 0\]。设置原理参考约束说明。
+    仅mx量化场景时，`group_size`取值有效，其他场景需传入\[0, 0, 0\]。设置原理参考约束说明。
 
 - **gmm\_x\_dtype** (`int`)：可选参数，默认None。表示路由专家左矩阵`gmm_x`的实际数据类型。对于PyTorch原生不支持的数据类型（如`torch_npu.hifloat8`、`torch_npu.float4_e2m1fn_x2`）需要指定该参数取值。
 - **gmm\_weight\_dtype** (`int`)：可选参数，默认None。表示路由专家右矩阵`gmm_weight`的实际数据类型。对于PyTorch原生不支持的数据类型（如`torch_npu.hifloat8`、`torch_npu.float4_e2m1fn_x2`）需要指定该参数取值。
@@ -101,7 +101,7 @@ torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_sca
 
 - 该接口支持训练、推理场景下使用。
 - **通信引擎约束**：支持CCU和AI CPU通信，通过`comm_mode`参数配置。当`comm_mode`为None时，走AI CPU通信。
-- 该接口支持单算子模式调用和T-T量化场景的图模式调用。
+- 该接口支持单算子模式调用、T-T量化场景的图模式调用和MX量化场景的图模式调用。
 - 参数说明中Shape涉及的变量说明：
     - BS表示batch sequence size。
     - K表示选取的topK专家个数。当存在共享专家计算时，K需要满足取值范围\[2，8\]。
@@ -124,11 +124,12 @@ torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_sca
     - 7：pertoken动态量化
     - 当前`gmm_x_quant_mode`、`gmm_weight_quant_mode`的组合仅支持\[1, 1\]和\[6, 6\]，分别表示T-T量化和mx量化。
     - 当前`mm_x_quant_mode`和`mm_weight_quant_mode`的组合仅支持\[1, 1\]和\[6, 6\]，分别表示T-T量化和mx量化，且量化组合需与`gmm_x_quant_mode`、`gmm_weight_quant_mode`组合保持一致。
-- **group\_sizes**：
+- **group\_size**：
     - groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据输入`gmm_x_scale`、`gmm_weight_scale`、`mm_x_scale`、`mm_weight_scale`、`gmm_x`、`gmm_weight`、`mm_x`、`mm_weight`的shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。
     - 设置原理：如果groupSizeM=0，表示m方向量化分组值由接口推导，推导公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与`gmm_x`、`mm_x`中的m方向值一致，scaleM与`gmm_x_scale`、`mm_x_scale`中的m方向值一致；如果groupSizeK=0，表示k方向量化分组值由接口推导，推导公式为groupSizeK = k / scaleK（需保证k能被scaleK整除），其中k与`gmm_x`、`mm_x`中的k方向值一致，scaleK与`gmm_x_scale`、`mm_x_scale`中的k方向值一致；如果groupSizeN=0，表示n方向量化分组值由接口推导，推导公式为groupSizeN = n / scaleN（需保证n能被scaleN整除），其中n与`gmm_weight`、`mm_weight`中的n方向值一致，scaleN与`gmm_weight_scale`、`mm_weight_scale`中的n方向值一致。
     - 如果满足重新设置条件，当`gmm_x_scale`、`mm_x_scale`、`mm_weight_scale`输入都是3维，`gmm_weight_scale`是4维时，且数据类型都为`torch.float8_e8m0fnu`时，\[groupSizeM, groupSizeN, groupSizeK\]取值组合会推导为\[1, 1, 32\]。
 - 当存在某张卡的输出张量（`gmm_y`、`mm_y`、`permute_out`）均为空Tensor时，必须显式调用 `torch.distributed.barrier()`，确保这张卡进程同步等待其他卡完成通信与计算。若未添加同步，AlltoAllv通信将因进程不同步而阻塞。
+- 当走CCU通信时，AlltoAllv集合通信单次最大通信数据量不能超过256M，数据总量不能超过16 \* 256MB。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
 
 - 各量化模式下输入输出数据类型详细约束如下表：
 
@@ -196,12 +197,12 @@ torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_sca
             H2, N2 = 256, 128
             total_tokens = BS * K
             send_counts, recv_counts = generate_counts(world_size, e, total_tokens, seed=rank)
-            gmm_x = torch.randint(0, 255, (total_tokens, H1), dtype=torch.uint8).npu()
-            gmm_weight = torch.randint(0, 255, (e, H1, N1), dtype=torch.uint8).npu()
+            gmm_x = torch.randint(0, 20, (total_tokens, H1), dtype=torch.uint8).npu()
+            gmm_weight = torch.randint(0, 20, (e, H1, N1), dtype=torch.uint8).npu()
             gmm_x_scale = torch.tensor([0.5], dtype=None).npu()
             gmm_weight_scale = torch.tensor([0.3], dtype=None).npu()
-            mm_x = torch.randint(0, 255, (BS, H2), dtype=torch.uint8).npu()
-            mm_weight = torch.randint(0, 255, (H2, N2), dtype=torch.uint8).npu()
+            mm_x = torch.randint(0, 20, (BS, H2), dtype=torch.uint8).npu()
+            mm_weight = torch.randint(0, 20, (H2, N2), dtype=torch.uint8).npu()
             mm_x_scale = torch.tensor([0.4], dtype=None).npu()
             mm_weight_scale = torch.tensor([0.2], dtype=None).npu()
             quant_mode = 1
@@ -225,7 +226,7 @@ torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_sca
                 gmm_weight_quant_mode=quant_mode,
                 mm_x_quant_mode=quant_mode,
                 mm_weight_quant_mode=quant_mode,
-                permute_out_flag=True,
+                permute_out_flag=False,
                 gmm_x_dtype=torch_npu.hifloat8,
                 gmm_weight_dtype=torch_npu.hifloat8,
                 gmm_x_scale_dtype=None,

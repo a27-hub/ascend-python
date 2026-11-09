@@ -25,11 +25,15 @@ at::Tensor &im2col_out(const at::Tensor &self, at::IntArrayRef kernel_size, at::
                        at::IntArrayRef padding, at::IntArrayRef stride, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnIm2col, acl_op::im2col_out(self, kernel_size, dilation, padding, stride, out));
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+    if (op_plugin::utils::is_lt_soc_version_910b1()) {
         return acl_op::im2col_out(self, kernel_size, dilation, padding, stride, out);
     }
     auto output_size = op_infer::image_to_col_npu_output_size(self, kernel_size, stride, dilation, padding);
     npu_preparation::check_tensor({self}, out, out.scalar_type(), output_size);
+    // Return the empty result directly when the output tensor is empty.
+    if (out.numel() == 0) {
+        return out;
+    }
     EXEC_NPU_CMD(aclnnIm2col, self, kernel_size, dilation, padding, stride, out);
     return out;
 }
@@ -38,11 +42,15 @@ at::Tensor im2col(const at::Tensor &self, at::IntArrayRef kernel_size, at::IntAr
                   at::IntArrayRef padding, at::IntArrayRef stride)
 {
     DO_COMPATIBILITY(aclnnIm2col, acl_op::im2col(self, kernel_size, dilation, padding, stride));
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
+    if (op_plugin::utils::is_lt_soc_version_910b1()) {
         return acl_op::im2col(self, kernel_size, dilation, padding, stride);
     }
     auto output_size = op_infer::image_to_col_npu_output_size(self, kernel_size, stride, dilation, padding);
     at::Tensor result = npu_preparation::apply_tensor_without_format(self, output_size);
+    // Return the empty result directly when the output tensor is empty.
+    if (result.numel() == 0) {
+        return result;
+    }
     EXEC_NPU_CMD(aclnnIm2col, self, kernel_size, dilation, padding, stride, result);
     return result;
 }

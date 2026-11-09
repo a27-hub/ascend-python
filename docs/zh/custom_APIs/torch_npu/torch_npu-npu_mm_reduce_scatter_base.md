@@ -164,7 +164,7 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：`comm_mode`支持`ai_cpu`、`aiv`两种模式。`ai_cpu`模式仅在训练场景下使用，`aiv`模式训练和推理场景均可使用。
   <!-- end id25 -->
   <!-- npu="950" id26 -->
-  - <term>Ascend 950PR&950DT系列产品</term>：`comm_mode`支持`ai_cpu`、`ccu`两种模式，两种模式均仅在训练场景下使用。ReduceScatter集合通信数据总量不能超过16\*256MB，集合通信数据总量计算方式为：m \* n \* sizeof\(output\_dtype\)。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
+  - <term>Ascend 950PR&950DT系列产品</term>：`comm_mode`支持`ai_cpu`、`ccu`两种模式，两种模式均仅在训练场景下使用。`ccu`模式下，ReduceScatter集合通信数据总量不能超过16\*256MB，集合通信数据总量计算方式为：m \* n \* sizeof\(output\_dtype\)。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
   <!-- end id26 -->
 
 - **comm_mode支持矩阵**：
@@ -204,13 +204,6 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
     - `input`数据类型：`torch.float16` / `torch.bfloat16`
     - 是否支持：支持
   <!-- end id31 -->
-  <!-- npu="950" id32 -->
-  - <term>Ascend 950PR&950DT系列产品</term>：
-    - 场景：量化场景
-    - `comm_mode`：- 
-    - `input`数据类型：-
-    - 是否支持：不支持（仅支持基础场景）
-  <!-- end id32 -->
 <!-- npu="A3,910b" id33 -->
 - **scale参数组合约束**（量化场景，仅<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>支持）：
 

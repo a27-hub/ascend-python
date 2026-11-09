@@ -1,6 +1,6 @@
-# 适配开发及调用（AscendC）
+# 适配开发及调用（Ascend C）
 
-基于C++ extensions方式，通过TorchNPU框架调用AscendC自定义算子的完整适配开发流程。本样例展示了如何将AscendC算子集成到Ascend for PyTorch生态中，实现高效的NPU加速计算。
+基于C++ extensions方式，通过TorchNPU框架调用Ascend C自定义算子的完整适配开发流程。本样例展示了如何将Ascend C算子集成到Ascend for PyTorch生态中，实现高效的NPU加速计算。
 
 ## 算子适配开发
 
@@ -179,7 +179,7 @@
         torch.ops.load_library(atb_so_path)
     ```
         
-## 调用样例
+## 调用示例
 
 完成了算子适配开发后，即可通过C++ extensions的方式调用自定义算子。
 
@@ -187,7 +187,7 @@
 2. 下载示例代码。
 
     ```bash
-    # 下载样例代码
+    # 下载示例代码
     git clone https://gitcode.com/Ascend/op-plugin
     # 进入代码目录
     cd examples/cpp_extension_base

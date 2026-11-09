@@ -2,10 +2,12 @@
 
 ## Supported Products
 
-| Product                                                        | Supported|
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 training products/Atlas A3 inference products</term>    |    √     |
-| <term>Atlas A2 training products/Atlas A2 inference products</term>|    √     |
+<!-- npu="A3" id1 -->
+- <term>Atlas A3 products</term>: Supported
+<!-- end id1 -->
+<!-- npu="910b" id2 -->
+- <term>Atlas A2 products</term>: Supported
+<!-- end id2 -->
 
 ## Function
 
@@ -44,7 +46,7 @@
 
   | Parameter| ≤ | Valid Range| Invalid Range|
   | :-------:| :------:|:-------:|:-------:|
-  |`top_k[b]`|Skip top-K sampling.|If `1≤topK≤min(voc_size,ks_max)`, perform top-K sampling.|If `top_k>min(voc_size,ks_max)`, skip top-K sampling.|
+  |`top_k[b]`|Skip top-K sampling.|If `1≤top_k≤min(voc_size,ks_max)`, perform top-K sampling.|If `top_k>min(voc_size,ks_max)`, skip top-K sampling.|
 
   * Divide the current batch into multiple segments and compute `top_k_value[b]` in a rolling manner:
 
@@ -100,7 +102,7 @@
     \end{cases}
     $$
 
-  * The processing strategy of this module varies depending on the value of the input `top_p[b]`:
+  * The processing strategy of this module varies depending on the value of the input `top_p[b]`.
 
   | Parameter| ≤ | Valid Range| Invalid Range|
   | :-------:| :------:|:-------:|:-------:|
@@ -287,9 +289,9 @@
     \end{cases}
     $$
 
-  * This sampling process is based on `aclnn.Multinomial`. For details, see <https://gitcode.com/cann/ops-math/blob/master/random/stateless_sample_multinomial/docs/aclnnMultinomial.md>.
+  * This sampling process is based on `aclnnMultinomial`. For details, see <https://gitcode.com/cann/ops-math/blob/master/random/stateless_sample_multinomial/docs/aclnnMultinomial.md>.
 
-  * When called through TorchNPU, built-in values are used as the default sampling seed and offset. For details, see <https://gitcode.com/Ascend/op-plugin/blob/26.0.0/op_plugin/ops/opapi/MultinomialKernelNpuOpApi.cpp>.
+  * When called through TorchNPU, built-in values are used as the default sampling seed and offset. For details, see <https://gitcode.com/Ascend/op-plugin/blob/master/op_plugin/ops/opapi/MultinomialKernelNpuOpApi.cpp>.
 
 ## Prototype
 

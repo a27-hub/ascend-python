@@ -761,9 +761,9 @@ std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> ctc
   }
   c10::SmallVector<int64_t, SIZE> neg_log_likelihood_size = {batch_size};
   int64_t alpha_tail_size = 2 * max_length + 1;
-  static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
   // Apply for a 32 byte aligned space to avoid address shifting in the OP.
-  int64_t alpha_tail_size_align = isRegBaseSoc ? alpha_tail_size : (alpha_tail_size + 7) / 8 * 8;
+  int64_t alpha_tail_size_align =
+      op_plugin::utils::is_gte_soc_version_950() ? alpha_tail_size : (alpha_tail_size + 7) / 8 * 8;
   c10::SmallVector<int64_t, SIZE> log_alpha_size = {batch_size, time_size, alpha_tail_size_align};
 
   if (log_probs.dim() == dim_num_two) {
@@ -2665,22 +2665,12 @@ c10::SmallVector<int64_t, SIZE> gru_npu_output_size(
   if (batch_sizes.has_value()) {
     const at::Tensor& bs_tensor = batch_sizes.value();
     if (bs_tensor.numel() > 0) {
-      time_step = bs_tensor.size(0);
-      TORCH_CHECK(
-          time_step > 0 && input.size(0) % time_step == 0,
-          "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
-          "time_step=",
-          time_step,
-          ", input_size0=",
-          input.size(0),
-          ", batch_sizes_shape=",
-          bs_tensor.sizes(),
-          OPS_ERROR(ErrCode::PARAM));
-      batch_size = input.size(0) / time_step;
-    } else {
-      batch_size = batch_first ? input.size(0) : input.size(1);
-      time_step = batch_first ? input.size(1) : input.size(0);
+      // Packed sequence: out0 must be 2D [sum(batch_sizes), D*hidden], where
+      // sum(batch_sizes) equals the number of rows of the packed input data.
+      return {input.size(0), output_last_dim};
     }
+    batch_size = batch_first ? input.size(0) : input.size(1);
+    time_step = batch_first ? input.size(1) : input.size(0);
   } else {
     batch_size = batch_first ? input.size(0) : input.size(1);
     time_step = batch_first ? input.size(1) : input.size(0);
@@ -2705,22 +2695,13 @@ c10::SmallVector<int64_t, SIZE> gru_npu_hy_output_size(
   int64_t D = bidirectional ? 2 : 1;
   int64_t hidden_size = X1.size(0) / 3;
   int64_t batch_size;
-  int64_t time_step;
   if (batch_sizes.has_value()) {
     const at::Tensor& bs_tensor = batch_sizes.value();
     if (bs_tensor.numel() > 0) {
-      time_step = bs_tensor.size(0);
-      TORCH_CHECK(
-          time_step > 0 && input.size(0) % time_step == 0,
-          "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
-          "time_step=",
-          time_step,
-          ", input_size0=",
-          input.size(0),
-          ", batch_sizes_shape=",
-          bs_tensor.sizes(),
-          OPS_ERROR(ErrCode::PARAM));
-      batch_size = input.size(0) / time_step;
+      // Packed sequence: the layer/step counts are fixed by num_layers*D, and the
+      // batch dimension of hy is the maximum batch, i.e. the first entry of
+      // batch_sizes (the largest batch with the most remaining time steps).
+      batch_size = bs_tensor[0].item<int64_t>();
     } else {
       batch_size = batch_first ? input.size(0) : input.size(1);
     }
@@ -2748,22 +2729,13 @@ c10::SmallVector<int64_t, SIZE> gru_npu_gate_output_size(
   if (batch_sizes.has_value()) {
     const at::Tensor& bs_tensor = batch_sizes.value();
     if (bs_tensor.numel() > 0) {
-      time_step = bs_tensor.size(0);
-      TORCH_CHECK(
-          time_step > 0 && input.size(0) % time_step == 0,
-          "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
-          "time_step=",
-          time_step,
-          ", input_size0=",
-          input.size(0),
-          ", batch_sizes_shape=",
-          bs_tensor.sizes(),
-          OPS_ERROR(ErrCode::PARAM));
-      batch_size = input.size(0) / time_step;
-    } else {
-      batch_size = batch_first ? input.size(0) : input.size(1);
-      time_step = batch_first ? input.size(1) : input.size(0);
+      // Packed sequence: each gate/state tensor saved for backward must be the
+      // flat 2D [sum(batch_sizes), hidden_size] layout that aclnnGRUBackward
+      // expects, matching the packed forward output.
+      return {input.size(0), hidden_size};
     }
+    batch_size = batch_first ? input.size(0) : input.size(1);
+    time_step = batch_first ? input.size(1) : input.size(0);
   } else {
     batch_size = batch_first ? input.size(0) : input.size(1);
     time_step = batch_first ? input.size(1) : input.size(0);
@@ -2803,22 +2775,13 @@ c10::SmallVector<int64_t, SIZE> gru_backward_npu_h_prev_output_size(
   int64_t D = bidirectional ? 2 : 1;
   int64_t hidden_size = X1.size(0) / 3;
   int64_t batch_size;
-  int64_t time_step;
   if (batch_sizes.has_value()) {
     const at::Tensor& bs_tensor = batch_sizes.value();
     if (bs_tensor.numel() > 0) {
-      time_step = bs_tensor.size(0);
-      TORCH_CHECK(
-          time_step > 0 && input.size(0) % time_step == 0,
-          "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
-          "time_step=",
-          time_step,
-          ", input_size0=",
-          input.size(0),
-          ", batch_sizes_shape=",
-          bs_tensor.sizes(),
-          OPS_ERROR(ErrCode::PARAM));
-      batch_size = input.size(0) / time_step;
+      // Packed sequence: the layer/step counts are fixed by num_layers*D, and the
+      // batch dimension of hy is the maximum batch, i.e. the first entry of
+      // batch_sizes (the largest batch with the most remaining time steps).
+      batch_size = bs_tensor[0].item<int64_t>();
     } else {
       batch_size = batch_first ? input.size(0) : input.size(1);
     }

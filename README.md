@@ -32,6 +32,8 @@
 
 TorchNPU integrates this repository through the `third_party/op-plugin` submodule and compiles its operator adaptation code into the `torch_npu` package. Building and running OpPlugin depend on TorchNPU. To use these operators, install a compatible TorchNPU package; no separate OpPlugin package is required.
 
+<p style="color: #6b7280;"><sub>About Ascend NPU: Ascend NPU (Neural Processing Unit) is a series of AI accelerators developed by Huawei.</sub></p>
+
 ## Key Features
 
 - **Operator adaptation:** Connects to CANN operator interfaces to implement NPU computation for native PyTorch operators and TorchNPU custom operators.
@@ -67,7 +69,7 @@ The build script in this repository obtains the TorchNPU source, integrates the 
 | Task | Documentation |
 | --- | --- |
 | Configure operator interfaces, version adaptation, forward/backward bindings, and structured adaptation | [API adaptation workflow (Chinese)](op_plugin/config/README.md) |
-| Adapt Ascend C custom operators through OpPlugin | [TorchNPU operator adaptation guide](https://gitcode.com/Ascend/pytorch/blob/master/docs/en/developer_notes/framework_feature_guide_pytorch/opplugin_operator_adaptation.md) |
+| Adapt Ascend C custom operators through OpPlugin | [TorchNPU operator adaptation guide](https://gitcode.com/Ascend/pytorch/blob/master/docs/en/developer_notes/custom_operator_adaptation/opplugin_operator_adaptation/_menu_opplugin_operator_adaptation.md) |
 | Build custom operator extensions using C++ extensions | [Custom operator extension examples (Chinese)](examples/README.md) |
 | Review and add operator test cases | [Tests](test) |
 

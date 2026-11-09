@@ -123,6 +123,12 @@ official:
   - func: _amp_update_scale_(Tensor(a!) self, Tensor(b!) growth_tracker, Tensor found_inf, float growth_factor, float backoff_factor, int growth_interval) -> Tensor(a!)
     op_api: all_version
 
+  - func: _assert_async(Tensor self) -> ()
+    op_api: all_version
+
+  - func: _assert_async.msg(Tensor self, str assert_msg) -> ()
+    op_api: all_version
+
   - func: _cdist_backward(Tensor grad, Tensor x1, Tensor x2, float p, Tensor cdist) -> Tensor
     acl_op: all_version
     op_api: all_version
@@ -680,6 +686,10 @@ official:
     acl_op: [v2.1, newest]
     op_api: all_version
 
+  - func: _native_batch_norm_legit.no_stats(Tensor input, Tensor? weight, Tensor? bias, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)
+    acl_op: [v2.1, newest]
+    op_api: all_version
+
   - func: _nnpack_spatial_convolution(Tensor input, Tensor weight, Tensor? bias, SymInt[2] padding, int[2] stride=1) -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
@@ -693,6 +703,9 @@ official:
     op_api: all_version
     internal_format_opapi: all_version
     device_check: NoCheck
+
+  - func: _pdist_backward(Tensor grad_output, Tensor self, float p, Tensor pdist) -> Tensor
+    op_api: [v2.14, newest]
 
   - func: _pdist_forward(Tensor self, float p=2) -> Tensor
     acl_op: all_version
@@ -2327,6 +2340,9 @@ official:
     op_api: all_version
     dvm: all_version
 
+  - func: _grouped_mm(Tensor self, Tensor mat2, Tensor? offs=None, Tensor? bias=None, ScalarType? out_dtype=None) -> Tensor
+    op_api: [v2.9, newest]
+
   - func: fmod.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
@@ -2525,10 +2541,9 @@ official:
     acl_op: all_version
     op_api: all_version
 
-  # TODO(aclnnGRU): Uncomment this once aclnnGRU supports batchSizes and add case in torch_npu_OpApi_schema_all.json. Currently gru.data fallbacks to the composite implementation.
-  #- func: gru.data(Tensor data, Tensor batch_sizes, Tensor hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional) -> (Tensor, Tensor)
-  #  op_api: all_version
-  #  device_check: NoCheck
+  - func: gru.data(Tensor data, Tensor batch_sizes, Tensor hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional) -> (Tensor, Tensor)
+    op_api: all_version
+    device_check: NoCheck
 
   - func: gt.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
@@ -3015,6 +3030,12 @@ official:
     acl_op: all_version
     op_api: all_version
 
+  - func: linalg_matrix_sqrth(Tensor self) -> Tensor
+    op_api: [v2.14, newest]
+
+  - func: linalg_matrix_sqrth.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: [v2.14, newest]
+
   - func: linalg_qr(Tensor self, str mode='reduced') -> (Tensor Q, Tensor R)
     acl_op: all_version
     op_api: all_version
@@ -3407,10 +3428,6 @@ official:
     acl_op: [v2.1, v2.12]
     op_api: [v2.1, v2.12]
 
-  - func: max.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: all_version
-    op_api: all_version
-
   - func: max_unpool2d(Tensor self, Tensor indices, SymInt[2] output_size) -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
@@ -3552,10 +3569,6 @@ official:
   - func: min.names_dim_min(Tensor self, Dimname dim, bool keepdim=False, *, Tensor(a!) min, Tensor(b!) min_indices) -> (Tensor(a!) values, Tensor(b!) indices)
     acl_op: [v2.1, v2.12]
     op_api: [v2.1, v2.12]
-
-  - func: min.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: all_version
-    op_api: all_version
 
   - func: minimum(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
@@ -3734,23 +3747,10 @@ official:
     acl_op: all_version
     dvm: all_version
     op_api: all_version
-    gen_opapi:
-      out0:
-        size: input
-        dtype: input
-      out1:
-        size: c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}
-        dtype: 'training ? at::kFloat : input.scalar_type()'
-      out2:
-        size: c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}
-        dtype: 'training ? at::kFloat : input.scalar_type()'
-      exec: aclnnBatchNorm
 
   - func: native_batch_norm.out(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, *, Tensor(a!) out, Tensor(b!) save_mean, Tensor(c!) save_invstd) -> (Tensor(a!), Tensor(b!), Tensor(c!))
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      exec: aclnnBatchNorm
 
   - func: native_batch_norm_backward(Tensor grad_out, Tensor input, Tensor? weight, Tensor? running_mean, Tensor? running_var, Tensor? save_mean, Tensor? save_invstd, bool train, float eps, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
@@ -4975,7 +4975,7 @@ official:
     gen_opapi:
       out:
         size: stack_output_size(tensors, dim)
-        dtype: tensors[0]
+        dtype: at::native::result_type(tensors)
       exec: aclnnStack
 
   - func: std.correction(Tensor self, int[1]? dim=None, *, Scalar? correction=None, bool keepdim=False) -> Tensor
@@ -5683,6 +5683,9 @@ custom:
   - func: npu_top_k_top_p_sample(Tensor logits, Tensor top_k, Tensor top_p, Tensor? q=None, float? eps=1e-8, bool? is_need_logits=False, int? top_k_guess=32, Tensor? min_ps=None, int? ks_max=1024, bool? input_is_logits=True, str? post_sample='qSample', Generator? generator=None) -> (Tensor, Tensor)
     op_api: all_version
     tags: nondeterministic_seeded
+
+  - func: npu_linalg_matrix_sqrth_backward(Tensor grad, Tensor self) -> Tensor
+    op_api: [v2.14, newest]
 
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
@@ -6505,9 +6508,11 @@ custom:
 
   - func: _gru_npu(Tensor input, Tensor hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
+    device_check: NoCheck
     tags: nondeterministic_seeded
 
   - func: _gru_npu_backward(Tensor grad_y, Tensor grad_h, Tensor input, Tensor hx, Tensor[] params, Tensor r, Tensor z, Tensor n, Tensor h_n, Tensor h, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor[])
+    device_check: NoCheck
     op_api: all_version
 
   - func: npu_masked_fill_range(Tensor self, Tensor start, Tensor end, Tensor value, int axis=-1) -> Tensor
@@ -6666,7 +6671,7 @@ custom:
   - func: npu_moe_distribute_combine(Tensor expand_x, Tensor expert_ids, Tensor expand_idx, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? activation_scale=None, Tensor? weight_scale=None, Tensor? group_list=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int out_dtype=0, int comm_quant_mode=0, int group_list_type=0) -> Tensor
     op_api: all_version
 
-  - func: npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tensor assist_info_for_combine, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, Tensor? elastic_info=None, Tensor? ori_x=None, Tensor? const_expert_alpha_1=None, Tensor? const_expert_alpha_2=None, Tensor? const_expert_v=None, Tensor? performance_info=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0, str comm_alg="", int zero_expert_num=0, int copy_expert_num=0, int const_expert_num=0) -> Tensor
+  - func: npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tensor assist_info_for_combine, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, Tensor? elastic_info=None, Tensor? ori_x=None, Tensor? const_expert_alpha_1=None, Tensor? const_expert_alpha_2=None, Tensor? const_expert_v=None, Tensor? performance_info=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0, str comm_alg="", int zero_expert_num=0, int copy_expert_num=0, int const_expert_num=0, bool enable_pre_reduce=True) -> Tensor
     op_api: all_version
 
   - func: _npu_distribute_barrier(Tensor x_ref, str group, int world_size, *, Tensor? time_out=None, Tensor? elastic_info=None) -> Tensor

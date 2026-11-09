@@ -2,9 +2,9 @@
 
 ## Supported Products
 
-| Product                                                        | Supported|
-| ------------------------------------------------------------ | :------: |
-|<term>Atlas A3 training products/Atlas A3 inference products</term>           |    √     |
+<!-- npu="A3" id1 -->
+- <term>Atlas A3 products</term>: Supported
+<!-- end id1 -->
 
 ## Function<a name="en-us_topic_0000002203575833_section14441124184110"></a>
 
@@ -22,7 +22,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
 - **`session_ids`** (`Tensor`): Required. Index of the Attention Worker node for each token, which determines the Attention Worker nodes to which each token is sent. This parameter must be 1D with shape `(Y,)`. The data type can be `torch.int32`. The data layout can be ND. Non-contiguous tensors are supported. The value range of elements in the tensor is [0, attnRankNum - 1].
 - **`micro_batch_ids`** (`Tensor`): Required. microBatch index for each token. This parameter must be 1D with shape `(Y,)`. The data type can be `torch.int32`. The data layout can be ND. Non-contiguous tensors are supported. The value range of elements in the tensor is [0, `MicroBatchNum` - 1].
 - **`token_ids`** (`Tensor`): Required. microBatch index for each token. This parameter must be 1D with shape `(Y,)`. The data type can be `torch.int32`. The data layout can be ND. Non-contiguous tensors are supported. The value range of elements in the tensor is [0, `BS` - 1].
-- **`expert_offsets`** (`Tensor`): Required. Index of `PerTokenExpertNum` in `token_info_table_shape` for each token. This parameter must be 1D with shape `(Y,)`. The data type can be `torch.int32`. The data layout can be ND. Non-contiguous tensors are supported. The value range of elements in the tensor is [0, `ExpertNumPerToken` - 1].
+- **`expert_offsets`** (`Tensor`): Required. Index of `ExpertNumPerToken` in `token_info_table_shape` for each token. This parameter must be 1D with shape `(Y,)`. The data type can be `torch.int32`. The data layout can be ND. Non-contiguous tensors are supported. The value range of elements in the tensor is [0, `ExpertNumPerToken` - 1].
 - **`actual_token_num`** (`Tensor`): Required. Total number of tokens sent by the current rank. This parameter must be 1D with shape `(1,)`. The data type can be `torch.int64`. The data layout can be ND. Non-contiguous tensors are supported. The value range of elements in the tensor is [0, `Y`].
 - **`group`** (`str`): Required. Communication domain name used for expert parallelism. The string length range is [1, 128).
 - **`world_size`** (`int`): Required. Size of the communication domain. The value range is [2, 768].
@@ -33,8 +33,10 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
 ## Constraints<a name="en-us_topic_0000002203575833_section12345537164214"></a>
 
 - The values of the `group`, `world_size`, `token_info_table_shape`, `token_data_shape`, and `HCCL_BUFFSIZE` parameters used during API execution must be identical across all ranks and across different layers in the network.
-- Atlas A3 training products/Atlas A3 inference products: In this scenario, a single rank contains dual dies. Therefore, "this rank" in the parameter description indicates a single die.
 
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 products</term>: In this scenario, a single rank contains dual dies. Therefore, "this rank" in the parameter description indicates a single die.
+<!-- end id2 -->
 - Variables used in input parameter tensor shapes:
     - `Y`: Maximum number of tokens to be distributed by the current rank.
 

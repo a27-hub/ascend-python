@@ -2,10 +2,15 @@
 
 ## Supported Products
 
-| Product                                                        | Supported|
-| ------------------------------------------------------------ | :------: |
-| <term>Atlas A3 training products/Atlas A3 inference products</term>    |    √     |
-| <term>Atlas A2 training products/Atlas A2 inference products</term>    |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950DT products</term>: Supported
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 products</term>: Supported
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 products</term>: Supported
+<!-- end id3 -->
 
 ## Function
 
@@ -142,7 +147,7 @@
       query = torch.cat((queryRot, queryPass), dim=-1)
       $$
 
-    - When `rotary_mode` is `"interleaved"` (GPT-J style):
+    - When `rotary_mode` is `"interleave"` (GPT-J style):
 
       $$
       x1 = queryRot[..., ::2]
@@ -210,7 +215,7 @@
     query = torch.cat((queryRot, queryPass), dim=-1)
     $$
 
-  - When `rotary_mode` is `"interleaved"` (GPT-J style):
+  - When `rotary_mode` is `"interleave"` (GPT-J style):
 
     $$
     x1 = queryRot[..., ::2]
@@ -255,7 +260,7 @@ torch_npu.npu_mrope(positions, query, key, cos_sin_cache, head_size, *, mrope_se
 - **`cos_sin_cache`** (`Tensor`): Required. Precomputed position embedding cache, $cosSinCache$ in the formulas. This parameter must be 2D with shape `(max_seq_len, rotary_dim)`. The last dimension is split into cosine and sine halves using `chunk(2, dim=-1)`. Floating-point data types of `query`, `key`, and `cos_sin_cache` must be identical.
 - **`head_size`** (`int`): Required. Size of each attention head, indicating the feature dimension of a single attention head.
 - **`mrope_section`** (`List[int]`): Optional. Length configuration of each MRoPE segment in the half-rotation dimension, $mropeSection$ in the formulas. If omitted or set to `[0, 0, 0]`, RoPE mode is used. If set to `[16, 24, 24]`, `[24, 20, 20]`, `[8, 12, 12]`, or `[16, 16, 16, 16]`, MRoPE mode is used. In MRoPE scenarios, the number of elements in `mrope_section` must be identical to the number of rows in `positions`.
-- **`rotary_mode`** (`str`): Optional. Rotation style. Valid values are `"half"` (NeoX-style) or `"interleaved"` (GPT-J-style). The default value is `half`.
+- **`rotary_mode`** (`str`): Optional. Rotation style. Valid values are `"half"` (NeoX-style) or `"interleave"` (GPT-J-style). The default value is `half`.
 - **`cache_mode`** (`str`): Optional. Concatenation style. Valid values are `"default"` (segmented cosine/sine concatenation) or `"interleave"` (interleaved concatenation). The default value is `default`. In RoPE scenarios, only `"default"` is supported. In MRoPE scenarios, `"default"` or `"interleave"` can be used.
 
 ## Return Values
@@ -309,7 +314,7 @@ query_out, key_out = torch_npu.npu_mrope(
 
 - MRoPE example (four-segment `mrope_section`):
 
-  When `positions` is set to `(4, num_tokens)`, it corresponds to a four-segment configuration such as `[16, 16, 16, 16]`. In this configuration, **only `cache_mode="default"` is supported**.
+  When `positions` is set to `(4, num_tokens)`, it corresponds to a four-segment configuration such as `[16, 16, 16, 16]`. In this configuration, only `cache_mode="default"` is supported.
 
 ```python
 import torch
