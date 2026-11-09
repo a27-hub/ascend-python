@@ -50,6 +50,21 @@ static inline bool add_bool_alpha_is_zero(const at::Scalar& alpha) {
   return !alpha.to<bool>();
 }
 
+// Bool is the lowest promotion category, so the promoted type is Bool only
+// when every operand is Bool. Reading the dtypes keeps the promotion call off
+// the non-bool add hot path.
+static inline bool add_promotes_to_bool(
+    const at::Tensor& self,
+    const at::Tensor& other) {
+  return self.scalar_type() == at::kBool && other.scalar_type() == at::kBool;
+}
+
+static inline bool add_promotes_to_bool(
+    const at::Tensor& self,
+    const at::Scalar& other) {
+  return self.scalar_type() == at::kBool && other.isBoolean();
+}
+
 static void check_bool_add_inputs(
     const at::Tensor& self,
     const at::Tensor& other,
@@ -70,7 +85,7 @@ static at::Tensor& add_out_npu_nocheck(
     const at::Tensor& other,
     const at::Scalar& alpha,
     at::Tensor& result) {
-  if (at::native::result_type(self, other) == at::kBool &&
+  if (add_promotes_to_bool(self, other) &&
       result.scalar_type() != at::kBool) {
     auto bool_result = npu_preparation::apply_tensor_without_format(
         result.sizes(), result.options().dtype(at::kBool));
@@ -163,7 +178,7 @@ at::Tensor add(
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnAdd, acl_op::add(self, other, alpha));
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
-  if (at::native::result_type(self, other) == at::kBool) {
+  if (add_promotes_to_bool(self, other)) {
     DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
   }
   std::vector<at::Tensor> tensor_list = {self, other};
@@ -187,7 +202,7 @@ at::Tensor add(
     const at::Scalar& other,
     const at::Scalar& alpha) {
   DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
-  if (at::native::result_type(self, other) == at::kBool) {
+  if (add_promotes_to_bool(self, other)) {
     DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add(self, other, alpha));
   }
   // calculate the output size
@@ -220,7 +235,7 @@ at::Tensor& add_out(
     at::Tensor& result) {
   DO_COMPATIBILITY(aclnnAdd, acl_op::add_out(self, other, alpha, result));
   DO_COMPATIBILITY(aclnnAdds, acl_op::add_out(self, other, alpha, result));
-  if (at::native::result_type(self, other) == at::kBool) {
+  if (add_promotes_to_bool(self, other)) {
     DO_COMPATIBILITY(aclnnLogicalOr, acl_op::add_out(self, other, alpha, result));
   }
   std::vector<at::Tensor> tensor_list = {self, other};
