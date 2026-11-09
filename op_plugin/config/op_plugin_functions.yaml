@@ -1598,6 +1598,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      integral_identity_tensor: self
       out:
         size: self
         dtype: self
@@ -1698,21 +1699,10 @@ official:
   - func: clamp_max.Tensor(Tensor self, Tensor max) -> Tensor
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: op_infer::broadcast_ops_npu_output_size(self, max)
-        dtype: is_gte_cann_version_820rc1()?at::native::result_type(self, max):c10::typeMetaToScalarType(self.dtype())
-        name: self
-      exec: aclnnClampMaxTensor
 
   - func: clamp_max.Tensor_out(Tensor self, Tensor max, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: op_infer::broadcast_ops_npu_output_size(self, max)
-        name: self
-      exec: aclnnClampMaxTensor
 
   - func: clamp_max.out(Tensor self, Scalar max, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -1747,20 +1737,10 @@ official:
   - func: clamp_min.Tensor(Tensor self, Tensor min) -> Tensor
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: op_infer::broadcast_ops_npu_output_size(self, min)
-        dtype: is_gte_cann_version_820rc1()?at::native::result_type(self, min):c10::typeMetaToScalarType(self.dtype())
-      exec: aclnnClampMinTensor
 
   - func: clamp_min.Tensor_out(Tensor self, Tensor min, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: op_infer::broadcast_ops_npu_output_size(self, min)
-        name: self
-      exec: aclnnClampMinTensor
 
   - func: clamp_min.out(Tensor self, Scalar min, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2087,7 +2067,9 @@ official:
         size: self
         dtype: '(self.scalar_type() == at::ScalarType::Bool || self.scalar_type() == at::ScalarType::Long || self.scalar_type() == at::ScalarType::Int) ? at::kFloat : self.scalar_type()'
         name: self
-      exec: aclnnErf
+      new_params:
+        self_cast: "(self.scalar_type() == at::ScalarType::Int) ? self.to(at::kFloat) : self"
+      exec: aclnnErf, self_cast, out
 
   - func: erf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2112,7 +2094,9 @@ official:
         size: self
         dtype: '(self.scalar_type() == at::ScalarType::Bool || self.scalar_type() == at::ScalarType::Long || self.scalar_type() == at::ScalarType::Int) ? at::kFloat : self.scalar_type()'
         name: self
-      exec: aclnnErfc
+      new_params:
+        self_cast: "(self.scalar_type() == at::ScalarType::Int) ? self.to(at::kFloat) : self"
+      exec: aclnnErfc, self_cast, out
 
   - func: erfc.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2161,9 +2145,11 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: '(self.scalar_type() == at::ScalarType::Bool || self.scalar_type() == at::ScalarType::Long) ? at::kFloat : self.scalar_type()'
+        dtype: '(self.scalar_type() == at::ScalarType::Bool || self.scalar_type() == at::ScalarType::Long || self.scalar_type() == at::ScalarType::Int) ? at::kFloat : self.scalar_type()'
         name: self
-      exec: aclnnExp
+      new_params:
+        self_cast: "(self.scalar_type() == at::ScalarType::Int) ? self.to(at::kFloat) : self"
+      exec: aclnnExp, self_cast, out
 
   - func: exp.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2214,7 +2200,9 @@ official:
         size: self
         dtype: 'isFloatingType(self.scalar_type()) ? self.scalar_type() : at::kFloat'
         name: self
-      exec: aclnnExpm1
+      new_params:
+        self_cast: "(self.scalar_type() == at::ScalarType::Int) ? self.to(at::kFloat) : self"
+      exec: aclnnExpm1, self_cast, out
 
   - func: expm1.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version

@@ -53,7 +53,12 @@ static at::Tensor& argmin_exec(
         output_size, self.options().dtype(at::kLong));
   }
 
-  EXEC_NPU_CMD(aclnnArgMin, input, real_dim, real_keep_dim, result);
+  // aclnnArgMin rejects INT32 on SoCs earlier than Ascend950 (Atlas A2/A3, error 161002);
+  // run in INT64 there (the indices output is INT64 either way).
+  bool cast_int32 = input.scalar_type() == at::kInt &&
+      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
+  at::Tensor input_cast = cast_int32 ? input.to(at::kLong) : input;
+  EXEC_NPU_CMD(aclnnArgMin, input_cast, real_dim, real_keep_dim, result);
   return result;
 }
 

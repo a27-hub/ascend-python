@@ -98,23 +98,42 @@ std::tuple<at::Tensor&, at::Tensor&> max_out(
     at::Tensor& indices) {
   at::native::zero_numel_check_dims(self, dim, "max()");
   DO_COMPATIBILITY(aclnnMaxDim, acl_op::max_out(self, dim, keepdim, output, indices));
+  // aclnnMaxDim rejects INT32 on SoCs earlier than Ascend950 (Atlas A2/A3, error 161002),
+  // so run in INT64 there and cast the values back to INT32 afterwards.
+  bool cast_int32 = self.scalar_type() == at::kInt &&
+      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
+  at::Tensor self_cast = cast_int32 ? self.to(at::kLong) : self;
   at::SmallVector<int64_t, op_infer::SIZE> dims = {dim};
   auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
   at_npu::native::OpPreparation::check_tensor({self}, output, self.scalar_type(), output_size);
   at_npu::native::OpPreparation::check_tensor({self}, indices, at::ScalarType::Long, output_size);
-  EXEC_NPU_CMD(aclnnMaxDim, self, dim, keepdim, output, indices);
+  if (cast_int32) {
+    at::Tensor values = at_npu::native::OpPreparation::apply_tensor_without_format(
+        output_size, self_cast.options());
+    EXEC_NPU_CMD(aclnnMaxDim, self_cast, dim, keepdim, values, indices);
+    output.copy_(values);
+  } else {
+    EXEC_NPU_CMD(aclnnMaxDim, self, dim, keepdim, output, indices);
+  }
   return std::tie(output, indices);
 }
 
 std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self, int64_t dim, bool keepdim) {
   at::native::zero_numel_check_dims(self, dim, "max()");
   DO_COMPATIBILITY(aclnnMaxDim, acl_op::max(self, dim, keepdim));
+  bool cast_int32 = self.scalar_type() == at::kInt &&
+      c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
+  at::Tensor self_cast = cast_int32 ? self.to(at::kLong) : self;
   at::SmallVector<int64_t, op_infer::SIZE> dims = {dim};
   auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, keepdim);
-  at::Tensor outputs = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options());
+  at::Tensor outputs = at_npu::native::OpPreparation::apply_tensor_without_format(
+      output_size, self_cast.options());
   at::Tensor indices = at_npu::native::OpPreparation::apply_tensor_without_format(
       output_size, self.options().dtype(at::ScalarType::Long));
-  EXEC_NPU_CMD(aclnnMaxDim, self, dim, keepdim, outputs, indices);
+  EXEC_NPU_CMD(aclnnMaxDim, self_cast, dim, keepdim, outputs, indices);
+  if (cast_int32) {
+    outputs = outputs.to(self.scalar_type());
+  }
   return std::tie(outputs, indices);
 }
 
