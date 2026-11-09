@@ -16,6 +16,7 @@
 #include "op_plugin/DvmOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 
 namespace lazy_fusion {
@@ -1436,7 +1437,9 @@ at::Tensor& gelu_out(const at::Tensor& self, c10::string_view approximate, at::T
 
 at::Tensor gelu_backward(const at::Tensor& grad_output, const at::Tensor& self, c10::string_view approximate) {
   static auto enable = IsEnabled("gelu_backward");
-  if (!enable || !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
+  // The DVM formula implements only the tanh approximation.
+  if (!enable || approximate != "tanh" ||
+      !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) || grad_output.scalar_type() != self.scalar_type()) {
     return op_api::gelu_backward(grad_output, self, approximate);
   }
@@ -1699,8 +1702,13 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor>& tensor, int64_t chann
       at::Tensor sum_dy = std::get<0>(reduce_res);
       at::Tensor sum_dy_xmu = std::get<1>(reduce_res);
       auto k = g_lazy_fusion_manager.Get();
-      auto rstd_obj = k->Unary<dvm::UnaryType::kReciprocal>(k->Unary<dvm::UnaryType::kSqrt>(
-          k->Binary<dvm::BinaryType::kAdd>(k->Input(save_invstd.value().contiguous()), static_cast<float>(eps))));
+      auto rstd_obj = k->Input(save_invstd.value().contiguous());
+      // aclnnBatchNorm saves invstd on Ascend950 and variance on older SoCs.
+      // Only variance needs conversion; applying rsqrt again corrupts A5 gradients.
+      if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+        rstd_obj = k->Unary<dvm::UnaryType::kReciprocal>(k->Unary<dvm::UnaryType::kSqrt>(
+            k->Binary<dvm::BinaryType::kAdd>(rstd_obj, static_cast<float>(eps))));
+      }
       at::Tensor rstd;
       if (output_mask[0]) {
         rstd = k->Output(rstd_obj, k->GetShape(rstd_obj), input.options().dtype(at::kFloat));
