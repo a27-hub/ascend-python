@@ -2450,6 +2450,42 @@ def npu_quant_fusion_attention_forward(query, key, value, head_num, input_layout
             numels)
 
 
+
+@impl(m, "npu_fusion_attention_tensor_rng")
+def npu_fusion_attention_tensor_rng_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
+                                            atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647,
+                                            next_tockens=2147483647, inner_precise=0, prefix=None,
+                                            actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
+                                            gen_mask_parallel=True, sync=False, softmax_layout="", sink=None,
+                                            dropout_mask=None, seed=0, offset=0):
+    outputs = npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse, padding_mask,
+                                           atten_mask, scale, keep_prob, pre_tockens, next_tockens,
+                                           inner_precise, prefix, actual_seq_qlen, actual_seq_kvlen,
+                                           sparse_mode, gen_mask_parallel, sync, softmax_layout, sink,
+                                           dropout_mask, seed, offset)
+    rng = torch.empty([1], dtype=torch.int64, device="meta")
+    return outputs[:4] + (rng, rng.clone(), rng.clone())
+
+
+@impl(m, "npu_fusion_attention_grad_tensor_rng")
+def npu_fusion_attention_grad_tensor_rng_backward(query, key, value, dy, head_num, input_layout, *, pse=None,
+                                                  padding_mask=None, atten_mask=None, softmax_max=None,
+                                                  softmax_sum=None, softmax_in=None, attention_in=None,
+                                                  scale_value=1.0, keep_prob=1.0, pre_tockens=2147483647,
+                                                  next_tockens=2147483647, inner_precise=0, seed=None, offset=None,
+                                                  numels=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None,
+                                                  sparse_mode=0, gen_mask_parallel=True, sync=False,
+                                                  softmax_layout="", sink=None):
+    dq = query.new_empty(query.shape, dtype=query.dtype, device="meta")
+    dk = key.new_empty(key.shape, dtype=key.dtype, device="meta")
+    dv = value.new_empty(value.shape, dtype=value.dtype, device="meta")
+    dpse = pse.new_empty(pse.shape, dtype=pse.dtype, device="meta") if pse is not None \
+        else torch.empty([0], dtype=query.dtype, device="meta")
+    dsink = sink.new_empty(sink.shape, dtype=sink.dtype, device="meta") if sink is not None \
+        else torch.empty([0], dtype=torch.float32, device="meta")
+    return dq, dk, dv, dpse, dsink
+
+
 @impl(m, "npu_fusion_attention_v2")
 def npu_fusion_attention_forward_v2(query, key, value, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None, query_rope=None,
                                 key_rope=None, scale=1.0, keep_prob=1.0,
