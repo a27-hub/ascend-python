@@ -325,9 +325,9 @@ at::Tensor scaled_dot_product_attention(const at::Tensor &query, const at::Tenso
             return std::get<0>(outputv3);
         }
         c10::OptionalIntArrayRef nulllen = c10::nullopt;
-        auto output = at_npu::native::custom_ops::npu_fusion_attention(query, key, value, head_num, input_layout,
-            nulltensor, nulltensor, atten_mask, input_scale.as_float_unchecked(), keep_prob, TOKEN_MAX, next_tockens,
-            inner_precise, nulllen, nulllen, nulllen, sparse_mode, true, false);
+        auto output = at_npu::native::custom_ops::npu_fusion_attention_tensor_rng(query, key, value, head_num,
+            input_layout, nulltensor, nulltensor, atten_mask, input_scale.as_float_unchecked(), keep_prob, TOKEN_MAX,
+            next_tockens, inner_precise, nulllen, nulllen, nulllen, sparse_mode, true, false);
         return std::get<0>(output);
     } else if (!force_math && (!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
         (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
