@@ -32,17 +32,14 @@ at::Tensor rrelu_with_noise(
   DO_COMPATIBILITY(aclnnRReluWithNoise, acl_op::rrelu_with_noise(self, noise, lower, upper, training, generator));
   at::Tensor result = npu_preparation::apply_tensor_without_format(self);
   static const bool is_a5 = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950);
-  // A5(Ascend950+) 对齐社区：空 tensor 提前返回，不消耗 generator offset；其他芯片保持原流程
   if (is_a5 && self.numel() == 0) {
     return result;
   }
   int64_t seed = 0;
   int64_t offset = 0;
-  // A5(Ascend950+) 对齐社区：eval 模式不消耗随机数；其他芯片保持无条件取 seed/offset
   if (training || !is_a5) {
     auto gen_ =
         at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
-    // A5(Ascend950+) 对齐社区：offset 按 numel 动态计算；其他芯片保持固定 1<<28
     const uint64_t counter_offset = is_a5
         ? static_cast<uint64_t>(op_plugin::utils::calc_final_counter_offset(result))
         : (1 << 28);
@@ -64,7 +61,6 @@ at::Tensor& rrelu_with_noise_(
     bool training,
     c10::optional<at::Generator> generator) {
   static const bool is_a5 = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950);
-  // A5(Ascend950+) 对齐社区：空 tensor 提前返回，不消耗 generator offset；其他芯片保持原流程
   if (is_a5 && self.numel() == 0) {
     return self;
   }
@@ -72,11 +68,9 @@ at::Tensor& rrelu_with_noise_(
       aclnnInplaceRReluWithNoise, acl_op::rrelu_with_noise_(self, noise, lower, upper, training, generator));
   int64_t seed = 0;
   int64_t offset = 0;
-  // A5(Ascend950+) 对齐社区：eval 模式不消耗随机数；其他芯片保持无条件取 seed/offset
   if (training || !is_a5) {
     auto gen_ =
         at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
-    // A5(Ascend950+) 对齐社区：offset 按 numel 动态计算；其他芯片保持固定 1<<28
     const uint64_t counter_offset = is_a5
         ? static_cast<uint64_t>(op_plugin::utils::calc_final_counter_offset(self))
         : (1 << 28);
@@ -101,17 +95,14 @@ at::Tensor& rrelu_with_noise_out(
       aclnnRReluWithNoise, acl_op::rrelu_with_noise_out(self, noise, lower, upper, training, generator, output));
   npu_preparation::check_tensor({self, noise}, output, self);
   static const bool is_a5 = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950);
-  // A5(Ascend950+) 对齐社区：空 tensor 提前返回，不消耗 generator offset；其他芯片保持原流程
   if (is_a5 && self.numel() == 0) {
     return output;
   }
   int64_t seed = 0;
   int64_t offset = 0;
-  // A5(Ascend950+) 对齐社区：eval 模式不消耗随机数；其他芯片保持无条件取 seed/offset
   if (training || !is_a5) {
     auto gen_ =
         at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
-    // A5(Ascend950+) 对齐社区：offset 按 numel 动态计算；其他芯片保持固定 1<<28
     const uint64_t counter_offset = is_a5
         ? static_cast<uint64_t>(op_plugin::utils::calc_final_counter_offset(output))
         : (1 << 28);
