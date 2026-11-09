@@ -51,14 +51,15 @@ fusion_attention_rng_output npu_fusion_attention_tensor_rng(
     auto output = npu_fusion_attention(query, key, value, head_num, input_layout, pse, padding_mask, atten_mask,
                                        scale, keep_prob, pre_tockens, next_tockens, inner_precise, prefix,
                                        actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync,
-                                       softmax_layout, dropout_mask, seed, offset);
+                                       softmax_layout, sink, dropout_mask, seed, offset);
     return {std::get<0>(output), std::get<1>(output), std::get<2>(output), std::get<3>(output),
             rng_scalar_to_tensor(std::get<4>(output), query),
             rng_scalar_to_tensor(std::get<5>(output), query),
             rng_scalar_to_tensor(std::get<6>(output), query)};
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_grad_tensor_rng(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_fusion_attention_grad_tensor_rng(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value, const at::Tensor &dy,
     int64_t head_num, c10::string_view input_layout, const c10::optional<at::Tensor> &pse,
     const c10::optional<at::Tensor> &padding_mask, const c10::optional<at::Tensor> &atten_mask,
@@ -79,7 +80,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_grad_tensor_
                                             seed_value, offset_value, numels_value, prefix, actual_seq_qlen,
                                             actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout,
                                             sink);
-    return {std::get<0>(output), std::get<1>(output), std::get<2>(output)};
+    return {std::get<0>(output), std::get<1>(output), std::get<2>(output),
+            std::get<3>(output), std::get<4>(output)};
 }
 #endif
 }  // namespace op_api

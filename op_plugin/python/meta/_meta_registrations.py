@@ -2479,7 +2479,11 @@ def npu_fusion_attention_grad_tensor_rng_backward(query, key, value, dy, head_nu
     dq = query.new_empty(query.shape, dtype=query.dtype, device="meta")
     dk = key.new_empty(key.shape, dtype=key.dtype, device="meta")
     dv = value.new_empty(value.shape, dtype=value.dtype, device="meta")
-    return dq, dk, dv
+    dpse = pse.new_empty(pse.shape, dtype=pse.dtype, device="meta") if pse is not None \
+        else torch.empty([0], dtype=query.dtype, device="meta")
+    dsink = sink.new_empty(sink.shape, dtype=sink.dtype, device="meta") if sink is not None \
+        else torch.empty([0], dtype=torch.float32, device="meta")
+    return dq, dk, dv, dpse, dsink
 
 
 @impl(m, "npu_fusion_attention_v2")
