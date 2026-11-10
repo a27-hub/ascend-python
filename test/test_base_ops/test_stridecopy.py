@@ -106,6 +106,20 @@ class TestNpuStrideCopy(TestCase):
             with self.subTest(jit_compile=jit):
                 self.assertRtolEqual(expected, got)
 
+    def test_stride_copy_view_source(self):
+        # 源是带 storage_offset 的非连续视图：storage_offset 以 storage 起址为基准，
+        # 可直接抓到 aclnnAsStrided 路径把 view offset 二次叠加的问题
+        base = torch.randn(4, 8)
+        npu_base = base.npu()
+        src = npu_base.t()[1:]           # 形状 (7,4)，strides (1,8)，storage_offset=1
+        size, stride, offset = (2, 3), (1, 8), 1
+        expected = torch.as_strided(base, size, stride, offset).numpy()
+        for jit in _jit_modes():
+            torch_npu.npu.set_compile_mode(jit_compile=jit)
+            got = torch_npu.npu_stride_copy(src, size, stride, offset).cpu().numpy()
+            with self.subTest(jit_compile=jit):
+                self.assertRtolEqual(expected, got)
+
     def test_stride_copy_out_variant(self):
         # .out 版是框架热路径实际调用的入口（copy_d2d_dtype_baseformat）
         self._check_out([[np.float32, 0, [3, 3]], (2, 2), (1, 2), 0])
