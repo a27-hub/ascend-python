@@ -21,6 +21,100 @@ FP8_E4M3_BLOCK_SIZE = 32
 m = Library("npu", "IMPL", "Meta")
 m_aten = Library("aten", "IMPL", "Meta")
 
+# The aten::lstm.data wrapper reads batch_sizes[0] as an integer before it
+# dispatches to this operator. Full-graph PackedSequence capture also needs
+# a change in that wrapper. These Meta kernels cover the internal ACLNN ops.
+def _lstm_npu_meta_sizes(input, hx, params, num_layers, bidirectional,
+                         batch_first, batch_sizes):
+    hidden_size = params[0].size(0) // 4
+    layer_directions = num_layers * (2 if bidirectional else 1)
+    if batch_sizes is not None:
+        time_step = batch_sizes.size(0)
+        torch._check(time_step > 0, lambda: "LSTM batch_sizes must have positive length")
+        torch._check(
+            input.size(0) % time_step == 0,
+            lambda: "LSTM input.size(0) must be divisible by batch_sizes.size(0)",
+        )
+        batch_size = input.size(0) // time_step
+        # NPU packing retains T * B rows, including padding, even for variable
+        # sequence lengths. CPU packing keeps only sum(batch_sizes) rows.
+        # Divisibility alone can produce a smaller batch than the initial state
+        # for a CPU-packed tensor. Check that batch using metadata available to
+        # FakeTensor before it would reach the ACLNN kernel.
+        torch._check(
+            batch_size == hx[0].size(1),
+            lambda: "LSTM packed input rows must equal time steps times the initial hidden state batch size",
+        )
+    else:
+        time_step = input.size(1) if batch_first else input.size(0)
+        batch_size = input.size(0) if batch_first else input.size(1)
+    return time_step, batch_size, hidden_size, layer_directions
+
+
+@impl(m, "_lstm_npu")
+def _lstm_npu_meta(input, hx, params, has_biases, num_layers, dropout,
+                   train, bidirectional, *, batch_first=False, batch_sizes=None):
+    time_step, batch_size, hidden_size, layer_directions = _lstm_npu_meta_sizes(
+        input, hx, params, num_layers, bidirectional, batch_first, batch_sizes,
+    )
+    output_size = hidden_size * (2 if bidirectional else 1)
+    output_shape = (
+        (batch_size, time_step, output_size)
+        if batch_first else (time_step, batch_size, output_size)
+    )
+    state_shape = (layer_directions, batch_size, hidden_size)
+    output = input.new_empty(output_shape)
+    hy = input.new_empty(state_shape)
+    cy = input.new_empty(state_shape)
+    if train:
+        saved_shape = (layer_directions, time_step, batch_size, hidden_size)
+        saved = tuple(input.new_empty(saved_shape) for _ in range(7))
+    else:
+        # Inference returns undefined gates and stacked scalar h/c tensors.
+        saved = (
+            None, None, None, None,
+            input.new_empty((layer_directions,)),
+            input.new_empty((layer_directions,)),
+            None,
+        )
+    return (output, hy, cy, *saved)
+
+
+@impl(m, "_lstm_npu_backward")
+def _lstm_npu_backward_meta(grad_y, grad_hy, grad_cy, input, hx, params,
+                            i, j, f, o, h, c, tanhc, has_biases, num_layers,
+                            dropout, train, bidirectional, *, batch_first=False,
+                            batch_sizes=None):
+    packed = batch_sizes is not None
+    if packed:
+        # ACLNN selects packed backward when batch_sizes is present. Its C++
+        # shape helper can infer dense outputs for an empty tensor, but ACLNN
+        # still takes the packed path and rejects a 3-D input. Dense calls use None.
+        torch._check(
+            batch_sizes.numel() > 0,
+            lambda: "LSTM backward requires nonempty batch_sizes for packed input. Use None for dense input",
+        )
+        # The existing PackedSequence autograd path can pass the gradient of
+        # the internal [T, B, D * H] output in that same 3-D layout. ACLNN packed
+        # backward requires [T * B, D * H]. Reject the unsupported rank during
+        # capture, where this Meta kernel can inspect it without reading data.
+        torch._check(
+            grad_y.dim() == 2,
+            lambda: "LSTM packed backward grad_y must be two-dimensional",
+        )
+    _, batch_size, hidden_size, layer_directions = _lstm_npu_meta_sizes(
+        input, hx, params, num_layers, bidirectional, batch_first, batch_sizes,
+    )
+    input_shape = (
+        (input.size(0), input.size(1))
+        if packed else (input.size(0), input.size(1), input.size(2))
+    )
+    state_shape = (layer_directions, batch_size, hidden_size)
+    grad_input = input.new_empty(input_shape)
+    grad_hx = [input.new_empty(state_shape), input.new_empty(state_shape)]
+    grad_params = [input.new_empty(param.shape) for param in params]
+    return grad_input, grad_hx, grad_params
+
 TORCH_DTYPE_MAP = {
     torch.float16: 5,
     torch.bfloat16: 15,

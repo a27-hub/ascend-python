@@ -6453,6 +6453,302 @@ class TestNpuLstmCellBackward(TestCase):
             self.assertEqual(grad_ct.shape, c.shape)
 
 
+class TestNpuLstmMeta(TestCase):
+    # 形状推导需与 op_plugin/utils/KernelNpuOutputSize.cpp 保持一致
+    HIDDEN_SIZE = 4
+    INPUT_SIZE = 8
+    NUM_LAYERS = 2
+    BATCH_SIZE = 3
+    TIME_STEP = 5
+
+    @classmethod
+    def _make_params(cls):
+        # num_layers=2 且 has_biases=False：每层各一组 (w_ih, w_hh)
+        gate_size = 4 * cls.HIDDEN_SIZE
+        return [
+            torch.randn(gate_size, cls.INPUT_SIZE, dtype=torch.float16).npu(),
+            torch.randn(gate_size, cls.HIDDEN_SIZE, dtype=torch.float16).npu(),
+            torch.randn(gate_size, cls.HIDDEN_SIZE, dtype=torch.float16).npu(),
+            torch.randn(gate_size, cls.HIDDEN_SIZE, dtype=torch.float16).npu(),
+        ]
+
+    @classmethod
+    def _make_hx(cls, bidirectional=False):
+        layer_directions = cls.NUM_LAYERS * (2 if bidirectional else 1)
+        return [
+            torch.randn(layer_directions, cls.BATCH_SIZE, cls.HIDDEN_SIZE,
+                        dtype=torch.float16).npu()
+            for _ in range(2)
+        ]
+
+    def test_npu_lstm_meta(self):
+        # Check output, state, and saved tensor shapes for time-major two-layer training.
+        with FakeTensorMode():
+            input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+
+            out = torch_npu._lstm_npu(
+                input_, self._make_hx(), self._make_params(),
+                False, self.NUM_LAYERS, 0.0, True, False
+            )
+
+            self.assertEqual(out[0].shape,
+                             (self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(out[1].shape,
+                             (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(out[2].shape,
+                             (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            # 训练态 7 个中间结果按层堆叠为 4 维
+            for idx in range(3, 10):
+                self.assertEqual(
+                    out[idx].shape,
+                    (self.NUM_LAYERS, self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE)
+                )
+
+    def test_npu_lstm_batch_first_meta(self):
+        # Check the output and saved tensor layouts for batch-first training.
+        with FakeTensorMode():
+            input_ = torch.randn(self.BATCH_SIZE, self.TIME_STEP, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+
+            out = torch_npu._lstm_npu(
+                input_, self._make_hx(), self._make_params(),
+                False, self.NUM_LAYERS, 0.0, True, False, batch_first=True
+            )
+
+            self.assertEqual(out[0].shape,
+                             (self.BATCH_SIZE, self.TIME_STEP, self.HIDDEN_SIZE))
+            self.assertEqual(out[1].shape,
+                             (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            for idx in range(3, 10):
+                self.assertEqual(
+                    out[idx].shape,
+                    (self.NUM_LAYERS, self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE)
+                )
+
+    def test_npu_lstm_bidirectional_meta(self):
+        # Check doubled output width and layer-direction dimensions for bidirectional training.
+        with FakeTensorMode():
+            layer_directions = self.NUM_LAYERS * 2
+            input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+
+            out = torch_npu._lstm_npu(
+                input_, self._make_hx(bidirectional=True), self._make_params(),
+                False, self.NUM_LAYERS, 0.0, True, True
+            )
+
+            self.assertEqual(out[0].shape,
+                             (self.TIME_STEP, self.BATCH_SIZE, 2 * self.HIDDEN_SIZE))
+            self.assertEqual(out[1].shape,
+                             (layer_directions, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(out[2].shape,
+                             (layer_directions, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            for idx in range(3, 10):
+                self.assertEqual(
+                    out[idx].shape,
+                    (layer_directions, self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE)
+                )
+
+    def test_npu_lstm_inference_meta(self):
+        # Check output and state shapes and saved tensor placeholders during inference.
+        # 推理态不产出 gate：i/j/f/o/tanhc 为未定义张量，h/c 为按层堆叠的一维张量
+        with FakeTensorMode():
+            input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+
+            out = torch_npu._lstm_npu(
+                input_, self._make_hx(), self._make_params(),
+                False, self.NUM_LAYERS, 0.0, False, False
+            )
+
+            self.assertEqual(out[0].shape,
+                             (self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(out[1].shape,
+                             (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(out[2].shape,
+                             (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            for idx in (3, 4, 5, 6, 9):
+                self.assertIsNone(out[idx])
+            self.assertEqual(out[7].shape, (self.NUM_LAYERS,))
+            self.assertEqual(out[8].shape, (self.NUM_LAYERS,))
+
+    def test_npu_lstm_packed_meta(self):
+        # Check native variable-length packing and reject the compact CPU layout.
+        with FakeTensorMode():
+            input_ = torch.randn(self.TIME_STEP * self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+            # For lengths [5, 3, 2], NPU packing retains 15 rows and CPU packing retains 10.
+            batch_sizes = torch.tensor([3, 3, 2, 1, 1], dtype=torch.int64).npu()
+            hx, params = self._make_hx(), self._make_params()
+
+            out = torch_npu._lstm_npu(
+                input_, hx, params,
+                False, self.NUM_LAYERS, 0.0, True, False, batch_sizes=batch_sizes
+            )
+
+            self.assertEqual(out[0].shape,
+                             (self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(out[1].shape,
+                             (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            for idx in range(3, 10):
+                self.assertEqual(
+                    out[idx].shape,
+                    (self.NUM_LAYERS, self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE)
+                )
+
+            with self.assertRaisesRegex(RuntimeError, "initial hidden state batch size"):
+                torch_npu._lstm_npu(
+                    input_[:10], hx, params,
+                    False, self.NUM_LAYERS, 0.0, True, False, batch_sizes=batch_sizes,
+                )
+
+    def test_npu_lstm_batch_first_none_meta(self):
+        # Check that an explicit batch_first=None selects time-major output.
+        # batch_first 在 schema 中是 bool?，None 应与 False 等价
+        with FakeTensorMode():
+            input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+
+            out = torch_npu._lstm_npu(
+                input_, self._make_hx(), self._make_params(),
+                False, self.NUM_LAYERS, 0.0, True, False, batch_first=None
+            )
+
+            self.assertEqual(out[0].shape,
+                             (self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(out[1].shape,
+                             (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+
+    def test_npu_lstm_invalid_batch_sizes_meta(self):
+        # Reject empty batch_sizes and packed row counts that are indivisible by the time dimension.
+        # 与 C++ lstm_npu_output_size 中的 TORCH_CHECK 报错保持一致
+        with FakeTensorMode():
+            input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+            hx = self._make_hx()
+            params = self._make_params()
+
+            # 空 batch_sizes：time_step 为 0
+            with self.assertRaisesRegex(RuntimeError, "positive length"):
+                torch_npu._lstm_npu(
+                    input_, hx, params, False, self.NUM_LAYERS, 0.0, True, False,
+                    batch_sizes=torch.full((0,), 0, dtype=torch.int64).npu()
+                )
+
+            # input.size(0) 不能被 time_step 整除
+            with self.assertRaisesRegex(RuntimeError, "must be divisible"):
+                torch_npu._lstm_npu(
+                    input_, hx, params, False, self.NUM_LAYERS, 0.0, True, False,
+                    batch_sizes=torch.full((4,), self.BATCH_SIZE, dtype=torch.int64).npu()
+                )
+
+
+class TestNpuLstmBackwardMeta(TestCase):
+    # 形状推导需与 KernelNpuOutputSize.cpp 中的 lstm_backward_npu_* 保持一致
+    HIDDEN_SIZE = 4
+    INPUT_SIZE = 8
+    NUM_LAYERS = 2
+    BATCH_SIZE = 3
+    TIME_STEP = 5
+
+    @classmethod
+    def _make_params(cls):
+        gate_size = 4 * cls.HIDDEN_SIZE
+        return [
+            torch.randn(gate_size, cls.INPUT_SIZE, dtype=torch.float16).npu(),
+            torch.randn(gate_size, cls.HIDDEN_SIZE, dtype=torch.float16).npu(),
+            torch.randn(gate_size, cls.HIDDEN_SIZE, dtype=torch.float16).npu(),
+            torch.randn(gate_size, cls.HIDDEN_SIZE, dtype=torch.float16).npu(),
+        ]
+
+    @classmethod
+    def _make_hx(cls):
+        return [
+            torch.randn(cls.NUM_LAYERS, cls.BATCH_SIZE, cls.HIDDEN_SIZE,
+                        dtype=torch.float16).npu()
+            for _ in range(2)
+        ]
+
+    @classmethod
+    def _make_saved(cls):
+        # 训练态正向保存的 i/j/f/o/h/c/tanhc
+        return [
+            torch.randn(cls.NUM_LAYERS, cls.TIME_STEP, cls.BATCH_SIZE, cls.HIDDEN_SIZE,
+                        dtype=torch.float16).npu()
+            for _ in range(7)
+        ]
+
+    @classmethod
+    def _make_grads(cls):
+        grad_y = torch.randn(cls.TIME_STEP, cls.BATCH_SIZE, cls.HIDDEN_SIZE,
+                             dtype=torch.float16).npu()
+        grad_hy = torch.randn(cls.NUM_LAYERS, cls.BATCH_SIZE, cls.HIDDEN_SIZE,
+                              dtype=torch.float16).npu()
+        grad_cy = torch.randn(cls.NUM_LAYERS, cls.BATCH_SIZE, cls.HIDDEN_SIZE,
+                              dtype=torch.float16).npu()
+        return grad_y, grad_hy, grad_cy
+
+    def test_npu_lstm_backward_meta(self):
+        # Check dense gradient shapes and reject an explicitly empty batch_sizes tensor.
+        with FakeTensorMode():
+            params = self._make_params()
+            input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+            grad_y, grad_hy, grad_cy = self._make_grads()
+
+            args = (
+                grad_y, grad_hy, grad_cy, input_, self._make_hx(), params,
+                *self._make_saved(), False, self.NUM_LAYERS, 0.0, True, False,
+            )
+            grad_input, grad_hx, grad_params = torch_npu._lstm_npu_backward(*args)
+
+            self.assertEqual(grad_input.shape, input_.shape)
+            self.assertEqual(len(grad_hx), 2)
+            for grad in grad_hx:
+                self.assertEqual(grad.shape,
+                                 (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(len(grad_params), len(params))
+            for grad, param in zip(grad_params, params):
+                self.assertEqual(grad.shape, param.shape)
+
+            with self.assertRaisesRegex(RuntimeError, "requires nonempty batch_sizes"):
+                torch_npu._lstm_npu_backward(
+                    *args, batch_sizes=torch.empty(0, dtype=torch.int64).npu(),
+                )
+
+    def test_npu_lstm_backward_packed_meta(self):
+        # Check packed gradients with a 2-D grad_y and reject a 3-D grad_y.
+        with FakeTensorMode():
+            params = self._make_params()
+            input_ = torch.randn(self.TIME_STEP * self.BATCH_SIZE, self.INPUT_SIZE,
+                                 dtype=torch.float16).npu()
+            batch_sizes = torch.full((self.TIME_STEP,), self.BATCH_SIZE,
+                                     dtype=torch.int64).npu()
+            grad_y, grad_hy, grad_cy = self._make_grads()
+
+            args = (
+                grad_hy, grad_cy, input_, self._make_hx(), params,
+                *self._make_saved(), False, self.NUM_LAYERS, 0.0, True, False,
+            )
+            with self.assertRaisesRegex(RuntimeError, "grad_y must be two-dimensional"):
+                torch_npu._lstm_npu_backward(grad_y, *args, batch_sizes=batch_sizes)
+
+            grad_input, grad_hx, grad_params = torch_npu._lstm_npu_backward(
+                grad_y.flatten(0, 1), *args, batch_sizes=batch_sizes,
+            )
+
+            # packed 输入为二维，梯度形状与之对齐
+            self.assertEqual(grad_input.shape, input_.shape)
+            self.assertEqual(len(grad_hx), 2)
+            for grad in grad_hx:
+                self.assertEqual(grad.shape,
+                                 (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
+            self.assertEqual(len(grad_params), len(params))
+            for grad, param in zip(grad_params, params):
+                self.assertEqual(grad.shape, param.shape)
+
+
 class TestNpuFusedAttentionScoreFwd(TestCase):
     def test_npu_fused_attention_score_fwd_meta(self):
         with FakeTensorMode():
