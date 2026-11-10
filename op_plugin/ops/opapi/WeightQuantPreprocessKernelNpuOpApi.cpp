@@ -494,6 +494,24 @@ static void prepare_out_weight_f8f4(QuantContext& ctx) {
   }
 }
 
+static c10::SmallVector<int64_t, DIMS_MAX> get_mm_mx_scale_storage_shape(
+    int64_t k_scale,
+    int64_t n_blocks) {
+  return {n_blocks, k_scale, NZ_16, MX_SCALE_LAST_DIM};
+}
+
+static c10::SmallVector<int64_t, DIMS_MAX> get_mm_mx_scale_trans_stride(int64_t k_scale) {
+  return {MX_SCALE_LAST_DIM, MX_SCALE_LAST_DIM * k_scale, 1};
+}
+
+static int64_t get_shape_numel(const c10::SmallVector<int64_t, DIMS_MAX>& shape) {
+  int64_t storage_size = 1;
+  for (auto dim : shape) {
+    storage_size *= dim;
+  }
+  return storage_size;
+}
+
 template <bool IsGmm>
 static void prepare_out_weight_scale_mx(QuantContext& ctx) {
   constexpr int64_t expected_dim = IsGmm ? DIMS_4 : DIMS_3;
@@ -506,24 +524,43 @@ static void prepare_out_weight_scale_mx(QuantContext& ctx) {
       OPS_ERROR(ErrCode::PARAM));
 
   auto scale_view_shape = op_infer::array_to_small_vector(ctx.weight_scale.sizes());
-  ctx.out_weight_scale = npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
-
-  if (ctx.is_weight_trans) {
-    int64_t scale_dim = ctx.weight_scale.dim();
-    int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
-    int64_t n = scale_view_shape[scale_dim - IDX_2];
-    c10::SmallVector<int64_t, DIMS_MAX> trans_stride; // 对应内存转置存储
-    if constexpr (IsGmm) {
-      trans_stride = {
+  if constexpr (IsGmm) {
+    ctx.out_weight_scale =
+        npu_preparation::apply_tensor_without_format(scale_view_shape, ctx.weight_scale.options());
+    if (ctx.is_weight_trans) {
+      int64_t scale_dim = ctx.weight_scale.dim();
+      int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
+      int64_t n = scale_view_shape[scale_dim - IDX_2];
+      c10::SmallVector<int64_t, DIMS_MAX> trans_stride = {
           MX_SCALE_LAST_DIM * k_scale * n,
           MX_SCALE_LAST_DIM,
           MX_SCALE_LAST_DIM * k_scale,
-          1}; // 对应内存中的 [group_num, n, k_scale, 2]
-    } else {
-      trans_stride = {MX_SCALE_LAST_DIM, MX_SCALE_LAST_DIM * k_scale, 1}; // 对应内存中的 [n, k_scale, 2]
+          1};
+      ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
     }
-    ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
+    return;
   }
+
+  int64_t scale_dim = ctx.weight_scale.dim();
+  int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
+  int64_t n = scale_view_shape[scale_dim - IDX_2];
+  auto storage_shape = get_mm_mx_scale_storage_shape(k_scale, ceil_div(n, NZ_16));
+  auto trans_stride = get_mm_mx_scale_trans_stride(k_scale);
+  int64_t storage_size = get_shape_numel(storage_shape);
+  ctx.out_weight_scale =
+      npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight_scale.options());
+  if (ctx.is_weight_trans) {
+    ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
+  } else {
+    ctx.out_weight_scale.unsafeGetTensorImpl()->set_sizes_contiguous(scale_view_shape);
+  }
+
+  at_npu::native::StorageDescHelper::SetDesc(
+      ctx.out_weight_scale,
+      ctx.out_weight_scale.sizes(),
+      storage_shape,
+      ctx.out_weight_scale.strides(),
+      ACL_FORMAT_FRACTAL_NZ_C0_2);
 }
 
 static void prepare_out_weight_offset_direct(QuantContext& ctx) {

@@ -22,6 +22,7 @@ namespace op_api {
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 constexpr int64_t PERGROUP_DIM_NUM = 2;
 constexpr int64_t INT4_NUMS_IN_INT32 = 8;
+constexpr int64_t REQUIRED_SCALE_NZ_STORAGE_OFFSET = 0;
 static const uint64_t GROUP_MAX = 65535UL;
 static const size_t A8W4_GROUP_DIM = 3;
 static const size_t A8W4_INPUT_DIM = 2;
@@ -70,15 +71,26 @@ static bool is_x_scale_same_transpose(const at::Tensor& x, const at::Tensor& sca
   }
   return false;
 }
-static bool is_nz_format(const at::Tensor& x2) {
-  const torch_npu::NPUStorageDesc& tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(x2)->npu_desc_;
+static bool is_weight_nz_format(const at::Tensor& tensor) {
+  if (!tensor.defined()) {
+    return false;
+  }
+  const torch_npu::NPUStorageDesc& tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(tensor)->npu_desc_;
   return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ || tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_4 ||
       tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_16;
 }
 
+static bool is_scale_nz_format(const at::Tensor& tensor) {
+  if (!tensor.defined()) {
+    return false;
+  }
+  const torch_npu::NPUStorageDesc& tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(tensor)->npu_desc_;
+  return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ || tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ_C0_2;
+}
+
 uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2, std::vector<uint64_t> &batch_record)
 {
-    TORCH_CHECK(at_npu::native::FormatHelper::IsOpInputBaseFormat(x2) || is_nz_format(x2),
+    TORCH_CHECK(at_npu::native::FormatHelper::IsOpInputBaseFormat(x2) || is_weight_nz_format(x2),
                 "x2 should be in the original image format or nz format, but it is ",
                 npu_preparation::get_tensor_npu_format(x2), OPS_ERROR(ErrCode::PARAM));
     uint64_t batch_val = 1;
@@ -144,7 +156,8 @@ at::Tensor npu_quant_matmul(
     c10::optional<int64_t> scale_dtype,
     c10::OptionalIntArrayRef group_sizes,
     const c10::optional<at::Tensor>& y_scale) {
-  if (is_nz_format(x2)) {
+  const bool weight_is_nz = is_weight_nz_format(x2);
+  if (weight_is_nz) {
     static const bool is_quant_matmul_weight_nz_available = check_aclnn_kernel_available("aclnnQuantMatmulWeightNz");
     TORCH_CHECK(
         is_quant_matmul_weight_nz_available,
@@ -164,6 +177,9 @@ at::Tensor npu_quant_matmul(
 #if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
   // torch 2.8+ 原生 float4_e2m1fn_x2 与 uint8 载体物理等价（1 字节 2 个 FP4）；显式传 torch dtype
   // 对象时 pybind 转为 ScalarType 枚举值，与 c10_npu::DType::FLOAT4_E2M1 数值不同，先归一化
+  if (x1_dtype.has_value() && x1_dtype.value() == static_cast<int64_t>(at::ScalarType::Float4_e2m1fn_x2)) {
+    x1_dtype = static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+  }
   if (x2_dtype.has_value() && x2_dtype.value() == static_cast<int64_t>(at::ScalarType::Float4_e2m1fn_x2)) {
     x2_dtype = static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
   }
@@ -290,8 +306,18 @@ at::Tensor npu_quant_matmul(
       ? c10_npu::GetAclDataType(pertoken_scale_dtype.value())
       : (pertoken_scale.has_value() ? c10_npu::GetAclDataType(static_cast<int64_t>(pertoken_scale_real.scalar_type()))
                                     : aclDataType::ACL_INT8);
-  TORCH_CHECK(!is_nz_format(scale) || is_nz_format(x2),
+  const aclDataType x2_scale_dtype_real = scale_dtype.has_value()
+      ? c10_npu::GetAclDataType(scale_dtype.value())
+      : c10_npu::GetAclDataType(static_cast<int64_t>(scale.scalar_type()));
+  const bool scale_is_nz = is_scale_nz_format(scale);
+  TORCH_CHECK(!scale_is_nz || weight_is_nz,
               "ScaleNZ requires x2 in WeightNZ format; ND x2 is not supported.", OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(!scale_is_nz || x2_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0,
+              "ScaleNZ requires FLOAT8_E8M0 scale.", OPS_ERROR(ErrCode::TYPE));
+  TORCH_CHECK(!scale_is_nz || scale.storage_offset() == REQUIRED_SCALE_NZ_STORAGE_OFFSET,
+              "ScaleNZ storage_offset must be 0.", OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(!is_scale_nz_format(pertoken_scale_real),
+              "ScaleNZ is only supported for x2 scale; pertoken_scale must remain ND.", OPS_ERROR(ErrCode::PARAM));
   bool need_check_trans = pertoken_scale.has_value() &&
       (((pertoken_scale_real.dim() == x1.dim() && scale.dim() == x2.dim()) ||
         pertoken_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0) &&
@@ -317,7 +343,7 @@ at::Tensor npu_quant_matmul(
         OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
         // ScaleNZ always describes [Kg, N, 2], independent of the weight view.
-        (pertoken_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0 && is_nz_format(x2) && is_nz_format(scale)) ||
+        (pertoken_scale_dtype_real == aclDataType::ACL_FLOAT8_E8M0 && weight_is_nz && scale_is_nz) ||
             is_x_scale_same_transpose(x2, scale, dim_x2, dim_x2_scale),
         "Input x2 tensor and scale tensor's transpose are not same, please check input.",
         OPS_ERROR(ErrCode::PARAM));
@@ -327,7 +353,7 @@ at::Tensor npu_quant_matmul(
       (output_acltype != ACL_BF16 || use_aclnn_v5) && output_acltype != ACL_INT32;
   if (use_trans_quant_param) {
     const at::Tensor quant_param = op_api::npu_trans_quant_param(scale, offset);
-    if (is_nz_format(x2)) {
+    if (weight_is_nz) {
       EXEC_NPU_CMD(
           aclnnQuantMatmulWeightNz,
           x1_wrapper,
@@ -361,7 +387,7 @@ at::Tensor npu_quant_matmul(
           result_wrapper);
     }
   } else {
-    if (!is_a4w4 && is_nz_format(x2)) {
+    if (!is_a4w4 && weight_is_nz) {
       EXEC_NPU_CMD(
           aclnnQuantMatmulWeightNz,
           x1_wrapper,
