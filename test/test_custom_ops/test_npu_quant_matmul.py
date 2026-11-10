@@ -1089,6 +1089,24 @@ class TestQuantMatmulScaleNz(TestCase):
                                 torch_npu.npu_quant_matmul(
                                     x1, x2, bad_scale, pertoken_scale=pertoken, **kwargs)
 
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_matmul_scalenz_from_weight_preprocess(self):
+        x1, weight_nz, scale_nd, pertoken, kwargs, golden = self.make_case(
+            byte_scale=True, scale_nz=False)
+        out_weight, out_scale, _, _ = torch_npu.npu_weight_quant_preprocess(
+            weight_nz,
+            scale_nd,
+            x_dtype=torch.float8_e4m3fn,
+            weight_dtype=torch_npu.float4_e2m1fn_x2,
+            weight_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_scale_dtype=torch_npu.float8_e8m0fnu,
+            k_group_size=32)
+
+        self.assertEqual(torch_npu.get_npu_format(out_scale), 52)
+        actual = torch_npu.npu_quant_matmul(
+            x1, out_weight, out_scale, pertoken_scale=pertoken, **kwargs)
+        torch.testing.assert_close(actual.cpu(), golden, rtol=0, atol=1e-3)
+
 
 if __name__ == "__main__":
     run_tests()
