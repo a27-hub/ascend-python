@@ -16,12 +16,13 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/OpUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor npu_sign_bits_unpack(const at::Tensor& input, int64_t size, c10::ScalarType dtype) {
-  if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+  if (op_plugin::utils::is_lt_soc_version_950()) {
     return acl_op::npu_sign_bits_unpack(input, size, dtype);
   }
   DO_COMPATIBILITY(aclnnSignBitsUnpack, acl_op::npu_sign_bits_unpack(input, size, dtype));
