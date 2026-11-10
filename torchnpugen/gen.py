@@ -289,7 +289,7 @@ Use {deprecated_replace} instead.");'
             migrated_warn += f'TORCH_WARN_ONCE("{migrated_func} has been migrated to taco. '
             migrated_warn += f'Please install torch_npu_custom_ops and import taco after torch_npu '
             migrated_warn += f'to continue using this API. '
-            migrated_warn += f'See https://gitcode.com/Ascend/taco for details. '
+            migrated_warn += f'See https://gitcode.com/Ascend/taco/blob/master/README.md for details. '
             migrated_warn += f'This API will be removed from torch_npu in a future version.");'
 
         warn_block = deprecated_warn + migrated_warn
