@@ -21,6 +21,9 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor npu_sign_bits_unpack(const at::Tensor& input, int64_t size, c10::ScalarType dtype) {
+  if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+    return acl_op::npu_sign_bits_unpack(input, size, dtype);
+  }
   DO_COMPATIBILITY(aclnnSignBitsUnpack, acl_op::npu_sign_bits_unpack(input, size, dtype));
   int64_t dim = input.dim();
   TORCH_CHECK(dim == 1, "input value should be a 1-dimensional tensor" + OPS_ERROR(ErrCode::PARAM));
