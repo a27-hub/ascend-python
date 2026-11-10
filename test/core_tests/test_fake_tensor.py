@@ -6482,7 +6482,7 @@ class TestNpuLstmMeta(TestCase):
         ]
 
     def test_npu_lstm_meta(self):
-        # 用例场景为时间步优先的两层单向训练，校验输出、最终状态和保存张量的形状。
+        # Check output, state, and saved tensor shapes for time-major two-layer training.
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
                                  dtype=torch.float16).npu()
@@ -6506,7 +6506,7 @@ class TestNpuLstmMeta(TestCase):
                 )
 
     def test_npu_lstm_batch_first_meta(self):
-        # 用例场景为 batch 优先训练，校验主输出切换布局及保存张量的时间步维度。
+        # Check the output and saved tensor layouts for batch-first training.
         with FakeTensorMode():
             input_ = torch.randn(self.BATCH_SIZE, self.TIME_STEP, self.INPUT_SIZE,
                                  dtype=torch.float16).npu()
@@ -6527,7 +6527,7 @@ class TestNpuLstmMeta(TestCase):
                 )
 
     def test_npu_lstm_bidirectional_meta(self):
-        # 用例场景为双向训练，校验输出宽度以及状态和保存张量的层方向维度翻倍。
+        # Check doubled output width and layer-direction dimensions for bidirectional training.
         with FakeTensorMode():
             layer_directions = self.NUM_LAYERS * 2
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6551,7 +6551,7 @@ class TestNpuLstmMeta(TestCase):
                 )
 
     def test_npu_lstm_inference_meta(self):
-        # 用例场景为单向推理，校验主输出、最终状态及训练中间结果的占位结构。
+        # Check output and state shapes and saved tensor placeholders during inference.
         # 推理态不产出 gate：i/j/f/o/tanhc 为未定义张量，h/c 为按层堆叠的一维张量
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6574,7 +6574,7 @@ class TestNpuLstmMeta(TestCase):
             self.assertEqual(out[8].shape, (self.NUM_LAYERS,))
 
     def test_npu_lstm_packed_meta(self):
-        # 用例场景为变长 packed 前向，校验 NPU 保留填充的布局及 CPU 紧凑布局的拒绝行为。
+        # Check native variable-length packing and reject the compact CPU layout.
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP * self.BATCH_SIZE, self.INPUT_SIZE,
                                  dtype=torch.float16).npu()
@@ -6604,7 +6604,7 @@ class TestNpuLstmMeta(TestCase):
                 )
 
     def test_npu_lstm_batch_first_none_meta(self):
-        # 用例场景为显式传入 batch_first=None，校验输出采用时间步优先布局。
+        # Check that an explicit batch_first=None selects time-major output.
         # batch_first 在 schema 中是 bool?，None 应与 False 等价
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6621,7 +6621,7 @@ class TestNpuLstmMeta(TestCase):
                              (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
 
     def test_npu_lstm_invalid_batch_sizes_meta(self):
-        # 用例场景为 packed 前向传入空 batch_sizes 或输入行数无法按时间步整除，校验捕获时报错。
+        # Reject empty batch_sizes and packed row counts that are indivisible by the time dimension.
         # 与 C++ lstm_npu_output_size 中的 TORCH_CHECK 报错保持一致
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6690,7 +6690,7 @@ class TestNpuLstmBackwardMeta(TestCase):
         return grad_y, grad_hy, grad_cy
 
     def test_npu_lstm_backward_meta(self):
-        # 用例场景为普通三维输入的反向，校验各梯度形状及显式空 batch_sizes 的拒绝行为。
+        # Check dense gradient shapes and reject an explicitly empty batch_sizes tensor.
         with FakeTensorMode():
             params = self._make_params()
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6718,7 +6718,7 @@ class TestNpuLstmBackwardMeta(TestCase):
                 )
 
     def test_npu_lstm_backward_packed_meta(self):
-        # 用例场景为等长 packed 反向，校验二维 grad_y 的梯度形状及三维 grad_y 的拒绝行为。
+        # Check packed gradients with a 2-D grad_y and reject a 3-D grad_y.
         with FakeTensorMode():
             params = self._make_params()
             input_ = torch.randn(self.TIME_STEP * self.BATCH_SIZE, self.INPUT_SIZE,
