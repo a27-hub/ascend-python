@@ -6482,6 +6482,7 @@ class TestNpuLstmMeta(TestCase):
         ]
 
     def test_npu_lstm_meta(self):
+        # 用例场景为时间步优先的两层单向训练，校验输出、最终状态和保存张量的形状。
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
                                  dtype=torch.float16).npu()
@@ -6505,6 +6506,7 @@ class TestNpuLstmMeta(TestCase):
                 )
 
     def test_npu_lstm_batch_first_meta(self):
+        # 用例场景为 batch 优先训练，校验主输出切换布局及保存张量的时间步维度。
         with FakeTensorMode():
             input_ = torch.randn(self.BATCH_SIZE, self.TIME_STEP, self.INPUT_SIZE,
                                  dtype=torch.float16).npu()
@@ -6525,6 +6527,7 @@ class TestNpuLstmMeta(TestCase):
                 )
 
     def test_npu_lstm_bidirectional_meta(self):
+        # 用例场景为双向训练，校验输出宽度以及状态和保存张量的层方向维度翻倍。
         with FakeTensorMode():
             layer_directions = self.NUM_LAYERS * 2
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6548,6 +6551,7 @@ class TestNpuLstmMeta(TestCase):
                 )
 
     def test_npu_lstm_inference_meta(self):
+        # 用例场景为单向推理，校验主输出、最终状态及训练中间结果的占位结构。
         # 推理态不产出 gate：i/j/f/o/tanhc 为未定义张量，h/c 为按层堆叠的一维张量
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6570,14 +6574,16 @@ class TestNpuLstmMeta(TestCase):
             self.assertEqual(out[8].shape, (self.NUM_LAYERS,))
 
     def test_npu_lstm_packed_meta(self):
+        # 用例场景为变长 packed 前向，校验 NPU 保留填充的布局及 CPU 紧凑布局的拒绝行为。
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP * self.BATCH_SIZE, self.INPUT_SIZE,
                                  dtype=torch.float16).npu()
-            batch_sizes = torch.full((self.TIME_STEP,), self.BATCH_SIZE,
-                                     dtype=torch.int64).npu()
+            # For lengths [5, 3, 2], NPU packing retains 15 rows and CPU packing retains 10.
+            batch_sizes = torch.tensor([3, 3, 2, 1, 1], dtype=torch.int64).npu()
+            hx, params = self._make_hx(), self._make_params()
 
             out = torch_npu._lstm_npu(
-                input_, self._make_hx(), self._make_params(),
+                input_, hx, params,
                 False, self.NUM_LAYERS, 0.0, True, False, batch_sizes=batch_sizes
             )
 
@@ -6591,7 +6597,14 @@ class TestNpuLstmMeta(TestCase):
                     (self.NUM_LAYERS, self.TIME_STEP, self.BATCH_SIZE, self.HIDDEN_SIZE)
                 )
 
+            with self.assertRaisesRegex(RuntimeError, "initial hidden state batch size"):
+                torch_npu._lstm_npu(
+                    input_[:10], hx, params,
+                    False, self.NUM_LAYERS, 0.0, True, False, batch_sizes=batch_sizes,
+                )
+
     def test_npu_lstm_batch_first_none_meta(self):
+        # 用例场景为显式传入 batch_first=None，校验输出采用时间步优先布局。
         # batch_first 在 schema 中是 bool?，None 应与 False 等价
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6608,6 +6621,7 @@ class TestNpuLstmMeta(TestCase):
                              (self.NUM_LAYERS, self.BATCH_SIZE, self.HIDDEN_SIZE))
 
     def test_npu_lstm_invalid_batch_sizes_meta(self):
+        # 用例场景为 packed 前向传入空 batch_sizes 或输入行数无法按时间步整除，校验捕获时报错。
         # 与 C++ lstm_npu_output_size 中的 TORCH_CHECK 报错保持一致
         with FakeTensorMode():
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6676,16 +6690,18 @@ class TestNpuLstmBackwardMeta(TestCase):
         return grad_y, grad_hy, grad_cy
 
     def test_npu_lstm_backward_meta(self):
+        # 用例场景为普通三维输入的反向，校验各梯度形状及显式空 batch_sizes 的拒绝行为。
         with FakeTensorMode():
             params = self._make_params()
             input_ = torch.randn(self.TIME_STEP, self.BATCH_SIZE, self.INPUT_SIZE,
                                  dtype=torch.float16).npu()
             grad_y, grad_hy, grad_cy = self._make_grads()
 
-            grad_input, grad_hx, grad_params = torch_npu._lstm_npu_backward(
+            args = (
                 grad_y, grad_hy, grad_cy, input_, self._make_hx(), params,
-                *self._make_saved(), False, self.NUM_LAYERS, 0.0, True, False
+                *self._make_saved(), False, self.NUM_LAYERS, 0.0, True, False,
             )
+            grad_input, grad_hx, grad_params = torch_npu._lstm_npu_backward(*args)
 
             self.assertEqual(grad_input.shape, input_.shape)
             self.assertEqual(len(grad_hx), 2)
@@ -6696,7 +6712,13 @@ class TestNpuLstmBackwardMeta(TestCase):
             for grad, param in zip(grad_params, params):
                 self.assertEqual(grad.shape, param.shape)
 
+            with self.assertRaisesRegex(RuntimeError, "requires nonempty batch_sizes"):
+                torch_npu._lstm_npu_backward(
+                    *args, batch_sizes=torch.empty(0, dtype=torch.int64).npu(),
+                )
+
     def test_npu_lstm_backward_packed_meta(self):
+        # 用例场景为等长 packed 反向，校验二维 grad_y 的梯度形状及三维 grad_y 的拒绝行为。
         with FakeTensorMode():
             params = self._make_params()
             input_ = torch.randn(self.TIME_STEP * self.BATCH_SIZE, self.INPUT_SIZE,
@@ -6705,10 +6727,15 @@ class TestNpuLstmBackwardMeta(TestCase):
                                      dtype=torch.int64).npu()
             grad_y, grad_hy, grad_cy = self._make_grads()
 
-            grad_input, grad_hx, grad_params = torch_npu._lstm_npu_backward(
-                grad_y, grad_hy, grad_cy, input_, self._make_hx(), params,
+            args = (
+                grad_hy, grad_cy, input_, self._make_hx(), params,
                 *self._make_saved(), False, self.NUM_LAYERS, 0.0, True, False,
-                batch_sizes=batch_sizes
+            )
+            with self.assertRaisesRegex(RuntimeError, "grad_y must be two-dimensional"):
+                torch_npu._lstm_npu_backward(grad_y, *args, batch_sizes=batch_sizes)
+
+            grad_input, grad_hx, grad_params = torch_npu._lstm_npu_backward(
+                grad_y.flatten(0, 1), *args, batch_sizes=batch_sizes,
             )
 
             # packed 输入为二维，梯度形状与之对齐
