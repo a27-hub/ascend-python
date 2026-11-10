@@ -7371,3 +7371,16 @@ if hasattr(torch.ops.npu, "npu_linalg_matrix_sqrth_backward"):
         # NPU backward of torch.linalg.matrix_sqrth: the output has the same shape as the input A,
         # used by the fake tensor / compile paths for shape inference.
         return torch.empty_like(self)
+
+# torch.linalg.polar was introduced in torch 2.14. The custom ops below only exist on builds
+# that declare them, so guard the registration for the older version branches.
+if hasattr(torch.ops.npu, "npu_linalg_polar_backward"):
+    @impl(m, "npu_linalg_polar_backward")
+    def npu_linalg_polar_backward_meta(grad_U, grad_H, A, U, H):
+        # The backward returns the gradient w.r.t. A, so it has the shape of A.
+        return torch.empty_like(A, memory_format=torch.contiguous_format)
+
+    @impl(m, "npu_linalg_polar_jvp")
+    def npu_linalg_polar_jvp_meta(A, dA, U, H):
+        # Forward-mode tangents of the two outputs (U, H).
+        return torch.empty_like(U), torch.empty_like(H)

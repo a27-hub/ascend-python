@@ -6,6 +6,11 @@ backward:
   result: at_npu::redispatch::npu_linalg_matrix_sqrth_backward(ks & c10::after_autograd_keyset, self_t, self_p)
   version: [v2.14, newest]
 
+- name: linalg_polar(Tensor A) -> (Tensor U, Tensor H)
+  A: npu_linalg_polar_backward(grad_U, grad_H, A, U, H)
+  U, H: at_npu::redispatch::npu_linalg_polar_jvp(ks & c10::after_autograd_keyset, A_p, A_t, U, H)
+  version: [v2.14, newest]
+
 - name: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor
   self: cholesky_backward(grad, upper, result)
   result: cholesky_jvp(self_t, result, upper)
